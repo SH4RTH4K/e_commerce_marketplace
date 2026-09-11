@@ -1,59 +1,72 @@
-# SHARTHAK Laravel E-Commerce Platform
+# SHARTHAK Commerce Platform
 
-A Laravel, Inertia.js, React, and Tailwind CSS e-commerce application for online stores, with product management, checkout, customer accounts, courier integrations, fraud controls, marketing tools, and an administration dashboard.
+> A production-oriented Laravel marketplace for catalog management, storefront sales, customer accounts, fulfillment, courier integrations, and operational administration.
 
-## Ownership
+<p align="center">
+  <img src="https://img.shields.io/badge/Laravel-13-FF2D20?style=flat-square&logo=laravel&logoColor=white" alt="Laravel 13">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=111827" alt="React 19">
+  <img src="https://img.shields.io/badge/Inertia.js-3-9553E9?style=flat-square" alt="Inertia.js 3">
+  <img src="https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4">
+  <img src="https://img.shields.io/badge/cPanel-ready-FF6C2C?style=flat-square&logo=cpanel&logoColor=white" alt="cPanel ready">
+</p>
 
-- Owner and maintainer: **SHARTHAK**
-- Official website: [https://sharthak.com](https://sharthak.com)
+## Overview
 
-No ownership, support, activation, telemetry, or remote-access rights are granted to any previous supplier by this project documentation.
+SHARTHAK Commerce Platform combines a customer-facing online store with a complete administration workspace. It is designed for teams that need to manage products, inventory, orders, marketing content, customer communication, and delivery operations from one Laravel application.
 
-## Security status
+The application is maintained by **SHARTHAK**. Visit [sharthak.com](https://sharthak.com) for the official website.
 
-> **Production deployment is currently blocked pending security hardening.**
+## Core capabilities
 
-A read-only review on 4 September 2026 found no obvious hidden vendor callback, webshell, shell-execution code, or unauthorized administrator in the active application. That does not guarantee that the application is impossible to compromise.
+### Storefront
 
-The following items must be corrected before the application is exposed to the internet:
+- Product catalog, category browsing, search, filters, and product detail pages
+- Customer registration, authentication, profiles, order history, and password reset
+- Cart, standard checkout, quick order, cash on delivery, and mobile banking options
+- Coupons, flash sales, reviews, SEO metadata, storefront branding, and landing pages
+- Order tracking, abandoned checkout recovery, and contact forms
 
-1. Make the courier webhook reject every request unless a valid secret/signature is configured.
-2. Enforce staff permissions on the server with Laravel gates, policies, or permission middleware. Hiding menu items is not authorization.
-3. Rotate all credentials that may have been known to a previous supplier, including hosting, SSH/SFTP/FTP, database, administrator, SMTP, courier API, and application keys.
-4. Remove secrets from database exports and remove every archive or SQL dump from web-accessible directories.
-5. Validate uploaded file contents and MIME types, reject active SVG content, and store uploads outside the webroot where practical.
-6. Remove public development artifacts such as `.DS_Store`, obsolete `.user.ini` files, and `capture_helper.html`.
-7. Remove unsafe raw-HTML rendering or sanitize it with a maintained allow-list sanitizer, then tighten the Content Security Policy.
-8. Replace predictable seeded passwords before the first public request.
+### Administration
 
-Never publish a vulnerability report containing passwords, API keys, database dumps, or other secret values.
+- Product, category, inventory, variant, banner, coupon, and landing-page management
+- Order review, status management, invoices, courier shipment, and tracking
+- Customer CRM, reviews, contact messages, fraud controls, and blocked identity lists
+- Staff roles and server-side permissions
+- Store settings, payment configuration, analytics, media management, and design controls
+
+### Imported product review workflow
+
+The imported-products screen provides a consistent publish/unpublish review process:
+
+1. Search by product name or SKU and select category/status filters.
+2. Click **Apply filters** to fetch the requested result. Changing rows per page does not fetch automatically.
+3. Open the image preview and check the primary image and additional-image count.
+4. Confirm price, stock, and mapped supplier variants.
+5. Publish approved products, or leave them as drafts. Unpublish products that no longer meet the storefront standard.
+6. Use pagination and the 25, 50, or 100 rows-per-page setting for larger catalogs.
 
 ## Technology
 
-| Component | Version / requirement |
+| Layer | Technology |
 | --- | --- |
-| Laravel | 13.x (currently 13.18.0) |
-| PHP | 8.3 or later |
-| Database | MySQL 8.x or a compatible MariaDB release |
-| Frontend | React 19, Inertia.js 3, Tailwind CSS 4, Vite 8 |
-| Node.js | 20.19 or later, or 22.12 or later |
-| Composer | 2.x |
-| Web server | Apache/LiteSpeed, Nginx, or the local Laravel server |
+| Backend | PHP 8.3+, Laravel 13 |
+| Frontend | React 19, Inertia.js 3 |
+| Styling | Tailwind CSS 4 |
+| Build | Vite 8, Node.js 20.19+ or 22.12+ |
+| Database | MySQL 8.x or compatible MariaDB |
+| Web server | Apache/LiteSpeed, Nginx, or Laravel development server |
+| Delivery integrations | Steadfast, Pathao, and RedX service adapters |
 
 Required PHP extensions include Ctype, cURL, DOM, Fileinfo, Filter, Hash, Mbstring, OpenSSL, PCRE, PDO, `pdo_mysql`, Session, Tokenizer, and XML. GD or Imagick is recommended for image processing.
 
-## Main features
+## Quick start
 
-- Product, category, inventory, coupon, flash-sale, banner, and landing-page management
-- Customer registration, login, password reset, profiles, order history, and invoices
-- Cart, standard checkout, quick order, cash on delivery, and mobile-banking configuration
-- Steadfast, Pathao, and RedX courier integrations
-- Order tracking, abandoned-checkout recovery, reviews, and contact messages
-- Fake-order controls using IP, device, phone, and BD Courier information
-- Store branding, SEO, analytics, legal pages, and storefront customization
-- Staff roles and permission definitions (server-side enforcement is required before production)
+### Requirements
 
-## Local installation
+- PHP 8.3 or newer
+- Composer 2.x
+- Node.js 20.19+ or 22.12+
+- MySQL 8.x or compatible MariaDB
 
 ### 1. Install dependencies
 
@@ -62,7 +75,7 @@ composer install
 npm ci
 ```
 
-### 2. Create the environment file
+### 2. Configure the environment
 
 Linux/macOS:
 
@@ -78,13 +91,9 @@ Copy-Item .env.example .env
 php artisan key:generate
 ```
 
-Never reuse a production `APP_KEY`, database password, or API key from an old archive.
+Configure the database in `.env`:
 
-### 3. Create and configure MySQL
-
-Create an empty database and a dedicated database user. Do not use a MySQL administrator account in production.
-
-```env
+```dotenv
 APP_NAME="SHARTHAK"
 APP_ENV=local
 APP_DEBUG=false
@@ -98,20 +107,15 @@ DB_USERNAME=your_database_user
 DB_PASSWORD=your_database_password
 ```
 
-### 4. Prepare the application
+Never reuse production keys, database passwords, courier credentials, or mail credentials from an old archive.
+
+### 3. Prepare and run
 
 ```bash
 php artisan migrate
 php artisan storage:link
 npm run build
 php artisan optimize:clear
-```
-
-Use `php artisan migrate --seed` only for a private development environment. The supplied seeder contains predictable development credentials that must never remain active on a public website.
-
-### 5. Start locally
-
-```bash
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
@@ -121,55 +125,32 @@ Open:
 - Customer login: `http://127.0.0.1:8000/login`
 - Administrator login: `http://127.0.0.1:8000/admin/login`
 
-For frontend hot reloading, run `npm run dev` in a second terminal. Delete a stale `public/hot` file before using only the production build; otherwise Laravel may try to load an unavailable Vite development server and display a blank page.
+For frontend hot reloading, run `npm run dev` in a second terminal. Remove a stale `public/hot` file before using only the production build.
 
-## MySQL/DBeaver troubleshooting
+The database seeder is intended for private development environments only. Do not use `php artisan migrate --seed` on a public production database without reviewing and replacing all seeded credentials and demo data.
 
-### `Public Key Retrieval is not allowed`
+## Production deployment on cPanel
 
-For a local MySQL 8 connection in DBeaver:
+The complete deployment runbook is available in [DEPLOY.md](DEPLOY.md). The essential process is:
 
-1. Edit the connection.
-2. Open **Driver properties**.
-3. Set `allowPublicKeyRetrieval` to `true`.
-4. For localhost only, set `useSSL` to `false` if SSL is not configured.
-5. Confirm the host is `127.0.0.1`, port is `3306`, and test the connection.
+### 1. Clone or upload the application
 
-Equivalent local JDBC options are:
+Clone the `main` branch from the [e_commerce_marketplace repository](https://github.com/SH4RTH4K/e_commerce_marketplace), or upload an archive created from it.
+
+Keep the application outside the public web root where possible:
 
 ```text
-allowPublicKeyRetrieval=true&useSSL=false
-```
-
-Do not use this localhost workaround as the production security design. Use TLS for remote database administration, restrict MySQL access by IP, and keep the website database host private or on `localhost`.
-
-## Secure cPanel deployment
-
-### Required directory layout
-
-Configure the domain document root to point to the Laravel `public` directory, for example:
-
-```text
-/home/CPANEL_USER/apps/sharthak/          Laravel application (not public)
+/home/CPANEL_USER/apps/sharthak/          Application root
 /home/CPANEL_USER/apps/sharthak/public/   Domain document root
 ```
 
-Do not make the complete Laravel project the public document root. An `.htaccess` fallback is not an equal substitute for a correctly configured document root.
+Do not use the complete Laravel project as the document root. Never expose `.env`, SQL exports, backup archives, logs, or private cache files.
 
-Never place these items in `public_html` or any other web-accessible directory:
+### 2. Configure production `.env`
 
-- `.env`, `.env.production`, or credential notes
-- SQL/database exports
-- ZIP/RAR/TAR backups
-- `vendor` source listings, tests, logs, or cache files
-- cPanel backups or copies of an older project
+Copy [.env.production.example](.env.production.example) to `.env` on the server and set new production values:
 
-### Production environment
-
-Create `.env` directly on the server. Use new values and never commit or distribute it.
-
-```env
-APP_NAME="SHARTHAK"
+```dotenv
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://your-domain.example
@@ -191,99 +172,82 @@ COURIER_WEBHOOK_SECRET=GENERATE_A_LONG_RANDOM_SECRET
 TRUSTED_PROXIES=127.0.0.1
 ```
 
-Generate `APP_KEY` on the production server:
-
-```bash
-php artisan key:generate
-```
-
-Use `TRUSTED_PROXIES=*` only when the hosting/proxy architecture genuinely requires trusting every proxy. Prefer explicit proxy addresses.
-
-### Deployment commands
-
-Build assets locally or in a trusted build environment:
-
-```bash
-npm ci
-npm run build
-```
-
-On the server:
+### 3. Prepare Laravel
 
 ```bash
 composer install --no-dev --prefer-dist --optimize-autoloader
 php artisan migrate --force
 php artisan storage:link
-php artisan optimize
+php artisan optimize:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
 ```
 
-Restart queue workers after each deployment. Configure a supervised queue worker where cPanel supports it, or use an appropriate scheduled queue command for the hosting plan.
+The compiled frontend files are committed under `public/build`, so Node.js is not required on cPanel for a normal deployment. If frontend source files are changed, run `npm ci && npm run build` in a trusted build environment and commit the new build output.
 
-### Permissions
+For an existing store, import the database backup privately through phpMyAdmin or MySQL, then run migrations. Database exports must never be committed to this repository.
 
-- Normal directories: `755`
-- Normal files: `644`
-- `storage` and `bootstrap/cache`: writable by the PHP/web-server user, commonly `775`
-- Never solve permission problems by recursively applying `777`
-- Disable directory listing and PHP execution inside upload directories at the web-server level
+### 4. Permissions and operations
 
-### HTTPS and server configuration
+- Use `755` for directories and `644` for normal files.
+- Ensure `storage/`, `bootstrap/cache/`, and `public/uploads/` are writable by the PHP/web-server user.
+- Do not use recursive `777` permissions.
+- Configure a queue worker for supplier and delivery jobs when the hosting plan supports it.
+- Add the Laravel scheduler to cPanel Cron once per minute:
 
-- Force HTTPS and enable automatic certificate renewal.
-- Set PHP `display_errors=Off` and `expose_php=Off` in production.
-- Disable remote MySQL unless it is required; if enabled, allow only trusted IP addresses.
-- Use a Web Application Firewall such as ModSecurity when available.
-- Back up the database and uploads outside the public directory and test restoration.
-- Keep PHP, Composer packages, Node packages, and cPanel software patched.
+```cron
+* * * * * cd /home/CPANEL_USER/apps/sharthak && php artisan schedule:run >> /dev/null 2>&1
+```
 
-## Credential handover checklist
+Keep `DROPSHIPPING_ENABLED=false` until supplier credentials and sync drivers have been tested with production data.
 
-When taking ownership from a previous developer or company:
+## Security baseline
 
-- [ ] Change the cPanel and hosting-provider passwords.
-- [ ] Remove unknown cPanel team members, FTP accounts, SSH keys, and API tokens.
-- [ ] Review cron jobs, email forwarders, DNS records, subdomains, and deployment hooks.
-- [ ] Create a new MySQL user/password and remove old database users.
-- [ ] Change every administrator password and remove unknown staff/customer accounts.
-- [ ] Rotate SMTP, courier, analytics, payment, and fraud-service credentials.
-- [ ] Generate a new production `APP_KEY` before launch.
-- [ ] Search the server for old ZIP files, SQL dumps, `.env` copies, and public backups.
-- [ ] Review access and error logs after deployment.
+Before the first public request:
 
-Changing the visible brand or copyright text does not revoke access. Credentials, accounts, keys, scheduled jobs, DNS, and hosting permissions must all be reviewed.
+- Set `APP_ENV=production` and `APP_DEBUG=false`.
+- Generate a unique production `APP_KEY`.
+- Rotate cPanel, SSH/SFTP/FTP, database, administrator, SMTP, courier, payment, and analytics credentials.
+- Configure `COURIER_WEBHOOK_SECRET`; production requests without a valid token are rejected.
+- Use the `public` directory as the document root.
+- Keep SQL dumps, archives, `.env` files, logs, and customer data outside web-accessible locations.
+- Review administrator accounts, staff permissions, cron jobs, DNS records, and deployment hooks.
+- Validate uploads and prevent executable content in upload directories.
+- Force HTTPS and enable secure session cookies.
+- Back up the database and uploaded media outside the public directory, then test restoration.
+- Run dependency audits and automated tests before each release.
 
-## Pre-launch checklist
-
-- [ ] All security blockers listed above are fixed and tested.
-- [ ] The domain document root is the `public` directory only.
-- [ ] No secrets, dumps, archives, logs, or development artifacts are publicly accessible.
-- [ ] `APP_ENV=production` and `APP_DEBUG=false`.
-- [ ] HTTPS is forced and session cookies are secure.
-- [ ] The webhook secret is present and invalid/missing signatures receive `401` or `403`.
-- [ ] Every staff role is tested against direct URLs and write requests.
-- [ ] Uploads are checked by content, MIME type, extension, size, and authorization.
-- [ ] Seeded/default accounts and passwords have been removed or changed.
-- [ ] `composer audit` and `npm audit` complete without unresolved high-risk advisories.
-- [ ] Automated tests pass against an isolated testing database.
-- [ ] Database backups and restore procedures have been tested.
-
-## Maintenance commands
+## Verification commands
 
 ```bash
+composer validate --no-check-publish
+composer check-platform-reqs
 composer audit
 npm audit
-php artisan test
-php artisan about
 php artisan route:list
-php artisan optimize
+php artisan test
 ```
 
-Run security and dependency checks regularly, especially before deployments and after framework upgrades.
+## Project structure
 
-## License
+```text
+app/                 Laravel application code, services, middleware, and models
+bootstrap/            Framework bootstrap and cache directory
+config/               Application and integration configuration
+database/             Migrations, factories, and development seeders
+public/               Web root, compiled assets, and uploaded media
+resources/js/         React and Inertia pages and components
+resources/views/      Blade entry points and server-rendered layouts
+routes/               Web and console route definitions
+tests/                Feature and unit tests
+DEPLOY.md             Detailed cPanel deployment runbook
+```
 
-No project-level license file is currently included in this repository. Ownership by SHARTHAK does not automatically grant third parties permission to copy, redistribute, or resell the source code. Add a reviewed license file if specific commercial or open-source rights are intended.
+## License and ownership
+
+No project-level license file is currently included. Ownership by SHARTHAK does not grant permission to copy, redistribute, resell, or operate this source code. Add a reviewed license file if specific commercial or open-source rights are intended.
 
 ---
 
-Owned and maintained by **SHARTHAK** — [https://sharthak.com](https://sharthak.com)
+Maintained by **SHARTHAK** · [sharthak.com](https://sharthak.com)
