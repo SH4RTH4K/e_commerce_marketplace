@@ -136,7 +136,7 @@ export default function StorefrontLayout({ children, title, description, activeC
                   ? <a href={promoLink} className="hover:text-[#717fe0] mr-auto font-medium" dangerouslySetInnerHTML={{ __html: promoText }} />
                   : <span className="mr-auto font-medium" dangerouslySetInnerHTML={{ __html: promoText }} />
               )}
-              <div className="template-1-topbar-links">
+              <div className="template-1-topbar-links ml-auto">
                 <a href="/contact">Help &amp; FAQs</a>
                 <a href={auth?.user ? '/account' : '/login'}>{auth?.user ? 'My Account' : 'Sign In'}</a>
               </div>
