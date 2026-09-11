@@ -184,7 +184,7 @@ export default function ImportedProducts({ products = [], categories = [], searc
               const pData = getPriceData(product.id);
               return <tr key={product.id} className="transition-colors hover:bg-orange-50/20">
                 <td className="px-5 py-4"><input type="checkbox" aria-label={`Select ${product.name}`} checked={selected.includes(product.id)} onChange={() => toggle(product.id)} /></td>
-                <td className="px-5 py-4 text-xs font-medium text-gray-500">{((pagination.current_page || 1) - 1) * 100 + index + 1}</td>
+                <td className="px-5 py-4 text-xs font-medium text-gray-500">{((pagination.current_page || 1) - 1) * (pagination.per_page || 100) + index + 1}</td>
                 <td className="px-3 py-4"><ImagePreview product={product} /></td>
                 <td className="px-5 py-4"><a href={`/admin/products/${product.id}/edit`} className="font-semibold text-orange-600 hover:underline">{product.name}</a><p className="mt-0.5 text-xs text-gray-400">SKU: {product.sku || '?'}</p></td>
                 <td className="px-5 py-4 text-xs capitalize text-gray-600">{product.category ? product.category.replace(/-/g, ' ') : '-'}</td>
