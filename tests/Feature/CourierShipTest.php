@@ -290,6 +290,22 @@ class CourierShipTest extends TestCase
     }
 
     #[Test]
+    public function webhook_rejects_requests_when_production_secret_is_missing(): void
+    {
+        config([
+            'app.env' => 'production',
+            'services.courier_webhook_secret' => null,
+        ]);
+
+        $response = $this->postJson('/webhooks/courier-status', [
+            'tracking_code' => 'SF-TRACK-000',
+            'status'        => 'Delivered',
+        ]);
+
+        $response->assertStatus(401)->assertJson(['status' => 'unauthorized']);
+    }
+
+    #[Test]
     public function webhook_skips_auth_when_secret_is_not_configured(): void
     {
         config(['services.courier_webhook_secret' => null]);

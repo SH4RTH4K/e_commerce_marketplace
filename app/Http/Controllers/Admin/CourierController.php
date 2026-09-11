@@ -102,9 +102,14 @@ class CourierController extends Controller
      */
     public function webhook(Request $request): JsonResponse
     {
-        // BUG-3: Verify shared webhook secret to prevent status spoofing
-        $secret = config('services.courier_webhook_secret');
-        if ($secret && $request->header('X-Webhook-Token') !== $secret) {
+        // Verify the shared webhook secret to prevent status spoofing. A missing
+        // secret is tolerated only outside production so local/test webhooks remain usable.
+        $secret = trim((string) config('services.courier_webhook_secret'));
+        $providedToken = (string) $request->header('X-Webhook-Token');
+        $secretMissingInProduction = config('app.env') === 'production' && $secret === '';
+        $tokenInvalid = $secret !== '' && ! hash_equals($secret, $providedToken);
+
+        if ($secretMissingInProduction || $tokenInvalid) {
             Log::warning('[Courier Webhook] Unauthorized request', [
                 'ip'    => $request->ip(),
                 'token' => $request->header('X-Webhook-Token') ? '(present but wrong)' : '(missing)',
