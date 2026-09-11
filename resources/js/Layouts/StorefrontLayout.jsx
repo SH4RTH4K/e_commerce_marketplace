@@ -27,6 +27,7 @@ function CartIcon({ count = 0, onClick }) {
 export default function StorefrontLayout({ children, title, description, activeCategory = null }) {
   const { props } = usePage();
   const { auth, app, flash, cartCount = 0, categories = [], hasFlashSale = false, promoText = '', promoLink = '', popup } = props;
+  const hasPromoText = typeof promoText === 'string' && promoText.trim() !== '';
   const rawCategories = categories || [];
   const categoryList = Array.isArray(rawCategories)
     ? rawCategories
@@ -130,17 +131,17 @@ export default function StorefrontLayout({ children, title, description, activeC
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center h-9 gap-4">
           {isTemplateOne ? (
             <>
-              {promoText ? (
+              {hasPromoText && (
                 promoLink
                   ? <a href={promoLink} className="hover:text-[#717fe0] mr-auto font-medium" dangerouslySetInnerHTML={{ __html: promoText }} />
                   : <span className="mr-auto font-medium" dangerouslySetInnerHTML={{ __html: promoText }} />
-              ) : <span className="mr-auto font-medium">Free shipping for standard order over $100</span>}
+              )}
               <div className="template-1-topbar-links">
                 <a href="/contact">Help &amp; FAQs</a>
                 <a href={auth?.user ? '/account' : '/login'}>{auth?.user ? 'My Account' : 'Sign In'}</a>
               </div>
             </>
-          ) : promoText && (
+          ) : hasPromoText && (
             promoLink
               ? <a href={promoLink} className="hover:text-[#f15a24] mr-auto font-medium" dangerouslySetInnerHTML={{ __html: promoText }} />
               : <span className="mr-auto font-medium text-gray-700" dangerouslySetInnerHTML={{ __html: promoText }} />
