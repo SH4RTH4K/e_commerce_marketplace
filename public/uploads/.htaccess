@@ -1,0 +1,25 @@
+# Block PHP execution in the uploads directory — CRITICAL SECURITY
+<FilesMatch "\.php$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Also block other executable types
+<FilesMatch "\.(php|php3|php4|php5|php7|phtml|pl|py|cgi|sh|bash|exe|com|bat)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+Options -ExecCGI
+Options -Indexes
+AddHandler cgi-script .php .php3 .php4 .php5 .phtml .pl .py .cgi

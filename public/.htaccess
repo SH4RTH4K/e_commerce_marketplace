@@ -1,0 +1,120 @@
+# PLACE: public_html/public/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GZIP COMPRESSION — saves 60-80% transfer size for HTML/CSS/JS
+# ─────────────────────────────────────────────────────────────────────────────
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css
+    AddOutputFilterByType DEFLATE text/javascript application/javascript application/x-javascript
+    AddOutputFilterByType DEFLATE application/json application/xml application/xhtml+xml
+    AddOutputFilterByType DEFLATE image/svg+xml font/ttf font/otf font/woff font/woff2
+    # Don't compress already-compressed formats
+    SetEnvIfNoCase Request_URI \.(gif|jpe?g|png|webp|avif|woff2|gz|zip|rar)$ no-gzip dont-vary
+    Header append Vary Accept-Encoding env=!no-gzip
+</IfModule>
+
+# ─────────────────────────────────────────────────────────────────────────────
+# BROWSER CACHING — fixes "Use efficient cache lifetimes" (470 KiB)
+# ─────────────────────────────────────────────────────────────────────────────
+<IfModule mod_expires.c>
+    ExpiresActive On
+    # HTML — never cache (always fresh)
+    ExpiresByType text/html                         "access plus 0 seconds"
+    # Versioned CSS/JS assets — 1 year (they have ?v= query strings)
+    ExpiresByType text/css                          "access plus 1 year"
+    ExpiresByType application/javascript            "access plus 1 year"
+    ExpiresByType text/javascript                   "access plus 1 year"
+    # Images
+    ExpiresByType image/jpeg                        "access plus 1 year"
+    ExpiresByType image/png                         "access plus 1 year"
+    ExpiresByType image/webp                        "access plus 1 year"
+    ExpiresByType image/avif                        "access plus 1 year"
+    ExpiresByType image/gif                         "access plus 1 year"
+    ExpiresByType image/svg+xml                     "access plus 1 year"
+    ExpiresByType image/x-icon                      "access plus 1 year"
+    ExpiresByType image/vnd.microsoft.icon          "access plus 1 year"
+    # Fonts
+    ExpiresByType font/woff                         "access plus 1 year"
+    ExpiresByType font/woff2                        "access plus 1 year"
+    ExpiresByType application/font-woff             "access plus 1 year"
+    ExpiresByType application/font-woff2            "access plus 1 year"
+    # Other
+    ExpiresByType application/pdf                   "access plus 1 month"
+    ExpiresByType application/json                  "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Versioned static assets — immutable, 1 year
+    <FilesMatch "\.(css|js|woff2?|ttf|otf|eot|svg|png|jpe?g|webp|avif|gif|ico)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+    # HTML — never cache
+    <FilesMatch "\.php$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+    </FilesMatch>
+
+    # ── Security headers ────────────────────────────────────────────────────
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>
+
+# ─────────────────────────────────────────────────────────────────────────────
+# URL REWRITING
+# ─────────────────────────────────────────────────────────────────────────────
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    Options +FollowSymLinks
+    RewriteEngine On
+
+    DirectoryIndex index.php
+
+    # After flatten: old bookmark/asset URLs under /public/... → real routes.
+    RewriteRule ^public/(.*)$ /$1 [L,R=301]
+    RewriteRule ^public$ / [L,R=301]
+
+    # Block sensitive Laravel paths that sit beside index.php when flattened.
+    RewriteRule ^(app|bootstrap|config|database|resources|routes|storage|tests|vendor)($|/) - [F,L]
+    RewriteRule ^(\.env|artisan|composer\.(json|lock)|phpunit\.xml|vite\.config\.js|package\.json|package-lock\.json|webpack\.mix\.js)($|/) - [F,L]
+
+    # Pass auth headers through to PHP (stripped by some proxies/hosts).
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    RewriteCond %{HTTP:x-xsrf-token} .
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
+    # Serve real public files as-is (CSS/JS/images/favicon/robots, etc.).
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # Remove trailing slash (skip real directories).
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} !^/$
+    RewriteRule ^(.*)/$ $1 [L,R=301]
+
+    # Front controller.
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    DirectoryIndex index.php
+    Options -Indexes
+</IfModule>
+
+# Deny direct access to .env even if rewrite is unavailable.
+<FilesMatch "^\.env">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>

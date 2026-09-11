@@ -1,0 +1,563 @@
+/*! Chilora Landing — modern kids sales page | v4 */
+:root {
+  --ink:        #0c1e36;
+  --sky:        #0284c7;
+  --sky-deep:   #0369a1;
+  --sky-soft:   #e0f2fe;
+  --blue:       #2563eb;
+  --emerald:    #10b981;
+  --emerald-soft:#ecfdf5;
+  --amber:      #f59e0b;
+  --amber-soft: #fffbeb;
+  --coral:      #ea580c;
+  --rose:       #f43f5e;
+  --rose-soft:  #fff1f2;
+  --line:       #dbeafe;
+  --muted:      #475569;
+  --card:       #ffffff;
+  --wa:         #25d366;
+  --shadow:     0 20px 50px rgba(2, 132, 199, .12);
+  --shadow-sm:  0 4px 20px rgba(2, 132, 199, .08);
+  --radius:     1.25rem;
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: "Plus Jakarta Sans", "Hind Siliguri", system-ui, sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse 70% 50% at 100% -5%, rgba(2, 132, 199, .14), transparent 55%),
+    radial-gradient(ellipse 60% 40% at -5% 20%, rgba(245, 158, 11, .10), transparent 50%),
+    linear-gradient(180deg, #f0f9ff 0%, #f8fcff 30%, #ffffff 65%);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display {
+  font-family: "Fredoka", "Hind Siliguri", sans-serif;
+  letter-spacing: -.02em;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Reveal Animations */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity .55s cubic-bezier(0.16, 1, 0.3, 1), transform .55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.is-visible { opacity: 1; transform: none; }
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Promo Top Marquee */
+.promo-marquee {
+  background: linear-gradient(90deg, #0369a1 0%, #0284c7 50%, #0369a1 100%);
+  letter-spacing: .02em;
+}
+.promo-item {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .85rem;
+  font-weight: 700;
+  color: #fff;
+}
+.promo-item svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Hero Section */
+.hero {
+  position: relative;
+  padding: 2.25rem 0 3rem;
+  overflow: hidden;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  top: -100px;
+  right: -60px;
+  width: 540px;
+  height: 540px;
+  background: radial-gradient(circle, rgba(2, 132, 199, .15), transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  border: 1.5px solid rgba(2, 132, 199, .3);
+  background: rgba(255, 255, 255, .95);
+  color: var(--sky-deep);
+  border-radius: 999px;
+  padding: .45rem 1.15rem;
+  font-size: .82rem;
+  font-weight: 800;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(2, 132, 199, .1);
+}
+.hero-badge svg {
+  width: 1.05rem;
+  height: 1.05rem;
+  color: var(--amber);
+}
+
+.price-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  border-radius: 999px;
+  padding: .55rem 1.15rem;
+  font-size: .92rem;
+  font-weight: 800;
+  color: var(--sky-deep);
+  background: linear-gradient(135deg, #ffffff, var(--sky-soft));
+  border: 1.5px solid rgba(2, 132, 199, .25);
+  box-shadow: var(--shadow-sm);
+}
+
+.phone-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  border-radius: 999px;
+  padding: .55rem 1.15rem;
+  font-size: .88rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1.5px solid var(--line);
+  text-decoration: none;
+  transition: all .2s ease;
+}
+.phone-chip:hover {
+  border-color: var(--sky);
+  color: var(--sky-deep);
+  transform: translateY(-1px);
+}
+.phone-chip svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--sky);
+}
+
+.cta-order {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .6rem;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #fff !important;
+  font-weight: 800;
+  border-radius: 1rem;
+  padding: 1rem 1.85rem;
+  font-size: 1.1rem;
+  text-decoration: none;
+  box-shadow: 0 12px 30px rgba(2, 132, 199, .38);
+  transition: all .2s ease;
+  border: 0;
+  cursor: pointer;
+}
+.cta-order:hover {
+  filter: brightness(1.08);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(2, 132, 199, .46);
+}
+.cta-order svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.cta-wrap {
+  display: inline-block;
+  padding: 8px;
+  border-radius: 1.35rem;
+  background: rgba(2, 132, 199, .1);
+}
+
+.product-shot {
+  border-radius: 1.35rem;
+  box-shadow: 0 24px 60px rgba(12, 30, 54, .14);
+  background: #fff;
+  border: 4px solid #fff;
+  transition: transform .3s ease;
+}
+.product-shot:hover {
+  transform: scale(1.02);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Trust Badges Bar */
+.trust-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem 1rem;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, .8);
+  backdrop-filter: blur(8px);
+}
+.trust-badge {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.trust-badge svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex-shrink: 0;
+  color: var(--sky);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Countdown Section */
+.countdown-section {
+  position: relative;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(2, 132, 199, .22), transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(245, 158, 11, .18), transparent 42%),
+    linear-gradient(135deg, #081e36 0%, #0d3257 50%, #061c33 100%);
+  color: #fff;
+  padding: 3.5rem 0;
+  overflow: hidden;
+}
+.countdown-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='1.2' fill='%23fff' fill-opacity='.06'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+.countdown-cell {
+  background: rgba(255, 255, 255, .1);
+  border: 1px solid rgba(255, 255, 255, .18);
+  color: #fff;
+  border-radius: 1.15rem;
+  min-width: 5.25rem;
+  padding: .95rem .75rem;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .25);
+  text-align: center;
+}
+@media (min-width: 640px) {
+  .countdown-cell {
+    min-width: 6rem;
+    padding: 1.15rem .95rem;
+  }
+}
+.countdown-cell .font-display {
+  color: #fff;
+  font-size: 2.25rem;
+  line-height: 1;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Feature Cards */
+.feature-card {
+  position: relative;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: #ffffff;
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px rgba(2, 132, 199, .06);
+  transition: all .25s ease;
+  overflow: hidden;
+}
+.feature-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--sky), var(--amber));
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+.feature-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(2, 132, 199, .4);
+  box-shadow: var(--shadow);
+}
+.feature-card:hover::before {
+  opacity: 1;
+}
+.feature-icon-badge {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: .85rem;
+  background: linear-gradient(135deg, var(--sky-soft), #fff);
+  border: 1px solid rgba(2, 132, 199, .2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sky-deep);
+  margin-bottom: .9rem;
+}
+.feature-icon-badge svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Benefits (Why) Section */
+.benefit-card {
+  position: relative;
+  display: flex;
+  gap: 1.15rem;
+  border-radius: var(--radius);
+  padding: 1.45rem 1.35rem;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 16px rgba(2, 132, 199, .05);
+  transition: all .25s ease;
+}
+.benefit-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(2, 132, 199, .35);
+  box-shadow: var(--shadow);
+}
+.benefit-icon {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 1rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--sky-soft), #ffffff);
+  border: 1.5px solid rgba(2, 132, 199, .25);
+  color: var(--sky-deep);
+  box-shadow: 0 6px 16px rgba(2, 132, 199, .12);
+}
+.benefit-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Reviews Section */
+.review-rail {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  display: flex;
+  gap: 1.15rem;
+  padding-bottom: .85rem;
+}
+.review-rail::-webkit-scrollbar { height: 5px; }
+.review-rail::-webkit-scrollbar-thumb {
+  background: rgba(2, 132, 199, .35);
+  border-radius: 999px;
+}
+.review-card {
+  scroll-snap-align: start;
+  flex: 0 0 min(82vw, 320px);
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(12, 30, 54, .06);
+  transition: all .25s ease;
+}
+.review-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px rgba(2, 132, 199, .12);
+}
+.stars {
+  display: flex;
+  gap: 2px;
+  margin-bottom: .45rem;
+}
+.stars svg {
+  width: 1rem;
+  height: 1rem;
+  fill: var(--amber);
+  color: var(--amber);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Call CTA Section */
+.call-cta-section {
+  position: relative;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 40%, #0f766e 100%);
+  color: #fff;
+  padding: 3.5rem 0;
+  overflow: hidden;
+}
+.call-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .65rem;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 1rem 2.25rem;
+  font-size: 1.5rem;
+  font-weight: 800;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .2);
+  text-decoration: none;
+  transition: all .2s ease;
+}
+.call-cta-btn:hover {
+  transform: scale(1.04);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .28);
+}
+.call-cta-btn svg {
+  width: 1.6rem;
+  height: 1.6rem;
+  color: var(--sky);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Order Checkout Panel */
+.order-panel {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 60px rgba(12, 30, 54, .09);
+  border-radius: 1.5rem;
+}
+.qty-btn {
+  height: 2.5rem;
+  width: 2.5rem;
+  border-radius: .75rem;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  font-weight: 800;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.qty-btn:hover {
+  border-color: var(--sky);
+  color: var(--sky-deep);
+  background: var(--sky-soft);
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Toast */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  z-index: 80;
+  transform: translate(-50%, 120%);
+  opacity: 0;
+  transition: .3s ease;
+}
+.toast.show {
+  transform: translate(-50%, 0);
+  opacity: 1;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Back to top */
+.back-top {
+  position: fixed;
+  right: 1.15rem;
+  bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  z-index: 70;
+  opacity: 0;
+  pointer-events: none;
+  transition: .25s ease;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  border: 0;
+  background: var(--sky-deep);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(2, 132, 199, .3);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.back-top.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ WhatsApp FAB */
+.whatsapp-fab {
+  position: fixed;
+  right: 1.15rem;
+  bottom: calc(1.15rem + env(safe-area-inset-bottom, 0px));
+  z-index: 70;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: var(--wa);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 8px 24px rgba(37, 211, 102, .45);
+  transition: transform .2s ease, box-shadow .2s ease;
+  text-decoration: none;
+}
+.whatsapp-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 12px 30px rgba(37, 211, 102, .55);
+}
+.whatsapp-fab svg {
+  width: 1.75rem;
+  height: 1.75rem;
+  display: block;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ Mobile Sticky CTA Bar */
+.mobile-cta {
+  display: none;
+}
+@media (max-width: 767px) {
+  .mobile-cta {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    gap: .75rem;
+    align-items: center;
+    padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 255, 255, .95);
+    border-top: 1px solid var(--line);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 -8px 30px rgba(12, 30, 54, .1);
+  }
+  .mobile-cta .price {
+    flex: 1;
+    min-width: 0;
+  }
+  .mobile-cta .price strong {
+    display: block;
+    color: var(--sky-deep);
+    font-size: 1.1rem;
+    font-weight: 800;
+  }
+  .mobile-cta .price span {
+    font-size: .75rem;
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+  .mobile-cta .btn-primary,
+  .mobile-cta .cta-order {
+    flex-shrink: 0;
+    padding: .85rem 1.25rem;
+    font-size: .92rem;
+    border-radius: .85rem;
+  }
+  body.has-mobile-cta {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
+  body.has-mobile-cta .whatsapp-fab {
+    bottom: calc(5.2rem + env(safe-area-inset-bottom, 0px));
+  }
+  body.has-mobile-cta .back-top {
+    bottom: calc(9.6rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+}

@@ -1,0 +1,106 @@
+.storefront-theme-root {
+  font-family: var(--theme-body-font, inherit) !important;
+  color: var(--theme-body-color, inherit);
+  font-size: var(--theme-body-size, inherit);
+  font-weight: var(--theme-body-weight, inherit);
+  font-style: var(--theme-body-style, normal);
+  text-transform: var(--theme-body-transform, none);
+}
+
+.storefront-theme-root .storefront-header-area,
+.storefront-theme-root .storefront-header-area a,
+.storefront-theme-root .storefront-header-area button,
+.storefront-theme-root .storefront-header-area input,
+.storefront-theme-root .storefront-header-area select {
+  font-family: var(--theme-header-font, inherit) !important;
+  color: var(--theme-header-color, inherit);
+  font-size: var(--theme-header-size, inherit);
+  font-weight: var(--theme-header-weight, inherit);
+  font-style: var(--theme-header-style, normal);
+  text-transform: var(--theme-header-transform, none);
+}
+
+.storefront-theme-root .storefront-hero-section,
+.storefront-theme-root .storefront-hero-section h1,
+.storefront-theme-root .storefront-hero-section h2,
+.storefront-theme-root .storefront-hero-section p,
+.storefront-theme-root .storefront-hero-section a {
+  font-family: var(--theme-hero-font, inherit) !important;
+  color: var(--theme-hero-color, inherit);
+  font-size: var(--theme-hero-size, inherit);
+  font-weight: var(--theme-hero-weight, inherit);
+  font-style: var(--theme-hero-style, normal);
+  text-transform: var(--theme-hero-transform, none);
+}
+
+.storefront-theme-root .storefront-section h1,
+.storefront-theme-root .storefront-section h2,
+.storefront-theme-root .storefront-section h3,
+.storefront-theme-root .template-1-section-head h2,
+.storefront-theme-root .storefront-shop-page h1,
+.storefront-theme-root .storefront-product-page h1,
+.storefront-theme-root .storefront-product-page h2,
+.storefront-theme-root .storefront-product-page h3 {
+  font-family: var(--theme-section-font, inherit) !important;
+  color: var(--theme-section-color, inherit) !important;
+  font-size: var(--theme-section-size, inherit) !important;
+  font-weight: var(--theme-section-weight, inherit) !important;
+  font-style: var(--theme-section-style, normal) !important;
+  text-transform: var(--theme-section-transform, none) !important;
+}
+
+.storefront-theme-root .storefront-product-card,
+.storefront-theme-root .storefront-product-card .storefront-product-title,
+.storefront-theme-root .storefront-product-card .storefront-product-price,
+.storefront-theme-root .storefront-product-card .storefront-product-compare-price,
+.storefront-theme-root .storefront-product-card .product-card-category {
+  font-family: var(--theme-product-font, inherit) !important;
+  color: var(--theme-product-color, inherit);
+  font-size: var(--theme-product-size, inherit);
+  font-weight: var(--theme-product-weight, inherit);
+  font-style: var(--theme-product-style, normal);
+  text-transform: var(--theme-product-transform, none);
+}
+
+.storefront-theme-root .storefront-product-card .storefront-product-price {
+  display: inline !important;
+}
+
+.storefront-theme-root .storefront-main-area button,
+.storefront-theme-root .storefront-main-area [type="submit"],
+.storefront-theme-root .storefront-main-area .storefront-product-button,
+.storefront-theme-root .template-1-footer button,
+.storefront-theme-root .template-1-footer [type="submit"] {
+  font-family: var(--theme-button-font, inherit) !important;
+  color: var(--theme-button-color, inherit) !important;
+  font-size: var(--theme-button-size, inherit) !important;
+  font-weight: var(--theme-button-weight, inherit) !important;
+  font-style: var(--theme-button-style, normal) !important;
+  text-transform: var(--theme-button-transform, none) !important;
+}
+
+.storefront-theme-root .template-1-hero-content a,
+.storefront-theme-root .template-1-banner-overlay b,
+.storefront-theme-root .template-1-filter-buttons button,
+.storefront-theme-root .template-1-empty a,
+.storefront-theme-root .template-1-newsletter button {
+  color: var(--theme-button-color, inherit) !important;
+}
+
+.storefront-theme-root .storefront-footer-area,
+.storefront-theme-root .storefront-footer-area p,
+.storefront-theme-root .storefront-footer-area a,
+.storefront-theme-root .storefront-footer-area h4,
+.storefront-theme-root .storefront-footer-area input,
+.storefront-theme-root .storefront-footer-area button {
+  font-family: var(--theme-footer-font, inherit) !important;
+  color: var(--theme-footer-color, inherit) !important;
+  font-size: var(--theme-footer-size, inherit);
+  font-weight: var(--theme-footer-weight, inherit);
+  font-style: var(--theme-footer-style, normal);
+  text-transform: var(--theme-footer-transform, none);
+}
+
+.storefront-theme-root .template-1-footer h4 {
+  color: var(--theme-footer-color, #fff) !important;
+}

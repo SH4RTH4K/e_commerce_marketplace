@@ -1,0 +1,13 @@
+* text=auto eol=lf
+*.php text eol=lf diff=php
+*.js text eol=lf diff=javascript
+*.jsx text eol=lf diff=javascript
+*.json text eol=lf diff=json
+*.blade.php text eol=lf diff=html
+*.css text eol=lf diff=css
+*.html text eol=lf diff=html
+*.md text eol=lf diff=markdown
+
+/.github export-ignore
+CHANGELOG.md export-ignore
+.styleci.yml export-ignore

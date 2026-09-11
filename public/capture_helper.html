@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body, html { margin: 0; padding: 0; width: 1920px; overflow: hidden; }
+  iframe { width: 1920px; border: none; overflow: hidden; display: block; }
+</style>
+</head>
+<body>
+<iframe id="f" src="/" scrolling="no"></iframe>
+<script>
+  window.onload = () => {
+    setTimeout(() => {
+      const f = document.getElementById('f');
+      const doc = f.contentDocument || f.contentWindow.document;
+      // Get the true height of the content
+      const height = Math.max(doc.body.scrollHeight, doc.documentElement.scrollHeight, doc.body.offsetHeight, doc.documentElement.offsetHeight);
+      f.style.height = height + 'px';
+      // Signal ready by changing document title to the height
+      document.title = "HEIGHT:" + height;
+    }, 1000); // Wait for images/fonts to load
+  };
+</script>
+</body>
+</html>

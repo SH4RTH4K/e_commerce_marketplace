@@ -1,0 +1,475 @@
+/* =========================================================================
+   SHOPZY — Online Marketplace Theme
+   Hand-written styles & animations (100% original)
+   Vivid orange dense marketplace look. Works alongside Tailwind CSS.
+   MIT-style license — you own this code.
+   ========================================================================= */
+
+:root {
+  --brand: #f15a24;
+  --brand-600: #e04708;
+  --ink: #1f2430;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+html {
+  scroll-behavior: smooth;
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+body {
+  font-family: 'Mulish', ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+  background: #f3f4f6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* hostfix: constrain media; never let product images use natural height */
+img, svg, video { max-width: 100%; height: auto; }
+.product-card .product-img,
+#heroSlider [data-slide] img,
+.hero-slide img {
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: block;
+}
+
+.font-display { font-family: 'Outfit', 'Mulish', sans-serif; }
+
+::selection { background: var(--brand); color: #fff; }
+
+/* ---------- Scrollbar ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #e7e9ee; }
+::-webkit-scrollbar-thumb { background: #c7ccd6; border-radius: 999px; border: 2px solid #e7e9ee; }
+::-webkit-scrollbar-thumb:hover { background: var(--brand); }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ---------- Reveal ---------- */
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity .55s cubic-bezier(.2,.7,.2,1), transform .55s cubic-bezier(.2,.7,.2,1); }
+.reveal.in-view { opacity: 1; transform: none; }
+.reveal-delay-1 { transition-delay: .05s; }
+.reveal-delay-2 { transition-delay: .1s; }
+.reveal-delay-3 { transition-delay: .15s; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+
+/* ---------- Product card (compact) ---------- */
+.product-card { transition: transform .25s ease, box-shadow .25s ease; min-width: 0; width: 100%; }
+.product-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px -24px rgba(31,36,48,.4); }
+.product-card .product-img { transition: transform .5s cubic-bezier(.2,.7,.2,1); display: block; max-width: 100%; width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; }
+.product-card:hover .product-img { transform: scale(1.06); }
+.product-card .quick { opacity: 0; transition: opacity .25s ease; }
+.product-card:hover .quick { opacity: 1; }
+
+/* ---------- Wishlist ---------- */
+.wish-btn.is-active { background: var(--brand); color: #fff; }
+.wish-btn.is-active svg { fill: currentColor; }
+
+/* ---------- Sold bar ---------- */
+.sold-track { background: rgba(255,255,255,.35); border-radius: 999px; overflow: hidden; height: 14px; position: relative; }
+.sold-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #fde68a, #f59e0b); }
+.sold-track.dark { background: #ffe4d3; }
+
+/* ---------- Header on scroll ---------- */
+.site-header {
+  overflow: visible;
+  transition: box-shadow .3s ease;
+}
+.site-header.scrolled { box-shadow: 0 8px 26px -16px rgba(31,36,48,.4); }
+
+/* ---------- Account dropdown ---------- */
+.account-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 0.5rem;
+  width: min(18rem, calc(100vw - 1.5rem));
+  max-width: calc(100vw - 1.5rem);
+  z-index: 60;
+}
+
+/* ---------- Hero slider (swipe / drag track — DP-Site style) ---------- */
+.hero-slider {
+  touch-action: pan-y pinch-zoom;
+  cursor: grab;
+  min-height: 340px;
+}
+@media (min-width: 1024px) {
+  .hero-slider {
+    min-height: 340px;
+    height: 100%;
+  }
+  .hero-feature-stack {
+    height: 100%;
+    min-height: 340px;
+  }
+}
+.hero-slider.is-grabbing { cursor: grabbing; }
+.hero-track {
+  display: flex;
+  height: 100%;
+  min-height: inherit;
+  transition: transform .5s cubic-bezier(.25, .46, .45, .94);
+  will-change: transform;
+}
+.hero-track.is-dragging { transition: none; }
+.hero-slide {
+  position: relative;
+  flex: 0 0 100%;
+  width: 100%;
+  min-height: inherit;
+  overflow: hidden;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 0.375rem;
+  row-gap: 0.5rem;
+  align-items: start;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.product-grid > * {
+  min-width: 0;
+  max-width: 100%;
+}
+@media (min-width: 640px) {
+  .product-grid {
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+}
+@media (min-width: 1024px) {
+  .product-grid { gap: 0.75rem; }
+}
+
+/* Flash Sale — 5 items in one horizontal row */
+.flash-row {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.125rem;
+}
+.flash-row__item {
+  flex: 0 0 calc((100% - 0.5rem) / 2.15);
+  min-width: 0;
+  scroll-snap-align: start;
+}
+.flash-row__item > .product-card {
+  height: 100%;
+}
+@media (min-width: 640px) {
+  .flash-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.75rem;
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
+  .flash-row__item {
+    flex: none;
+    width: auto;
+    max-width: none;
+  }
+}
+@media (min-width: 1024px) {
+  .flash-row { gap: 0.75rem; }
+}
+
+/* ---------- Buttons ---------- */
+.btn-shine { position: relative; overflow: hidden; }
+.btn-shine::after { content: ""; position: absolute; top: 0; left: -120%; width: 60%; height: 100%; background: linear-gradient(120deg, transparent, rgba(255,255,255,.4), transparent); transform: skewX(-20deg); }
+.btn-shine:hover::after { left: 130%; transition: left .8s ease; }
+
+/* ---------- Cart badge ---------- */
+.cart-count.bump { animation: bump .4s ease; }
+@keyframes bump { 0%{transform:scale(1)} 50%{transform:scale(1.4)} 100%{transform:scale(1)} }
+
+/* ---------- Flash countdown chips ---------- */
+.cd-chip { background: var(--ink); color: #fff; border-radius: .375rem; }
+
+/* ---------- Category circle ---------- */
+.cat-circle { transition: transform .25s ease; }
+.cat-circle:hover { transform: translateY(-4px); }
+.cat-circle:hover .cat-circle-img { box-shadow: 0 14px 26px -16px rgba(241,90,36,.7); }
+.cat-circle-img { transition: box-shadow .25s ease; }
+
+/* ---------- Category list (hero) ---------- */
+.cat-link { transition: background-color .2s ease, color .2s ease; }
+.cat-link:hover { background: #fff4ec; color: var(--brand); }
+
+/* ---------- Marquee ---------- */
+.marquee { overflow: hidden; }
+.marquee__track { display: flex; width: max-content; animation: marquee 28s linear infinite; }
+.marquee:hover .marquee__track { animation-play-state: paused; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* ---------- Drawers / overlay / menu ---------- */
+.drawer { transition: transform .42s cubic-bezier(.4,0,.2,1); }
+.overlay { transition: opacity .35s ease; }
+.mobile-menu { transition: transform .4s cubic-bezier(.4,0,.2,1); }
+.filter-panel { transition: transform .4s cubic-bezier(.4,0,.2,1); }
+
+/* ---------- Accordion ---------- */
+.acc-body { max-height: 0; overflow: hidden; transition: max-height .4s ease; }
+
+/* ---------- Range slider ---------- */
+input[type="range"].brand-range { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 999px; background: #dfe3ea; outline: none; }
+input[type="range"].brand-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--brand); cursor: pointer; box-shadow: 0 0 0 4px rgba(241,90,36,.2); }
+input[type="range"].brand-range::-moz-range-thumb { width: 18px; height: 18px; border: none; border-radius: 50%; background: var(--brand); cursor: pointer; }
+
+/* ---------- Stars ---------- */
+.stars { color: #f59e0b; letter-spacing: 1px; }
+
+/* ---------- Toast ---------- */
+.toast { transition: transform .4s cubic-bezier(.2,.8,.2,1), opacity .4s ease; }
+
+/* ---------- Misc ---------- */
+body.no-scroll { overflow: hidden; }
+/* Children use pointer-events:auto — must disable them too or they steal taps over the drawer footer */
+body.cart-drawer-open .floating-chat,
+body.cart-drawer-open .floating-chat * {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+body.cart-drawer-open #backToTop {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Price: never split currency from digits; keep card rows aligned on phone */
+.product-card-price,
+.product-card .pc-price,
+.product-card .pc-price-was,
+.product-card .dn-price,
+.product-card .dn-price-was,
+.product-card .sh-price,
+.product-card .sh-price-was,
+.product-card .dm-price,
+.product-card .dm-price-was,
+.product-card .fk-price,
+.product-card .fk-price-was,
+.product-card .rw-price,
+.product-card .rw-price-was,
+.product-card .hl-price,
+.product-card .hl-price-was,
+.product-card .nr-price,
+.product-card .nr-price-was,
+.product-card .tz-price {
+  white-space: nowrap !important;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+.product-card-price {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  column-gap: 0.375rem;
+  row-gap: 0.125rem;
+  min-height: 1.25rem;
+}
+@media (max-width: 640px) {
+  .product-card-price > span {
+    white-space: nowrap !important;
+    display: inline !important;
+    max-width: none !important;
+  }
+  .product-card-price > span:first-child {
+    font-size: 0.8125rem;
+    flex: 0 0 auto;
+  }
+  .product-card-price > span:last-child:not(:only-child) {
+    font-size: 0.6875rem;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  .account-dropdown,
+  [data-account-dropdown] {
+    position: fixed !important;
+    left: 0.75rem !important;
+    right: 0.75rem !important;
+    top: calc(4.75rem + env(safe-area-inset-top, 0px)) !important;
+    width: auto !important;
+    max-width: none !important;
+    margin-top: 0 !important;
+    z-index: 60 !important;
+  }
+}
+
+/* WaveSeller developer credit — high visibility strip */
+.ws-dev-credit {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.95rem 1rem;
+  background: #020617;
+  color: #f8fafc;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+  border-top: 3px solid #38bdf8;
+}
+.ws-dev-credit strong {
+  color: #38bdf8;
+  font-weight: 800;
+  font-size: 1.05rem;
+  margin-left: 0.25rem;
+  letter-spacing: 0.02em;
+}
+@media (max-width: 640px) {
+  .ws-dev-credit {
+    font-size: 0.9rem;
+    padding: 1rem 0.75rem;
+  }
+  .ws-dev-credit strong {
+    font-size: 1rem;
+  }
+}
+
+/* ---------- Floating chat + back-to-top (DP-Site method) ---------- */
+:root {
+  --floating-action-right: max(1.25rem, env(safe-area-inset-right, 0px));
+  --floating-action-bottom: max(1.125rem, env(safe-area-inset-bottom, 0px));
+  --floating-action-size: 3.25rem;
+  --floating-action-gap: 0.75rem;
+  --floating-action-shadow: 0 18px 40px -14px rgba(20, 20, 20, 0.4);
+  --floating-chat-brand: var(--brand, #f15a24);
+}
+
+#backToTop {
+  transition: opacity .2s ease, background .15s ease, bottom .2s ease, right .2s ease, width .2s ease, height .2s ease !important;
+}
+.floating-chat {
+  position: fixed;
+  right: var(--floating-action-right);
+  bottom: var(--floating-action-bottom);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.625rem;
+  pointer-events: none;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+.floating-chat__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.85) translateY(0.5rem);
+  pointer-events: none;
+  transition: opacity .22s ease, transform .22s ease, visibility .22s ease;
+}
+.floating-chat__actions.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1) translateY(0);
+  pointer-events: auto;
+}
+.floating-chat__btn,
+.floating-chat__trigger {
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  pointer-events: auto;
+  color: #fff;
+  box-shadow: var(--floating-action-shadow);
+  transition: transform .15s ease, filter .15s ease, background .15s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.floating-chat__btn {
+  width: 3rem;
+  height: 3rem;
+  min-width: 44px;
+  min-height: 44px;
+}
+.floating-chat__trigger {
+  width: var(--floating-action-size);
+  height: var(--floating-action-size);
+  min-width: 48px;
+  min-height: 48px;
+  background: var(--floating-chat-brand);
+}
+.floating-chat__btn--whatsapp { background: #16a34a; }
+.floating-chat__btn--messenger { background: #2563eb; }
+@media (hover: hover) {
+  .floating-chat__btn:hover,
+  .floating-chat__trigger:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.06);
+  }
+}
+.floating-chat__icon { grid-area: 1 / 1; }
+.floating-chat__icon--close { display: none; }
+.floating-chat__trigger[aria-expanded="true"] .floating-chat__icon--open { display: none; }
+.floating-chat__trigger[aria-expanded="true"] .floating-chat__icon--close { display: block; }
+
+body.has-floating-chat #backToTop {
+  right: var(--floating-action-right) !important;
+  bottom: calc(var(--floating-action-bottom) + var(--floating-action-size) + var(--floating-action-gap)) !important;
+  width: var(--floating-action-size) !important;
+  height: var(--floating-action-size) !important;
+  z-index: 36 !important;
+}
+body.floating-chat-open #backToTop {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+@media (max-width: 480px) {
+  :root {
+    --floating-action-right: max(1rem, env(safe-area-inset-right, 0px));
+    --floating-action-size: 3.125rem;
+  }
+  .floating-chat__btn { width: 2.75rem; height: 2.75rem; }
+  .floating-chat__btn svg { width: 1.25rem; height: 1.25rem; }
+}
+
+/* hostfix: hero layout — works if Tailwind CDN utilities fail */
+.hero-home-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  align-items: stretch;
+}
+.hero-cats-desktop { display: none; }
+.hero-feature-stack { display: none; }
+.hero-feature-mobile { display: grid; }
+@media (min-width: 1024px) {
+  .hero-home-grid.has-cats.has-features { grid-template-columns: 220px minmax(0, 1fr) 240px; }
+  .hero-home-grid.has-cats:not(.has-features) { grid-template-columns: 220px minmax(0, 1fr); }
+  .hero-home-grid.has-features:not(.has-cats) { grid-template-columns: minmax(0, 1fr) 240px; }
+  .hero-cats-desktop { display: block; }
+  .hero-feature-stack { display: flex; flex-direction: column; }
+  .hero-feature-mobile { display: none !important; }
+}
