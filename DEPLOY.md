@@ -25,8 +25,8 @@
 | Laravel application | Project root | Storefront, API, and admin panel |
 | Production assets | `public/build/` | Pre-built JavaScript and CSS |
 | Uploaded media | `public/uploads/` | Existing product and site images |
-| Database dump | `database/shopzy_full.sql` | Database structure and demo data |
-| Environment template | `.env.production` | Production configuration template |
+| Database setup | `database/migrations/` | Reproducible schema via Laravel migrations |
+| Environment template | `.env.production.example` | Production configuration template |
 
 ## ✅ Before you begin
 
@@ -44,7 +44,7 @@ Make sure your hosting account provides:
 | :---: | :--- | :--- |
 | 01 | [Upload the application](#01--upload-and-extract) | Project files are on the server |
 | 02 | [Create a database](#02--create-the-database) | Database and user are ready |
-| 03 | [Import the data](#03--import-the-database) | Tables and demo data are loaded |
+| 03 | [Prepare the database](#03--prepare-the-database) | Tables are created from migrations |
 | 04 | [Configure the environment](#04--configure-the-environment) | Laravel can connect to production services |
 | 05 | [Prepare Laravel](#05--prepare-laravel) | Key, links, and caches are ready |
 | 06 | [Set permissions](#06--set-file-permissions) | Writable directories work correctly |
@@ -57,7 +57,7 @@ Make sure your hosting account provides:
 
 1. Sign in to **cPanel → File Manager**.
 2. Open `public_html/`, or the document folder assigned to your domain.
-3. Select **Upload** and upload `shopzy-production.zip`.
+3. Select **Upload** and upload an application archive created from this repository.
 4. Right-click the archive, select **Extract**, and extract it into `public_html/`.
 
 Your directory should look like this:
@@ -65,7 +65,7 @@ Your directory should look like this:
 ```text
 public_html/
 |-- .htaccess           # Root redirect; do not delete
-|-- .env.production     # Rename to .env in Step 04
+|-- .env.production.example # Copy to .env in Step 04
 |-- app/
 |-- artisan
 |-- bootstrap/
@@ -97,22 +97,20 @@ Keep the database name, username, and password nearby. You will add them to `.en
 
 ---
 
-## 03 · Import the database
+## 03 · Prepare the database
 
-1. Open **cPanel → phpMyAdmin**.
-2. Select the new database in the left sidebar.
-3. Open the **Import** tab.
-4. Choose `database/shopzy_full.sql` from the extracted application.
-5. Select **Go** and wait for the success message.
+The repository uses Laravel migrations as the source of truth for the production schema.
+After configuring `.env`, run the migration command in Step 05. It creates the required
+tables in the database you created above.
 
 > [!NOTE]
-> Large SQL imports may exceed the hosting upload limit. If that happens, ask the hosting provider to import the file or use MySQL through SSH.
+> Do not publish database dumps, customer data, credentials, or local backup archives in GitHub.
 
 ---
 
 ## 04 · Configure the environment
 
-In File Manager, rename `.env.production` to `.env`. Open it and replace every value marked `← EDIT`.
+In File Manager, copy `.env.production.example` to `.env`. Open it and replace every value marked `← EDIT`.
 
 ```dotenv
 APP_NAME="Shopzy"
