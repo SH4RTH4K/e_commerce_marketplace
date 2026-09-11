@@ -9,6 +9,7 @@ use App\Jobs\Dropshipping\SyncSupplierCatalogPage;
 use App\Jobs\Dropshipping\TestSupplierConnection;
 use App\Models\DropshipSupplier;
 use App\Models\DropshipDriverProfile;
+use App\Models\DropshipProductLink;
 use App\Models\DropshipSupplierCategory;
 use App\Models\DropshipSupplierProduct;
 use App\Models\DropshipSupplierVariant;
