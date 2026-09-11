@@ -11,6 +11,14 @@ export default function LoginPage() {
 
   const submit = (e) => {
     e.preventDefault();
+
+    // Make the common admin mistake recoverable: the storefront form is
+    // email-based, while the admin portal uses the username "admin".
+    if (data.email.trim().toLowerCase() === 'admin') {
+      window.location.assign('/admin/login');
+      return;
+    }
+
     post('/login');
   };
 
@@ -41,7 +49,8 @@ export default function LoginPage() {
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wide">Email Address</label>
               <input
-                type="email"
+                type="text"
+                inputMode="email"
                 required
                 autoFocus
                 value={data.email}
@@ -54,6 +63,9 @@ export default function LoginPage() {
                 placeholder="you@example.com"
               />
               {errors.email && <p className="mt-1.5 text-xs font-bold text-red-500">{errors.email}</p>}
+              <p className="mt-1.5 text-xs text-gray-400">
+                Administrator? Use the <Link href="/admin/login" className="font-bold text-[#f15a24] hover:text-[#d94a1a]">Admin Login</Link> with username <code className="font-semibold">admin</code>.
+              </p>
             </div>
 
             <div>

@@ -43,12 +43,31 @@ class HomeController extends Controller
 
         $banners = fn (string $placement) => Banner::active()
             ->placement($placement)
+            ->with('product:id,name,slug,is_published')
             ->orderBy('position')
             ->orderBy('id');
 
+        $bannerPayload = fn (string $placement) => $banners($placement)->get()->map(fn (Banner $banner) => [
+            'id' => $banner->id,
+            'title' => $banner->title,
+            'subtitle' => $banner->subtitle,
+            'badge' => $banner->badge,
+            'image' => $banner->image,
+            'button' => $banner->button_text,
+            'button_text' => $banner->button_text,
+            'link' => $banner->linkHref(),
+            'link_url' => $banner->link_url,
+            'product' => $banner->product ? [
+                'id' => $banner->product->id,
+                'name' => $banner->product->name,
+                'slug' => $banner->product->slug,
+            ] : null,
+            'style' => $banner->style,
+        ]);
+
         return Inertia::render('Storefront/Home', [
-            'heroBanners'     => $banners('hero')->get(),
-            'middleBanners'   => $banners('middle')->get(),
+            'heroBanners'     => $bannerPayload('hero'),
+            'middleBanners'   => $bannerPayload('middle'),
             'features'        => Feature::where('is_active', true)->orderBy('position')->get(),
             'featuredCategories' => $categories,
             'coupons'         => Coupon::query()

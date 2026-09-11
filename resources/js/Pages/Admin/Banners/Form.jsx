@@ -15,13 +15,14 @@ function Field({ label, error, children, required }) {
   );
 }
 
-export default function BannerForm({ banner, placements, styles }) {
+export default function BannerForm({ banner, placements, styles, products = [] }) {
   const isEdit = !!banner.id;
   const [submitting, setSubmitting] = useState(false);
   const { data, setData, processing, errors } = useForm({
     title: banner.title || '',
     subtitle: banner.subtitle || '',
     badge: banner.badge || '',
+    product_id: banner.product_id || '',
     link_url: banner.link_url || '',
     button_text: banner.button_text || '',
     placement: banner.placement || 'hero',
@@ -82,7 +83,18 @@ export default function BannerForm({ banner, placements, styles }) {
               <Field label="Badge" error={errors.badge}><input value={data.badge} onChange={e => setData('badge', e.target.value)} className={inputClass} placeholder="e.g. NEW" /></Field>
               <Field label="Button Text" error={errors.button_text}><input value={data.button_text} onChange={e => setData('button_text', e.target.value)} className={inputClass} /></Field>
             </div>
-            <Field label="Link URL" error={errors.link_url}><input value={data.link_url} onChange={e => setData('link_url', e.target.value)} className={inputClass} placeholder="/shop or https://..." /></Field>
+            <Field label="Related Product" error={errors.product_id}>
+              <select value={data.product_id} onChange={e => setData('product_id', e.target.value)} className={inputClass}>
+                <option value="">No product link</option>
+                {products.map(product => (
+                  <option key={product.id} value={product.id}>
+                    {product.name}{product.is_published ? '' : ' (unpublished)'}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-400">When selected, the banner button opens this product page. The custom URL is used only when no product is selected.</p>
+            </Field>
+            <Field label="Fallback Link URL" error={errors.link_url}><input value={data.link_url} onChange={e => setData('link_url', e.target.value)} className={inputClass} placeholder="/shop or https://..." /></Field>
             <div className="grid grid-cols-3 gap-4">
               <Field label="Placement" required error={errors.placement}>
                 <select value={data.placement} onChange={e => setData('placement', e.target.value)} className={inputClass}>

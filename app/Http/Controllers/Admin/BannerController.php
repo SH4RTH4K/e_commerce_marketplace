@@ -7,6 +7,7 @@ use Inertia\Inertia;
 
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
+use App\Models\Product;
 use App\Support\PublicUploader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -29,6 +30,7 @@ class BannerController extends Controller
             'banner'     => new Banner(['is_active' => true, 'placement' => 'hero', 'style' => 'brand', 'position' => 0]),
             'placements' => Banner::PLACEMENTS,
             'styles'     => Banner::STYLES,
+            'products'   => $this->bannerProducts(),
         ]);
     }
 
@@ -50,6 +52,7 @@ class BannerController extends Controller
             'banner'     => $banner,
             'placements' => Banner::PLACEMENTS,
             'styles'     => Banner::STYLES,
+            'products'   => $this->bannerProducts(),
         ]);
     }
 
@@ -86,7 +89,8 @@ class BannerController extends Controller
             'title'       => ['nullable', 'string', 'max:180'],
             'subtitle'    => ['nullable', 'string', 'max:400'],
             'badge'       => ['nullable', 'string', 'max:60'],
-            'link_url'    => ['nullable', 'url', 'max:255'],
+            'link_url'    => ['nullable', 'string', 'max:255', 'regex:#^(?:https?://[^\s]+|/[^\s]*)$#i'],
+            'product_id'  => ['nullable', 'integer', 'exists:products,id'],
             'button_text' => ['nullable', 'string', 'max:60'],
             'placement'   => ['required', 'in:' . implode(',', array_keys(Banner::PLACEMENTS))],
             'style'       => ['required', 'in:' . implode(',', array_keys(Banner::STYLES))],
@@ -145,5 +149,12 @@ class BannerController extends Controller
         }
 
         return $data;
+    }
+
+    private function bannerProducts()
+    {
+        return Product::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'is_published', 'regular_price', 'sale_price']);
     }
 }

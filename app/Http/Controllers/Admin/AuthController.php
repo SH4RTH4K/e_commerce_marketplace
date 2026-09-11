@@ -28,14 +28,14 @@ class AuthController extends Controller
 
         $login = trim($credentials['username']);
 
-        // Usernames are the primary admin credential. The email fallback keeps existing
-        // staff accounts usable until each account has been assigned a username.
+        // Admin authentication is intentionally username-only. The email address is
+        // used internally by Laravel's provider after the matching username is found;
+        // it is never accepted as admin login input.
         $user = User::query()
-            ->whereIn('role', User::STAFF_ROLES)
-            ->where(function ($query) use ($login) {
-                $query->where('username', $login)
-                    ->orWhere('email', $login);
-            })
+            // Keep legacy cPanel accounts usable when role values were
+            // entered with different casing or accidental whitespace.
+            ->whereRaw('LOWER(TRIM(role)) IN ('.implode(',', array_fill(0, count(User::STAFF_ROLES), '?')).')', User::STAFF_ROLES)
+            ->where('username', $login)
             ->first();
 
         $attempted = $user && Auth::attempt([

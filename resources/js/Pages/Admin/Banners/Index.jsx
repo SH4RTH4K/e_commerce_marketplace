@@ -46,6 +46,7 @@ export default function BannersIndex({ banners, placements }) {
                           <div>
                             <p className="font-semibold text-gray-800">{banner.title || '—'}</p>
                             {banner.subtitle && <p className="text-xs text-gray-400 truncate max-w-[200px]">{banner.subtitle}</p>}
+                            {banner.product_id && <p className="text-xs text-orange-500 truncate max-w-[200px]">Product link attached</p>}
                           </div>
                         </div>
                       </td>

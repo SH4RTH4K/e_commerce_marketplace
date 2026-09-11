@@ -79,12 +79,15 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        return $this->role === 'admin';
+        // Older cPanel databases may contain values such as "Admin" or
+        // "admin " after a manual import. Treat those as the same role as
+        // the canonical value used by the application.
+        return $this->normalisedRole() === 'admin';
     }
 
     public function isAdmin(): bool
     {
-        return in_array($this->role, self::STAFF_ROLES, true);
+        return in_array($this->normalisedRole(), self::STAFF_ROLES, true);
     }
 
     public function isCustomer(): bool
@@ -106,6 +109,11 @@ class User extends Authenticatable
     public function hasVerifiedEmail(): bool
     {
         return $this->email_verified_at !== null;
+    }
+
+    public function normalisedRole(): string
+    {
+        return strtolower(trim((string) $this->role));
     }
 
     public function orders(): HasMany

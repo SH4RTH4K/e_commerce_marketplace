@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Banner extends Model
 {
@@ -35,6 +36,11 @@ class Banner extends Model
         return $query->where('placement', $placement);
     }
 
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
     public function placementLabel(): string
     {
         return explode(' — ', self::PLACEMENTS[$this->placement] ?? $this->placement)[0];
@@ -47,11 +53,15 @@ class Banner extends Model
 
     public function linkHref(): string
     {
-        if (! $this->link_url) {
-            return route('shop');
+        if ($this->product?->is_published) {
+            return route('product.show', $this->product, absolute: false);
         }
 
-        return str_starts_with($this->link_url, 'http') ? $this->link_url : url($this->link_url);
+        if (! $this->link_url) {
+            return route('shop', absolute: false);
+        }
+
+        return str_starts_with($this->link_url, 'http') ? $this->link_url : url($this->link_url, [], false);
     }
 
     public function imageUrl(): string
