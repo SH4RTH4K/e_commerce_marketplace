@@ -1,61 +1,89 @@
-# SHARTHAK Commerce Platform
-
-> A production-oriented Laravel marketplace for catalog management, storefront sales, customer accounts, fulfillment, courier integrations, and operational administration.
-
 <p align="center">
-  <img src="https://img.shields.io/badge/Laravel-13-FF2D20?style=flat-square&logo=laravel&logoColor=white" alt="Laravel 13">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=111827" alt="React 19">
-  <img src="https://img.shields.io/badge/Inertia.js-3-9553E9?style=flat-square" alt="Inertia.js 3">
-  <img src="https://img.shields.io/badge/Tailwind%20CSS-4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4">
-  <img src="https://img.shields.io/badge/cPanel-ready-FF6C2C?style=flat-square&logo=cpanel&logoColor=white" alt="cPanel ready">
+  <img src="public/theme/logo.svg" width="92" alt="SHARTHAK Commerce logo">
 </p>
 
-## Overview
+<h1 align="center">SHARTHAK Commerce Platform</h1>
 
-SHARTHAK Commerce Platform combines a customer-facing online store with a complete administration workspace. It is designed for teams that need to manage products, inventory, orders, marketing content, customer communication, and delivery operations from one Laravel application.
+<p align="center">
+  <strong>A complete commerce workspace for selling, managing, and scaling online.</strong><br>
+  Storefront · Operations · Fulfillment · Growth
+</p>
 
-The application is maintained by **SHARTHAK**. Visit [sharthak.com](https://sharthak.com) for the official website.
+<p align="center">
+  <a href="https://github.com/SH4RTH4K/e_commerce_marketplace"><img src="https://img.shields.io/badge/owner-SHARTHAK-f15a24?style=for-the-badge" alt="Owner SHARTHAK"></a>
+  <img src="https://img.shields.io/badge/Laravel-13-ff2d20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 13">
+  <img src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=111827" alt="React 19">
+  <img src="https://img.shields.io/badge/cPanel-ready-ff6c2c?style=for-the-badge&logo=cpanel&logoColor=white" alt="cPanel ready">
+</p>
 
-## Core capabilities
+<p align="center">
+  <a href="#what-is-included">Features</a> ·
+  <a href="#imported-catalog-review">Catalog review</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#production-deployment">cPanel deployment</a> ·
+  <a href="#security-before-launch">Security</a>
+</p>
 
-### Storefront
+<br>
 
-- Product catalog, category browsing, search, filters, and product detail pages
-- Customer registration, authentication, profiles, order history, and password reset
-- Cart, standard checkout, quick order, cash on delivery, and mobile banking options
-- Coupons, flash sales, reviews, SEO metadata, storefront branding, and landing pages
-- Order tracking, abandoned checkout recovery, and contact forms
+## What is included
 
-### Administration
+| <div align="center">🛍️ Storefront</div> | <div align="center">⚙️ Operations</div> | <div align="center">📈 Growth</div> |
+| :--- | :--- | :--- |
+| Catalog, search, filters, cart, checkout, customer accounts, reviews, order tracking | Products, variants, inventory, orders, invoices, staff roles, permissions, courier delivery | Coupons, flash sales, banners, landing pages, SEO, analytics, branding, CRM |
 
-- Product, category, inventory, variant, banner, coupon, and landing-page management
-- Order review, status management, invoices, courier shipment, and tracking
-- Customer CRM, reviews, contact messages, fraud controls, and blocked identity lists
-- Staff roles and server-side permissions
-- Store settings, payment configuration, analytics, media management, and design controls
+<div align="center">
 
-### Imported product review workflow
+| Capability | Included |
+| :--- | :---: |
+| Cash on delivery and mobile banking | ✅ |
+| Steadfast, Pathao, and RedX adapters | ✅ |
+| Fraud controls by IP, device, phone, and courier history | ✅ |
+| Abandoned checkout recovery | ✅ |
+| Image/media management with upload validation | ✅ |
+| Queue and scheduler support | ✅ |
 
-The imported-products screen provides a consistent publish/unpublish review process:
+</div>
 
-1. Search by product name or SKU and select category/status filters.
-2. Click **Apply filters** to fetch the requested result. Changing rows per page does not fetch automatically.
-3. Open the image preview and check the primary image and additional-image count.
-4. Confirm price, stock, and mapped supplier variants.
-5. Publish approved products, or leave them as drafts. Unpublish products that no longer meet the storefront standard.
-6. Use pagination and the 25, 50, or 100 rows-per-page setting for larger catalogs.
+## Imported catalog review
+
+Imported products use a clear, repeatable publish decision process. This keeps the storefront clean while making large supplier catalogs fast to review.
+
+```text
+Search name/SKU
+      ↓
+Apply category, status, and rows-per-page filters
+      ↓
+Preview image → confirm price → confirm stock → confirm variants
+      ↓
+Publish approved products  |  Keep as draft  |  Unpublish when standards change
+```
+
+### Review controls
+
+- **Image column:** click the thumbnail for a fast full-size preview and see the additional-image count.
+- **Text search:** search by product name or SKU.
+- **Explicit filtering:** edit the controls, then click **Apply filters** to fetch results.
+- **Pagination:** choose 25, 50, or 100 rows per page; page navigation keeps active filters.
+- **Decision actions:** publish, unpublish, sync, or update prices in bulk.
 
 ## Technology
 
-| Layer | Technology |
+<p>
+  <img src="https://img.shields.io/badge/PHP-8.3%2B-777bb4?style=flat-square&logo=php&logoColor=white" alt="PHP 8.3 or newer">
+  <img src="https://img.shields.io/badge/Inertia.js-3-9553e9?style=flat-square" alt="Inertia.js 3">
+  <img src="https://img.shields.io/badge/Tailwind%20CSS-4-06b6d4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4">
+  <img src="https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white" alt="Vite 8">
+  <img src="https://img.shields.io/badge/MySQL-8.x-4479a1?style=flat-square&logo=mysql&logoColor=white" alt="MySQL 8">
+</p>
+
+| Layer | Version / requirement |
 | --- | --- |
 | Backend | PHP 8.3+, Laravel 13 |
 | Frontend | React 19, Inertia.js 3 |
-| Styling | Tailwind CSS 4 |
-| Build | Vite 8, Node.js 20.19+ or 22.12+ |
+| Styling and build | Tailwind CSS 4, Vite 8 |
 | Database | MySQL 8.x or compatible MariaDB |
 | Web server | Apache/LiteSpeed, Nginx, or Laravel development server |
-| Delivery integrations | Steadfast, Pathao, and RedX service adapters |
 
 Required PHP extensions include Ctype, cURL, DOM, Fileinfo, Filter, Hash, Mbstring, OpenSSL, PCRE, PDO, `pdo_mysql`, Session, Tokenizer, and XML. GD or Imagick is recommended for image processing.
 
@@ -68,26 +96,22 @@ Required PHP extensions include Ctype, cURL, DOM, Fileinfo, Filter, Hash, Mbstri
 - Node.js 20.19+ or 22.12+
 - MySQL 8.x or compatible MariaDB
 
-### 1. Install dependencies
+### Install
 
 ```bash
 composer install
 npm ci
 ```
 
-### 2. Configure the environment
-
-Linux/macOS:
+Create the environment file:
 
 ```bash
+# Linux/macOS
 cp .env.example .env
-php artisan key:generate
-```
 
-Windows PowerShell:
-
-```powershell
+# Windows PowerShell
 Copy-Item .env.example .env
+
 php artisan key:generate
 ```
 
@@ -107,9 +131,7 @@ DB_USERNAME=your_database_user
 DB_PASSWORD=your_database_password
 ```
 
-Never reuse production keys, database passwords, courier credentials, or mail credentials from an old archive.
-
-### 3. Prepare and run
+Prepare and run the application:
 
 ```bash
 php artisan migrate
@@ -119,36 +141,37 @@ php artisan optimize:clear
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-Open:
+| URL | Purpose |
+| --- | --- |
+| `http://127.0.0.1:8000` | Storefront |
+| `http://127.0.0.1:8000/login` | Customer login |
+| `http://127.0.0.1:8000/admin/login` | Administrator login |
 
-- Storefront: `http://127.0.0.1:8000`
-- Customer login: `http://127.0.0.1:8000/login`
-- Administrator login: `http://127.0.0.1:8000/admin/login`
+For hot reloading, run `npm run dev` in a second terminal. Remove a stale `public/hot` file before using only the production build.
 
-For frontend hot reloading, run `npm run dev` in a second terminal. Remove a stale `public/hot` file before using only the production build.
+> [!WARNING]
+> The database seeder is for private development only. Do not run `php artisan migrate --seed` on a public production database without reviewing and replacing seeded credentials and demo data.
 
-The database seeder is intended for private development environments only. Do not use `php artisan migrate --seed` on a public production database without reviewing and replacing all seeded credentials and demo data.
+## Production deployment
 
-## Production deployment on cPanel
+The full cPanel runbook is in [DEPLOY.md](DEPLOY.md). The short version follows.
 
-The complete deployment runbook is available in [DEPLOY.md](DEPLOY.md). The essential process is:
+### 1. Clone the repository
 
-### 1. Clone or upload the application
+Clone the `main` branch from [e_commerce_marketplace](https://github.com/SH4RTH4K/e_commerce_marketplace) using cPanel Git Version Control, or upload an archive created from the repository.
 
-Clone the `main` branch from the [e_commerce_marketplace repository](https://github.com/SH4RTH4K/e_commerce_marketplace), or upload an archive created from it.
-
-Keep the application outside the public web root where possible:
+Use this layout whenever the host allows it:
 
 ```text
 /home/CPANEL_USER/apps/sharthak/          Application root
 /home/CPANEL_USER/apps/sharthak/public/   Domain document root
 ```
 
-Do not use the complete Laravel project as the document root. Never expose `.env`, SQL exports, backup archives, logs, or private cache files.
+The domain must point to Laravel's `public` directory. Do not expose the complete application root.
 
-### 2. Configure production `.env`
+### 2. Configure production environment
 
-Copy [.env.production.example](.env.production.example) to `.env` on the server and set new production values:
+Copy [.env.production.example](.env.production.example) to `.env` on the server and set new secrets:
 
 ```dotenv
 APP_ENV=production
@@ -184,39 +207,40 @@ php artisan route:cache
 php artisan view:cache
 ```
 
-The compiled frontend files are committed under `public/build`, so Node.js is not required on cPanel for a normal deployment. If frontend source files are changed, run `npm ci && npm run build` in a trusted build environment and commit the new build output.
+The production frontend is already compiled under `public/build`, so Node.js is not required on cPanel for a normal deployment. If frontend source changes, run `npm ci && npm run build` in a trusted build environment and commit the updated build output.
 
-For an existing store, import the database backup privately through phpMyAdmin or MySQL, then run migrations. Database exports must never be committed to this repository.
+For an existing store, import the database backup privately through phpMyAdmin or MySQL, then run migrations. Never commit database exports, credentials, or customer data.
 
-### 4. Permissions and operations
+### 4. Configure operations
 
 - Use `755` for directories and `644` for normal files.
-- Ensure `storage/`, `bootstrap/cache/`, and `public/uploads/` are writable by the PHP/web-server user.
-- Do not use recursive `777` permissions.
-- Configure a queue worker for supplier and delivery jobs when the hosting plan supports it.
-- Add the Laravel scheduler to cPanel Cron once per minute:
+- Ensure `storage/`, `bootstrap/cache/`, and `public/uploads/` are writable by the PHP user.
+- Configure a queue worker for supplier and delivery jobs when supported by the hosting plan.
+- Add the scheduler to cPanel Cron once per minute:
 
 ```cron
 * * * * * cd /home/CPANEL_USER/apps/sharthak && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-Keep `DROPSHIPPING_ENABLED=false` until supplier credentials and sync drivers have been tested with production data.
+Keep `DROPSHIPPING_ENABLED=false` until supplier credentials and sync drivers are tested with production data.
 
-## Security baseline
+## Security before launch
 
-Before the first public request:
+> [!CAUTION]
+> A successful deployment is not the same as a secure launch. Complete this checklist before accepting public traffic.
 
-- Set `APP_ENV=production` and `APP_DEBUG=false`.
-- Generate a unique production `APP_KEY`.
-- Rotate cPanel, SSH/SFTP/FTP, database, administrator, SMTP, courier, payment, and analytics credentials.
-- Configure `COURIER_WEBHOOK_SECRET`; production requests without a valid token are rejected.
-- Use the `public` directory as the document root.
-- Keep SQL dumps, archives, `.env` files, logs, and customer data outside web-accessible locations.
-- Review administrator accounts, staff permissions, cron jobs, DNS records, and deployment hooks.
-- Validate uploads and prevent executable content in upload directories.
-- Force HTTPS and enable secure session cookies.
-- Back up the database and uploaded media outside the public directory, then test restoration.
-- Run dependency audits and automated tests before each release.
+- [ ] `APP_ENV=production` and `APP_DEBUG=false`
+- [ ] A unique production `APP_KEY` has been generated
+- [ ] cPanel, SSH/SFTP/FTP, database, admin, mail, courier, payment, and analytics credentials are rotated
+- [ ] `COURIER_WEBHOOK_SECRET` is configured; missing/invalid production tokens receive `401`
+- [ ] The domain document root is Laravel's `public` directory
+- [ ] `.env`, SQL dumps, archives, logs, backups, and customer data are not web-accessible
+- [ ] HTTPS is forced and secure session cookies are enabled
+- [ ] Staff roles and direct URL permissions have been tested
+- [ ] Upload directories cannot execute server-side scripts
+- [ ] Database and upload backups are stored outside the public directory
+- [ ] Queue workers and scheduler are monitored
+- [ ] Dependency audits and automated tests pass
 
 ## Verification commands
 
@@ -229,25 +253,23 @@ php artisan route:list
 php artisan test
 ```
 
-## Project structure
+## Project map
 
 ```text
-app/                 Laravel application code, services, middleware, and models
+app/                 Backend code, services, middleware, and models
 bootstrap/            Framework bootstrap and cache directory
 config/               Application and integration configuration
 database/             Migrations, factories, and development seeders
 public/               Web root, compiled assets, and uploaded media
 resources/js/         React and Inertia pages and components
-resources/views/      Blade entry points and server-rendered layouts
-routes/               Web and console route definitions
+resources/views/      Blade entry points and layouts
+routes/               Web and console routes
 tests/                Feature and unit tests
 DEPLOY.md             Detailed cPanel deployment runbook
 ```
 
-## License and ownership
-
-No project-level license file is currently included. Ownership by SHARTHAK does not grant permission to copy, redistribute, resell, or operate this source code. Add a reviewed license file if specific commercial or open-source rights are intended.
-
----
+## Ownership and license
 
 Maintained by **SHARTHAK** · [sharthak.com](https://sharthak.com)
+
+No project-level license file is currently included. Ownership by SHARTHAK does not grant permission to copy, redistribute, resell, or operate this source code. Add a reviewed license file if specific commercial or open-source rights are intended.
