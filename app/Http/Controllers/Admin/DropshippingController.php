@@ -15,6 +15,7 @@ use App\Models\DropshipSupplierVariant;
 use App\Models\DropshipSyncRun;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Services\Dropshipping\CategoryMapper;
 use App\Services\Dropshipping\ProductImportService;
@@ -261,9 +262,31 @@ class DropshippingController extends Controller
 
     public function mediaCleanup()
     {
+        $linkedProductIds = DropshipProductLink::query()
+            ->whereNotNull('product_id')
+            ->select('product_id');
+
+        $linkedImages = ProductImage::query()->whereIn('product_id', $linkedProductIds);
+        $externalImages = (clone $linkedImages)->where(function ($query) {
+            $query->where('path', 'like', 'http://%')
+                ->orWhere('path', 'like', 'https://%');
+        });
+
         return Inertia::render('Admin/Dropshipping/MediaCleanup', [
-            'supplier_image_links' => DropshipSupplierProduct::query()->whereHas('productLink')->count(),
-            'local_product_images' => Schema::hasTable('product_images') ? Schema::getConnection()->table('product_images')->count() : 0,
+            'audit' => [
+                'supplier_products' => DropshipSupplierProduct::query()->whereHas('productLink')->count(),
+                'supplier_image_references' => $linkedImages->count(),
+                'external_image_references' => $externalImages->count(),
+                'local_image_references' => (clone $linkedImages)
+                    ->where(function ($query) {
+                        $query->where('path', 'not like', 'http://%')
+                            ->where('path', 'not like', 'https://%');
+                    })
+                    ->count(),
+                'unlinked_image_references' => ProductImage::query()
+                    ->whereDoesntHave('product.supplierLinks')
+                    ->count(),
+            ],
         ]);
     }
 
