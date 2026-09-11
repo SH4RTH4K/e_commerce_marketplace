@@ -24,3 +24,21 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Local backups, exports, temporary diagnostics, and OS metadata
+/__MACOSX/
+/database/schema/
+/database/*.sql
+/*.docx
+/*.sql
+/*.zip
+/check_*.php
+/fix_*.php
+/fix-*.cjs
+/fix.ps1
+/temp_*
+/test_*
+/test.jpg
+/tmp_*
+/trigger.php
+/update_tables2.cjs
