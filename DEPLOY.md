@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🚀 Shopzy Production Deployment
+# 🚀 e_commerce_marketplace Production Deployment
 
-### A complete cPanel deployment guide for the Shopzy Laravel marketplace
+### A complete cPanel deployment guide for the e_commerce_marketplace Laravel application
 
 ![Laravel](https://img.shields.io/badge/Laravel-13-FF2D20?style=flat-square&logo=laravel&logoColor=white)
 ![PHP](https://img.shields.io/badge/PHP-8.3%2B-777BB4?style=flat-square&logo=php&logoColor=white)
@@ -89,7 +89,7 @@ public_html/
 ## 02 · Create the database
 
 1. Open **cPanel → MySQL Databases**.
-2. Create a database, for example `youruser_shopzy`.
+2. Create a database, for example `youruser_ecommerce_marketplace`.
 3. Create a dedicated database user with a strong, unique password.
 4. Add the user to the database and grant **All Privileges**.
 
@@ -113,7 +113,7 @@ tables in the database you created above.
 In File Manager, copy `.env.production.example` to `.env`. Open it and replace every value marked `← EDIT`.
 
 ```dotenv
-APP_NAME="Shopzy"
+APP_NAME="e_commerce_marketplace"
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://yourdomain.com
@@ -122,7 +122,7 @@ APP_KEY=
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=youruser_shopzy
+DB_DATABASE=youruser_ecommerce_marketplace
 DB_USERNAME=youruser_dbuser
 DB_PASSWORD=your_strong_database_password
 

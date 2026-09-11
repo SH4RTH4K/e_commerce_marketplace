@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="public/theme/logo.svg" width="92" alt="SHARTHAK Commerce logo">
+  <img src="public/theme/logo.svg" width="92" alt="e_commerce_marketplace logo">
 </p>
 
-<h1 align="center">SHARTHAK Commerce Platform</h1>
+<h1 align="center">e_commerce_marketplace</h1>
 
 <p align="center">
   <strong>A complete commerce workspace for selling, managing, and scaling online.</strong><br>
@@ -118,7 +118,7 @@ php artisan key:generate
 Configure the database in `.env`:
 
 ```dotenv
-APP_NAME="SHARTHAK"
+APP_NAME="e_commerce_marketplace"
 APP_ENV=local
 APP_DEBUG=false
 APP_URL=http://127.0.0.1:8000
@@ -163,8 +163,8 @@ Clone the `main` branch from [e_commerce_marketplace](https://github.com/SH4RTH4
 Use this layout whenever the host allows it:
 
 ```text
-/home/CPANEL_USER/apps/sharthak/          Application root
-/home/CPANEL_USER/apps/sharthak/public/   Domain document root
+/home/CPANEL_USER/apps/e_commerce_marketplace/        Application root
+/home/CPANEL_USER/apps/e_commerce_marketplace/public/ Domain document root
 ```
 
 The domain must point to Laravel's `public` directory. Do not expose the complete application root.
@@ -219,7 +219,7 @@ For an existing store, import the database backup privately through phpMyAdmin o
 - Add the scheduler to cPanel Cron once per minute:
 
 ```cron
-* * * * * cd /home/CPANEL_USER/apps/sharthak && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /home/CPANEL_USER/apps/e_commerce_marketplace && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 Keep `DROPSHIPPING_ENABLED=false` until supplier credentials and sync drivers are tested with production data.

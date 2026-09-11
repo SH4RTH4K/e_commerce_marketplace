@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'SHARTHAK'),
+    'name' => env('APP_NAME', 'e_commerce_marketplace'),
 
     /*
     |--------------------------------------------------------------------------
