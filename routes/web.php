@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\AdminPopupController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SystemHealthController;
+use App\Http\Controllers\Admin\ApplicationUpdateController;
 use App\Http\Controllers\Admin\BlockedDeviceController;
 use App\Http\Controllers\Admin\BlockedPhoneController;
 use App\Http\Controllers\Admin\CourierController;
@@ -344,6 +345,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('system-health/backups/{backup}/delete', [SystemHealthController::class, 'destroy'])->name('system-health.backups.delete');
             Route::post('system-health/clear-cache', [SystemHealthController::class, 'clearCache'])->name('system-health.clear-cache');
             Route::post('system-health/migrations/run', [SystemHealthController::class, 'runMigrations'])->name('system-health.migrations.run');
+
+            Route::get('system/git-repository', [ApplicationUpdateController::class, 'index'])->name('git-repository.index');
+            Route::post('system/git-repository', [ApplicationUpdateController::class, 'saveSettings'])->name('git-repository.settings');
+            Route::post('system/git-repository/test', [ApplicationUpdateController::class, 'test'])->name('git-repository.test');
+            Route::post('system/git-repository/check', [ApplicationUpdateController::class, 'check'])->name('git-repository.check');
+            Route::post('system/git-repository/pull', [ApplicationUpdateController::class, 'pull'])->name('git-repository.pull');
+            Route::post('system/git-repository/deploy', [ApplicationUpdateController::class, 'deploy'])->name('git-repository.deploy');
+            Route::post('system/git-repository/discard-and-deploy', [ApplicationUpdateController::class, 'discardAndDeploy'])->name('git-repository.discard-and-deploy');
+            Route::post('system/git-repository/rollback/{deployment}', [ApplicationUpdateController::class, 'rollback'])->name('git-repository.rollback');
         });
     });
 });

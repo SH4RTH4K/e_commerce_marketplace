@@ -224,6 +224,18 @@ For an existing store, import the database backup privately through phpMyAdmin o
 
 Keep `DROPSHIPPING_ENABLED=false` until supplier credentials and sync drivers are tested with production data.
 
+### In-app Git deployment
+
+After the application is installed as a Git checkout, administrators with `settings.manage` access can use `/admin/system/git-repository` to manage reviewed updates:
+
+1. Configure the GitHub repository, branch, and authentication method.
+2. Test the connection and check for remote commits.
+3. Review the incoming commit list and server-side tracked changes.
+4. Deploy only a fast-forward update after the checks pass.
+5. Review the recorded deployment history and use source rollback only when necessary.
+
+The workflow never pushes to GitHub. Private credentials are encrypted in the database, deployment operations are serialized with a lock, untracked uploads are preserved, and destructive tracked-file resets require an explicit confirmation.
+
 ## Security before launch
 
 > [!CAUTION]

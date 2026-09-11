@@ -163,6 +163,17 @@ Supplier sync actions are queued and must not be enabled without a durable worke
 `DROPSHIPPING_ENABLED=false` until an evidence-backed supplier driver and credentials have
 been configured and tested.
 
+### In-app Git deployment
+
+Once the server is a Git checkout, administrators with `settings.manage` permission can use
+`/admin/system/git-repository` to test the connection, review incoming commits, and deploy a
+fast-forward update. Configure the repository URL to match the server's Git remote. Private
+repository credentials are encrypted in the database and are never displayed after saving.
+
+The deployment workflow preserves untracked uploads and runtime files. It blocks when tracked
+server changes or diverged branch history are detected. The explicit discard option resets only
+tracked files, and source rollback does not reverse database migrations.
+
 On a server with Supervisor or a hosting process manager, run one long-lived worker from the
 application directory:
 
