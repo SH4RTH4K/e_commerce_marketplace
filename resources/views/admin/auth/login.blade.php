@@ -45,8 +45,8 @@
       <form method="POST" action="{{ route('admin.login.attempt') }}" class="space-y-4">
         @csrf
         <div>
-          <label class="block text-sm text-gray-600 mb-1">Email</label>
-          <input type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="username"
+          <label class="block text-sm text-gray-600 mb-1">Username</label>
+          <input type="text" name="username" value="{{ old('username') }}" required autofocus autocomplete="username"
             class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40" />
         </div>
         <div>

@@ -9,7 +9,7 @@
         "php": "^8.3",
         "composer/ca-bundle": "^1.5",
         "inertiajs/inertia-laravel": "^3.3",
-        "laravel/framework": "^13.31",
+        "laravel/framework": "13.20.0",
         "laravel/tinker": "^3.0"
     },
     "require-dev": {
@@ -81,6 +81,9 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "platform": {
+            "php": "8.3.0"
+        },
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true

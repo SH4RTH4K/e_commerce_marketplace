@@ -141,6 +141,16 @@ php artisan optimize:clear
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
+For cPanel using **PHP 8.3 (ea-php83)**, use the explicit PHP 8.3 binary for Composer
+and Artisan commands. See [DEPLOY.md](DEPLOY.md) for the complete deployment procedure:
+
+```bash
+PHP83=/opt/cpanel/ea-php83/root/usr/bin/php
+COMPOSER_BIN="$(command -v composer)"
+"$PHP83" "$COMPOSER_BIN" install --no-dev --prefer-dist --optimize-autoloader
+"$PHP83" artisan migrate --force
+```
+
 | URL | Purpose |
 | --- | --- |
 | `http://127.0.0.1:8000` | Storefront |
