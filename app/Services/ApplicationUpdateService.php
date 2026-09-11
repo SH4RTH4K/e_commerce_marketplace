@@ -38,6 +38,45 @@ class ApplicationUpdateService
         $settings->secret_fingerprint = hash('sha256', $secret);
     }
 
+    /**
+     * Turn an existing cPanel upload into a Git-managed checkout without
+     * replacing its working files. The remote branch is placed in Git's
+     * index, so any differences remain visible as local changes for review.
+     */
+    public function initializeRepository(ApplicationUpdateSetting $settings): bool
+    {
+        $this->validateConfiguration($settings);
+
+        if (is_dir(base_path('.git'))) {
+            return false;
+        }
+
+        $gitDirectory = base_path('.git');
+        $initialized = false;
+
+        try {
+            $this->gitOrFail(['init'], 'Unable to initialize Git in the application directory. Confirm that Git is installed and the directory is writable.');
+            $initialized = true;
+            $this->gitOrFail(['remote', 'add', $settings->remote_name, $settings->repository_url], 'Unable to configure the GitHub remote.');
+            $this->gitOrFail(['fetch', '--prune', $settings->remote_name, $settings->branch], 'Unable to fetch the configured GitHub branch. Check repository access and branch settings.');
+
+            $remoteBranch = $settings->remote_name.'/'.$settings->branch;
+            $this->gitOrFail(['branch', '--force', $settings->branch, $remoteBranch], 'Unable to create the configured local branch.');
+            $this->gitOrFail(['symbolic-ref', 'HEAD', 'refs/heads/'.$settings->branch], 'Unable to select the configured local branch.');
+            $this->gitOrFail(['reset', '--mixed', $remoteBranch], 'Unable to register the existing application files with the fetched Git branch.');
+
+            return true;
+        } catch (\Throwable $exception) {
+            // Only remove the .git directory created by this attempt. The
+            // application files, environment, and uploads are never touched.
+            if ($initialized && is_dir($gitDirectory)) {
+                File::deleteDirectory($gitDirectory);
+            }
+
+            throw $exception;
+        }
+    }
+
     public function status(?ApplicationUpdateSetting $settings = null): array
     {
         $settings ??= $this->settings();
@@ -58,6 +97,7 @@ class ApplicationUpdateService
         }
 
         $this->validateConfiguration($settings);
+        $this->initializeRepository($settings);
         $this->assertRepository();
 
         $currentBranch = trim($this->git(['branch', '--show-current'])['output']);
@@ -138,6 +178,7 @@ class ApplicationUpdateService
     public function fetch(ApplicationUpdateSetting $settings): array
     {
         $this->validateConfiguration($settings);
+        $this->initializeRepository($settings);
         $this->assertRepository();
 
         $remote = $this->git(['remote', 'get-url', $settings->remote_name]);

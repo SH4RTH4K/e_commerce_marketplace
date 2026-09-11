@@ -185,6 +185,12 @@ The deployment workflow preserves untracked uploads and runtime files. It blocks
 server changes or diverged branch history are detected. The explicit discard option resets only
 tracked files, and source rollback does not reverse database migrations.
 
+When Git integration is enabled and saved from the admin page, an uploaded cPanel installation
+without a `.git` directory is initialized automatically. The remote branch is fetched and
+registered without replacing the existing working files; any differences are shown as tracked
+local changes and must be reviewed before deployment. Git must be installed and the application
+directory must be writable by the PHP process.
+
 On a server with Supervisor or a hosting process manager, run one long-lived worker from the
 application directory:
 

@@ -116,7 +116,15 @@ class ApplicationUpdateController extends Controller
 
         $settings->save();
 
-        return back()->with('status', 'Git repository settings saved. Test the connection before checking for updates.');
+        try {
+            $initialized = $settings->enabled ? $updates->initializeRepository($settings) : false;
+        } catch (\Throwable $exception) {
+            return back()->with('error', 'Settings were saved, but Git could not be initialized automatically: '.$exception->getMessage())->withInput();
+        }
+
+        return back()->with('status', $initialized
+            ? 'Git settings saved and this installation is now connected to the configured repository. Review local changes before deployment.'
+            : 'Git repository settings saved. Test the connection before checking for updates.');
     }
 
     public function test(ApplicationUpdateService $updates)

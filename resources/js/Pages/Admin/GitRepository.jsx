@@ -105,7 +105,7 @@ export default function GitRepository({ settings = {}, status = null, error = nu
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-orange-500">Connection</p>
               <h2 className="mt-1 text-xl font-bold text-slate-900">Repository settings</h2>
-              <p className="mt-1 text-sm text-slate-500">The server must already be a Git checkout of the configured repository.</p>
+              <p className="mt-1 text-sm text-slate-500">Saving enabled settings automatically connects an uploaded cPanel installation to the configured repository without overwriting its files.</p>
             </div>
             <span className={`rounded-full px-3 py-1 text-xs font-bold ${form.data.enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>{form.data.enabled ? 'Integration enabled' : 'Integration disabled'}</span>
           </div>

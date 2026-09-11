@@ -52,6 +52,27 @@ class ApplicationUpdateTest extends TestCase
     }
 
     #[Test]
+    public function enabling_repository_settings_keeps_an_existing_checkout_managed(): void
+    {
+        $response = $this->actingAs(User::factory()->create(['role' => 'admin']))
+            ->post('/admin/system/git-repository', [
+                'enabled' => '1',
+                'repository_type' => 'public',
+                'repository_url' => 'https://github.com/SH4RTH4K/e_commerce_marketplace.git',
+                'branch' => 'main',
+                'remote_name' => 'origin',
+                'authentication' => 'none',
+                'run_migrations' => '1',
+                'clear_cache' => '1',
+                'health_check' => '1',
+            ]);
+
+        $response->assertRedirect();
+        $this->assertDirectoryExists(base_path('.git'));
+        $this->assertDatabaseHas('application_update_settings', ['enabled' => 1]);
+    }
+
+    #[Test]
     public function private_repository_requires_a_credential(): void
     {
         $response = $this->actingAs(User::factory()->create(['role' => 'admin']))
