@@ -224,13 +224,22 @@
             min-width: 0;
         }
 
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
         .brand-logo {
             display: block;
             max-width: 190px;
             max-height: 58px;
-            margin-bottom: 10px;
             object-fit: contain;
             object-position: left center;
+        }
+
+        .brand-copy .brand-title {
+            font-size: 21px;
         }
 
         .brand-title {
@@ -604,6 +613,15 @@
                 border-radius: 13px;
             }
 
+            .brand-row {
+                align-items: flex-start;
+            }
+
+            .brand-logo {
+                max-width: 90px;
+                max-height: 55px;
+            }
+
             .header-meta,
             .detail-card.payment-card {
                 text-align: left;
@@ -898,7 +916,13 @@
                 <header class="header">
                     <div class="brand-lockup">
                         @if(!empty($store['logo']))
-                            <img class="brand-logo" src="{{ $store['logo'] }}" alt="{{ $store['name'] }}">
+                            <div class="brand-row">
+                                <img class="brand-logo" src="{{ $store['logo'] }}" alt="{{ $store['name'] }}">
+                                <div class="brand-copy">
+                                    <div class="brand-title">{{ $store['name'] }}</div>
+                                    <div class="brand-kicker">{{ $store['tagline'] }}</div>
+                                </div>
+                            </div>
                         @else
                             <div class="brand-title">{{ $store['name'] }}</div>
                             <div class="brand-kicker">{{ $store['tagline'] }}</div>
