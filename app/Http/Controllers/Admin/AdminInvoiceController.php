@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Setting;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Http\Request;
 
 class AdminInvoiceController extends Controller
@@ -18,6 +20,36 @@ class AdminInvoiceController extends Controller
             'orders' => collect([$order]),
             'store'  => $store,
             'isBulk' => false,
+        ]);
+    }
+
+    /**
+     * Render a real PDF for download or native file sharing on supported devices.
+     */
+    public function pdf(Order $order, Request $request)
+    {
+        $order->load(['items.product']);
+        $store = $this->getStoreDetails();
+        $printMode = $request->query('mode') === 'mono' ? 'mono' : 'color';
+
+        $options = new Options();
+        $options->setIsRemoteEnabled(true);
+        $options->setDefaultFont('DejaVu Sans');
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml(view('admin.orders.invoice', [
+            'orders'    => collect([$order]),
+            'store'     => $store,
+            'isBulk'    => false,
+            'isPdf'     => true,
+            'printMode' => $printMode,
+        ])->render(), 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        return response($dompdf->output(), 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="Invoice_' . $order->order_number . '_' . $printMode . '.pdf"',
         ]);
     }
 

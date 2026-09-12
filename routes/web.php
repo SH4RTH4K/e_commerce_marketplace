@@ -218,6 +218,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('orders/customer-history', [AdminOrderController::class, 'customerHistory'])->name('orders.customer-history');
         Route::get('orders/{order:id}', [AdminOrderController::class, 'show'])->name('orders.show');
         Route::get('orders/{order:id}/invoice', [\App\Http\Controllers\Admin\AdminInvoiceController::class, 'show'])->name('orders.invoice');
+        Route::get('orders/{order:id}/invoice/pdf', [\App\Http\Controllers\Admin\AdminInvoiceController::class, 'pdf'])->name('orders.invoice.pdf');
         Route::patch('orders/{order:id}', [AdminOrderController::class, 'update'])->name('orders.update');
 
         // Courier integration

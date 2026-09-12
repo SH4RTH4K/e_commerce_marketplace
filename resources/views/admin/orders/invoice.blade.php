@@ -723,15 +723,114 @@
             background: #f4f4f4 !important;
             border-color: #aaa !important;
         }
+
+        body.pdf-mode {
+            min-height: auto;
+            background: #fff !important;
+        }
+
+        body.pdf-mode .invoice-sheet {
+            box-shadow: none !important;
+            border-radius: 0 !important;
+        }
+
+        .wa-choice-modal[hidden] {
+            display: none !important;
+        }
+
+        .wa-choice-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+            background: rgba(18, 48, 68, 0.48);
+            backdrop-filter: blur(5px);
+        }
+
+        .wa-choice-card {
+            width: min(100%, 390px);
+            padding: 24px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            box-shadow: 0 24px 70px rgba(18, 48, 68, 0.22);
+        }
+
+        .wa-choice-title {
+            color: var(--ink);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .wa-choice-copy {
+            margin-top: 5px;
+            color: var(--muted);
+            font-size: 11.5px;
+            line-height: 1.55;
+        }
+
+        .wa-choice-actions {
+            display: grid;
+            gap: 9px;
+            margin-top: 19px;
+        }
+
+        .wa-choice-action {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 11px 12px;
+            color: var(--ink);
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            cursor: pointer;
+            font: 700 12px/1.3 'DM Sans', sans-serif;
+            text-align: left;
+        }
+
+        .wa-choice-action:hover {
+            background: #f7fbf9;
+            border-color: #bcebd0;
+        }
+
+        .wa-choice-action.primary {
+            color: #126a40;
+            background: #ecfdf3;
+            border-color: #bcebd0;
+        }
+
+        .wa-choice-action span {
+            display: block;
+            color: var(--muted);
+            font-size: 10.5px;
+            font-weight: 400;
+        }
+
+        .wa-choice-cancel {
+            width: 100%;
+            margin-top: 13px;
+            padding: 8px;
+            color: var(--muted);
+            background: transparent;
+            border: 0;
+            cursor: pointer;
+            font: 600 11px 'DM Sans', sans-serif;
+        }
     </style>
 </head>
-<body>
+<body class="{{ ($isPdf ?? false) ? 'pdf-mode ' . (($printMode ?? 'color') === 'mono' ? 'print-mono' : '') : '' }}">
     @php
         $singleOrder = count($orders) === 1 ? $orders->first() : null;
         $singleCustomerInvoiceUrl = $singleOrder
             ? url('/order/' . $singleOrder->order_number . '/invoice?token=' . urlencode((string) $singleOrder->confirmation_token))
             : null;
     @endphp
+    @if(!($isPdf ?? false))
     <div class="action-bar no-print">
         <div class="toolbar-shell">
             <div class="toolbar-context">
@@ -761,14 +860,14 @@
                 @endif
                 <div class="toolbar-divider" aria-hidden="true"></div>
                 @if($singleOrder && $singleOrder->customer_phone && $singleCustomerInvoiceUrl)
-                    <button type="button" data-wa-invoice="color" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" class="btn btn-whatsapp" title="Open WhatsApp with a ready-to-send color invoice message">
+                    <button type="button" data-wa-invoice="color" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" data-wa-pdf-url="{{ route('admin.orders.invoice.pdf', $singleOrder) }}" class="btn btn-whatsapp" title="Open WhatsApp with a ready-to-send color invoice message">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a8 8 0 01-11.7 7.1L4 20l1.4-4.1A8 8 0 1112 20a8.3 8.3 0 008-8.5z" />
                             <path stroke-linecap="round" stroke-linejoin="round" d="M8.8 8.7c.2-.4.4-.4.7-.4h.4c.2 0 .4.1.5.4l.6 1.4c.1.2.1.4-.1.6l-.5.6c.5 1 1.2 1.7 2.2 2.2l.6-.5c.2-.2.4-.2.6-.1l1.4.6c.3.1.4.3.4.5v.4c0 .3 0 .5-.4.7-.3.2-.9.3-1.4.1-2.7-.7-4.7-2.7-5.4-5.4-.2-.5-.1-1.1.1-1.4z" />
                         </svg>
                         WhatsApp · Color
                     </button>
-                    <button type="button" data-wa-invoice="mono" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" class="btn btn-whatsapp-mono" title="Open WhatsApp with a ready-to-send black and white invoice message">
+                    <button type="button" data-wa-invoice="mono" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" data-wa-pdf-url="{{ route('admin.orders.invoice.pdf', $singleOrder) }}" class="btn btn-whatsapp-mono" title="Open WhatsApp with a ready-to-send black and white invoice message">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a8 8 0 01-11.7 7.1L4 20l1.4-4.1A8 8 0 1112 20a8.3 8.3 0 008-8.5z" />
                             <path stroke-linecap="round" stroke-linejoin="round" d="M8.8 8.7c.2-.4.4-.4.7-.4h.4c.2 0 .4.1.5.4l.6 1.4c.1.2.1.4-.1.6l-.5.6c.5 1 1.2 1.7 2.2 2.2l.6-.5c.2-.2.4-.2.6-.1l1.4.6c.3.1.4.3.4.5v.4c0 .3 0 .5-.4.7-.3.2-.9.3-1.4.1-2.7-.7-4.7-2.7-5.4-5.4-.2-.5-.1-1.1.1-1.4z" />
@@ -791,6 +890,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     <main class="invoice-wrapper">
         @foreach($orders as $order)
@@ -934,6 +1034,25 @@
         @endforeach
     </main>
 
+    @if(!($isPdf ?? false))
+    <div id="wa-choice-modal" class="wa-choice-modal no-print" hidden role="dialog" aria-modal="true" aria-labelledby="wa-choice-title">
+        <div class="wa-choice-card">
+            <div class="wa-choice-title" id="wa-choice-title">Send invoice on WhatsApp</div>
+            <div class="wa-choice-copy">Choose whether to share the actual PDF or send a secure invoice link. PDF sharing works directly on supported mobile devices.</div>
+            <div class="wa-choice-actions">
+                <button type="button" class="wa-choice-action primary" data-wa-choice="pdf">
+                    <span aria-hidden="true">📎</span>
+                    <span><strong>Send PDF to WhatsApp</strong><span>Attach the selected invoice PDF</span></span>
+                </button>
+                <button type="button" class="wa-choice-action" data-wa-choice="link">
+                    <span aria-hidden="true">🔗</span>
+                    <span><strong>Send invoice link</strong><span>Open the secure invoice link in WhatsApp</span></span>
+                </button>
+            </div>
+            <button type="button" class="wa-choice-cancel" data-wa-choice="cancel">Cancel</button>
+        </div>
+    </div>
+
     <script>
         (function () {
             const requestedMode = new URLSearchParams(window.location.search).get('print');
@@ -953,10 +1072,77 @@
             delete document.body.dataset.printMode;
         });
 
+        let activeWhatsAppButton = null;
+        const waChoiceModal = document.getElementById('wa-choice-modal');
+
+        function closeWhatsAppChoice() {
+            activeWhatsAppButton = null;
+            if (waChoiceModal) waChoiceModal.hidden = true;
+        }
+
         function normalizeWhatsAppNumber(phone) {
             let digits = String(phone || '').replace(/\D+/g, '');
             if (digits.startsWith('0') && digits.length === 11) digits = '88' + digits;
             return digits;
+        }
+
+        function invoiceMessage(button, mode, includeLink = true) {
+            const modeLabel = mode === 'mono' ? 'black & white' : 'color';
+            const separator = button.dataset.waUrl.includes('?') ? '&' : '?';
+            const invoiceUrl = button.dataset.waUrl + separator + 'print=' + mode;
+            const linkLine = includeLink ? '\n\nOpen invoice: ' + invoiceUrl : '';
+            return 'Hello ' + (button.dataset.waName || 'there') + ',\n\nYour ' + modeLabel + ' invoice for order #' + button.dataset.waOrder + ' is ready.' + linkLine + '\n\nThank you for shopping with us!';
+        }
+
+        function openWhatsAppLink(button) {
+            const phone = normalizeWhatsAppNumber(button.dataset.waPhone);
+            const mode = button.dataset.waInvoice === 'mono' ? 'mono' : 'color';
+            const message = invoiceMessage(button, mode) + '\n\nCustomer WhatsApp: +' + phone;
+            window.open('https://wa.me/?text=' + encodeURIComponent(message), '_blank', 'noopener');
+            closeWhatsAppChoice();
+        }
+
+        async function sendInvoicePdf(button) {
+            const mode = button.dataset.waInvoice === 'mono' ? 'mono' : 'color';
+            const separator = button.dataset.waPdfUrl.includes('?') ? '&' : '?';
+            const pdfUrl = button.dataset.waPdfUrl + separator + 'mode=' + mode;
+            const fileName = 'Invoice_' + button.dataset.waOrder + '_' + mode + '.pdf';
+
+            try {
+                const response = await fetch(pdfUrl, { headers: { 'Accept': 'application/pdf' } });
+                if (!response.ok) throw new Error('PDF request failed');
+
+                const blob = await response.blob();
+                const file = new File([blob], fileName, { type: 'application/pdf' });
+                const canShareFile = typeof navigator.share === 'function'
+                    && (!navigator.canShare || navigator.canShare({ files: [file] }));
+
+                if (canShareFile) {
+                    await navigator.share({
+                        title: 'Invoice #' + button.dataset.waOrder,
+                        text: invoiceMessage(button, mode, false),
+                        files: [file],
+                    });
+                    closeWhatsAppChoice();
+                    return;
+                }
+
+                const download = document.createElement('a');
+                download.href = URL.createObjectURL(blob);
+                download.download = fileName;
+                document.body.appendChild(download);
+                download.click();
+                download.remove();
+                URL.revokeObjectURL(download.href);
+
+                const fallbackMessage = invoiceMessage(button, mode, false) + '\n\nThe PDF has been downloaded. Please attach it to this chat before sending.';
+                window.open('https://wa.me/?text=' + encodeURIComponent(fallbackMessage), '_blank', 'noopener');
+                closeWhatsAppChoice();
+            } catch (error) {
+                if (error?.name !== 'AbortError') {
+                    window.alert('Could not prepare the invoice PDF. Please try again or send the invoice link.');
+                }
+            }
         }
 
         document.querySelectorAll('[data-wa-invoice]').forEach(function (button) {
@@ -966,20 +1152,27 @@
                     window.alert('This order does not have a valid WhatsApp number.');
                     return;
                 }
+                activeWhatsAppButton = button;
+                waChoiceModal.hidden = false;
+            });
+        });
 
-                const mode = button.dataset.waInvoice === 'mono' ? 'mono' : 'color';
-                const modeLabel = mode === 'mono' ? 'black & white' : 'color';
-                const separator = button.dataset.waUrl.includes('?') ? '&' : '?';
-                const invoiceUrl = button.dataset.waUrl + separator + 'print=' + mode;
-                const message = 'Hello ' + (button.dataset.waName || 'there') + ',\n\nYour ' + modeLabel + ' invoice for order #' + button.dataset.waOrder + ' is ready.\n\nOpen invoice: ' + invoiceUrl + '\n\nThank you for shopping with us!';
+        waChoiceModal?.addEventListener('click', function (event) {
+            if (event.target === waChoiceModal) closeWhatsAppChoice();
+        });
 
-                // WhatsApp cannot open a direct chat for a number that is not
-                // registered. Use the share composer so the message is still
-                // ready and the admin can choose the customer's actual chat.
-                const shareMessage = message + '\n\nCustomer WhatsApp: +' + phone;
-                window.open('https://wa.me/?text=' + encodeURIComponent(shareMessage), '_blank', 'noopener');
+        document.querySelectorAll('[data-wa-choice]').forEach(function (choice) {
+            choice.addEventListener('click', function () {
+                if (choice.dataset.waChoice === 'cancel') {
+                    closeWhatsAppChoice();
+                } else if (activeWhatsAppButton && choice.dataset.waChoice === 'link') {
+                    openWhatsAppLink(activeWhatsAppButton);
+                } else if (activeWhatsAppButton && choice.dataset.waChoice === 'pdf') {
+                    sendInvoicePdf(activeWhatsAppButton);
+                }
             });
         });
     </script>
+    @endif
 </body>
 </html>
