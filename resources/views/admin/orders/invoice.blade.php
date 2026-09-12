@@ -888,14 +888,14 @@
                 @endif
                 <div class="toolbar-divider" aria-hidden="true"></div>
                 @if($singleOrder && $singleOrder->customer_phone && $singleCustomerInvoiceUrl)
-                    <button type="button" data-wa-invoice="color" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" data-wa-pdf-url="{{ route('admin.orders.invoice.pdf', $singleOrder) }}" class="btn btn-whatsapp" title="Open WhatsApp with a ready-to-send color invoice message">
+                    <button type="button" data-wa-invoice="color" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" data-wa-pdf-url="{{ '/admin/orders/' . $singleOrder->id . '/invoice/pdf' }}" class="btn btn-whatsapp" title="Open WhatsApp with a ready-to-send color invoice message">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a8 8 0 01-11.7 7.1L4 20l1.4-4.1A8 8 0 1112 20a8.3 8.3 0 008-8.5z" />
                             <path stroke-linecap="round" stroke-linejoin="round" d="M8.8 8.7c.2-.4.4-.4.7-.4h.4c.2 0 .4.1.5.4l.6 1.4c.1.2.1.4-.1.6l-.5.6c.5 1 1.2 1.7 2.2 2.2l.6-.5c.2-.2.4-.2.6-.1l1.4.6c.3.1.4.3.4.5v.4c0 .3 0 .5-.4.7-.3.2-.9.3-1.4.1-2.7-.7-4.7-2.7-5.4-5.4-.2-.5-.1-1.1.1-1.4z" />
                         </svg>
                         WhatsApp · Color
                     </button>
-                    <button type="button" data-wa-invoice="mono" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" data-wa-pdf-url="{{ route('admin.orders.invoice.pdf', $singleOrder) }}" class="btn btn-whatsapp-mono" title="Open WhatsApp with a ready-to-send black and white invoice message">
+                    <button type="button" data-wa-invoice="mono" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" data-wa-pdf-url="{{ '/admin/orders/' . $singleOrder->id . '/invoice/pdf' }}" class="btn btn-whatsapp-mono" title="Open WhatsApp with a ready-to-send black and white invoice message">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a8 8 0 01-11.7 7.1L4 20l1.4-4.1A8 8 0 1112 20a8.3 8.3 0 008-8.5z" />
                             <path stroke-linecap="round" stroke-linejoin="round" d="M8.8 8.7c.2-.4.4-.4.7-.4h.4c.2 0 .4.1.5.4l.6 1.4c.1.2.1.4-.1.6l-.5.6c.5 1 1.2 1.7 2.2 2.2l.6-.5c.2-.2.4-.2.6-.1l1.4.6c.3.1.4.3.4.5v.4c0 .3 0 .5-.4.7-.3.2-.9.3-1.4.1-2.7-.7-4.7-2.7-5.4-5.4-.2-.5-.1-1.1.1-1.4z" />
@@ -1153,7 +1153,13 @@
             const fileName = 'Invoice_' + button.dataset.waOrder + '_' + mode + '.pdf';
 
             try {
-                const response = await fetch(pdfUrl, { headers: { 'Accept': 'application/pdf' } });
+                const response = await fetch(pdfUrl, {
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/pdf',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
                 if (!response.ok) throw new Error('PDF request failed');
 
                 const blob = await response.blob();
