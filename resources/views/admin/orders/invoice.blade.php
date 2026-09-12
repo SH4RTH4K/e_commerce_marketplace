@@ -761,14 +761,14 @@
                 @endif
                 <div class="toolbar-divider" aria-hidden="true"></div>
                 @if($singleOrder && $singleOrder->customer_phone && $singleCustomerInvoiceUrl)
-                    <button type="button" data-wa-invoice="color" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" class="btn btn-whatsapp" title="Send color invoice link on WhatsApp">
+                    <button type="button" data-wa-invoice="color" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" class="btn btn-whatsapp" title="Open WhatsApp with a ready-to-send color invoice message">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a8 8 0 01-11.7 7.1L4 20l1.4-4.1A8 8 0 1112 20a8.3 8.3 0 008-8.5z" />
                             <path stroke-linecap="round" stroke-linejoin="round" d="M8.8 8.7c.2-.4.4-.4.7-.4h.4c.2 0 .4.1.5.4l.6 1.4c.1.2.1.4-.1.6l-.5.6c.5 1 1.2 1.7 2.2 2.2l.6-.5c.2-.2.4-.2.6-.1l1.4.6c.3.1.4.3.4.5v.4c0 .3 0 .5-.4.7-.3.2-.9.3-1.4.1-2.7-.7-4.7-2.7-5.4-5.4-.2-.5-.1-1.1.1-1.4z" />
                         </svg>
                         WhatsApp · Color
                     </button>
-                    <button type="button" data-wa-invoice="mono" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" class="btn btn-whatsapp-mono" title="Send black and white invoice link on WhatsApp">
+                    <button type="button" data-wa-invoice="mono" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" class="btn btn-whatsapp-mono" title="Open WhatsApp with a ready-to-send black and white invoice message">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a8 8 0 01-11.7 7.1L4 20l1.4-4.1A8 8 0 1112 20a8.3 8.3 0 008-8.5z" />
                             <path stroke-linecap="round" stroke-linejoin="round" d="M8.8 8.7c.2-.4.4-.4.7-.4h.4c.2 0 .4.1.5.4l.6 1.4c.1.2.1.4-.1.6l-.5.6c.5 1 1.2 1.7 2.2 2.2l.6-.5c.2-.2.4-.2.6-.1l1.4.6c.3.1.4.3.4.5v.4c0 .3 0 .5-.4.7-.3.2-.9.3-1.4.1-2.7-.7-4.7-2.7-5.4-5.4-.2-.5-.1-1.1.1-1.4z" />
@@ -972,7 +972,12 @@
                 const separator = button.dataset.waUrl.includes('?') ? '&' : '?';
                 const invoiceUrl = button.dataset.waUrl + separator + 'print=' + mode;
                 const message = 'Hello ' + (button.dataset.waName || 'there') + ',\n\nYour ' + modeLabel + ' invoice for order #' + button.dataset.waOrder + ' is ready.\n\nOpen invoice: ' + invoiceUrl + '\n\nThank you for shopping with us!';
-                window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(message), '_blank', 'noopener');
+
+                // WhatsApp cannot open a direct chat for a number that is not
+                // registered. Use the share composer so the message is still
+                // ready and the admin can choose the customer's actual chat.
+                const shareMessage = message + '\n\nCustomer WhatsApp: +' + phone;
+                window.open('https://wa.me/?text=' + encodeURIComponent(shareMessage), '_blank', 'noopener');
             });
         });
     </script>
