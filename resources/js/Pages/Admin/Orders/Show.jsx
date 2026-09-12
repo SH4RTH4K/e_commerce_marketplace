@@ -685,17 +685,24 @@ export default function OrderShow({ order, bdcourier }) {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {(order.items || []).map(item => (
-                        <tr key={item.id}>
-                          <td className="px-5 py-3.5">
-                            <p className="font-medium text-gray-800">{item.product_name}</p>
-                            {item.variant_label && <p className="text-xs text-gray-400">{item.variant_label}</p>}
-                          </td>
-                          <td className="px-5 py-3.5 text-center text-gray-600">{item.quantity}</td>
-                          <td className="px-5 py-3.5 text-right text-gray-600">৳{Number(item.unit_price).toLocaleString()}</td>
-                          <td className="px-5 py-3.5 text-right font-semibold text-gray-900">৳{Number(item.subtotal).toLocaleString()}</td>
-                        </tr>
-                      ))}
+                      {(order.items || []).map(item => {
+                        const quantity = Number(item.quantity) || 0;
+                        const unitPrice = Number(item.unit_price) || 0;
+                        const storedLineTotal = Number(item.line_total ?? item.subtotal) || 0;
+                        const lineTotal = storedLineTotal > 0 ? storedLineTotal : unitPrice * quantity;
+
+                        return (
+                          <tr key={item.id}>
+                            <td className="px-5 py-3.5">
+                              <p className="font-medium text-gray-800">{item.product_name}</p>
+                              {item.variant_label && <p className="text-xs text-gray-400">{item.variant_label}</p>}
+                            </td>
+                            <td className="px-5 py-3.5 text-center text-gray-600">{quantity}</td>
+                            <td className="px-5 py-3.5 text-right text-gray-600">৳{unitPrice.toLocaleString()}</td>
+                            <td className="px-5 py-3.5 text-right font-semibold text-gray-900">৳{lineTotal.toLocaleString()}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                     <tfoot className="divide-y divide-gray-100 bg-gray-50/50">
                       <tr>

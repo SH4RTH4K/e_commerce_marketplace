@@ -997,6 +997,10 @@
                                     <td class="text-center font-mono">{{ $idx + 1 }}</td>
                                     <td>
                                         @php
+                                            $itemQuantity = $item->quantity ?? $item->qty ?? 1;
+                                            $itemLineTotal = (float) $item->line_total > 0
+                                                ? (float) $item->line_total
+                                                : (float) $item->unit_price * (int) $itemQuantity;
                                             $productName = $item->product_name ?: ($item->product?->name ?? 'Product');
                                             $productUrl = $item->product ? route('product.show', $item->product) : null;
                                         @endphp
@@ -1015,8 +1019,8 @@
                                         @endif
                                     </td>
                                     <td class="text-right font-mono">{{ $store['currency'] }}{{ number_format($item->unit_price, 2) }}</td>
-                                    <td class="text-center font-mono font-bold">{{ $item->quantity ?? $item->qty ?? 1 }}</td>
-                                    <td class="text-right font-mono font-bold">{{ $store['currency'] }}{{ number_format($item->line_total, 2) }}</td>
+                                    <td class="text-center font-mono font-bold">{{ $itemQuantity }}</td>
+                                    <td class="text-right font-mono font-bold">{{ $store['currency'] }}{{ number_format($itemLineTotal, 2) }}</td>
                                 </tr>
                             @empty
                                 <tr>

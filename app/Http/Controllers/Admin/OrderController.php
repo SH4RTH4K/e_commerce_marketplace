@@ -368,7 +368,11 @@ class OrderController extends Controller
         $order->load('items');
         $items = $order->items->map(fn($item) => [
             'id' => $item->id, 'product_name' => $item->product_name, 'variant_label' => $item->variant,
-            'quantity' => $item->quantity, 'unit_price' => $item->unit_price, 'subtotal' => $item->subtotal,
+            'quantity' => $item->quantity,
+            'unit_price' => $item->unit_price,
+            'line_total' => (float) $item->line_total > 0
+                ? $item->line_total
+                : round((float) $item->unit_price * (int) $item->quantity, 2),
         ]);
 
         // Load the latest saved result without making an API call on every page view.
