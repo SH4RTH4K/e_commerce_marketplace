@@ -95,10 +95,11 @@ class BdCourierService
 
             $normalized['_phone'] = $phone;
             $normalized['_success_ratio'] = (float) ($normalized['data']['summary']['success_ratio'] ?? $normalized['success_ratio'] ?? 0);
-            $normalized['_risk_level'] = $normalized['risk_verdict']['level']
-                ?? $normalized['risk_level']
+            $providerRiskLevel = $normalized['risk_verdict']['level'] ?? $normalized['risk_level'] ?? null;
+            $normalized['_risk_level'] = self::canonicalRiskLevel($providerRiskLevel)
                 ?? self::riskLevel($normalized['_success_ratio'], (int) ($normalized['data']['summary']['total_parcel'] ?? 0));
-            $normalized['_risk_label'] = $normalized['risk_verdict']['label'] ?? ucfirst((string) $normalized['_risk_level']);
+            // Keep the label free of a duplicated "Risk" suffix; the UI adds it.
+            $normalized['_risk_label'] = ucfirst((string) $normalized['_risk_level']);
             $normalized['_risk_color'] = $this->riskColor($normalized['_risk_level']);
 
             return $this->rememberConnection([
@@ -537,6 +538,20 @@ class BdCourierService
     /**
      * Map delivery success to the application's canonical risk level.
      */
+    public static function canonicalRiskLevel($level): ?string
+    {
+        $normalized = strtolower(trim((string) $level));
+        $normalized = preg_replace('/[\s-]+/', '_', $normalized) ?? '';
+
+        if (str_contains($normalized, 'danger')) return 'danger';
+        if (str_contains($normalized, 'high')) return 'high';
+        if (str_contains($normalized, 'medium') || str_contains($normalized, 'moderate')) return 'medium';
+        if (str_contains($normalized, 'low')) return 'low';
+        if (str_contains($normalized, 'safe') || str_contains($normalized, 'good')) return 'safe';
+
+        return null;
+    }
+
     public static function riskLevel(float $ratio, int $totalParcels): string
     {
         if ($totalParcels <= 0) {

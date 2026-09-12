@@ -12,6 +12,47 @@ function PaymentBadge({ status }) {
   return <span className={`px-2.5 py-1 text-xs font-medium rounded-full capitalize ${map[status]||'bg-gray-100 text-gray-600'}`}>{status}</span>;
 }
 
+function normalizeRiskLevel(level) {
+  const normalized = String(level || 'unknown')
+    .toLowerCase()
+    .trim()
+    .replace(/[\s-]+/g, '_')
+    .replace(/_+/g, '_');
+
+  if (normalized.includes('danger')) return 'danger';
+  if (normalized.includes('high')) return 'high';
+  if (normalized.includes('medium') || normalized.includes('moderate')) return 'medium';
+  if (normalized.includes('low')) return 'low';
+  if (normalized.includes('safe') || normalized.includes('good')) return 'safe';
+  return normalized;
+}
+
+function resolveRiskLevel(level, label) {
+  const knownLevels = ['safe', 'low', 'medium', 'high', 'danger'];
+  const normalizedLevel = normalizeRiskLevel(level);
+  if (knownLevels.includes(normalizedLevel)) return normalizedLevel;
+
+  const normalizedLabel = normalizeRiskLevel(label);
+  return knownLevels.includes(normalizedLabel) ? normalizedLabel : normalizedLevel;
+}
+
+function riskDisplayLabel(level, label) {
+  const normalized = resolveRiskLevel(level, label);
+  const raw = String(label || level || normalized)
+    .replace(/(?:[\s_-]+risk)+$/i, '')
+    .trim();
+  return raw || normalized;
+}
+
+function riskRatioClass(level, ratio) {
+  const normalized = resolveRiskLevel(level);
+  if (normalized === 'danger' || normalized === 'high') return 'text-red-500';
+  if (normalized === 'medium') return 'text-amber-500';
+  if (normalized === 'low') return 'text-blue-500';
+  if (normalized === 'safe') return 'text-green-600';
+  return Number(ratio) < 50 ? 'text-red-500' : 'text-green-600';
+}
+
 function RiskBadge({ level, label }) {
   const map = {
     safe:   'bg-green-100 text-green-700 border-green-200',
@@ -20,11 +61,12 @@ function RiskBadge({ level, label }) {
     high:   'bg-red-100 text-red-700 border-red-200',
     danger: 'bg-rose-100 text-rose-700 border-rose-200',
   };
-  const cls = map[level] || 'bg-gray-100 text-gray-600 border-gray-200';
-  const icon = level === 'danger' || level === 'high' ? '⚠ ' : level === 'safe' ? '✓ ' : '● ';
+  const normalized = resolveRiskLevel(level, label);
+  const cls = map[normalized] || 'bg-gray-100 text-gray-600 border-gray-200';
+  const icon = normalized === 'danger' || normalized === 'high' ? '⚠ ' : normalized === 'safe' ? '✓ ' : '● ';
   return (
     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${cls}`}>
-      {icon}{label || level} Risk
+      {icon}{riskDisplayLabel(level, label)} Risk
     </span>
   );
 }
@@ -236,19 +278,17 @@ function FraudHistoryPanel({ order }) {
             const ratio   = fraudResult._success_ratio || 0;
             const level   = fraudResult._risk_level;
             const label   = fraudResult._risk_label;
+            const normalizedLevel = resolveRiskLevel(level, label);
             const reports = fraudResult.reports || [];
 
             const bannerCls =
-              level === 'danger' ? 'bg-rose-50 border-rose-200' :
-              level === 'high'   ? 'bg-red-50 border-red-200'   :
-              level === 'medium' ? 'bg-amber-50 border-amber-200':
-              level === 'low'    ? 'bg-blue-50 border-blue-200'  :
+              normalizedLevel === 'danger' ? 'bg-rose-50 border-rose-200' :
+              normalizedLevel === 'high'   ? 'bg-red-50 border-red-200'   :
+              normalizedLevel === 'medium' ? 'bg-amber-50 border-amber-200':
+              normalizedLevel === 'low'    ? 'bg-blue-50 border-blue-200'  :
                                    'bg-green-50 border-green-200';
 
-            const ratioCls =
-              ratio < 50 ? 'text-red-600' :
-              ratio < 75 ? 'text-amber-600' :
-                           'text-green-600';
+            const ratioCls = riskRatioClass(normalizedLevel, ratio).replace('-500', '-600');
 
             return (
               <div className="space-y-4">
@@ -559,6 +599,7 @@ function EditCustomerModal({ order, onClose }) {
 export default function OrderShow({ order, bdcourier }) {
   const [showCourierModal, setShowCourierModal] = useState(false);
   const [showEditCustomerModal, setShowEditCustomerModal] = useState(false);
+  const bdcourierRiskLevel = resolveRiskLevel(bdcourier?._risk_level, bdcourier?._risk_label);
 
   // Auto-open modal when navigated with ?ship=1
   useEffect(() => {
@@ -893,19 +934,19 @@ export default function OrderShow({ order, bdcourier }) {
                       BD Courier Report
                     </h3>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      bdcourier._risk_level === 'danger' ? 'bg-rose-100 text-rose-700' :
-                      bdcourier._risk_level === 'high'   ? 'bg-red-100 text-red-700'   :
-                      bdcourier._risk_level === 'medium' ? 'bg-amber-100 text-amber-700':
-                      bdcourier._risk_level === 'low'    ? 'bg-blue-100 text-blue-700'  :
+                      bdcourierRiskLevel === 'danger' ? 'bg-rose-100 text-rose-700' :
+                      bdcourierRiskLevel === 'high'   ? 'bg-red-100 text-red-700'   :
+                      bdcourierRiskLevel === 'medium' ? 'bg-amber-100 text-amber-700':
+                      bdcourierRiskLevel === 'low'    ? 'bg-blue-100 text-blue-700'  :
                                                            'bg-green-100 text-green-700'
                     }`}>
-                      {bdcourier._risk_label} Risk
+                      {riskDisplayLabel(bdcourier._risk_level, bdcourier._risk_label)} Risk
                     </span>
                   </div>
                   <div className="p-5 space-y-4">
                     <div className="flex items-center gap-4">
                       <div className="w-14 h-14 rounded-full border-4 border-gray-50 flex items-center justify-center flex-shrink-0">
-                        <span className={`font-bold text-sm ${bdcourier._success_ratio < 50 ? 'text-red-500' : 'text-green-600'}`}>
+                        <span className={`font-bold text-sm ${riskRatioClass(bdcourierRiskLevel, bdcourier._success_ratio)}`}>
                           {bdcourier._success_ratio.toFixed(0)}%
                         </span>
                       </div>

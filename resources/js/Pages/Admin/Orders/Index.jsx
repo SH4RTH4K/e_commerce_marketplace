@@ -1,6 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /* ─── Badges ─────────────────────────────────────────────────────── */
 function StatusBadge({ status }) {
@@ -32,8 +32,32 @@ function PaymentBadge({ status }) {
   );
 }
 
+function normalizeRiskLevel(level) {
+  const normalized = String(level || 'unknown')
+    .toLowerCase()
+    .trim()
+    .replace(/[\s-]+/g, '_')
+    .replace(/_+/g, '_');
+
+  if (normalized.includes('danger')) return 'danger';
+  if (normalized.includes('high')) return 'high';
+  if (normalized.includes('medium') || normalized.includes('moderate')) return 'medium';
+  if (normalized.includes('low')) return 'low';
+  if (normalized.includes('safe') || normalized.includes('good')) return 'safe';
+  return normalized;
+}
+
+function resolveRiskLevel(level, label) {
+  const knownLevels = ['safe', 'low', 'medium', 'high', 'danger'];
+  const normalizedLevel = normalizeRiskLevel(level);
+  if (knownLevels.includes(normalizedLevel)) return normalizedLevel;
+
+  const normalizedLabel = normalizeRiskLevel(label);
+  return knownLevels.includes(normalizedLabel) ? normalizedLabel : normalizedLevel;
+}
+
 function RiskBadge({ level, label }) {
-  const norm = String(level || '').toLowerCase().replace('_risk', '');
+  const norm = resolveRiskLevel(level, label);
   const map = {
     safe:   'bg-green-100 text-green-700 border-green-200',
     low:    'bg-blue-100 text-blue-700 border-blue-200',
@@ -55,6 +79,51 @@ function getCsrfToken() {
   return meta ? meta.content : '';
 }
 
+function normalizePhone(phone) {
+  const digits = String(phone || '').replace(/\D+/g, '');
+  return digits.length === 13 && digits.startsWith('88') ? digits.slice(2) : digits;
+}
+
+function CourierRatioButton({ ratio, loading, onClick }) {
+  const value = ratio?.success_ratio;
+  const numericValue = Number(value);
+  const hasValue = Number.isFinite(numericValue);
+  const risk = resolveRiskLevel(ratio?.risk_level);
+  const tone = risk === 'danger'
+    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-100'
+    : risk === 'high'
+      ? 'bg-red-50 hover:bg-red-100 text-red-700 border-red-100'
+      : risk === 'medium'
+        ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-100'
+        : risk === 'low'
+          ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-100'
+          : !hasValue
+    ? 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-100'
+    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-100';
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg ${tone} text-[10px] font-bold transition-colors border cursor-pointer`}
+      title="Click to view courier delivery history and fraud details"
+    >
+      <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+      <span className="flex flex-col items-start leading-tight">
+        <span>Courier ratio</span>
+        <span className="text-[11px] font-extrabold">
+          {loading ? 'Checking…' : hasValue ? `${numericValue.toFixed(0)}% success` : 'Check now'}
+        </span>
+      </span>
+      <svg className="w-3 h-3 ml-0.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
+  );
+}
+
 /* ─── Tab config ─────────────────────────────────────────────────── */
 const tabs = [
   { key: 'all',                   label: 'All Orders' },
@@ -74,8 +143,9 @@ export default function OrdersIndex({
   dateFilter: dateFilterProp = 'all',
   fromDate: fromDateProp = '',
   toDate: toDateProp = '',
-  q, 
-  bdcourierConfigured = false 
+  q,
+  bdcourierConfigured = false,
+  courierRatios: courierRatiosProp = {},
 }) {
   const { auth } = usePage().props;
   const user = auth?.user;
@@ -93,6 +163,81 @@ export default function OrdersIndex({
 
   // ── Quick Courier Ratio / Score Checker Modal ──
   const [courierModal, setCourierModal] = useState({ open: false, phone: '', customerName: '', loading: false, data: null, history: null, error: null });
+  const [courierRatios, setCourierRatios] = useState(courierRatiosProp || {});
+  const [ratioLoadingPhones, setRatioLoadingPhones] = useState({});
+  const autoCheckedPhones = useRef(new Set());
+
+  const saveCourierRatio = (phone, result) => {
+    const summary = result?.data?.summary || {};
+    const total = Number(summary.total_parcel ?? 0);
+    const success = Number(summary.success_parcel ?? 0);
+    const ratio = Number(result?._success_ratio ?? summary.success_ratio ?? (total > 0 ? (success / total) * 100 : 0));
+    const key = normalizePhone(phone);
+    const resolvedRisk = resolveRiskLevel(result?._risk_level, result?._risk_label);
+
+    if (!key || !Number.isFinite(ratio)) return;
+
+    setCourierRatios(prev => ({
+      ...prev,
+      [key]: {
+        ...(prev[key] || {}),
+        success_ratio: ratio,
+        risk_level: resolvedRisk !== 'unknown' ? resolvedRisk : (prev[key]?.risk_level || 'unknown'),
+        total_parcels: total,
+        successful_parcels: success,
+        cancelled_parcels: Number(summary.cancelled_parcel ?? 0),
+        last_checked_at: new Date().toISOString(),
+      },
+    }));
+  };
+
+  const fetchAutoCourierRatio = async (order) => {
+    const phone = order?.customer_phone;
+    const key = normalizePhone(phone);
+    if (!key) return;
+
+    setRatioLoadingPhones(prev => ({ ...prev, [key]: true }));
+    try {
+      const response = await fetch('/admin/orders/check-fraud', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken(), 'Accept': 'application/json' },
+        body: JSON.stringify({ phone, customer_name: order.customer_name }),
+      });
+      const result = await response.json();
+      if (!result.error) saveCourierRatio(phone, result);
+    } catch (err) {
+      // A failed background check should not interrupt order management.
+    } finally {
+      setRatioLoadingPhones(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
+  useEffect(() => {
+    if (!bdcourierConfigured || !orders?.data?.length) return;
+
+    let cancelled = false;
+    const refreshRatios = async () => {
+      for (const order of orders.data) {
+        if (cancelled) break;
+        const key = normalizePhone(order.customer_phone);
+        if (!key || autoCheckedPhones.current.has(key)) continue;
+
+        const cached = courierRatios[key];
+        const cachedAt = cached?.last_checked_at ? Date.parse(cached.last_checked_at) : 0;
+        const isFresh = cachedAt > 0 && (Date.now() - cachedAt) < 30 * 60 * 1000;
+        if (isFresh) {
+          autoCheckedPhones.current.add(key);
+          continue;
+        }
+
+        autoCheckedPhones.current.add(key);
+        await fetchAutoCourierRatio(order);
+      }
+    };
+
+    refreshRatios();
+    return () => { cancelled = true; };
+  }, [bdcourierConfigured, orders?.data, courierRatios]);
 
   const openCourierModal = async (phone, name = '') => {
     if (!phone) return;
@@ -117,6 +262,7 @@ export default function OrdersIndex({
         history: histRes,
         error: fraudRes.error || null,
       }));
+      if (!fraudRes.error) saveCourierRatio(phone, fraudRes);
     } catch (err) {
       setCourierModal(prev => ({ ...prev, loading: false, error: 'Could not fetch courier data. Check API settings.' }));
     }
@@ -427,16 +573,11 @@ export default function OrdersIndex({
                       </div>
 
                       {bdcourierConfigured && (
-                        <button
+                        <CourierRatioButton
+                          ratio={courierRatios[normalizePhone(order.customer_phone)]}
+                          loading={Boolean(ratioLoadingPhones[normalizePhone(order.customer_phone)])}
                           onClick={() => openCourierModal(order.customer_phone, order.customer_name)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-bold transition-colors border border-indigo-100 shrink-0 cursor-pointer"
-                          title="Check Courier Delivery History & Fraud Score"
-                        >
-                          <svg className="w-3 h-3 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                          </svg>
-                          Courier Ratio
-                        </button>
+                        />
                       )}
                     </div>
 
@@ -589,16 +730,11 @@ export default function OrdersIndex({
                         {/* Courier / Fraud Ratio Badge & Checker if BD Courier is Configured */}
                         {bdcourierConfigured && (
                           <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-                            <button
+                            <CourierRatioButton
+                              ratio={courierRatios[normalizePhone(order.customer_phone)]}
+                              loading={Boolean(ratioLoadingPhones[normalizePhone(order.customer_phone)])}
                               onClick={() => openCourierModal(order.customer_phone, order.customer_name)}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10.5px] font-semibold transition-colors border border-indigo-100 cursor-pointer"
-                              title="Check Courier Delivery History & Fraud Score"
-                            >
-                              <svg className="w-3 h-3 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                              </svg>
-                              Courier Ratio
-                            </button>
+                            />
                           </div>
                         )}
 

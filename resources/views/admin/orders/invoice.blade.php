@@ -12,8 +12,26 @@
     </title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --ink: #123044;
+            --ink-soft: #355467;
+            --muted: #718895;
+            --line: #dbe6e8;
+            --line-soft: #edf3f2;
+            --paper: #ffffff;
+            --canvas: #eef5f3;
+            --accent: #087861;
+            --accent-dark: #075a4a;
+            --accent-soft: #e3f3ed;
+            --gold: #d29a35;
+            --gold-soft: #fff5dd;
+            --danger-soft: #fff0ec;
+            --danger: #a64e36;
+            --shadow: 0 22px 55px rgba(18, 48, 68, 0.09);
+        }
+
         *, *::before, *::after {
             box-sizing: border-box;
             margin: 0;
@@ -21,210 +39,377 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #f8fafc;
-            color: #1e293b;
-            line-height: 1.5;
+            min-height: 100vh;
+            background: var(--canvas);
+            color: var(--ink);
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             font-size: 13px;
+            line-height: 1.5;
             -webkit-font-smoothing: antialiased;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
         }
 
-        /* ── Minimalist Floating Action Bar (Hidden on print) ── */
         .action-bar {
             position: sticky;
             top: 0;
-            z-index: 100;
-            background: #ffffff;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 12px 24px;
+            z-index: 10;
+            padding: 13px 28px;
+            background: rgba(255, 255, 255, 0.94);
+            border-bottom: 1px solid rgba(219, 230, 232, 0.9);
+            box-shadow: 0 5px 18px rgba(18, 48, 68, 0.06);
+            backdrop-filter: blur(14px);
+        }
+
+        .toolbar-shell {
+            max-width: 1120px;
+            margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            gap: 20px;
         }
 
-        .action-bar .info {
+        .toolbar-context {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #0f172a;
+            gap: 11px;
+            min-width: 0;
         }
 
-        .action-bar .info span.muted {
-            font-size: 12px;
-            color: #64748b;
-            font-weight: 400;
+        .toolbar-mark {
+            width: 30px;
+            height: 30px;
+            display: grid;
+            place-items: center;
+            flex: 0 0 auto;
+            border-radius: 9px;
+            background: var(--accent-soft);
+            color: var(--accent);
+        }
+
+        .toolbar-title {
+            color: var(--ink);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .toolbar-subtitle {
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .toolbar-divider {
+            width: 1px;
+            height: 24px;
+            background: var(--line);
         }
 
         .btn-group {
             display: flex;
             align-items: center;
             gap: 8px;
+            flex: 0 0 auto;
         }
 
         .btn {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 7px 16px;
-            border-radius: 8px;
-            font-size: 12.5px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.15s ease;
+            justify-content: center;
+            gap: 7px;
+            min-height: 36px;
+            padding: 8px 14px;
             border: 1px solid transparent;
+            border-radius: 9px;
+            cursor: pointer;
+            font: 600 12px/1 'DM Sans', sans-serif;
+            text-decoration: none;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
         }
 
-        .btn-primary {
-            background: #0f172a;
-            color: #ffffff;
-        }
-
-        .btn-primary:hover {
-            background: #334155;
+        .btn:hover {
+            transform: translateY(-1px);
         }
 
         .btn-secondary {
-            background: #ffffff;
-            color: #334155;
-            border-color: #cbd5e1;
+            color: var(--ink-soft);
+            background: #fff;
+            border-color: var(--line);
         }
 
         .btn-secondary:hover {
-            background: #f1f5f9;
+            background: #f8fbfa;
+            box-shadow: 0 4px 12px rgba(18, 48, 68, 0.08);
         }
 
-        /* ── Minimalist Sheet Container ── */
+        .btn-mono {
+            color: #1c2b31;
+            background: #fff;
+            border-color: #afbec1;
+        }
+
+        .btn-mono:hover {
+            background: #f2f5f5;
+            box-shadow: 0 4px 12px rgba(18, 48, 68, 0.1);
+        }
+
+        .btn-color {
+            color: #fff;
+            background: var(--accent);
+            box-shadow: 0 5px 12px rgba(8, 120, 97, 0.2);
+        }
+
+        .btn-color:hover {
+            background: var(--accent-dark);
+            box-shadow: 0 7px 16px rgba(8, 120, 97, 0.28);
+        }
+
         .invoice-wrapper {
-            max-width: 760px;
-            margin: 24px auto;
+            width: min(100% - 32px, 920px);
+            margin: 34px auto 54px;
         }
 
         .invoice-sheet {
-            background: #ffffff;
-            padding: 48px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            margin-bottom: 24px;
             position: relative;
+            overflow: hidden;
+            margin-bottom: 28px;
+            padding: 48px 54px 34px;
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
         }
 
-        /* Top Header */
+        .invoice-sheet::before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto;
+            height: 5px;
+            background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 62%, var(--gold) 62%, var(--gold) 100%);
+        }
+
         .header {
             display: flex;
-            justify-content: space-between;
             align-items: flex-start;
-            padding-bottom: 24px;
-            border-bottom: 1px solid #e2e8f0;
+            justify-content: space-between;
+            gap: 30px;
+            padding-bottom: 29px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .brand-lockup {
+            min-width: 0;
+        }
+
+        .brand-logo {
+            display: block;
+            max-width: 190px;
+            max-height: 58px;
+            margin-bottom: 10px;
+            object-fit: contain;
+            object-position: left center;
         }
 
         .brand-title {
-            font-size: 22px;
+            color: var(--ink);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+        }
+
+        .brand-kicker {
+            margin-top: 3px;
+            color: var(--accent);
+            font-size: 10px;
             font-weight: 800;
-            color: #0f172a;
-            letter-spacing: -0.02em;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
         }
 
         .brand-sub {
-            font-size: 11.5px;
-            color: #64748b;
-            margin-top: 3px;
+            max-width: 470px;
+            margin-top: 11px;
+            color: var(--muted);
+            font-size: 11px;
         }
 
         .header-meta {
+            min-width: 190px;
+            padding: 14px 16px;
             text-align: right;
+            background: var(--accent-soft);
+            border-radius: 12px;
+        }
+
+        .invoice-eyebrow {
+            color: var(--accent);
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
         }
 
         .invoice-heading {
-            font-size: 18px;
-            font-weight: 800;
-            letter-spacing: 0.05em;
-            color: #0f172a;
+            margin-top: 1px;
+            color: var(--ink);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 25px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
         }
 
         .invoice-code {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 12.5px;
+            margin-top: 6px;
+            color: var(--ink-soft);
+            font-family: 'Space Grotesk', monospace;
+            font-size: 12px;
             font-weight: 600;
-            color: #334155;
-            margin-top: 2px;
         }
 
         .invoice-date {
-            font-size: 11.5px;
-            color: #64748b;
-            margin-top: 2px;
+            margin-top: 3px;
+            color: var(--muted);
+            font-size: 10.5px;
         }
 
-        /* Customer & Order Details Grid */
         .details-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 32px;
+            grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr);
+            gap: 18px;
             padding: 24px 0;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .detail-card {
+            min-height: 122px;
+            padding: 16px 18px;
+            background: #fbfdfc;
+            border: 1px solid var(--line-soft);
+            border-radius: 12px;
+        }
+
+        .detail-card.payment-card {
+            text-align: right;
+            background: #f8fbfa;
         }
 
         .section-label {
-            font-size: 10px;
-            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 8px;
+            color: var(--muted);
+            font-size: 9.5px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: #94a3b8;
-            margin-bottom: 6px;
+        }
+
+        .payment-card .section-label {
+            justify-content: flex-end;
+        }
+
+        .section-label::before {
+            content: "";
+            width: 17px;
+            height: 2px;
+            background: var(--gold);
+            border-radius: 99px;
         }
 
         .customer-name {
-            font-size: 14px;
+            color: var(--ink);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 16px;
             font-weight: 700;
-            color: #0f172a;
         }
 
         .text-row {
-            font-size: 12px;
-            color: #475569;
-            margin-top: 2px;
+            margin-top: 3px;
+            color: var(--ink-soft);
+            font-size: 11.5px;
+        }
+
+        .text-row strong {
+            color: var(--ink);
+            font-weight: 700;
+        }
+
+        .badge-row {
+            margin-top: 8px;
         }
 
         .badge {
             display: inline-block;
-            font-size: 10px;
-            font-weight: 700;
+            margin-top: 3px;
+            padding: 4px 8px;
+            color: var(--ink-soft);
+            background: #eaf0f0;
+            border: 1px solid #dfe9e8;
+            border-radius: 5px;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
-            padding: 2px 7px;
-            border-radius: 4px;
-            background: #f1f5f9;
-            color: #475569;
-            margin-top: 4px;
         }
 
-        .badge-success { background: #dcfce7; color: #15803d; }
-        .badge-pending { background: #fef3c7; color: #b45309; }
+        .badge-success {
+            color: var(--accent-dark);
+            background: var(--accent-soft);
+            border-color: #c7e7dc;
+        }
 
-        /* Minimal Clean Items Table */
+        .badge-pending {
+            color: #96661a;
+            background: var(--gold-soft);
+            border-color: #f2dfad;
+        }
+
+        .delivery-note {
+            margin-top: 7px;
+            padding: 6px 8px;
+            color: #805d1d;
+            background: var(--gold-soft);
+            border: 1px solid #f2dfad;
+            border-radius: 6px;
+            font-size: 10.5px;
+        }
+
+        .delivery-note strong {
+            color: #6e4d12;
+        }
+
         .table-wrap {
-            padding: 20px 0;
+            padding: 25px 0 19px;
         }
 
-        table.items-table {
+        table.items-table,
+        table.summary-table {
             width: 100%;
             border-collapse: collapse;
         }
 
         table.items-table th {
-            font-size: 10.5px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #64748b;
-            padding: 10px 0;
-            border-bottom: 1px solid #0f172a;
+            padding: 10px 10px;
+            color: var(--accent-dark);
+            background: var(--accent-soft);
+            font-size: 9.5px;
+            font-weight: 800;
+            letter-spacing: 0.1em;
             text-align: left;
+            text-transform: uppercase;
+        }
+
+        table.items-table th:first-child {
+            padding-left: 12px;
+            border-radius: 7px 0 0 7px;
+        }
+
+        table.items-table th:last-child {
+            padding-right: 12px;
+            border-radius: 0 7px 7px 0;
         }
 
         table.items-table th.text-right,
@@ -238,94 +423,206 @@
         }
 
         table.items-table td {
-            padding: 14px 0;
-            border-bottom: 1px solid #f1f5f9;
+            padding: 16px 10px;
+            border-bottom: 1px solid var(--line-soft);
+            color: var(--ink-soft);
+            font-size: 12px;
             vertical-align: top;
-            font-size: 12.5px;
+        }
+
+        table.items-table td:first-child {
+            padding-left: 12px;
+        }
+
+        table.items-table td:last-child {
+            padding-right: 12px;
         }
 
         .item-title {
+            color: var(--ink);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 12.5px;
             font-weight: 600;
-            color: #0f172a;
         }
 
         .item-variant {
-            font-size: 11px;
-            color: #64748b;
-            margin-top: 1px;
+            margin-top: 2px;
+            color: var(--muted);
+            font-size: 10.5px;
+        }
+
+        .item-sku,
+        .font-mono {
+            font-family: 'Space Grotesk', monospace;
         }
 
         .item-sku {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10.5px;
-            color: #94a3b8;
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 9.5px;
         }
 
-        .font-mono {
-            font-family: 'JetBrains Mono', monospace;
+        .font-bold {
+            font-weight: 700;
         }
 
-        /* Summary Section */
         .summary-grid {
             display: grid;
-            grid-template-columns: 1fr 240px;
-            gap: 32px;
-            padding-top: 16px;
+            grid-template-columns: minmax(0, 1fr) 270px;
+            align-items: start;
+            gap: 34px;
+            padding-top: 11px;
         }
 
         .notes-content {
+            padding: 13px 0;
+            color: var(--muted);
             font-size: 11.5px;
-            color: #64748b;
-            line-height: 1.6;
+            line-height: 1.65;
+        }
+
+        .notes-content p + p {
+            margin-top: 9px;
         }
 
         .notes-content strong {
-            color: #334155;
+            color: var(--ink-soft);
         }
 
-        table.summary-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
+        .summary-table {
+            padding: 7px 0;
         }
 
         table.summary-table td {
-            padding: 4px 0;
-            color: #64748b;
+            padding: 5px 0;
+            color: var(--muted);
+            font-size: 11.5px;
         }
 
         table.summary-table td.amount {
+            color: var(--ink);
+            font-weight: 700;
             text-align: right;
-            font-weight: 600;
-            color: #0f172a;
+        }
+
+        table.summary-table .discount-amount {
+            color: var(--accent) !important;
         }
 
         table.summary-table tr.total-row td {
-            padding-top: 10px;
-            border-top: 1px solid #0f172a;
-            font-size: 14.5px;
+            padding: 14px 15px;
+            color: #fff;
+            background: var(--accent);
+            font-size: 14px;
             font-weight: 800;
-            color: #0f172a;
         }
 
-        /* Minimal Footer */
+        table.summary-table tr.total-row td:first-child {
+            border-radius: 9px 0 0 9px;
+        }
+
+        table.summary-table tr.total-row td:last-child {
+            border-radius: 0 9px 9px 0;
+        }
+
         .footer {
-            margin-top: 40px;
-            padding-top: 16px;
-            border-top: 1px solid #f1f5f9;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            font-size: 11px;
-            color: #94a3b8;
+            justify-content: space-between;
+            gap: 16px;
+            margin-top: 31px;
+            padding-top: 16px;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 10px;
         }
 
-        /* ── Print Media ── */
+        .footer strong {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        @media (max-width: 700px) {
+            .action-bar {
+                padding: 12px 16px;
+            }
+
+            .toolbar-shell,
+            .header,
+            .footer {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .toolbar-shell {
+                gap: 12px;
+            }
+
+            .toolbar-divider {
+                display: none;
+            }
+
+            .btn-group {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+
+            .btn {
+                padding-inline: 9px;
+                font-size: 11px;
+            }
+
+            .invoice-wrapper {
+                width: min(100% - 20px, 920px);
+                margin-top: 20px;
+            }
+
+            .invoice-sheet {
+                padding: 35px 20px 25px;
+                border-radius: 13px;
+            }
+
+            .header-meta,
+            .detail-card.payment-card {
+                text-align: left;
+            }
+
+            .payment-card .section-label {
+                justify-content: flex-start;
+            }
+
+            .details-grid,
+            .summary-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .summary-grid {
+                gap: 6px;
+            }
+
+            .footer {
+                gap: 5px;
+            }
+
+            table.items-table {
+                min-width: 570px;
+            }
+
+            .table-wrap {
+                overflow-x: auto;
+            }
+        }
+
         @media print {
+            @page {
+                size: A4;
+                margin: 0;
+            }
+
             body {
-                background: #ffffff !important;
-                color: #000000 !important;
-                font-size: 10.5pt;
+                min-height: auto;
+                background: #fff !important;
             }
 
             .no-print {
@@ -333,14 +630,17 @@
             }
 
             .invoice-wrapper {
-                max-width: 100% !important;
+                width: 100% !important;
                 margin: 0 !important;
             }
 
             .invoice-sheet {
+                min-height: 277mm;
+                margin: 0 !important;
+                padding: 12mm 13mm 9mm !important;
                 border: none !important;
                 border-radius: 0 !important;
-                padding: 12mm 12mm !important;
+                box-shadow: none !important;
                 page-break-after: always;
                 page-break-inside: avoid;
             }
@@ -348,70 +648,130 @@
             .invoice-sheet:last-child {
                 page-break-after: auto;
             }
+
+            .table-wrap {
+                overflow: visible;
+            }
+        }
+
+        /* Explicit black-and-white print mode. */
+        body.print-mono {
+            --ink: #111111;
+            --ink-soft: #333333;
+            --muted: #555555;
+            --line: #b8b8b8;
+            --line-soft: #dddddd;
+            --accent: #111111;
+            --accent-dark: #111111;
+            --accent-soft: #eeeeee;
+            --gold: #555555;
+            --gold-soft: #f4f4f4;
+            --danger-soft: #f4f4f4;
+            --danger: #222222;
+        }
+
+        body.print-mono .invoice-sheet::before {
+            background: #111 !important;
+        }
+
+        body.print-mono .invoice-sheet,
+        body.print-mono .detail-card,
+        body.print-mono .detail-card.payment-card,
+        body.print-mono .header-meta {
+            background: #fff !important;
+        }
+
+        body.print-mono table.items-table th {
+            color: #111 !important;
+            background: #eeeeee !important;
+        }
+
+        body.print-mono table.summary-table tr.total-row td {
+            color: #111 !important;
+            background: #fff !important;
+            border-top: 2px solid #111 !important;
+            border-bottom: 2px solid #111 !important;
+        }
+
+        body.print-mono .badge,
+        body.print-mono .badge-success,
+        body.print-mono .badge-pending,
+        body.print-mono .delivery-note {
+            color: #111 !important;
+            background: #f4f4f4 !important;
+            border-color: #aaa !important;
         }
     </style>
 </head>
 <body>
-
-    <!-- ── Minimal Top Action Bar (Hidden on print) ── -->
     <div class="action-bar no-print">
-        <div class="info">
-            <span>
-                @if($isBulk)
-                    Batch Print: {{ count($orders) }} Invoices
+        <div class="toolbar-shell">
+            <div class="toolbar-context">
+                <div class="toolbar-mark" aria-hidden="true">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 3h8l4 4v14H7a2 2 0 01-2-2V5a2 2 0 012-2z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 3v5h5M9 13h6M9 17h6" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="toolbar-title">
+                        @if($isBulk)
+                            {{ count($orders) }} invoices ready to print
+                        @else
+                            Invoice #{{ $orders->first()->order_number }}
+                        @endif
+                    </div>
+                    <div class="toolbar-subtitle">A4 layout · choose your print finish</div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                @if(isset($isCustomer) && $isCustomer)
+                    <a href="/account" class="btn btn-secondary">← Account</a>
                 @else
-                    Invoice #{{ $orders->first()->order_number }}
+                    <a href="/admin/orders" class="btn btn-secondary">← Orders</a>
                 @endif
-            </span>
-            <span class="muted">· A4 / PDF Ready</span>
-        </div>
-
-        <div class="btn-group">
-            @if(isset($isCustomer) && $isCustomer)
-                <a href="/account" class="btn btn-secondary">
-                    ← My Account
-                </a>
-            @else
-                <a href="/admin/orders" class="btn btn-secondary">
-                    ← Orders
-                </a>
-            @endif
-
-            <button onclick="window.print()" class="btn btn-primary">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                </svg>
-                Print / Save PDF
-            </button>
+                <div class="toolbar-divider" aria-hidden="true"></div>
+                <button type="button" onclick="printInvoice('mono')" class="btn btn-mono">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 9V4h12v5M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v6H6v-6z" />
+                    </svg>
+                    B&amp;W Print
+                </button>
+                <button type="button" onclick="printInvoice('color')" class="btn btn-color">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 9V4h12v5M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v6H6v-6z" />
+                    </svg>
+                    Color Print
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- ── Minimal Clean Invoice Sheet ── -->
-    <div class="invoice-wrapper">
+    <main class="invoice-wrapper">
         @foreach($orders as $order)
-            <div class="invoice-sheet">
-                
-                <!-- 1. Header -->
-                <div class="header">
-                    <div>
+            <article class="invoice-sheet">
+                <header class="header">
+                    <div class="brand-lockup">
                         @if(!empty($store['logo']))
-                            <img src="{{ $store['logo'] }}" alt="{{ $store['name'] }}" style="max-height: 44px; max-width: 200px; object-fit: contain; margin-bottom: 4px; display: block;" />
+                            <img class="brand-logo" src="{{ $store['logo'] }}" alt="{{ $store['name'] }}">
                         @else
                             <div class="brand-title">{{ $store['name'] }}</div>
+                            <div class="brand-kicker">{{ $store['tagline'] }}</div>
                         @endif
                         <div class="brand-sub">{{ $store['address'] }} · {{ $store['phone'] }} · {{ $store['email'] }}</div>
                     </div>
                     <div class="header-meta">
+                        <div class="invoice-eyebrow">Official document</div>
                         <div class="invoice-heading">INVOICE</div>
                         <div class="invoice-code">#{{ $order->order_number }}</div>
                         <div class="invoice-date">{{ $order->created_at->format('d M Y, h:i A') }}</div>
                     </div>
-                </div>
+                </header>
 
-                <!-- 2. Customer & Shipping Info -->
-                <div class="details-grid">
-                    <div>
-                        <div class="section-label">Billed &amp; Shipped To</div>
+                <section class="details-grid">
+                    <div class="detail-card">
+                        <div class="section-label">Billed &amp; shipped to</div>
                         <div class="customer-name">{{ $order->customer_name }}</div>
                         <div class="text-row">Phone: <strong>{{ $order->customer_phone }}</strong></div>
                         <div class="text-row">{{ $order->shipping_address }}@if($order->city), {{ $order->city }}@endif</div>
@@ -419,45 +779,38 @@
                             <div class="text-row">Email: {{ $order->customer_email }}</div>
                         @endif
                         @if($order->delivery_note)
-                            <div class="text-row" style="margin-top: 4px; padding: 4px 6px; background: #fef3c7; border: 1px solid #fde68a; border-radius: 4px; font-size: 11px; color: #78350f;">
-                                <strong>Note:</strong> {{ $order->delivery_note }}
-                            </div>
+                            <div class="delivery-note"><strong>Note:</strong> {{ $order->delivery_note }}</div>
                         @endif
                     </div>
 
-                    <div style="text-align: right;">
-                        <div class="section-label">Payment &amp; Delivery</div>
+                    <div class="detail-card payment-card">
+                        <div class="section-label">Payment &amp; delivery</div>
                         <div class="text-row">Payment: <strong>{{ $order->paymentMethodLabel() }}</strong></div>
                         @if($order->payment_sender_number)
                             <div class="text-row">Sender: <strong>{{ $order->payment_sender_number }}</strong></div>
                         @endif
                         @if($order->payment_txn_id)
-                            <div class="text-row">TrxID: <code class="font-mono" style="font-weight: bold; background: #f1f5f9; padding: 1px 4px; border-radius: 3px;">{{ $order->payment_txn_id }}</code></div>
+                            <div class="text-row">TrxID: <strong class="font-mono">{{ $order->payment_txn_id }}</strong></div>
                         @endif
                         @if($order->courier_provider)
                             <div class="text-row">Courier: {{ ucfirst($order->courier_provider) }} @if($order->courier_tracking_code)({{ $order->courier_tracking_code }})@endif</div>
                         @endif
-                        <div style="margin-top: 4px;">
-                            <span class="badge {{ $order->payment_status === 'verified' ? 'badge-success' : 'badge-pending' }}">
-                                {{ strtoupper($order->payment_status) }}
-                            </span>
-                            <span class="badge">
-                                {{ strtoupper($order->status) }}
-                            </span>
+                        <div class="badge-row">
+                            <span class="badge {{ $order->payment_status === 'verified' ? 'badge-success' : 'badge-pending' }}">{{ strtoupper($order->payment_status) }}</span>
+                            <span class="badge">{{ strtoupper($order->status) }}</span>
                         </div>
                     </div>
-                </div>
+                </section>
 
-                <!-- 3. Items Table -->
-                <div class="table-wrap">
+                <section class="table-wrap">
                     <table class="items-table">
                         <thead>
                             <tr>
-                                <th style="width: 25px;">#</th>
-                                <th>Item &amp; Description</th>
-                                <th class="text-right" style="width: 90px;">Price</th>
-                                <th class="text-center" style="width: 40px;">Qty</th>
-                                <th class="text-right" style="width: 90px;">Total</th>
+                                <th style="width: 36px;">#</th>
+                                <th>Item &amp; description</th>
+                                <th class="text-right" style="width: 92px;">Price</th>
+                                <th class="text-center" style="width: 42px;">Qty</th>
+                                <th class="text-right" style="width: 98px;">Total</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -479,22 +832,21 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" style="text-align: center; color: #94a3b8; padding: 16px;">No items in order.</td>
+                                    <td colspan="5" style="text-align: center; color: var(--muted); padding: 18px;">No items in order.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
-                </div>
+                </section>
 
-                <!-- 4. Summary & Instructions -->
-                <div class="summary-grid">
+                <section class="summary-grid">
                     <div class="notes-content">
                         @if($order->internal_note)
                             <p><strong>Note:</strong> {{ $order->internal_note }}</p>
                         @else
                             <p>Thank you for your order. Please check the parcel before accepting delivery.</p>
                         @endif
-                        <p style="margin-top: 6px;">Cash on Delivery Amount: <strong>{{ $store['currency'] }}{{ number_format($order->total, 2) }}</strong></p>
+                        <p>Cash on Delivery Amount: <strong>{{ $store['currency'] }}{{ number_format($order->total, 2) }}</strong></p>
                     </div>
 
                     <div>
@@ -513,7 +865,7 @@
                             @if($discountAmt > 0)
                                 <tr>
                                     <td>Discount @if($order->coupon_code)({{ $order->coupon_code }})@endif</td>
-                                    <td class="amount font-mono" style="color: #15803d;">-{{ $store['currency'] }}{{ number_format($discountAmt, 2) }}</td>
+                                    <td class="amount font-mono discount-amount">-{{ $store['currency'] }}{{ number_format($discountAmt, 2) }}</td>
                                 </tr>
                             @endif
                             @if(($order->tax ?? 0) > 0)
@@ -523,22 +875,34 @@
                                 </tr>
                             @endif
                             <tr class="total-row">
-                                <td>Total Due</td>
+                                <td>Total due</td>
                                 <td class="amount font-mono">{{ $store['currency'] }}{{ number_format($order->total, 2) }}</td>
                             </tr>
                         </table>
                     </div>
-                </div>
+                </section>
 
-                <!-- 5. Minimal Footer -->
-                <div class="footer">
-                    <div>{{ $store['name'] }} · {{ url('/') }}</div>
-                    <div>Computer-generated invoice.</div>
-                </div>
-
-            </div>
+                <footer class="footer">
+                    <div><strong>{{ $store['name'] }}</strong> · {{ url('/') }}</div>
+                    <div>{{ $store['footer_text'] ?: 'Computer-generated invoice.' }}</div>
+                </footer>
+            </article>
         @endforeach
-    </div>
+    </main>
 
+    <script>
+        function printInvoice(mode) {
+            document.body.classList.toggle('print-mono', mode === 'mono');
+            document.body.dataset.printMode = mode;
+            window.setTimeout(function () {
+                window.print();
+            }, 60);
+        }
+
+        window.addEventListener('afterprint', function () {
+            document.body.classList.remove('print-mono');
+            delete document.body.dataset.printMode;
+        });
+    </script>
 </body>
 </html>

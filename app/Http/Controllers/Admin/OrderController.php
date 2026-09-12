@@ -114,6 +114,38 @@ class OrderController extends Controller
             'device_hash' => $o->device_hash,
         ]);
 
+        // Reuse the latest saved checks so ratios render immediately. Missing
+        // or stale values are refreshed in the background by the orders page.
+        $courierRatios = [];
+        if (\Illuminate\Support\Facades\Schema::hasTable('bd_courier_checks')) {
+            $phones = $orders->getCollection()
+                ->pluck('customer_phone')
+                ->filter()
+                ->map(fn($phone) => BdCourierCheck::normalizePhone((string) $phone))
+                ->filter()
+                ->unique()
+                ->values();
+
+            if ($phones->isNotEmpty()) {
+                $courierRatios = BdCourierCheck::query()
+                    ->whereIn('phone', $phones)
+                    ->get([
+                        'phone', 'success_ratio', 'risk_level', 'total_parcels',
+                        'successful_parcels', 'cancelled_parcels', 'last_checked_at',
+                    ])
+                    ->keyBy('phone')
+                    ->map(fn($check) => [
+                        'success_ratio' => (float) $check->success_ratio,
+                        'risk_level' => $check->risk_level,
+                        'total_parcels' => (int) $check->total_parcels,
+                        'successful_parcels' => (int) $check->successful_parcels,
+                        'cancelled_parcels' => (int) $check->cancelled_parcels,
+                        'last_checked_at' => $check->last_checked_at?->toIso8601String(),
+                    ])
+                    ->all();
+            }
+        }
+
 
         $courierStats = [
             'total_shipped'   => Order::whereNotNull('courier_provider')->where('courier_provider', '!=', '')->count(),
@@ -152,6 +184,7 @@ class OrderController extends Controller
             'toDate'             => $toDate,
             'q'                  => $term,
             'courierStats'       => $courierStats,
+            'courierRatios'      => $courierRatios,
             'bdcourierConfigured'=> (string) setting('fog_enabled', '1') === '1'
                 && (string) setting('fog_bdcourier_enabled', '0') === '1'
                 && (bool) ! empty(setting('fog_bdcourier_api_key', ''))
@@ -347,6 +380,19 @@ class OrderController extends Controller
                 ->where('phone', BdCourierCheck::normalizePhone($order->customer_phone))
                 ->first();
             $bdcourier = $savedCheck?->response;
+
+            // Older saved responses may contain labels such as "HIGH RISK".
+            // Normalize them before sending the payload to the UI so every
+            // client version receives the same canonical risk value.
+            if (is_array($bdcourier)) {
+                $riskLevel = BdCourierService::canonicalRiskLevel($bdcourier['_risk_level'] ?? null)
+                    ?? BdCourierService::canonicalRiskLevel($bdcourier['_risk_label'] ?? null);
+
+                if ($riskLevel !== null) {
+                    $bdcourier['_risk_level'] = $riskLevel;
+                    $bdcourier['_risk_label'] = ucfirst($riskLevel);
+                }
+            }
         }
 
         return Inertia::render('Admin/Orders/Show', [
