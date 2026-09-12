@@ -165,6 +165,28 @@
             box-shadow: 0 7px 16px rgba(8, 120, 97, 0.28);
         }
 
+        .btn-whatsapp {
+            color: #16834b;
+            background: #ecfdf3;
+            border-color: #bcebd0;
+        }
+
+        .btn-whatsapp:hover {
+            background: #d8f8e5;
+            box-shadow: 0 4px 12px rgba(22, 131, 75, 0.14);
+        }
+
+        .btn-whatsapp-mono {
+            color: #35644b;
+            background: #f4fcf7;
+            border-color: #cfe9d8;
+        }
+
+        .btn-whatsapp-mono:hover {
+            background: #e4f7eb;
+            box-shadow: 0 4px 12px rgba(22, 131, 75, 0.1);
+        }
+
         .invoice-wrapper {
             width: min(100% - 32px, 920px);
             margin: 34px auto 54px;
@@ -704,6 +726,12 @@
     </style>
 </head>
 <body>
+    @php
+        $singleOrder = count($orders) === 1 ? $orders->first() : null;
+        $singleCustomerInvoiceUrl = $singleOrder
+            ? url('/order/' . $singleOrder->order_number . '/invoice?token=' . urlencode((string) $singleOrder->confirmation_token))
+            : null;
+    @endphp
     <div class="action-bar no-print">
         <div class="toolbar-shell">
             <div class="toolbar-context">
@@ -732,6 +760,22 @@
                     <a href="/admin/orders" class="btn btn-secondary">← Orders</a>
                 @endif
                 <div class="toolbar-divider" aria-hidden="true"></div>
+                @if($singleOrder && $singleOrder->customer_phone && $singleCustomerInvoiceUrl)
+                    <button type="button" data-wa-invoice="color" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" class="btn btn-whatsapp" title="Send color invoice link on WhatsApp">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a8 8 0 01-11.7 7.1L4 20l1.4-4.1A8 8 0 1112 20a8.3 8.3 0 008-8.5z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.8 8.7c.2-.4.4-.4.7-.4h.4c.2 0 .4.1.5.4l.6 1.4c.1.2.1.4-.1.6l-.5.6c.5 1 1.2 1.7 2.2 2.2l.6-.5c.2-.2.4-.2.6-.1l1.4.6c.3.1.4.3.4.5v.4c0 .3 0 .5-.4.7-.3.2-.9.3-1.4.1-2.7-.7-4.7-2.7-5.4-5.4-.2-.5-.1-1.1.1-1.4z" />
+                        </svg>
+                        WhatsApp · Color
+                    </button>
+                    <button type="button" data-wa-invoice="mono" data-wa-phone="{{ $singleOrder->customer_phone }}" data-wa-name="{{ $singleOrder->customer_name }}" data-wa-order="{{ $singleOrder->order_number }}" data-wa-url="{{ $singleCustomerInvoiceUrl }}" class="btn btn-whatsapp-mono" title="Send black and white invoice link on WhatsApp">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 11.5a8 8 0 01-11.7 7.1L4 20l1.4-4.1A8 8 0 1112 20a8.3 8.3 0 008-8.5z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.8 8.7c.2-.4.4-.4.7-.4h.4c.2 0 .4.1.5.4l.6 1.4c.1.2.1.4-.1.6l-.5.6c.5 1 1.2 1.7 2.2 2.2l.6-.5c.2-.2.4-.2.6-.1l1.4.6c.3.1.4.3.4.5v.4c0 .3 0 .5-.4.7-.3.2-.9.3-1.4.1-2.7-.7-4.7-2.7-5.4-5.4-.2-.5-.1-1.1.1-1.4z" />
+                        </svg>
+                        WhatsApp · B&amp;W
+                    </button>
+                @endif
                 <button type="button" onclick="printInvoice('mono')" class="btn btn-mono">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 9V4h12v5M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v6H6v-6z" />
@@ -891,6 +935,11 @@
     </main>
 
     <script>
+        (function () {
+            const requestedMode = new URLSearchParams(window.location.search).get('print');
+            if (requestedMode === 'mono') document.body.classList.add('print-mono');
+        })();
+
         function printInvoice(mode) {
             document.body.classList.toggle('print-mono', mode === 'mono');
             document.body.dataset.printMode = mode;
@@ -902,6 +951,29 @@
         window.addEventListener('afterprint', function () {
             document.body.classList.remove('print-mono');
             delete document.body.dataset.printMode;
+        });
+
+        function normalizeWhatsAppNumber(phone) {
+            let digits = String(phone || '').replace(/\D+/g, '');
+            if (digits.startsWith('0') && digits.length === 11) digits = '88' + digits;
+            return digits;
+        }
+
+        document.querySelectorAll('[data-wa-invoice]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const phone = normalizeWhatsAppNumber(button.dataset.waPhone);
+                if (!phone) {
+                    window.alert('This order does not have a valid WhatsApp number.');
+                    return;
+                }
+
+                const mode = button.dataset.waInvoice === 'mono' ? 'mono' : 'color';
+                const modeLabel = mode === 'mono' ? 'black & white' : 'color';
+                const separator = button.dataset.waUrl.includes('?') ? '&' : '?';
+                const invoiceUrl = button.dataset.waUrl + separator + 'print=' + mode;
+                const message = 'Hello ' + (button.dataset.waName || 'there') + ',\n\nYour ' + modeLabel + ' invoice for order #' + button.dataset.waOrder + ' is ready.\n\nOpen invoice: ' + invoiceUrl + '\n\nThank you for shopping with us!';
+                window.open('https://wa.me/' + phone + '?text=' + encodeURIComponent(message), '_blank', 'noopener');
+            });
         });
     </script>
 </body>
