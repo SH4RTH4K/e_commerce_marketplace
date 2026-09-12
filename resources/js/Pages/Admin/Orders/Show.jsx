@@ -251,7 +251,7 @@ function FraudHistoryPanel({ order }) {
                   </svg>
                   Checking…
                 </>
-              ) : 'Check Fraud'}
+              ) : 'View Saved Check'}
             </button>
           </div>
 
@@ -266,7 +266,7 @@ function FraudHistoryPanel({ order }) {
 
           {!fraudResult && !fraudLoading && !fraudError && (
             <p className="text-xs text-gray-400 text-center py-6">
-              Click &ldquo;Check Fraud&rdquo; to query BD Courier's database for this phone number.
+              BD Courier checks run only when the customer places an order. This panel shows the saved result without using another lookup.
             </p>
           )}
 

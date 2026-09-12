@@ -434,7 +434,7 @@ function PhoneChecker({ enabled, databaseReady, onStored }) {
           className="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm flex items-center gap-2 whitespace-nowrap transition-colors"
         >
           {loading ? <Icons.Loader className="w-4 h-4 animate-spin" /> : <Icons.Search className="w-4 h-4" />}
-          {loading ? 'Checking…' : 'Check'}
+          {loading ? 'Loading…' : 'View saved result'}
         </button>
       </div>
       {!databaseReady && (
@@ -868,13 +868,13 @@ export default function FakeOrderGuardIndex({ section = 'overview', settings, st
             refreshKey={planRefreshKey}
           />
 
-          {/* Live Manual Phone Checker */}
+          {/* Saved Checkout Phone Check */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h3 className="font-semibold text-gray-900 text-sm mb-1 flex items-center gap-2">
               <span className="w-7 h-7 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center"><Icons.Search className="w-4 h-4" /></span>
-              Manual Phone Checker
+              Saved Checkout Check
             </h3>
-            <p className="text-xs text-gray-500 mb-4">Check any BD phone number against BD Courier's fraud database instantly.</p>
+            <p className="text-xs text-gray-500 mb-4">View a saved BD Courier result. New phone lookups run only when a customer places an order.</p>
             <PhoneChecker
               enabled={masterEnabled && bdEnabled}
               databaseReady={Boolean(databaseStatus?.ready)}
@@ -885,7 +885,7 @@ export default function FakeOrderGuardIndex({ section = 'overview', settings, st
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
               <h3 className="font-semibold text-gray-900 text-sm">Recent Check History</h3>
-              <p className="text-xs text-gray-500 mt-0.5">Rechecking a number updates its existing row and increases the check count.</p>
+              <p className="text-xs text-gray-500 mt-0.5">Each customer phone is checked once at checkout and the saved result is reused.</p>
             </div>
             {courierHistory.length > 0 ? (
               <div className="overflow-x-auto">

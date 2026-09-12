@@ -9,6 +9,7 @@ use App\Models\BdCourierCheck;
 use App\Models\Order;
 use App\Support\BdPhoneValidator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * FakeOrderGuardService — centralises the 8-step fraud-prevention logic.
@@ -137,14 +138,28 @@ class FakeOrderGuardService
             (string) setting('fog_bdcourier_auto_check_checkout', '0') === '1') {
             if ($phone) {
                 $courier = new BdCourierService();
-                $result  = $courier->check($phone);
-                if ($result) {
-                    BdCourierCheck::record(
-                        $phone,
-                        $result,
-                        'checkout',
-                        customerName: $request->string('customer_name')->toString()
-                    );
+                $result = null;
+
+                // A phone is checked at most once. Reuse the saved result on
+                // later orders so checkout retries and repeat orders do not
+                // consume another BD Courier lookup.
+                if (Schema::hasTable('bd_courier_checks')) {
+                    $savedCheck = BdCourierCheck::query()
+                        ->where('phone', BdCourierCheck::normalizePhone($phone))
+                        ->first();
+                    $result = is_array($savedCheck?->response) ? $savedCheck->response : null;
+                }
+
+                if (! $result) {
+                    $result = $courier->check($phone);
+                    if ($result) {
+                        BdCourierCheck::record(
+                            $phone,
+                            $result,
+                            'checkout',
+                            customerName: $request->string('customer_name')->toString()
+                        );
+                    }
                 }
                 // Fail-open: if API is unreachable, allow order
                 if ($result && $courier->shouldBlock($result)) {

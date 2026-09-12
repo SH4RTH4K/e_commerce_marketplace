@@ -81,29 +81,15 @@ class FakeOrderGuardController extends Controller
             return response()->json(['error' => 'Courier history migration is pending. Run php artisan migrate first.'], 503);
         }
 
-        $apiKey = (string) setting('fog_bdcourier_api_key', '');
-        if (empty($apiKey)) {
-            return response()->json(['error' => 'BD Courier API key is not configured.'], 422);
-        }
-
-        $service = new BdCourierService($apiKey);
-        $check = $service->checkWithStatus($phone);
-
-        if (! $check['connected']) {
+        $history = BdCourierCheck::query()->where('phone', $phone)->first();
+        if (! $history || ! is_array($history->response)) {
             return response()->json([
-                'error' => $check['message'],
-                'connection' => $this->publicConnectionStatus($check),
-            ], $check['status'] === 'network_error' ? 503 : 422);
+                'error' => 'No saved result exists for this phone. BD Courier checks run only when a customer places an order.',
+            ], 404);
         }
 
-        $history = BdCourierCheck::record(
-            $check['result']['_phone'] ?? $phone,
-            $check['result'],
-            'manual',
-            customerName: $request->string('customer_name')->toString()
-        );
-        $result = $check['result'];
-        $result['_history'] = $history ? $this->historyPayload($history) : null;
+        $result = $history->response;
+        $result['_history'] = $this->historyPayload($history);
 
         return response()->json($result);
     }

@@ -114,8 +114,8 @@ class OrderController extends Controller
             'device_hash' => $o->device_hash,
         ]);
 
-        // Reuse the latest saved checks so ratios render immediately. Missing
-        // or stale values are refreshed in the background by the orders page.
+        // Reuse only saved checkout checks. Loading the orders page must never
+        // trigger a new BD Courier API request or consume phone-lookup quota.
         $courierRatios = [];
         if (\Illuminate\Support\Facades\Schema::hasTable('bd_courier_checks')) {
             $phones = $orders->getCollection()
@@ -556,8 +556,8 @@ class OrderController extends Controller
     }
 
     /**
-     * On-demand BD Courier fraud check for a phone number.
-     * Called via fetch() from the Fraud & History tab.
+     * Return the saved BD Courier result for a customer phone number.
+     * The external API is queried only during customer checkout.
      */
     public function checkFraud(Request $request): JsonResponse
     {
@@ -580,30 +580,19 @@ class OrderController extends Controller
             return response()->json(['error' => 'Courier history migration is pending. Run php artisan migrate first.'], 503);
         }
 
-        $apiKey = (string) setting('fog_bdcourier_api_key', '');
-        if (empty($apiKey)) {
-            return response()->json(['error' => 'BD Courier API key is not configured in settings.'], 422);
+        $history = BdCourierCheck::query()->where('phone', $phone)->first();
+        if (! $history || ! is_array($history->response)) {
+            return response()->json([
+                'error' => 'No saved BD Courier result exists for this customer yet. It will be checked when the customer places an order.',
+            ], 404);
         }
 
-        $service = new BdCourierService($apiKey);
-        $result  = $service->check($phone);
-
-        if (! $result) {
-            return response()->json(['error' => 'Could not reach BD Courier API. Check your API key or try again.'], 422);
-        }
-
-        $history = BdCourierCheck::record(
-            $phone,
-            $result,
-            'admin_order',
-            $request->integer('order_id') ?: null,
-            $request->string('customer_name')->toString()
-        );
-        $result['_history'] = $history ? [
+        $result = $history->response;
+        $result['_history'] = [
             'id' => $history->id,
             'check_count' => $history->check_count,
             'last_checked_at' => $history->last_checked_at?->toIso8601String(),
-        ] : null;
+        ];
 
         return response()->json($result);
     }

@@ -1,6 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 /* ─── Badges ─────────────────────────────────────────────────────── */
 function StatusBadge({ status }) {
@@ -106,7 +106,7 @@ function CourierRatioButton({ ratio, loading, onClick }) {
       type="button"
       onClick={onClick}
       className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg ${tone} text-[10px] font-bold transition-colors border cursor-pointer`}
-      title="Click to view courier delivery history and fraud details"
+      title="Click to view the saved courier result and customer order history"
     >
       <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -114,7 +114,7 @@ function CourierRatioButton({ ratio, loading, onClick }) {
       <span className="flex flex-col items-start leading-tight">
         <span>Courier ratio</span>
         <span className="text-[11px] font-extrabold">
-          {loading ? 'Checking…' : hasValue ? `${numericValue.toFixed(0)}% success` : 'Check now'}
+          {loading ? 'Loading…' : hasValue ? `${numericValue.toFixed(0)}% success` : 'No saved check'}
         </span>
       </span>
       <svg className="w-3 h-3 ml-0.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -164,8 +164,6 @@ export default function OrdersIndex({
   // ── Quick Courier Ratio / Score Checker Modal ──
   const [courierModal, setCourierModal] = useState({ open: false, phone: '', customerName: '', loading: false, data: null, history: null, error: null });
   const [courierRatios, setCourierRatios] = useState(courierRatiosProp || {});
-  const [ratioLoadingPhones, setRatioLoadingPhones] = useState({});
-  const autoCheckedPhones = useRef(new Set());
 
   const saveCourierRatio = (phone, result) => {
     const summary = result?.data?.summary || {};
@@ -190,54 +188,6 @@ export default function OrdersIndex({
       },
     }));
   };
-
-  const fetchAutoCourierRatio = async (order) => {
-    const phone = order?.customer_phone;
-    const key = normalizePhone(phone);
-    if (!key) return;
-
-    setRatioLoadingPhones(prev => ({ ...prev, [key]: true }));
-    try {
-      const response = await fetch('/admin/orders/check-fraud', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken(), 'Accept': 'application/json' },
-        body: JSON.stringify({ phone, customer_name: order.customer_name }),
-      });
-      const result = await response.json();
-      if (!result.error) saveCourierRatio(phone, result);
-    } catch (err) {
-      // A failed background check should not interrupt order management.
-    } finally {
-      setRatioLoadingPhones(prev => ({ ...prev, [key]: false }));
-    }
-  };
-
-  useEffect(() => {
-    if (!bdcourierConfigured || !orders?.data?.length) return;
-
-    let cancelled = false;
-    const refreshRatios = async () => {
-      for (const order of orders.data) {
-        if (cancelled) break;
-        const key = normalizePhone(order.customer_phone);
-        if (!key || autoCheckedPhones.current.has(key)) continue;
-
-        const cached = courierRatios[key];
-        const cachedAt = cached?.last_checked_at ? Date.parse(cached.last_checked_at) : 0;
-        const isFresh = cachedAt > 0 && (Date.now() - cachedAt) < 30 * 60 * 1000;
-        if (isFresh) {
-          autoCheckedPhones.current.add(key);
-          continue;
-        }
-
-        autoCheckedPhones.current.add(key);
-        await fetchAutoCourierRatio(order);
-      }
-    };
-
-    refreshRatios();
-    return () => { cancelled = true; };
-  }, [bdcourierConfigured, orders?.data, courierRatios]);
 
   const openCourierModal = async (phone, name = '') => {
     if (!phone) return;
@@ -575,7 +525,7 @@ export default function OrdersIndex({
                       {bdcourierConfigured && (
                         <CourierRatioButton
                           ratio={courierRatios[normalizePhone(order.customer_phone)]}
-                          loading={Boolean(ratioLoadingPhones[normalizePhone(order.customer_phone)])}
+                          loading={false}
                           onClick={() => openCourierModal(order.customer_phone, order.customer_name)}
                         />
                       )}
@@ -732,7 +682,7 @@ export default function OrdersIndex({
                           <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                             <CourierRatioButton
                               ratio={courierRatios[normalizePhone(order.customer_phone)]}
-                              loading={Boolean(ratioLoadingPhones[normalizePhone(order.customer_phone)])}
+                              loading={false}
                               onClick={() => openCourierModal(order.customer_phone, order.customer_name)}
                             />
                           </div>
