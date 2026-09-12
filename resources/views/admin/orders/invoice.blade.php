@@ -476,6 +476,16 @@
             font-weight: 600;
         }
 
+        .item-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .item-title a:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+
         .item-variant {
             margin-top: 2px;
             color: var(--muted);
@@ -986,7 +996,17 @@
                                 <tr>
                                     <td class="text-center font-mono">{{ $idx + 1 }}</td>
                                     <td>
-                                        <div class="item-title">{{ $item->product_name ?: ($item->product?->name ?? 'Product') }}</div>
+                                        @php
+                                            $productName = $item->product_name ?: ($item->product?->name ?? 'Product');
+                                            $productUrl = $item->product ? route('product.show', $item->product) : null;
+                                        @endphp
+                                        <div class="item-title">
+                                            @if($productUrl)
+                                                <a href="{{ $productUrl }}" target="_blank" rel="noopener">{{ $productName }}</a>
+                                            @else
+                                                {{ $productName }}
+                                            @endif
+                                        </div>
                                         @if($item->variant)
                                             <div class="item-variant">{{ $item->variant }}</div>
                                         @endif
