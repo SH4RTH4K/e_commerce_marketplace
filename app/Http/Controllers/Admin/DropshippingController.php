@@ -192,6 +192,8 @@ class DropshippingController extends Controller
         $categoryFilter = $request->string('category')->toString();
         $statusFilter = $request->string('status')->toString();
         $search = trim($request->string('q')->toString());
+        $stockOperator = $request->string('stock_operator')->toString();
+        $stockValue = $request->input('stock_value');
         $requestedPerPage = $request->input('per_page', 100);
         $perPage = is_numeric($requestedPerPage) && in_array((int) $requestedPerPage, [25, 50, 100], true)
             ? (int) $requestedPerPage
@@ -205,6 +207,10 @@ class DropshippingController extends Controller
             }))
             ->when($statusFilter === 'published', fn ($query) => $query->where('is_published', true))
             ->when($statusFilter === 'draft', fn ($query) => $query->where('is_published', false))
+            ->when(in_array($stockOperator, ['gt', 'lt', 'eq'], true) && is_numeric($stockValue), function ($query) use ($stockOperator, $stockValue) {
+                $operator = ['gt' => '>', 'lt' => '<', 'eq' => '='][$stockOperator];
+                $query->where('stock_quantity', $operator, (float) $stockValue);
+            })
             ->with([
                 'images' => fn ($query) => $query
                     ->select(['id', 'product_id', 'path', 'alt', 'is_primary', 'position'])
@@ -246,6 +252,8 @@ class DropshippingController extends Controller
             'search_filter' => $search,
             'category_filter' => $categoryFilter,
             'status_filter' => $statusFilter,
+            'stock_operator' => in_array($stockOperator, ['gt', 'lt', 'eq'], true) ? $stockOperator : '',
+            'stock_value' => is_numeric($stockValue) ? (string) $stockValue : '',
             'categories' => DropshipSupplierProduct::query()
                 ->whereNotNull('supplier_category_key')
                 ->distinct()

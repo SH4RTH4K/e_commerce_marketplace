@@ -51,11 +51,13 @@ function ImagePreview({ product }) {
   </>;
 }
 
-export default function ImportedProducts({ products = [], categories = [], search_filter = '', category_filter = '', status_filter = '', pagination = {} }) {
+export default function ImportedProducts({ products = [], categories = [], search_filter = '', category_filter = '', status_filter = '', stock_operator = '', stock_value = '', pagination = {} }) {
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState(search_filter);
   const [category, setCategory] = useState(category_filter);
   const [status, setStatus] = useState(status_filter);
+  const [stockOperator, setStockOperator] = useState(stock_operator);
+  const [stockValue, setStockValue] = useState(stock_value);
   const [pageSize, setPageSize] = useState(String(pagination.per_page || 100));
   const [prices, setPrices] = useState({});
   const [batchType, setBatchType] = useState('');
@@ -134,6 +136,10 @@ export default function ImportedProducts({ products = [], categories = [], searc
     if (search.trim()) params.append('q', search.trim());
     if (category) params.append('category', category);
     if (status) params.append('status', status);
+    if (stockOperator && stockValue !== '') {
+      params.append('stock_operator', stockOperator);
+      params.append('stock_value', stockValue);
+    }
     params.append('per_page', pageSize);
     return params.toString() ? `?${params.toString()}` : '';
   };
@@ -143,7 +149,7 @@ export default function ImportedProducts({ products = [], categories = [], searc
   const publishOne = id => router.patch(`/admin/dropshipping/imported/${id}/publish`, { ...flags, ...(prices[id] || {}) }, { preserveScroll: true });
   const unpublishOne = id => router.post('/admin/dropshipping/imported/bulk-unpublish', { ids: [id] }, { preserveScroll: true });
   const filterList = () => { setSelected([]); router.get(`/admin/dropshipping/imported${filterParams()}`, {}, { preserveScroll: true, preserveState: true }); };
-  const clearFilter = () => { setSearch(''); setCategory(''); setStatus(''); setPageSize('100'); setSelected([]); router.get('/admin/dropshipping/imported?per_page=100', {}, { preserveScroll: true, preserveState: true }); };
+  const clearFilter = () => { setSearch(''); setCategory(''); setStatus(''); setStockOperator(''); setStockValue(''); setPageSize('100'); setSelected([]); router.get('/admin/dropshipping/imported?per_page=100', {}, { preserveScroll: true, preserveState: true }); };
   const goToPage = page => { setSelected([]); router.get(`/admin/dropshipping/imported?page=${page}${filterParams().replace('?', '&')}`, {}, { preserveScroll: true, preserveState: true }); };
 
   return <DropshippingSubpage title="Imported Products" description="Review integration-created local products before publishing them to the storefront.">
@@ -157,6 +163,8 @@ export default function ImportedProducts({ products = [], categories = [], searc
         <label className="min-w-[240px] flex-1 text-sm font-semibold text-gray-600">Search products<input type="search" value={search} onChange={event => setSearch(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') filterList(); }} placeholder="Search by name or SKU" className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" /></label>
         <label className="flex-1 text-sm font-semibold text-gray-600">Category<select value={category} onChange={event => setCategory(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="">All categories</option>{categories.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
         <label className="w-40 text-sm font-semibold text-gray-600">Status<select value={status} onChange={event => setStatus(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="">All statuses</option><option value="published">Published</option><option value="draft">Draft (Unpublished)</option></select></label>
+        <label className="w-40 text-sm font-semibold text-gray-600">Stock comparison<select value={stockOperator} onChange={event => setStockOperator(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="">Any stock</option><option value="gt">Greater than</option><option value="lt">Less than</option><option value="eq">Equal to</option></select></label>
+        <label className="w-36 text-sm font-semibold text-gray-600">Stock value<input type="number" min="0" step="any" value={stockValue} onChange={event => setStockValue(event.target.value)} placeholder="e.g. 10" className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" /></label>
         <label className="w-28 text-sm font-semibold text-gray-600">Rows per page<select value={pageSize} onChange={event => setPageSize(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
         <button type="button" onClick={filterList} className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-600">Apply filters</button>
         <button type="button" onClick={clearFilter} className="rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-200">Clear</button>
@@ -180,7 +188,7 @@ export default function ImportedProducts({ products = [], categories = [], searc
         <table className="w-full text-sm">
           <thead><tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-400"><th className="px-5 py-3 text-left"><input type="checkbox" aria-label="Select all products" checked={products.length > 0 && selected.length === products.length} onChange={toggleAll} /></th><th className="px-5 py-3 text-left">SL</th><th className="px-3 py-3 text-left">Image</th><th className="px-5 py-3 text-left">Product</th><th className="px-5 py-3 text-left">Category</th><th className="px-5 py-3 text-left">Supplier</th><th className="px-5 py-3 text-left">Variants</th><th className="min-w-[200px] px-5 py-3 text-left">Storefront Price</th><th className="px-5 py-3 text-left">Stock</th><th className="px-5 py-3 text-left">Status</th><th className="px-5 py-3 text-right">Action</th></tr></thead>
           <tbody className="divide-y divide-gray-50">
-            {products.length === 0 ? <tr><td colSpan="11" className="px-5 py-12 text-center text-sm text-gray-400">No imported products match this category and status.</td></tr> : products.map((product, index) => {
+            {products.length === 0 ? <tr><td colSpan="11" className="px-5 py-12 text-center text-sm text-gray-400">No imported products match the current filters.</td></tr> : products.map((product, index) => {
               const pData = getPriceData(product.id);
               return <tr key={product.id} className="transition-colors hover:bg-orange-50/20">
                 <td className="px-5 py-4"><input type="checkbox" aria-label={`Select ${product.name}`} checked={selected.includes(product.id)} onChange={() => toggle(product.id)} /></td>

@@ -9,7 +9,7 @@ export function classNames(...classes) {
 export function imageUrl(path, seed = 'SHARTHAK') {
   if (path) {
     if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
+      return 'https://images.weserv.nl/?url=' + encodeURIComponent(path) + '&w=1200&q=75&output=webp';
     }
     if (path.startsWith('/uploads/') || path.startsWith('uploads/')) {
       return path.startsWith('/') ? path : '/' + path;
