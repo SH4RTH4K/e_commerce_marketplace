@@ -368,7 +368,7 @@ if (! function_exists('image_url')) {
     {
         if ($path) {
             if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-                return 'https://images.weserv.nl/?url=' . rawurlencode($path) . '&w=1200&q=75&output=webp';
+                return 'https://wsrv.nl/?url=' . rawurlencode($path) . '&w=1200&q=75&output=webp';
             }
             // Direct public uploads (e.g. uploads/products/abc.jpg)
             if (str_starts_with($path, '/uploads/') || str_starts_with($path, 'uploads/')) {

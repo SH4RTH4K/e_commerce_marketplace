@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import ProductCard from '@/Components/Storefront/ProductCard';
@@ -83,6 +83,25 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
   const [qty, setQty] = useState(1);
   const [imageError, setImageError] = useState(false);
   const [showQuickOrder, setShowQuickOrder] = useState(false);
+  const failedImagePaths = useRef(new Set());
+
+  const selectImage = path => {
+    setActiveImage(path);
+    setImageError(false);
+  };
+
+  const handleMainImageError = () => {
+    if (activeImage) failedImagePaths.current.add(activeImage);
+
+    const nextImage = (product.images || []).find(image => image.path && !failedImagePaths.current.has(image.path));
+    if (nextImage) {
+      setActiveImage(nextImage.path);
+      setImageError(false);
+      return;
+    }
+
+    setImageError(true);
+  };
 
   const getVariantString = () => {
     if (variantGroups && variantGroups.length > 0) {
@@ -288,13 +307,13 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
             <div className="template-1-gallery">
               <div className="template-1-gallery-thumbs">
                 {(product.images || []).map(image => (
-                  <button key={image.id || image.path} type="button" className={activeImage === image.path ? 'is-active' : ''} onClick={() => { setActiveImage(image.path); setImageError(false); }}>
+                  <button key={image.id || image.path} type="button" className={activeImage === image.path ? 'is-active' : ''} onClick={() => selectImage(image.path)}>
                     <img src={imageUrl(image.path, product.name)} alt="" />
                   </button>
                 ))}
               </div>
               <div className="template-1-gallery-main">
-                {mainImageUrl && !imageError ? <img src={mainImageUrl} alt={product.name} /> : <span>No image available</span>}
+                {mainImageUrl && !imageError ? <img src={mainImageUrl} onError={handleMainImageError} alt={product.name} /> : <span>No image available</span>}
                 {mainImageUrl && !imageError && <button type="button" onClick={() => window.open(mainImageUrl, '_blank', 'noopener,noreferrer')} aria-label="View larger image">&#8599;</button>}
               </div>
             </div>
@@ -426,7 +445,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
                   <button 
                     key={img.id}
                     type="button" 
-                    onClick={() => { setActiveImage(img.path); setImageError(false); }}
+                    onClick={() => selectImage(img.path)}
                     className={`relative rounded-xl border-2 shrink-0 overflow-hidden w-20 h-20 bg-white transition-all ${activeImage === img.path ? 'border-[#f15a24]' : 'border-gray-100 hover:border-[#f15a24]/50'}`}
                   >
                     <img 
@@ -455,7 +474,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
               {mainImageUrl && !imageError ? (
                 <img 
                   src={mainImageUrl} 
-                  onError={() => setImageError(true)}
+                  onError={handleMainImageError}
                   className="w-full h-full object-contain object-center transform group-hover:scale-105 transition-transform duration-500" 
                   alt={product.name} 
                 />
