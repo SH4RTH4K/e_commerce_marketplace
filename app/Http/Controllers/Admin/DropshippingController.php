@@ -99,9 +99,22 @@ class DropshippingController extends Controller
         $stockOperator = $request->string('stock_operator')->toString();
         $stockValue = $request->input('stock_value');
         $categoryFilter = $request->string('category')->toString();
-        $importStatusFilter = $request->string('import_status')->toString();
+        $search = trim($request->string('q')->toString());
+        $importStatusFilter = $request->string('status')->toString();
+        if ($importStatusFilter === '') {
+            $importStatusFilter = $request->string('import_status')->toString();
+        }
+        $requestedPerPage = $request->input('per_page', 100);
+        $perPage = is_numeric($requestedPerPage) && in_array((int) $requestedPerPage, [25, 50, 100], true)
+            ? (int) $requestedPerPage
+            : 100;
         
         $products = DropshipSupplierProduct::query()
+            ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search) {
+                $searchQuery->where('name', 'like', "%{$search}%")
+                    ->orWhere('supplier_product_id', 'like', "%{$search}%")
+                    ->orWhere('product_code', 'like', "%{$search}%");
+            }))
             ->when($stockFilter === 'positive', fn ($query) => $query->where('stock_qty', '>', 0))
             ->when($categoryFilter !== '', fn ($query) => $query->where('supplier_category_key', $categoryFilter))
             ->when(in_array($stockOperator, ['gt', 'lt', 'eq'], true) && is_numeric($stockValue), function ($query) use ($stockOperator, $stockValue) {
@@ -112,7 +125,7 @@ class DropshippingController extends Controller
             ->when($importStatusFilter === 'not_imported', fn ($query) => $query->doesntHave('productLink'))
             ->with(['supplier:id,name,key,pricing_rules', 'productLink.product:id,name,is_published'])
             ->latest('id')
-            ->paginate(100)
+            ->paginate($perPage)
             ->withQueryString();
 
         $productRows = $products->getCollection()
@@ -152,11 +165,14 @@ class DropshippingController extends Controller
             'stock_operator' => in_array($stockOperator, ['gt', 'lt', 'eq'], true) ? $stockOperator : '',
             'stock_value' => is_numeric($stockValue) ? (string) $stockValue : '',
             'category_filter' => $categoryFilter,
+            'search_filter' => $search,
+            'status_filter' => in_array($importStatusFilter, ['imported', 'not_imported'], true) ? $importStatusFilter : '',
             'import_status_filter' => in_array($importStatusFilter, ['imported', 'not_imported']) ? $importStatusFilter : '',
             'categories' => DropshipSupplierProduct::query()->whereNotNull('supplier_category_key')->distinct()->orderBy('supplier_category_key')->pluck('supplier_category_key')->values(),
             'pagination' => [
                 'current_page' => $products->currentPage(),
                 'last_page' => $products->lastPage(),
+                'per_page' => $products->perPage(),
                 'total' => $products->total(),
             ],
             'suppliers' => DropshipSupplier::query()
