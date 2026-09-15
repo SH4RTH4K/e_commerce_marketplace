@@ -48,7 +48,7 @@ function PolicyContent({ body }) {
     : <div className={contentClass}><PlainPolicyContent body={body} /></div>;
 }
 
-export default function PagePage({ title, heading, body }) {
+export default function PagePage({ title, heading, body, showPageTitle = true }) {
   const { app } = usePage().props;
   const isTemplateOne = app?.settings?.storefront_template === 'template-1';
 
@@ -56,7 +56,7 @@ export default function PagePage({ title, heading, body }) {
     return (
       <StorefrontLayout>
         <Head title={title || heading} />
-        <div className="template-1-page-title"><h1>{heading}</h1></div>
+        {showPageTitle && <div className="template-1-page-title"><h1>{heading}</h1></div>}
         <main className="template-1-legal-page">
           <article className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-10">
             <PolicyContent body={body} />
@@ -70,12 +70,13 @@ export default function PagePage({ title, heading, body }) {
     <StorefrontLayout>
       <Head title={title || heading} />
       
-      {/* Hero Section */}
-      <div className="bg-white border-b border-gray-100 py-16 sm:py-24">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 tracking-tight">{heading}</h1>
+      {showPageTitle && (
+        <div className="bg-white border-b border-gray-100 py-16 sm:py-24">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 className="text-4xl sm:text-5xl font-black text-gray-900 tracking-tight">{heading}</h1>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Content Section */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">

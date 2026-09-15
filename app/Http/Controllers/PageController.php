@@ -33,6 +33,7 @@ class PageController extends Controller
             'title'   => 'Refund Policy',
             'heading' => 'Refund Policy',
             'body'    => setting('refund_content') ?: $this->defaultRefund(),
+            'showPageTitle' => false,
         ]);
     }
 
