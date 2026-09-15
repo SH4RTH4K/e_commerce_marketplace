@@ -42,7 +42,7 @@ class PageController extends Controller
         return Inertia::render('Storefront/Page', [
             'title'   => 'Shipping Information',
             'heading' => 'Shipping Information',
-            'body'    => $this->defaultShipping(),
+            'body'    => setting('shipping_content') ?: $this->defaultShipping(),
         ]);
     }
 

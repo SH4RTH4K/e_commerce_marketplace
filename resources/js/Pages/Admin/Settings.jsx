@@ -228,7 +228,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '',
     
     // Legal
-    terms_content: settings.terms_content || '', privacy_content: settings.privacy_content || '', refund_content: settings.refund_content || '',
+    terms_content: settings.terms_content || '', privacy_content: settings.privacy_content || '', refund_content: settings.refund_content || '', shipping_content: settings.shipping_content || '',
 
     // Courier APIs
     courier_default:      settings.courier_default      || 'steadfast',
@@ -1265,7 +1265,10 @@ export default function Settings({ settings, templateStatus = {} }) {
                       <h3 className="font-bold text-gray-900">Legal Pages</h3>
                       <p className="mt-1 text-xs text-gray-400">Preview HTML and CSS before saving. The preview uses your current, unsaved editor content.</p>
                     </div>
-                    <a href="/refund-policy" target="_blank" rel="noreferrer" className="text-xs font-semibold text-orange-500 hover:underline">View saved Refund Policy ↗</a>
+                    <div className="flex items-center gap-3 text-xs font-semibold text-orange-500">
+                      <a href="/refund-policy" target="_blank" rel="noreferrer" className="hover:underline">View saved Refund Policy ↗</a>
+                      <a href="/shipping" target="_blank" rel="noreferrer" className="hover:underline">View Shipping page ↗</a>
+                    </div>
                   </div>
                   <Field label="Terms & Conditions (HTML/Text)" error={errors.terms_content}>
                     <textarea value={data.terms_content} onChange={e => setData('terms_content', e.target.value)} rows={10} className={inputClass} />
@@ -1278,6 +1281,10 @@ export default function Settings({ settings, templateStatus = {} }) {
                   <Field label="Refund Policy (HTML/Text)" error={errors.refund_content}>
                     <textarea value={data.refund_content} onChange={e => setData('refund_content', e.target.value)} rows={10} className={inputClass} />
                     <button type="button" onClick={() => setLegalPreview({ title: 'Refund Policy preview', content: data.refund_content })} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-orange-50 px-3 py-2 text-xs font-bold text-orange-600 transition-colors hover:bg-orange-100">Preview unsaved changes <span aria-hidden="true">↗</span></button>
+                  </Field>
+                  <Field label="Shipping Information (HTML/Text)" error={errors.shipping_content}>
+                    <textarea value={data.shipping_content} onChange={e => setData('shipping_content', e.target.value)} rows={10} className={inputClass} placeholder="Add delivery areas, delivery times, and shipping terms..." />
+                    <button type="button" onClick={() => setLegalPreview({ title: 'Shipping Information preview', content: data.shipping_content })} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-orange-50 px-3 py-2 text-xs font-bold text-orange-600 transition-colors hover:bg-orange-100">Preview unsaved changes <span aria-hidden="true">↗</span></button>
                   </Field>
                 </div>
                 <button type="submit" disabled={processing} className="px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-xl">Save Legal Pages</button>
