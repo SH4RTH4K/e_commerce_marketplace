@@ -153,7 +153,7 @@
           <div class="mt-5 space-y-4">
             @foreach($items as $item)
               <div class="flex gap-3">
-                <div class="relative"><img src="{{ $item->image }}" class="h-14 w-14 rounded-xl object-cover" alt="{{ $item->name }}" /><span class="absolute -top-2 -right-2 grid h-5 w-5 place-items-center rounded-full bg-brand-600 text-white text-[10px] font-bold">{{ $item->qty }}</span></div>
+                <div class="relative"><img src="{{ image_url($item->image, $item->name) }}" class="h-14 w-14 rounded-xl object-cover" alt="{{ $item->name }}" /><span class="absolute -top-2 -right-2 grid h-5 w-5 place-items-center rounded-full bg-brand-600 text-white text-[10px] font-bold">{{ $item->qty }}</span></div>
                 <div class="flex-1 min-w-0"><p class="text-sm font-semibold truncate">{{ $item->name }}</p><p class="text-xs text-slate-500">{{ $item->variant ?: $item->product->unit }}</p></div>
                 <span class="text-sm font-bold">{{ money($item->line_total) }}</span>
               </div>

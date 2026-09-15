@@ -21,7 +21,7 @@
               <div class="sm:hidden">
                 <div class="flex gap-3">
                   <a href="{{ route('product.show', $item->slug) }}" class="shrink-0">
-                    <img src="{{ $item->image }}" class="h-16 w-16 rounded-lg object-contain border border-gray-100 bg-gray-50" alt="{{ $item->name }}">
+                    <img src="{{ image_url($item->image, $item->name) }}" class="h-16 w-16 rounded-lg object-contain border border-gray-100 bg-gray-50" alt="{{ $item->name }}">
                   </a>
                   <div class="min-w-0 flex-1">
                     <div class="flex items-start justify-between gap-2">
@@ -55,7 +55,7 @@
               {{-- Desktop layout --}}
               <div class="hidden sm:flex sm:items-center sm:gap-4">
                 <a href="{{ route('product.show', $item->slug) }}" class="shrink-0">
-                  <img src="{{ $item->image }}" class="h-20 w-20 rounded-md object-contain border border-gray-100 bg-gray-50" alt="{{ $item->name }}">
+                  <img src="{{ image_url($item->image, $item->name) }}" class="h-20 w-20 rounded-md object-contain border border-gray-100 bg-gray-50" alt="{{ $item->name }}">
                 </a>
                 <div class="flex-1 min-w-0">
                   <a href="{{ route('product.show', $item->slug) }}" class="font-medium hover:text-brand-600">{{ $item->name }}</a>

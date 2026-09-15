@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/react';
-import { money } from '@/lib/utils';
+import { money, imageUrl } from '@/lib/utils';
 import { trackInitiateCheckout } from '@/lib/tracking';
 
 export default function CheckoutPage({ 
@@ -434,7 +434,7 @@ export default function CheckoutPage({
                         aria-label={`Select ${item.name}`}
                       />
                       <div className="relative shrink-0">
-                        <img src={item.image || ''} className="h-16 w-16 rounded-xl object-contain border border-gray-100 bg-gray-50 p-1" alt={item.name} />
+                        <img src={imageUrl(item.image, item.name)} className="h-16 w-16 rounded-xl object-contain border border-gray-100 bg-gray-50 p-1" alt={item.name} />
                         <span className="absolute -top-2 -right-2 grid h-6 w-6 place-items-center rounded-full bg-gray-900 text-white text-xs font-black shadow-md shadow-gray-900/20">
                           {item.qty}
                         </span>
