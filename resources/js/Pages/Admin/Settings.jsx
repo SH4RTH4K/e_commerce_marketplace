@@ -1182,8 +1182,8 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <Field label="Tax Percent (%)" error={errors.tax_percent}><input type="number" min="0" max="100" step="0.01" value={data.tax_percent} onChange={e => setData('tax_percent', e.target.value)} className={inputClass} required /></Field>
                   </div>
                   <Field label="Shipping Charge Introduction" error={errors.shipping_charge_intro}>
-                    <textarea value={data.shipping_charge_intro} onChange={e => setData('shipping_charge_intro', e.target.value)} rows={2} maxLength={300} className={inputClass} placeholder="Explain how delivery charges are calculated..." />
-                    <p className="mt-1.5 text-xs text-gray-500">Shown above the configured delivery charges on the public Shipping page.</p>
+                    <textarea value={data.shipping_charge_intro} onChange={e => setData('shipping_charge_intro', e.target.value)} rows={4} maxLength={2000} className={inputClass} placeholder="Explain how delivery charges are calculated..." />
+                    <p className="mt-1.5 text-xs text-gray-500">Shown above the configured delivery charges on the public Shipping page. Up to 2,000 characters.</p>
                   </Field>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                     <Field label="Currency Symbol" error={errors.currency_symbol}><input type="text" value={data.currency_symbol} onChange={e => setData('currency_symbol', e.target.value)} className={inputClass} placeholder="e.g. ৳" /></Field>

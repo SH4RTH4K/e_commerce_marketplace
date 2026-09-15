@@ -298,7 +298,7 @@ class SettingController extends Controller
                 'tax_percent'            => ['required', 'numeric', 'min:0', 'max:100'],
                 'shipping_inside_label'  => ['nullable', 'string', 'max:80'],
                 'shipping_outside_label' => ['nullable', 'string', 'max:120'],
-                'shipping_charge_intro'  => ['nullable', 'string', 'max:300'],
+                'shipping_charge_intro'  => ['nullable', 'string', 'max:2000'],
                 'currency_symbol'        => ['nullable', 'string', 'max:20'],
                 'currency_code'          => ['nullable', 'string', 'max:10'],
                 'fraud_order_time_limit_minutes' => ['nullable', 'numeric', 'min:0', 'max:1440'],
