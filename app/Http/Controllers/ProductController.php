@@ -49,7 +49,7 @@ class ProductController extends Controller
                 ->exists();
         }
 
-        return Inertia::render('Storefront/Product', compact(
+        return Inertia::render('Storefront/Product', array_merge(compact(
             'product',
             'related',
             'sizes',
@@ -59,6 +59,14 @@ class ProductController extends Controller
             'features',
             'reviews',
             'canReview'
-        ));
+        ), [
+            'seo' => [
+                'title' => $product->meta_title ?: $product->name,
+                'description' => $product->meta_description ?: $product->short_description,
+                'keywords' => $product->meta_keywords,
+                'image' => $product->images->first()?->path,
+                'type' => 'product',
+            ],
+        ]));
     }
 }

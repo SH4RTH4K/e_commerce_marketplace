@@ -14,7 +14,8 @@ export default function ShopPage({
   minRating, 
   q, 
   priceCeiling,
-  app
+  app,
+  seo
 }) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [loadedProducts, setLoadedProducts] = useState(products);
@@ -179,7 +180,7 @@ export default function ShopPage({
   if (isTemplateOne) {
     return (
       <StorefrontLayout title={title} app={app} categories={categories}>
-        <Head title={title} />
+        <Head title={seo?.title || title} />
 
         <main className="storefront-shop-page template-1-shop template-1-container min-w-0">
           <div className="template-1-shop-toolbar">
@@ -346,7 +347,7 @@ export default function ShopPage({
 
   return (
     <StorefrontLayout>
-      <Head title={title} />
+      <Head title={seo?.title || title} />
       
       <main className="storefront-shop-page max-w-[1440px] mx-auto px-4 sm:px-5 py-5 sm:py-6">
         <div className="flex flex-col lg:flex-row gap-5 lg:gap-6">

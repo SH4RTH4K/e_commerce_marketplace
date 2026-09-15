@@ -59,6 +59,12 @@ export default function StorefrontLayout({ children, title, description, activeC
     url: chatSettings.footer_developer_url?.trim(),
   };
   const showDeveloperCredit = developerCredit.enabled && Boolean(developerCredit.name);
+  const pageSeo = props.seo || {};
+  const defaultSeoTitle = chatSettings.default_meta_title?.trim() || app?.name || 'Store';
+  const seoTitle = pageSeo.title?.trim() || defaultSeoTitle;
+  const seoDescription = pageSeo.description?.trim() || chatSettings.default_meta_description?.trim();
+  const seoKeywords = pageSeo.keywords?.trim() || chatSettings.default_meta_keywords?.trim();
+  const seoImage = pageSeo.image ? imageUrl(pageSeo.image) : null;
   const typography = chatSettings[`theme_typography_${storefrontTemplate.replace('-', '_')}`] || {};
   const typographyStyle = Object.entries(typography).reduce((styles, [area, values]) => ({
     ...styles,
@@ -120,6 +126,19 @@ export default function StorefrontLayout({ children, title, description, activeC
 
   return (
     <div className="storefront-theme-root" style={typographyStyle}>
+      <Head>
+        {seoDescription && <meta head-key="description" name="description" content={seoDescription} />}
+        {seoKeywords && <meta head-key="keywords" name="keywords" content={seoKeywords} />}
+        <meta head-key="og:title" property="og:title" content={seoTitle} />
+        {seoDescription && <meta head-key="og:description" property="og:description" content={seoDescription} />}
+        <meta head-key="og:type" property="og:type" content={pageSeo.type || 'website'} />
+        {seoImage && <meta head-key="og:image" property="og:image" content={seoImage} />}
+        <meta head-key="twitter:card" name="twitter:card" content="summary_large_image" />
+        <meta head-key="twitter:title" name="twitter:title" content={seoTitle} />
+        {seoDescription && <meta head-key="twitter:description" name="twitter:description" content={seoDescription} />}
+        {seoImage && <meta head-key="twitter:image" name="twitter:image" content={seoImage} />}
+        {pageSeo.robots && <meta head-key="robots" name="robots" content={pageSeo.robots} />}
+      </Head>
       {title ? (
         <Head title={title}>
           {description && <meta name="description" content={description} />}

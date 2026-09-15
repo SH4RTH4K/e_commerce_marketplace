@@ -18,12 +18,16 @@ function getDynamicSiteName() {
   return meta?.getAttribute('content')?.trim() || '';
 }
 
+function getDefaultSeoTitle() {
+  return document.querySelector('meta[name="seo-default-title"]')?.getAttribute('content')?.trim() || '';
+}
+
 createInertiaApp({
     title: (title) => {
         const siteName = getDynamicSiteName() || 'Shop';
         const cleanTitle = (title || '').trim();
         if (!cleanTitle || cleanTitle.toLowerCase() === 'home') {
-            return siteName;
+            return getDefaultSeoTitle() || siteName;
         }
         return `${cleanTitle} — ${siteName}`;
     },

@@ -1247,10 +1247,37 @@ export default function Settings({ settings, templateStatus = {} }) {
               <form onSubmit={e => submitSection(e, 'tracking')} className="space-y-5">
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
                   <h3 className="font-bold text-gray-900 pb-3 border-b border-gray-50">Marketing & Analytics</h3>
+                  <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-950">
+                    <h4 className="font-bold">Setup helper</h4>
+                    <p className="mt-1 text-xs leading-5 text-blue-800">Paste only the ID, not the complete script. Save, open your storefront in a new tab, then verify that the tag fires with the provider’s browser helper.</p>
+                    <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                      <div className="rounded-lg bg-white/80 p-3">
+                        <p className="font-semibold">1. Google Tag Manager</p>
+                        <p className="mt-1 text-xs leading-5 text-blue-800">In Tag Manager, open your Web container and copy its container ID, for example <code>GTM-ABC1234</code>. Publish the container after configuring tags.</p>
+                      </div>
+                      <div className="rounded-lg bg-white/80 p-3">
+                        <p className="font-semibold">2. Google Analytics 4</p>
+                        <p className="mt-1 text-xs leading-5 text-blue-800">In GA4, copy the Web data stream Measurement ID, for example <code>G-ABC123456</code>. Leave this empty when your GA4 tag is already configured in GTM to prevent duplicate page views.</p>
+                      </div>
+                      <div className="rounded-lg bg-white/80 p-3">
+                        <p className="font-semibold">3. Meta Pixel</p>
+                        <p className="mt-1 text-xs leading-5 text-blue-800">In Meta Events Manager, copy the numeric Pixel ID only. Use Meta Pixel Helper after saving to confirm the <code>PageView</code> event.</p>
+                      </div>
+                    </div>
+                  </div>
                   <div className="space-y-4">
-                    <Field label="Google Tag Manager (GTM) ID" error={errors.tracking_gtm_id}><input value={data.tracking_gtm_id} onChange={e => setData('tracking_gtm_id', e.target.value)} className={inputClass} placeholder="GTM-XXXXXXX" /></Field>
-                    <Field label="Google Analytics (GA4) ID" error={errors.tracking_ga4_id}><input value={data.tracking_ga4_id} onChange={e => setData('tracking_ga4_id', e.target.value)} className={inputClass} placeholder="G-XXXXXXX" /></Field>
-                    <Field label="Meta Pixel ID" error={errors.tracking_meta_pixel_id}><input value={data.tracking_meta_pixel_id} onChange={e => setData('tracking_meta_pixel_id', e.target.value)} className={inputClass} placeholder="Numeric ID" /></Field>
+                    <Field label="Google Tag Manager (GTM) ID" error={errors.tracking_gtm_id}>
+                      <input value={data.tracking_gtm_id} onChange={e => setData('tracking_gtm_id', e.target.value)} className={inputClass} placeholder="GTM-XXXXXXX" />
+                      <p className="mt-1.5 text-xs text-gray-500">Optional. This application automatically adds the GTM base tag to storefront pages.</p>
+                    </Field>
+                    <Field label="Google Analytics (GA4) ID" error={errors.tracking_ga4_id}>
+                      <input value={data.tracking_ga4_id} onChange={e => setData('tracking_ga4_id', e.target.value)} className={inputClass} placeholder="G-XXXXXXX" />
+                      <p className="mt-1.5 text-xs text-gray-500">Use direct GA4 only when GA4 is not managed through GTM.</p>
+                    </Field>
+                    <Field label="Meta Pixel ID" error={errors.tracking_meta_pixel_id}>
+                      <input value={data.tracking_meta_pixel_id} onChange={e => setData('tracking_meta_pixel_id', e.target.value)} className={inputClass} placeholder="Numeric ID" />
+                      <p className="mt-1.5 text-xs text-gray-500">Use numbers only; do not paste Meta’s full Pixel code.</p>
+                    </Field>
                   </div>
                 </div>
                 <button type="submit" disabled={processing} className="px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-xl">Save Tracking Settings</button>

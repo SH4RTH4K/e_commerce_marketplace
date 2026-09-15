@@ -27,7 +27,7 @@ const formatDescriptionHtml = (value) => {
     .join('');
 };
 
-export default function ProductPage({ product, related, sizes, colors, weights, variantGroups = [], features, reviews, canReview, auth }) {
+export default function ProductPage({ product, related, sizes, colors, weights, variantGroups = [], features, reviews, canReview, auth, seo }) {
   const { app } = usePage().props;
   const settings = app?.settings || {};
   const isTemplateOne = settings.storefront_template === 'template-1';
@@ -296,7 +296,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
     const descriptionMarkup = formatDescriptionHtml(description);
     return (
       <StorefrontLayout>
-        <Head title={product.name} />
+        <Head title={seo?.title || product.name} />
         <div className="template-1-breadcrumb">
           <Link href="/">Home</Link> <span>&nbsp; / &nbsp;</span>
           {product.category && <><Link href={`/category/${product.category.slug}`}>{product.category.name}</Link> <span>&nbsp; / &nbsp;</span></>}
@@ -417,7 +417,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
 
   return (
     <StorefrontLayout>
-      <Head title={product.name} />
+      <Head title={seo?.title || product.name} />
       
       <main className="storefront-product-page max-w-[1440px] mx-auto w-full px-4 sm:px-5 py-6 overflow-x-hidden">
         {/* Breadcrumb */}

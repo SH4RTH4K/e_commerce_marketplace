@@ -176,6 +176,12 @@ class ShopController extends Controller
             'minRating'        => $request->input('min_rating'),
             'q'                => $term,
             'priceCeiling'     => $priceCeiling,
+            'seo'              => [
+                'title' => $category?->meta_title ?: ($category?->name ?: ($term ? "Search: {$term}" : 'Shop All Products')),
+                'description' => $category?->meta_description,
+                'keywords' => $category?->meta_keywords,
+                'robots' => $term || $request->query->count() > 0 ? 'noindex,follow' : 'index,follow',
+            ],
         ]);
     }
 }
