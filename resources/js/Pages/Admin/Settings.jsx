@@ -6,6 +6,24 @@ import { fileToBase64 } from '@/lib/utils';
 const inputClass = "w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300";
 const checkboxClass = "h-4 w-4 accent-orange-500 rounded";
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;',
+  }[char]));
+}
+
+function shippingPreviewContent(data) {
+  const currency = escapeHtml(data.currency_symbol || '৳');
+  const insideLabel = escapeHtml(data.shipping_inside_label || 'Inside Dhaka');
+  const outsideLabel = escapeHtml(data.shipping_outside_label || 'Outside Dhaka');
+  const insideCharge = escapeHtml(data.shipping_inside_dhaka || '0');
+  const outsideCharge = escapeHtml(data.shipping_outside_dhaka || '0');
+  const additionalContent = String(data.shipping_content || '').trim();
+  const defaultInformation = '<h2>Delivery Information</h2><p>Please provide a complete delivery address and a reachable phone number when placing your order. Our team may contact you to confirm the order before dispatch.</p><p>Shipping charges and delivery availability are applied according to the current store configuration at checkout.</p>';
+
+  return `<h2>Shipping Charges</h2><p>Your delivery charge is calculated at checkout from the delivery area you choose.</p><ul><li><strong>${insideLabel}:</strong> ${currency}${insideCharge}</li><li><strong>${outsideLabel}:</strong> ${currency}${outsideCharge}</li></ul>${additionalContent || defaultInformation}`;
+}
+
 function policyPreviewDocument(title, content) {
   return `<!doctype html>
 <html lang="en">
@@ -1327,14 +1345,14 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <textarea value={data.refund_content} onChange={e => setData('refund_content', e.target.value)} rows={10} className={inputClass} />
                     <button type="button" onClick={() => setLegalPreview({ title: 'Refund Policy preview', content: data.refund_content })} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-orange-50 px-3 py-2 text-xs font-bold text-orange-600 transition-colors hover:bg-orange-100">Preview unsaved changes <span aria-hidden="true">↗</span></button>
                   </Field>
-                  <Field label="Shipping Information (HTML/Text)" error={errors.shipping_content}>
+                  <Field label="Additional Shipping Information (HTML/Text)" error={errors.shipping_content}>
                     <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
                       <input type="checkbox" checked={data.shipping_page_enabled} onChange={e => setData('shipping_page_enabled', e.target.checked)} className={checkboxClass} />
                       <span className="text-sm font-semibold text-gray-800">Enable Shipping page and show the Shipping link in the footer</span>
                     </label>
                     <textarea value={data.shipping_content} onChange={e => setData('shipping_content', e.target.value)} rows={10} className={inputClass} placeholder="Add delivery areas, delivery times, and shipping terms..." />
-                    <p className="mt-2 text-xs leading-5 text-gray-500">Add HTML directly here. For custom styling, place a <code>&lt;style&gt;...&lt;/style&gt;</code> block before your HTML. Select Preview unsaved changes to check it before saving. JavaScript is not supported.</p>
-                    <button type="button" onClick={() => setLegalPreview({ title: 'Shipping Information preview', content: data.shipping_content })} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-orange-50 px-3 py-2 text-xs font-bold text-orange-600 transition-colors hover:bg-orange-100">Preview unsaved changes <span aria-hidden="true">↗</span></button>
+                    <p className="mt-2 text-xs leading-5 text-gray-500">The current charges from Shipping &amp; Currency always appear first and cannot be replaced here. Add HTML/CSS only for information below them; put CSS inside a <code>&lt;style&gt;...&lt;/style&gt;</code> block. JavaScript is not supported.</p>
+                    <button type="button" onClick={() => setLegalPreview({ title: 'Shipping Information preview', content: shippingPreviewContent(data) })} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-orange-50 px-3 py-2 text-xs font-bold text-orange-600 transition-colors hover:bg-orange-100">Preview charges and unsaved changes <span aria-hidden="true">↗</span></button>
                   </Field>
                 </div>
                 <button type="submit" disabled={processing} className="px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-xl">Save Legal Pages</button>

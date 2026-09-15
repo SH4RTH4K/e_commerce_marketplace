@@ -39,10 +39,14 @@ class PageController extends Controller
 
     public function shipping(): Response
     {
+        $additionalInformation = trim((string) setting('shipping_content', ''));
+
         return Inertia::render('Storefront/Page', [
             'title'   => 'Shipping Information',
             'heading' => 'Shipping Information',
-            'body'    => setting('shipping_content') ?: $this->defaultShipping(),
+            'body'    => $this->shippingCharges() . ($additionalInformation !== ''
+                ? $additionalInformation
+                : $this->defaultDeliveryInformation()),
         ]);
     }
 
@@ -107,19 +111,27 @@ class PageController extends Controller
         return "If you are not entirely satisfied with your purchase, we're here to help. Contact {$site} support to initiate a return or exchange. Products must be in their original condition and packaging. Refunds are processed to the original method of payment after we receive and inspect the returned item.";
     }
 
-    private function defaultShipping(): string
+    private function shippingCharges(): string
     {
         $currency = e((string) setting('currency_symbol', '৳'));
         $inside = number_format((float) setting('shipping_inside_dhaka', 60), 2);
         $outside = number_format((float) setting('shipping_outside_dhaka', 120), 2);
+        $insideLabel = e((string) setting('shipping_inside_label', 'Inside Dhaka'));
+        $outsideLabel = e((string) setting('shipping_outside_label', 'Outside Dhaka'));
 
         return <<<HTML
 <h2>Shipping Charges</h2>
 <p>Your delivery charge is calculated at checkout from the delivery area you choose.</p>
 <ul>
-  <li><strong>Inside Dhaka:</strong> {$currency}{$inside}</li>
-  <li><strong>Outside Dhaka:</strong> {$currency}{$outside}</li>
+  <li><strong>{$insideLabel}:</strong> {$currency}{$inside}</li>
+  <li><strong>{$outsideLabel}:</strong> {$currency}{$outside}</li>
 </ul>
+HTML;
+    }
+
+    private function defaultDeliveryInformation(): string
+    {
+        return <<<HTML
 <h2>Delivery Information</h2>
 <p>Please provide a complete delivery address and a reachable phone number when placing your order. Our team may contact you to confirm the order before dispatch.</p>
 <p>Shipping charges and delivery availability are applied according to the current store configuration at checkout.</p>
