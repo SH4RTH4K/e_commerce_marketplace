@@ -618,10 +618,10 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <div className="flex-1">
                       <label className="block text-sm font-bold text-gray-800 mb-1">WhatsApp</label>
                       <p className="text-xs text-gray-500 mb-2">Customer taps this icon → opens WhatsApp chat with your number</p>
-                      <Field label="WhatsApp Number (with country code)" error={errors.whatsapp_number}>
-                        <input value={data.whatsapp_number} onChange={e => setData('whatsapp_number', e.target.value)} className={inputClass} placeholder="e.g. 8801712345678" />
+                      <Field label="WhatsApp Number" error={errors.whatsapp_number}>
+                        <input value={data.whatsapp_number} onChange={e => setData('whatsapp_number', e.target.value)} className={inputClass} placeholder="e.g. 01516199674 or 8801516199674" />
                       </Field>
-                      <p className="text-xs text-gray-500 mt-2">Use your WhatsApp number, including country code, for example 8801712345678. The product WhatsApp button will stay hidden until this is configured.</p>
+                      <p className="text-xs text-gray-500 mt-2">Bangladesh local numbers (01…), +880…, and 880… are converted automatically to WhatsApp’s international format. The product WhatsApp button stays hidden until this is configured.</p>
                     </div>
                   </div>
 

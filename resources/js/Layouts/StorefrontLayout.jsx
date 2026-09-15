@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Head } from '@inertiajs/react';
 import CartDrawer from '@/Components/Storefront/CartDrawer';
 import VisitorPopupModal from '@/Components/Storefront/VisitorPopupModal';
-import { imageUrl } from '@/lib/utils';
+import { imageUrl, whatsappNumber } from '@/lib/utils';
 
 function CartIcon({ count = 0, onClick }) {
   return (
@@ -45,7 +45,8 @@ export default function StorefrontLayout({ children, title, description, activeC
   const isTemplateOne = storefrontTemplate === 'template-1';
   const templateOneNavbarMenu = chatSettings.template_1_navbar_menu || 'coza';
   const templateOneShowSearch = chatSettings.template_1_show_search !== false;
-  const hasWhatsapp = !!chatSettings.whatsapp_number;
+  const whatsappDigits = whatsappNumber(chatSettings.whatsapp_number);
+  const hasWhatsapp = Boolean(whatsappDigits);
   const hasCall = !!chatSettings.call_number;
   const hasMessenger = !!chatSettings.messenger_page;
   const showChat = chatSettings.chat_enabled !== false && (hasWhatsapp || hasCall || hasMessenger);
@@ -602,7 +603,7 @@ export default function StorefrontLayout({ children, title, description, activeC
             {/* WhatsApp */}
             {hasWhatsapp && (
               <a
-                href={`https://wa.me/${chatSettings.whatsapp_number.replace(/[^0-9]/g, '')}`}
+                href={`https://wa.me/${whatsappDigits}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Chat on WhatsApp"

@@ -3,7 +3,7 @@ import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import ProductCard from '@/Components/Storefront/ProductCard';
 import CodOrderModal from '@/Components/Storefront/CodOrderModal';
-import { money, imageUrl } from '@/lib/utils';
+import { money, imageUrl, whatsappNumber } from '@/lib/utils';
 import { trackViewItem, trackAddToCart } from '@/lib/tracking';
 
 const escapeDescriptionHtml = (value) => String(value)
@@ -40,8 +40,8 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
 
   const isWhatsappEnabled = settings.product_page_whatsapp_enabled !== false;
   const whatsappText = settings.product_page_whatsapp_text || 'WhatsApp Order';
-  const whatsappNumber = settings.whatsapp_number || settings.product_page_whatsapp_number || '';
-  const whatsappDigits = String(whatsappNumber).replace(/[^0-9]/g, '');
+  const configuredWhatsappNumber = settings.whatsapp_number || settings.product_page_whatsapp_number || '';
+  const whatsappDigits = whatsappNumber(configuredWhatsappNumber);
   const whatsappBgColor = settings.product_page_whatsapp_bg_color || '#25D366';
   const whatsappTextColor = settings.product_page_whatsapp_text_color || '#ffffff';
 

@@ -26,6 +26,21 @@ export function imageUrl(path, seed = 'SHARTHAK') {
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 
+/**
+ * Converts common Bangladesh phone formats to WhatsApp's international digits.
+ * Examples: 01516199674, 8801516199674 and +880 1516-199674 all become
+ * 8801516199674. Other already-international numbers are left unchanged.
+ */
+export function whatsappNumber(phone) {
+  let digits = String(phone || '').replace(/\D/g, '');
+
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.startsWith('0') && digits.length === 11) return `880${digits.slice(1)}`;
+  if (digits.startsWith('1') && digits.length === 10) return `880${digits}`;
+
+  return digits;
+}
+
 export function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     if (!file) {
