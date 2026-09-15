@@ -17,10 +17,17 @@ class MediaController extends Controller
         $query = ProductImage::with('product:id,name,slug')
             ->orderByDesc('created_at');
 
+        $filter = $request->input('filter', 'all');
+        if ($filter === 'primary') {
+            $query->where('is_primary', true);
+        }
+
         if ($request->filled('q')) {
             $term = $request->input('q');
-            $query->where('alt', 'like', "%{$term}%")
-                  ->orWhereHas('product', fn($q) => $q->where('name', 'like', "%{$term}%"));
+            $query->where(function ($searchQuery) use ($term) {
+                $searchQuery->where('alt', 'like', "%{$term}%")
+                    ->orWhereHas('product', fn($productQuery) => $productQuery->where('name', 'like', "%{$term}%"));
+            });
         }
 
         return Inertia::render('Admin/Media/Index', [
@@ -36,6 +43,7 @@ class MediaController extends Controller
                 ] : null,
             ]),
             'q'          => $request->input('q'),
+            'filter'     => $filter,
             'total'      => ProductImage::count(),
         ]);
     }

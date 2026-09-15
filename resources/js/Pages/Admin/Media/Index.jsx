@@ -107,8 +107,9 @@ function ImageCard({ image, selectedOrder, onSelect, onDelete, onMoveEarlier, on
 }
 
 /* ─── Main page ──────────────────────────────────────────────────── */
-export default function MediaIndex({ images, q, total }) {
+export default function MediaIndex({ images, q, filter = 'all', total }) {
   const [search, setSearch] = useState(q || '');
+  const [activeFilter, setActiveFilter] = useState(filter);
   const [selected, setSelected] = useState([]);
   const [textPosition, setTextPosition] = useState('center-left');
   const [imagePosition, setImagePosition] = useState('center-center');
@@ -116,7 +117,12 @@ export default function MediaIndex({ images, q, total }) {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    router.get('/admin/media', { q: search }, { preserveState: true });
+    router.get('/admin/media', { q: search, filter: activeFilter }, { preserveState: true });
+  };
+
+  const setFilter = (nextFilter) => {
+    setActiveFilter(nextFilter);
+    router.get('/admin/media', { q: search, filter: nextFilter }, { preserveState: true });
   };
 
   const handleUpload = async (e) => {
@@ -240,6 +246,17 @@ export default function MediaIndex({ images, q, total }) {
                 Search
               </button>
             </form>
+
+            <div className="flex items-center rounded-xl border border-gray-200 bg-white p-1">
+              <button onClick={() => setFilter('all')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${activeFilter === 'all' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+                All Images
+              </button>
+              <button onClick={() => setFilter('primary')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${activeFilter === 'primary' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
+                Primary Only
+              </button>
+            </div>
 
             {selected.length > 0 ? (
               <div className="flex flex-wrap items-center gap-2">
