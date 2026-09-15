@@ -24,6 +24,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    @if (! request()->is('admin*'))
+        {{-- Load storefront styling before React mounts to prevent a flash of unstyled content. --}}
+        <link rel="preload" as="style" href="{{ asset('theme/css/storefront-typography.css') }}">
+        <link rel="stylesheet" href="{{ asset('theme/css/storefront-typography.css') }}">
+        @if (setting('storefront_template', 'template-2') === 'template-1')
+            <link rel="preload" as="style" href="{{ asset('theme/css/template-1-storefront.css') }}">
+            <link rel="stylesheet" href="{{ asset('theme/css/template-1-storefront.css') }}">
+        @endif
+    @endif
     @include('partials.tracking-head')
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.jsx'])

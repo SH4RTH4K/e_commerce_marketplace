@@ -3,7 +3,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Head } from '@inertiajs/react';
 import CartDrawer from '@/Components/Storefront/CartDrawer';
 import VisitorPopupModal from '@/Components/Storefront/VisitorPopupModal';
-import { imageUrl } from '@/lib/utils';
 import { imageUrl, whatsappNumber } from '@/lib/utils';
 
 function CartIcon({ count = 0, onClick }) {
@@ -46,7 +45,6 @@ export default function StorefrontLayout({ children, title, description, activeC
   const isTemplateOne = storefrontTemplate === 'template-1';
   const templateOneNavbarMenu = chatSettings.template_1_navbar_menu || 'coza';
   const templateOneShowSearch = chatSettings.template_1_show_search !== false;
-  const hasWhatsapp = !!chatSettings.whatsapp_number;
   const whatsappDigits = whatsappNumber(chatSettings.whatsapp_number);
   const hasWhatsapp = Boolean(whatsappDigits);
   const hasCall = !!chatSettings.call_number;
@@ -148,31 +146,12 @@ export default function StorefrontLayout({ children, title, description, activeC
         {canonicalUrl && <link head-key="canonical" rel="canonical" href={canonicalUrl} />}
       </Head>
       {title ? (
-        <Head title={title}>
-          {description && <meta name="description" content={description} />}
-          {isTemplateOne && <link rel="stylesheet" href="/theme/css/template-1-storefront.css" />}
-          <link rel="stylesheet" href="/theme/css/storefront-typography.css" />
-          {isTemplateOne && <link rel="stylesheet" href="/theme/css/template-1-storefront.css?v=20260915-page-banner" />}
-        </Head>
+        <Head title={title}>{description && <meta name="description" content={description} />}</Head>
       ) : description ? (
-        <Head>
-          <meta name="description" content={description} />
-          {isTemplateOne && <link rel="stylesheet" href="/theme/css/template-1-storefront.css" />}
-          <link rel="stylesheet" href="/theme/css/storefront-typography.css" />
-          {isTemplateOne && <link rel="stylesheet" href="/theme/css/template-1-storefront.css?v=20260915-page-banner" />}
-        </Head>
-      ) : isTemplateOne ? (
-        <Head>
-          <link rel="stylesheet" href="/theme/css/template-1-storefront.css" />
-          <link rel="stylesheet" href="/theme/css/storefront-typography.css" />
-          <link rel="stylesheet" href="/theme/css/template-1-storefront.css?v=20260915-page-banner" />
-        </Head>
+        <Head><meta name="description" content={description} /></Head>
       ) : null}
 
       {/* Top bar */}
-      <div className={`hidden md:block text-xs border-b ${isTemplateOne ? 'template-1-topbar bg-[#222] text-[#b2b2b2] border-[#222]' : 'bg-[#f1f3f5] text-gray-600 border-gray-200'}`}>
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-end h-9 gap-4">
-          {promoText && (
       <div className={`storefront-topbar hidden md:block text-xs border-b ${isTemplateOne ? 'template-1-topbar bg-[#222] text-[#b2b2b2] border-[#222]' : 'bg-[#f1f3f5] text-gray-600 border-gray-200'}`}>
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center h-9 gap-4">
           {isTemplateOne ? (
@@ -196,7 +175,6 @@ export default function StorefrontLayout({ children, title, description, activeC
       </div>
 
       {/* Main header */}
-      <header className={`sticky z-40 transition-all duration-300 ${isTemplateOne ? 'template-1-header' : ''} ${isScrolled ? 'top-0 sm:top-4 px-0 sm:px-4 lg:px-8 mb-4 pointer-events-none' : 'top-0 px-0'}`}>
       <header className={`storefront-header-area sticky z-40 transition-all duration-300 ${isTemplateOne ? 'template-1-header' : ''} ${isScrolled ? 'top-0 sm:top-4 px-0 sm:px-4 lg:px-8 mb-4 pointer-events-none' : 'top-0 px-0'}`}>
         <div className={`mx-auto max-w-7xl transition-all duration-300 ${isTemplateOne ? 'template-1-header-inner' : ''} ${isScrolled ? 'bg-white/70 sm:bg-white/60 backdrop-blur-xl sm:border border-white/50 sm:shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:rounded-[2rem] px-4 md:px-6 pointer-events-auto border-b sm:border-b-0 border-gray-100' : 'bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-8'}`}>
           <div className="flex h-16 md:h-20 items-center gap-4 md:gap-6 lg:gap-10">
@@ -242,7 +220,6 @@ export default function StorefrontLayout({ children, title, description, activeC
             {isTemplateOne && templateOneNavbarMenu === 'categories' && categoryList.length > 0 && (
               <nav className="template-1-main-menu hidden lg:flex">
                 <a href="/" className={typeof window !== 'undefined' && window.location.pathname === '/' ? 'is-active' : ''}>Home</a>
-                {categoryList.slice(0, 5).map(cat => (
                 {categoryList.map(cat => (
                   <a key={cat.id} href={`/category/${cat.slug}`} className={activeCategory?.id === cat.id ? 'is-active' : ''}>{cat.name}</a>
                 ))}
@@ -250,7 +227,6 @@ export default function StorefrontLayout({ children, title, description, activeC
             )}
 
             {/* Desktop search */}
-            <form onSubmit={handleSearch} className={`${isTemplateOne ? (templateOneShowSearch ? 'template-1-header-search hidden xl:flex' : 'hidden') : 'hidden md:flex max-w-2xl'} flex-1 min-w-0 group relative`}>
             <form onSubmit={handleSearch} className={`${isTemplateOne ? (templateOneShowSearch ? 'template-1-header-search hidden md:flex' : 'hidden') : 'hidden md:flex max-w-2xl'} flex-1 min-w-0 group relative`}>
               <div className="flex w-full items-center rounded-full bg-white/80 border border-gray-200/60 focus-within:border-[#f15a24] focus-within:ring-1 focus-within:ring-[#f15a24]/20 overflow-hidden transition-all shadow-sm h-11 pl-4 pr-2">
                 <svg className="h-5 w-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -283,14 +259,11 @@ export default function StorefrontLayout({ children, title, description, activeC
 
               {/* Account dropdown */}
               {auth?.user ? (
-                <div className="hidden md:block relative group">
-                  <button className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-[#f15a24] transition-colors">
                 <div className="hidden md:flex items-center gap-3">
                   <Link href="/account" className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-[#f15a24] transition-colors" aria-label="My Account">
                     <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                       <circle cx="12" cy="8" r="4"/><path strokeLinecap="round" strokeLinejoin="round" d="M4 21v-1a8 8 0 0116 0v1"/>
                     </svg>
-                    <span className="text-[10px] font-semibold truncate max-w-[60px]">{auth.user.name.split(' ')[0]}</span>
                     <span className="text-[10px] font-semibold">My Account</span>
                   </Link>
                   <button type="button" onClick={handleLogout} className="flex flex-col items-center justify-center gap-1 text-gray-700 hover:text-red-600 transition-colors" aria-label="Logout" title="Logout">
@@ -311,7 +284,6 @@ export default function StorefrontLayout({ children, title, description, activeC
                   <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                     <circle cx="12" cy="8" r="4"/><path strokeLinecap="round" strokeLinejoin="round" d="M4 21v-1a8 8 0 0116 0v1"/>
                   </svg>
-                  <span className="text-[10px] font-semibold">Sign In</span>
                   <span className="text-[10px] font-semibold">Login</span>
                 </Link>
               )}
@@ -459,21 +431,18 @@ export default function StorefrontLayout({ children, title, description, activeC
       )}
 
       {/* Main content - pad bottom on mobile for sticky nav */}
-      <main className={`min-h-screen pb-[70px] md:pb-0 ${isTemplateOne ? 'template-1-storefront' : 'bg-[#f8f9fa]'}`}>
       <main className={`storefront-main-area min-h-screen pb-[70px] md:pb-0 ${isTemplateOne ? 'template-1-storefront' : 'bg-[#f8f9fa]'}`}>
         {children}
       </main>
 
       {/* Footer */}
       {isTemplateOne ? (
-        <footer className="template-1-footer">
         <footer className="storefront-footer-area template-1-footer">
           <div className="template-1-container">
             <div className="template-1-footer-grid">
               <div>
                 <h4>Categories</h4>
                 <ul>
-                  {categoryList.slice(0, 6).map(cat => (
                   {categoryList.slice(0, 4).map(cat => (
                     <li key={cat.id}><a href={`/category/${cat.slug}`}>{cat.name}</a></li>
                   ))}
@@ -525,8 +494,6 @@ export default function StorefrontLayout({ children, title, description, activeC
                 </form>
               </div>
             </div>
-            <div className="template-1-footer-bottom">
-              <p>&copy; {new Date().getFullYear()} {app?.name || 'Store'}. All rights reserved.</p>
             <div className="template-1-footer-bottom flex flex-wrap items-center justify-between gap-3">
               {showCopyright && (copyrightUrl ? (
                 <a href={copyrightUrl} target="_blank" rel="noopener noreferrer" className="hover:text-white hover:underline">{copyrightText}</a>
@@ -540,7 +507,6 @@ export default function StorefrontLayout({ children, title, description, activeC
           </div>
         </footer>
       ) : (
-      <footer className="bg-transparent pb-8 pt-4 mb-[60px] md:mb-0">
       <footer className="storefront-footer-area bg-transparent pb-8 pt-4 mb-[60px] md:mb-0">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm px-6 sm:px-10 py-12 lg:py-16">
@@ -647,7 +613,6 @@ export default function StorefrontLayout({ children, title, description, activeC
             {/* WhatsApp */}
             {hasWhatsapp && (
               <a
-                href={`https://wa.me/${chatSettings.whatsapp_number.replace(/[^0-9]/g, '')}`}
                 href={`https://wa.me/${whatsappDigits}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -727,7 +692,7 @@ export default function StorefrontLayout({ children, title, description, activeC
 
       {/* ── Marketing & Notice Visitor Popup ── */}
       <VisitorPopupModal popup={popup} />
-    </>
     </div>
+    </>
   );
 }
