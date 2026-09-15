@@ -74,7 +74,7 @@ export default function HomePage({
   const viewMore = app?.settings?.home_view_more_label || 'View all';
   const isTemplateOne = app?.settings?.storefront_template === 'template-1';
   const heroOverlayColor = app?.settings?.template_1_hero_overlay_color || '#ffffff';
-  const heroOverlayOpacity = Math.max(0, Math.min(80, Number(app?.settings?.template_1_hero_overlay_opacity ?? 28))) / 100;
+  const heroOverlayOpacity = Math.max(0, Math.min(80, Number(app?.settings?.template_1_hero_overlay_opacity ?? 0))) / 100;
   const heroTextBackgroundColor = app?.settings?.template_1_hero_text_background_color || '#1f2430';
   const heroTextBackgroundOpacity = Math.max(0, Math.min(100, Number(app?.settings?.template_1_hero_text_background_opacity ?? 88))) / 100;
   const heroTextPosition = ['left', 'center', 'right'].includes(app?.settings?.template_1_hero_text_position)

@@ -304,7 +304,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     template_1_products_per_page: settings.template_1_products_per_page || '12',
     template_2_products_per_page: settings.template_2_products_per_page || '12',
     template_1_hero_overlay_color: settings.template_1_hero_overlay_color || '#ffffff',
-    template_1_hero_overlay_opacity: settings.template_1_hero_overlay_opacity || '28',
+    template_1_hero_overlay_opacity: settings.template_1_hero_overlay_opacity ?? '0',
     template_1_hero_text_background_color: settings.template_1_hero_text_background_color || '#1f2430',
     template_1_hero_text_background_opacity: settings.template_1_hero_text_background_opacity || '88',
     template_1_hero_text_position: settings.template_1_hero_text_position || 'left',
@@ -950,7 +950,7 @@ export default function Settings({ settings, templateStatus = {} }) {
                           <Field label="Overlay color">
                             <input type="color" value={data.template_1_hero_overlay_color} onChange={e => setData('template_1_hero_overlay_color', e.target.value)} className="h-[42px] w-full cursor-pointer rounded-xl border border-gray-200 bg-white p-1" />
                           </Field>
-                          <Field label={`Overlay opacity (${data.template_1_hero_overlay_opacity}%)`}>
+                          <Field label={`Image wash / overlay (${data.template_1_hero_overlay_opacity}%)`}>
                             <input type="range" min="0" max="80" value={data.template_1_hero_overlay_opacity} onChange={e => setData('template_1_hero_overlay_opacity', e.target.value)} className="mt-3 w-full accent-orange-500" />
                           </Field>
                           <Field label="Text panel background">
@@ -960,6 +960,7 @@ export default function Settings({ settings, templateStatus = {} }) {
                             <input type="range" min="0" max="100" value={data.template_1_hero_text_background_opacity} onChange={e => setData('template_1_hero_text_background_opacity', e.target.value)} className="mt-3 w-full accent-orange-500" />
                           </Field>
                         </div>
+                        <p className="text-xs text-gray-500">Use 0% for the original, brightest image. Increase this only when text needs more contrast over the photo.</p>
                       </div>
 
                       <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">

@@ -118,7 +118,9 @@ class HandleInertiaRequests extends Middleware
                         ->value('image'),
                     'template_2_products_per_page' => setting('template_2_products_per_page', '12'),
                     'template_1_hero_overlay_color' => setting('template_1_hero_overlay_color', '#ffffff'),
-                    'template_1_hero_overlay_opacity' => (int) setting('template_1_hero_overlay_opacity', '28'),
+                    // Keep product photography true to its original colour by default. Administrators can
+                    // still add an overlay from Theme settings when a particular hero needs extra text contrast.
+                    'template_1_hero_overlay_opacity' => (int) setting('template_1_hero_overlay_opacity', '0'),
                     'template_1_hero_text_background_color' => setting('template_1_hero_text_background_color', '#1f2430'),
                     'template_1_hero_text_background_opacity' => (int) setting('template_1_hero_text_background_opacity', '88'),
                     'template_1_hero_text_position' => setting('template_1_hero_text_position', 'left'),
