@@ -69,9 +69,17 @@ class HomeController extends Controller
             'image_orientation' => $banner->image_orientation,
         ]);
 
-        $trending = Product::query()->tap($withImages)->where('is_featured', true)->take($overviewLimits['featured'])->get();
-        $bestSellers = Product::query()->tap($withImages)->where('is_best_seller', true)->take($overviewLimits['best'])->get();
-        $newArrivals = Product::query()->tap($withImages)->where('is_new_arrival', true)->take($overviewLimits['new'])->get();
+        // The administrator can choose a stable newest-first collection or a new
+        // shuffled collection on every homepage refresh. The stable option must
+        // explicitly order the query; database row order is not guaranteed.
+        $shuffleOverview = setting('homepage_product_overview_order', 'newest') === 'shuffle';
+        $overviewOrder = fn ($query) => $shuffleOverview
+            ? $query->inRandomOrder()
+            : $query->orderByDesc('created_at')->orderByDesc('id');
+
+        $trending = Product::query()->tap($withImages)->where('is_featured', true)->tap($overviewOrder)->take($overviewLimits['featured'])->get();
+        $bestSellers = Product::query()->tap($withImages)->where('is_best_seller', true)->tap($overviewOrder)->take($overviewLimits['best'])->get();
+        $newArrivals = Product::query()->tap($withImages)->where('is_new_arrival', true)->tap($overviewOrder)->take($overviewLimits['new'])->get();
         $overviewDisplayLimits = [
             'featured' => $isTemplateOne
                 ? min(48, max(1, (int) setting('template_1_overview_featured_count', '12')))
@@ -145,7 +153,11 @@ class HomeController extends Controller
         $limit = $this->overviewBatchSize($data['tab']);
         $products = $query
             ->whereNotIn('id', $data['exclude'] ?? [])
-            ->orderByDesc('id')
+            ->when(
+                setting('homepage_product_overview_order', 'newest') === 'shuffle',
+                fn ($productQuery) => $productQuery->inRandomOrder(),
+                fn ($productQuery) => $productQuery->orderByDesc('created_at')->orderByDesc('id'),
+            )
             ->limit($limit + 1)
             ->get();
 

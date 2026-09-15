@@ -323,6 +323,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     template_1_overview_featured_count: settings.template_1_overview_featured_count || '12',
     template_1_overview_new_count: settings.template_1_overview_new_count || '12',
     template_1_overview_best_count: settings.template_1_overview_best_count || '12',
+    homepage_product_overview_order: settings.homepage_product_overview_order || 'newest',
     template_2_overview_featured_count: settings.template_2_overview_featured_count || '12',
     template_2_overview_new_count: settings.template_2_overview_new_count || '12',
     template_2_overview_best_count: settings.template_2_overview_best_count || '12',
@@ -1027,9 +1028,9 @@ export default function Settings({ settings, templateStatus = {} }) {
                       <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
                         <div>
                           <h4 className="text-sm font-bold text-gray-900">Product Overview Counts</h4>
-                          <p className="text-xs text-gray-500 mt-1">Choose how many products appear in each Template-1 overview tab.</p>
+                          <p className="text-xs text-gray-500 mt-1">Choose how many products appear in each Template-1 overview tab and whether a new product mix appears after each homepage refresh.</p>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                           <Field label="All Products">
                             <input type="number" min="1" max="48" value={data.template_1_overview_all_count} onChange={e => setData('template_1_overview_all_count', e.target.value)} className={inputClass} />
                           </Field>
@@ -1041,6 +1042,12 @@ export default function Settings({ settings, templateStatus = {} }) {
                           </Field>
                           <Field label="Best Sellers">
                             <input type="number" min="1" max="48" value={data.template_1_overview_best_count} onChange={e => setData('template_1_overview_best_count', e.target.value)} className={inputClass} />
+                          </Field>
+                          <Field label="Refresh order">
+                            <select value={data.homepage_product_overview_order} onChange={e => setData('homepage_product_overview_order', e.target.value)} className={inputClass}>
+                              <option value="newest">Keep newest first</option>
+                              <option value="shuffle">Shuffle on each refresh</option>
+                            </select>
                           </Field>
                         </div>
                       </div>
