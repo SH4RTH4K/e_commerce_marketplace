@@ -1,6 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
+import { imageUrl } from '@/lib/utils';
 
 export default function FlashSaleIndex({ flashProducts, available, q, endsAt }) {
   const [search, setSearch] = useState(q || '');
@@ -13,7 +14,7 @@ export default function FlashSaleIndex({ flashProducts, available, q, endsAt }) 
 
   const primaryImage = (product) => {
     const img = (product.images || []).find(i => i.is_primary) || (product.images || [])[0];
-    return img?.path ? `/${img.path}` : null;
+    return imageUrl(img?.path, product.name);
   };
 
   return (
@@ -45,10 +46,7 @@ export default function FlashSaleIndex({ flashProducts, available, q, endsAt }) 
                 <div className="px-5 py-12 text-center text-gray-400">No products in flash sale yet.</div>
               ) : (flashProducts || []).map(product => (
                 <div key={product.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
-                  {primaryImage(product)
-                    ? <img src={primaryImage(product)} alt="" className="h-10 w-10 rounded-xl object-cover shrink-0 border border-gray-100" />
-                    : <div className="h-10 w-10 rounded-xl bg-gray-100 shrink-0" />
-                  }
+                  <img src={primaryImage(product)} alt="" className="h-10 w-10 rounded-xl object-cover shrink-0 border border-gray-100" />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-800 truncate">{product.name}</p>
                     <p className="text-xs text-gray-400">{product.category?.name} · ৳{Number(product.regular_price).toLocaleString()}{product.sale_price ? ` → ৳${Number(product.sale_price).toLocaleString()}` : ''}</p>
@@ -74,10 +72,7 @@ export default function FlashSaleIndex({ flashProducts, available, q, endsAt }) 
                 <div className="px-5 py-8 text-center text-gray-400 text-sm">No available products found.</div>
               ) : (available?.data || []).map(product => (
                 <div key={product.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50/50 transition-colors">
-                  {primaryImage(product)
-                    ? <img src={primaryImage(product)} alt="" className="h-10 w-10 rounded-xl object-cover shrink-0 border border-gray-100" />
-                    : <div className="h-10 w-10 rounded-xl bg-gray-100 shrink-0" />
-                  }
+                  <img src={primaryImage(product)} alt="" className="h-10 w-10 rounded-xl object-cover shrink-0 border border-gray-100" />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-800 truncate">{product.name}</p>
                     <p className="text-xs text-gray-400">৳{Number(product.regular_price).toLocaleString()}</p>
