@@ -21,7 +21,9 @@ function shippingPreviewContent(data) {
   const additionalContent = String(data.shipping_content || '').trim();
   const defaultInformation = '<h2>Delivery Information</h2><p>Please provide a complete delivery address and a reachable phone number when placing your order. Our team may contact you to confirm the order before dispatch.</p><p>Shipping charges and delivery availability are applied according to the current store configuration at checkout.</p>';
 
-  return `<h2>Shipping Charges</h2><p>Your delivery charge is calculated at checkout from the delivery area you choose.</p><ul><li><strong>${insideLabel}:</strong> ${currency}${insideCharge}</li><li><strong>${outsideLabel}:</strong> ${currency}${outsideCharge}</li></ul>${additionalContent || defaultInformation}`;
+  const intro = escapeHtml(data.shipping_charge_intro || 'Your delivery charge is calculated at checkout from the delivery area you choose.');
+
+  return `<h2>Shipping Charges</h2><p>${intro}</p><ul><li><strong>${insideLabel}:</strong> ${currency}${insideCharge}</li><li><strong>${outsideLabel}:</strong> ${currency}${outsideCharge}</li></ul>${additionalContent || defaultInformation}`;
 }
 
 const legalPageEditors = [
@@ -239,7 +241,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     // Shipping
     shipping_inside_dhaka: settings.shipping_inside_dhaka || '0', shipping_outside_dhaka: settings.shipping_outside_dhaka || '0', tax_percent: settings.tax_percent || '0',
     fraud_order_time_limit_minutes: settings.fraud_order_time_limit_minutes || '10',
-    shipping_inside_label: settings.shipping_inside_label || '', shipping_outside_label: settings.shipping_outside_label || '', currency_symbol: settings.currency_symbol || '৳', currency_code: settings.currency_code || 'BDT',
+    shipping_inside_label: settings.shipping_inside_label || '', shipping_outside_label: settings.shipping_outside_label || '', shipping_charge_intro: settings.shipping_charge_intro || 'Your delivery charge is calculated at checkout from the delivery area you choose.', currency_symbol: settings.currency_symbol || '৳', currency_code: settings.currency_code || 'BDT',
     checkout_delivery_note_enabled: settings.checkout_delivery_note_enabled !== '0',
     checkout_delivery_note_label: settings.checkout_delivery_note_label || 'ডেলিভারি সংক্রান্ত বিশেষ নোট (ঐচ্ছিক)',
     
@@ -1179,6 +1181,10 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <Field label="Outside Label" error={errors.shipping_outside_label}><input value={data.shipping_outside_label} onChange={e => setData('shipping_outside_label', e.target.value)} className={inputClass} /></Field>
                     <Field label="Tax Percent (%)" error={errors.tax_percent}><input type="number" min="0" max="100" step="0.01" value={data.tax_percent} onChange={e => setData('tax_percent', e.target.value)} className={inputClass} required /></Field>
                   </div>
+                  <Field label="Shipping Charge Introduction" error={errors.shipping_charge_intro}>
+                    <textarea value={data.shipping_charge_intro} onChange={e => setData('shipping_charge_intro', e.target.value)} rows={2} maxLength={300} className={inputClass} placeholder="Explain how delivery charges are calculated..." />
+                    <p className="mt-1.5 text-xs text-gray-500">Shown above the configured delivery charges on the public Shipping page.</p>
+                  </Field>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                     <Field label="Currency Symbol" error={errors.currency_symbol}><input type="text" value={data.currency_symbol} onChange={e => setData('currency_symbol', e.target.value)} className={inputClass} placeholder="e.g. ৳" /></Field>
                     <Field label="Currency Code" error={errors.currency_code}><input type="text" value={data.currency_code} onChange={e => setData('currency_code', e.target.value)} className={inputClass} placeholder="e.g. BDT" /></Field>

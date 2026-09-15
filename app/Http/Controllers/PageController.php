@@ -118,10 +118,11 @@ class PageController extends Controller
         $outside = number_format((float) setting('shipping_outside_dhaka', 120), 2);
         $insideLabel = e((string) setting('shipping_inside_label', 'Inside Dhaka'));
         $outsideLabel = e((string) setting('shipping_outside_label', 'Outside Dhaka'));
+        $intro = e((string) setting('shipping_charge_intro', 'Your delivery charge is calculated at checkout from the delivery area you choose.'));
 
         return <<<HTML
 <h2>Shipping Charges</h2>
-<p>Your delivery charge is calculated at checkout from the delivery area you choose.</p>
+<p>{$intro}</p>
 <ul>
   <li><strong>{$insideLabel}:</strong> {$currency}{$inside}</li>
   <li><strong>{$outsideLabel}:</strong> {$currency}{$outside}</li>

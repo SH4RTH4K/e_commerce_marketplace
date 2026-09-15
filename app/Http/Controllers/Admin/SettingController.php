@@ -298,6 +298,7 @@ class SettingController extends Controller
                 'tax_percent'            => ['required', 'numeric', 'min:0', 'max:100'],
                 'shipping_inside_label'  => ['nullable', 'string', 'max:80'],
                 'shipping_outside_label' => ['nullable', 'string', 'max:120'],
+                'shipping_charge_intro'  => ['nullable', 'string', 'max:300'],
                 'currency_symbol'        => ['nullable', 'string', 'max:20'],
                 'currency_code'          => ['nullable', 'string', 'max:10'],
                 'fraud_order_time_limit_minutes' => ['nullable', 'numeric', 'min:0', 'max:1440'],
@@ -416,6 +417,7 @@ class SettingController extends Controller
             'shipping' => [
                 'shipping_inside_dhaka', 'shipping_outside_dhaka', 'tax_percent',
                 'shipping_inside_label', 'shipping_outside_label',
+                'shipping_charge_intro',
                 'currency_symbol', 'currency_code', 'fraud_order_time_limit_minutes',
                 'checkout_delivery_note_label',
             ],
