@@ -22,6 +22,7 @@ export default function HomePage({
   trending, 
   bestSellers, 
   newArrivals,
+  homeOverviewHasMore = {},
   app 
 }) {
   const ctaDefault = app?.settings?.default_cta_text || 'Shop now';
@@ -138,7 +139,15 @@ export default function HomePage({
   const heroCount = displayHeroBanners?.length || 0;
   const [activeHeroIndex, setActiveHeroIndex] = useState(0);
   const [activeOverview, setActiveOverview] = useState('all');
-  const overviewProducts = uniqueProducts(overviewProductsByTab[activeOverview] || []).slice(0, overviewCounts[activeOverview] || 16);
+  const [overviewProductLists, setOverviewProductLists] = useState(() => Object.fromEntries(
+    Object.entries(overviewProductsByTab).map(([tab, products]) => [
+      tab,
+      uniqueProducts(products).slice(0, overviewCounts[tab] || 16),
+    ]),
+  ));
+  const [overviewHasMore, setOverviewHasMore] = useState(homeOverviewHasMore);
+  const [loadingOverviewTab, setLoadingOverviewTab] = useState(null);
+  const overviewProducts = overviewProductLists[activeOverview] || [];
 
   const overviewTabs = [
     ['all', 'All Products'],
@@ -146,6 +155,51 @@ export default function HomePage({
     ['new', 'New Arrivals'],
     ['best', 'Best Sellers'],
   ];
+
+  const loadMoreOverviewProducts = async (tab) => {
+    if (loadingOverviewTab || !overviewHasMore[tab]) return;
+
+    const displayedProducts = overviewProductLists[tab] || [];
+    const search = new URLSearchParams({ tab });
+    displayedProducts.forEach(product => search.append('exclude[]', product.id));
+    setLoadingOverviewTab(tab);
+
+    try {
+      const response = await fetch(`/home/products/load-more?${search.toString()}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (!response.ok) throw new Error('Unable to load more products.');
+
+      const { products, has_more: hasMore } = await response.json();
+      setOverviewProductLists(currentLists => {
+        const currentProducts = currentLists[tab] || [];
+        const currentIds = new Set(currentProducts.map(product => product.id));
+
+        return {
+          ...currentLists,
+          [tab]: [...currentProducts, ...products.filter(product => !currentIds.has(product.id))],
+        };
+      });
+      setOverviewHasMore(current => ({ ...current, [tab]: Boolean(hasMore && products.length) }));
+    } catch (error) {
+      // Keep the button available so a temporary network error can be retried.
+    } finally {
+      setLoadingOverviewTab(null);
+    }
+  };
+
+  const loadMoreButton = (tab) => overviewHasMore[tab] && (
+    <div className="mt-[45px] flex justify-center">
+      <button
+        type="button"
+        onClick={() => loadMoreOverviewProducts(tab)}
+        disabled={loadingOverviewTab !== null}
+        className="inline-flex h-[46px] min-w-[179px] items-center justify-center rounded-[23px] bg-[#e6e6e6] px-[15px] text-[15px] font-medium uppercase leading-[1.466667] text-[#333] transition-colors duration-300 hover:bg-[#222] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#222] focus:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
+      >
+        {loadingOverviewTab === tab ? 'LOADING...' : 'LOAD MORE'}
+      </button>
+    </div>
+  );
 
   const scrollToHeroSlide = (index) => {
     if (heroCount === 0) return;
@@ -350,6 +404,7 @@ export default function HomePage({
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
+          {loadMoreButton(activeOverview)}
         </section>
       </StorefrontLayout>
     );
@@ -535,7 +590,7 @@ export default function HomePage({
       )}
 
       {/* Trending / Featured Products */}
-      {trending?.length > 0 && (
+      {overviewProductLists.featured?.length > 0 && (
         <section className="storefront-section mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-end justify-between mb-6 border-b border-gray-100 pb-4">
             <div>
@@ -547,10 +602,11 @@ export default function HomePage({
             </Link>
           </div>
           <div className={`grid ${productGridClass} gap-3 sm:gap-4 lg:gap-5`}>
-            {trending.map(product => (
+            {overviewProductLists.featured.map(product => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
+          {loadMoreButton('featured')}
         </section>
       )}
 
@@ -589,7 +645,7 @@ export default function HomePage({
       )}
 
       {/* New Arrivals */}
-      {newArrivals?.length > 0 && (
+      {overviewProductLists.new?.length > 0 && (
         <section className="storefront-section mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 bg-gray-50 rounded-3xl my-8">
           <div className="flex items-end justify-between mb-6 pb-2">
             <div>
@@ -601,15 +657,16 @@ export default function HomePage({
             </Link>
           </div>
           <div className={`grid ${productGridClass} gap-3 sm:gap-4 lg:gap-5`}>
-            {newArrivals.map(product => (
+            {overviewProductLists.new.map(product => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
+          {loadMoreButton('new')}
         </section>
       )}
 
       {/* Best Sellers */}
-      {bestSellers?.length > 0 && (
+      {overviewProductLists.best?.length > 0 && (
         <section className="storefront-section mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 mb-12">
           <div className="flex items-end justify-between mb-6 border-b border-gray-100 pb-4">
             <div>
@@ -621,10 +678,11 @@ export default function HomePage({
             </Link>
           </div>
           <div className={`grid ${productGridClass} gap-3 sm:gap-4 lg:gap-5`}>
-            {bestSellers.map(product => (
+            {overviewProductLists.best.map(product => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
+          {loadMoreButton('best')}
         </section>
       )}
 

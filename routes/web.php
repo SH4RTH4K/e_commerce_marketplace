@@ -51,6 +51,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/home/products/load-more', [HomeController::class, 'loadMore'])->name('home.products.load-more');
 Route::get('/lp/{slug}', [LandingPageController::class, 'show'])->name('landing.show');
 Route::get('/campaign/{slug}', [LandingPageController::class, 'show'])->name('campaign.show');
 Route::post('/lp/{slug}/order', [LandingPageController::class, 'order'])->middleware('throttle:60,1')->name('landing.order');

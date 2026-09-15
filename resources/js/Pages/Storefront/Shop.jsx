@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import ProductCard from '@/Components/Storefront/ProductCard';
@@ -17,6 +17,8 @@ export default function ShopPage({
   app
 }) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [loadedProducts, setLoadedProducts] = useState(products);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const isTemplateOne = app?.settings?.storefront_template === 'template-1';
 
   const maxPrice = Math.max(1000, parseInt(priceCeiling || 100000));
@@ -45,6 +47,66 @@ export default function ShopPage({
     : q ? `Search: ${q}` : activeCollection || 'Shop All Products';
 
   const formAction = activeCategory ? `/category/${activeCategory.slug}` : '/shop';
+
+  // Keep the accumulated list only while the customer stays in the same
+  // catalogue view. A new search, filter, sort, or category starts over with
+  // the server's first page.
+  const listingParams = new URLSearchParams(window.location.search);
+  listingParams.delete('page');
+  const listingKey = `${window.location.pathname}?${listingParams.toString()}`;
+  const listingKeyRef = useRef(listingKey);
+
+  useEffect(() => {
+    if (listingKeyRef.current === listingKey) return;
+
+    listingKeyRef.current = listingKey;
+    setLoadedProducts(products);
+    setIsLoadingMore(false);
+  }, [listingKey, products]);
+
+  const loadMoreProducts = () => {
+    if (isLoadingMore || !loadedProducts.next_page_url) return;
+
+    setIsLoadingMore(true);
+    router.get(loadedProducts.next_page_url, {}, {
+      only: ['products'],
+      preserveState: true,
+      preserveScroll: true,
+      // Loading another batch should not turn the address into ?page=2. The
+      // current filtered catalogue remains shareable and reload-safe.
+      preserveUrl: true,
+      onSuccess: (page) => {
+        const nextProducts = page.props.products;
+        if (!nextProducts) return;
+
+        setLoadedProducts(currentProducts => {
+          const existingIds = new Set(currentProducts.data.map(product => product.id));
+
+          return {
+            ...nextProducts,
+            data: [
+              ...currentProducts.data,
+              ...nextProducts.data.filter(product => !existingIds.has(product.id)),
+            ],
+          };
+        });
+      },
+      onFinish: () => setIsLoadingMore(false),
+    });
+  };
+
+  const loadMoreButton = loadedProducts.next_page_url && (
+    <div className="mt-[45px] flex justify-center">
+      <button
+        type="button"
+        onClick={loadMoreProducts}
+        disabled={isLoadingMore}
+        className="inline-flex h-[46px] min-w-[179px] items-center justify-center rounded-[23px] bg-[#e6e6e6] px-[15px] text-[15px] font-medium uppercase leading-[1.466667] text-[#333] transition-colors duration-300 hover:bg-[#222] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#222] focus:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
+      >
+        {isLoadingMore ? 'LOADING...' : 'LOAD MORE'}
+      </button>
+    </div>
+  );
 
   const productGridClasses = {
     2: 'grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2',
@@ -258,9 +320,9 @@ export default function ShopPage({
             </>
           )}
 
-          <p className="template-1-result-count">{products.total} products found</p>
+          <p className="template-1-result-count">{loadedProducts.total} products found</p>
 
-          {products.data.length === 0 ? (
+          {loadedProducts.data.length === 0 ? (
             <div className="template-1-empty">
               <h2>No products found</h2>
               <p>Try adjusting your filters or search term.</p>
@@ -269,24 +331,12 @@ export default function ShopPage({
           ) : (
             <>
               <div className={`grid ${productGridClass} gap-7 sm:gap-8 lg:gap-x-7 lg:gap-y-12`}>
-                {products.data.map(product => (
+                {loadedProducts.data.map(product => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
 
-              {products.last_page > 1 && (
-                <nav className="template-1-pagination">
-                    {products.links.map((link, idx) => {
-                      const label = link.label.replace('&laquo; Previous', 'Prev').replace('Next &raquo;', 'Next');
-
-                      if (!link.url) {
-                        return <span key={idx}>{label}</span>;
-                      }
-
-                      return <Link key={idx} href={link.url} className={link.active ? 'is-active' : ''}>{label}</Link>;
-                    })}
-                </nav>
-              )}
+              {loadMoreButton}
             </>
           )}
         </main>
@@ -514,7 +564,7 @@ export default function ShopPage({
               </div>
             </div>
 
-            {products.data.length === 0 ? (
+            {loadedProducts.data.length === 0 ? (
               <div className="bg-white rounded-xl border border-dashed border-gray-200 p-12 sm:p-20 text-center text-gray-500 flex flex-col items-center">
                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                   <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" /></svg>
@@ -528,47 +578,12 @@ export default function ShopPage({
             ) : (
               <>
                 <div className={`grid ${productGridClass} gap-3 sm:gap-4 lg:gap-5`}>
-                  {products.data.map(product => (
+                  {loadedProducts.data.map(product => (
                     <ProductCard key={product.id} product={product} />
                   ))}
                 </div>
 
-                {/* Pagination */}
-                {products.last_page > 1 && (
-                  <nav className="mt-10 flex justify-center">
-                    <ul className="flex items-center gap-1 sm:gap-2">
-                      {products.links.map((link, idx) => {
-                        const isPrevOrNext = link.label.includes('Previous') || link.label.includes('Next');
-                        const label = link.label.replace('&laquo; Previous', 'Prev').replace('Next &raquo;', 'Next');
-                        
-                        if (!link.url) {
-                          return (
-                            <li key={idx}>
-                              <span className={`px-3 sm:px-4 py-2 border border-gray-100 rounded-lg bg-gray-50 text-gray-400 text-sm font-medium ${!isPrevOrNext ? 'hidden sm:inline-block' : ''}`}>
-                                {label}
-                              </span>
-                            </li>
-                          );
-                        }
-
-                        return (
-                          <li key={idx}>
-                            <Link 
-                              href={link.url}
-                              className={`px-3 sm:px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${
-                                link.active 
-                                  ? 'bg-[#f15a24] border-[#f15a24] text-white shadow-sm shadow-[#f15a24]/20' 
-                                  : 'border-gray-200 bg-white text-gray-700 hover:border-[#f15a24] hover:text-[#f15a24]'
-                              } ${!isPrevOrNext && !link.active ? 'hidden sm:inline-flex' : 'inline-flex'}`}
-                            >
-                              {label}
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </nav>
-                )}
+                {loadMoreButton}
               </>
             )}
           </div>
