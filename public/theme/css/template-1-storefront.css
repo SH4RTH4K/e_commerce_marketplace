@@ -1237,7 +1237,7 @@ body:has(.template-1-storefront) {
   justify-content: center;
   margin-top: 30px;
   padding: 42px 15px;
-  background: linear-gradient(rgb(0 0 0 / .12), rgb(0 0 0 / .12)), url('/templates/template-1/images/bg-01.jpg') center / cover;
+  background: linear-gradient(rgb(0 0 0 / .28), rgb(0 0 0 / .28)), var(--template-1-page-title-banner, url('/templates/template-1/images/bg-01.jpg')) center / cover;
   color: #fff;
   text-align: center;
 }

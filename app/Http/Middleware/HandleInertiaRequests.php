@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\ContactMessage;
+use App\Models\Banner;
 use App\Models\Order;
 use App\Models\ProductReview;
 use Illuminate\Http\Request;
@@ -104,6 +105,13 @@ class HandleInertiaRequests extends Middleware
                     'template_1_product_per_row' => setting('template_1_product_per_row', '5'),
                     'template_2_product_per_row' => setting('template_2_product_per_row', '5'),
                     'template_1_products_per_page' => setting('template_1_products_per_page', '12'),
+                    'template_1_inner_page_banner' => Banner::active()
+                        ->placement('hero')
+                        ->whereNotNull('image')
+                        ->where('image', '!=', '')
+                        ->orderBy('position')
+                        ->orderBy('id')
+                        ->value('image'),
                     'template_2_products_per_page' => setting('template_2_products_per_page', '12'),
                     'template_1_hero_overlay_color' => setting('template_1_hero_overlay_color', '#ffffff'),
                     'template_1_hero_overlay_opacity' => (int) setting('template_1_hero_overlay_opacity', '28'),

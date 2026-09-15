@@ -69,6 +69,9 @@ export default function StorefrontLayout({ children, title, description, activeC
     [`--theme-${area}-style`]: values.style,
     [`--theme-${area}-transform`]: values.transform,
   }), {});
+  if (chatSettings.template_1_inner_page_banner) {
+    typographyStyle['--template-1-page-title-banner'] = `url("${imageUrl(chatSettings.template_1_inner_page_banner)}")`;
+  }
 
   const getMessengerUrl = (page) => {
     if (!page) return '#';
@@ -121,18 +124,18 @@ export default function StorefrontLayout({ children, title, description, activeC
         <Head title={title}>
           {description && <meta name="description" content={description} />}
           <link rel="stylesheet" href="/theme/css/storefront-typography.css" />
-          {isTemplateOne && <link rel="stylesheet" href="/theme/css/template-1-storefront.css?v=20260911-tabs" />}
+          {isTemplateOne && <link rel="stylesheet" href="/theme/css/template-1-storefront.css?v=20260915-page-banner" />}
         </Head>
       ) : description ? (
         <Head>
           <meta name="description" content={description} />
           <link rel="stylesheet" href="/theme/css/storefront-typography.css" />
-          {isTemplateOne && <link rel="stylesheet" href="/theme/css/template-1-storefront.css?v=20260911-tabs" />}
+          {isTemplateOne && <link rel="stylesheet" href="/theme/css/template-1-storefront.css?v=20260915-page-banner" />}
         </Head>
       ) : isTemplateOne ? (
         <Head>
           <link rel="stylesheet" href="/theme/css/storefront-typography.css" />
-          <link rel="stylesheet" href="/theme/css/template-1-storefront.css?v=20260911-tabs" />
+          <link rel="stylesheet" href="/theme/css/template-1-storefront.css?v=20260915-page-banner" />
         </Head>
       ) : null}
 
@@ -429,7 +432,7 @@ export default function StorefrontLayout({ children, title, description, activeC
                 <ul>
                   <li><a href="/track">Track Order</a></li>
                   <li><a href="/refund-policy">Returns</a></li>
-                  <li><a href="/contact">Shipping</a></li>
+                  <li><a href="/shipping">Shipping</a></li>
                   <li><a href="/contact">FAQs &amp; Contact</a></li>
                 </ul>
               </div>

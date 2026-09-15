@@ -100,6 +100,7 @@ Route::get('/terms', [PageController::class, 'terms'])->name('terms');
 Route::get('/privacy', [PageController::class, 'privacy'])->name('privacy');
 Route::get('/refund-policy', [PageController::class, 'refund'])->name('refund');
 Route::get('/return-policy', [PageController::class, 'refund'])->name('return-policy');
+Route::get('/shipping', [PageController::class, 'shipping'])->name('shipping');
 Route::get('/contact', [PageController::class, 'contact'])->name('contact');
 Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:30,1')->name('contact.store');
 Route::get('/page/{slug}', [PageController::class, 'show'])->name('page');
