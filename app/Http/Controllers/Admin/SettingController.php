@@ -148,6 +148,7 @@ class SettingController extends Controller
                 'footer_text'     => ['nullable', 'string', 'max:400'],
                 'footer_copyright_enabled' => ['nullable', 'boolean'],
                 'footer_copyright_text'    => ['nullable', 'string', 'max:200'],
+                'footer_copyright_url'     => ['nullable', 'url', 'max:255'],
                 'footer_developer_enabled' => ['nullable', 'boolean'],
                 'footer_developer_label'   => ['nullable', 'string', 'max:60'],
                 'footer_developer_name'    => ['nullable', 'string', 'max:100'],
@@ -374,7 +375,7 @@ class SettingController extends Controller
 
         $keys = match ($section) {
             'brand' => [
-                'site_name', 'tagline', 'footer_text', 'footer_copyright_text',
+                'site_name', 'tagline', 'footer_text', 'footer_copyright_text', 'footer_copyright_url',
                 'footer_developer_label', 'footer_developer_name', 'footer_developer_url',
                 'contact_phone', 'contact_email', 'contact_address',
                 'contact_hours', 'contact_title', 'contact_intro',

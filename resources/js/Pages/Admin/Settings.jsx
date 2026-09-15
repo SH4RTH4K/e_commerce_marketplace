@@ -147,6 +147,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     site_name: settings.site_name || '', tagline: settings.tagline || '', footer_text: settings.footer_text || '',
     footer_copyright_enabled: settings.footer_copyright_enabled !== '0' && settings.footer_copyright_enabled !== false,
     footer_copyright_text: settings.footer_copyright_text || '',
+    footer_copyright_url: settings.footer_copyright_url || '',
     footer_developer_enabled: settings.footer_developer_enabled === '1' || settings.footer_developer_enabled === true,
     footer_developer_label: settings.footer_developer_label || 'Developed by', footer_developer_name: settings.footer_developer_name || '', footer_developer_url: settings.footer_developer_url || '',
     contact_phone: settings.contact_phone || '', contact_email: settings.contact_email || '', contact_address: settings.contact_address || '',
@@ -441,6 +442,7 @@ export default function Settings({ settings, templateStatus = {} }) {
                       <span className="text-sm font-semibold text-gray-800">Show copyright line in footer</span>
                     </label>
                     <Field label="Custom copyright text (optional)" error={errors.footer_copyright_text}><input value={data.footer_copyright_text} onChange={e => setData('footer_copyright_text', e.target.value)} className={inputClass} placeholder="© 2026 TAQI LIFE. All rights reserved." /></Field>
+                    <Field label="Copyright link (optional)" error={errors.footer_copyright_url}><input type="url" value={data.footer_copyright_url} onChange={e => setData('footer_copyright_url', e.target.value)} className={inputClass} placeholder="https://example.com" /></Field>
                     <p className="text-xs text-gray-400">Leave this empty to automatically show the current year and site name.</p>
                     <div className="border-t border-gray-200 pt-4" />
                     <label className="flex items-center gap-3 cursor-pointer">
