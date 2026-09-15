@@ -6,6 +6,23 @@ import { fileToBase64 } from '@/lib/utils';
 const inputClass = "w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300";
 const checkboxClass = "h-4 w-4 accent-orange-500 rounded";
 
+function policyPreviewDocument(title, content) {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${title}</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 32px 20px; background: #f8fafc; color: #263238; font-family: Arial, Helvetica, sans-serif; }
+      body > p { max-width: 720px; margin: 48px auto; text-align: center; color: #64748b; }
+    </style>
+  </head>
+  <body>${content || '<p>Add policy content, then select Preview.</p>'}</body>
+</html>`;
+}
+
 function Field({ label, error, children }) {
   return (
     <div>
@@ -123,6 +140,7 @@ export default function Settings({ settings, templateStatus = {} }) {
   const [activeTab, setActiveTab] = useState('brand');
   const [testEmail, setTestEmail] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [legalPreview, setLegalPreview] = useState(null);
 
   const { data, setData, errors, setError, clearErrors } = useForm({
     // Brand
@@ -1217,13 +1235,45 @@ export default function Settings({ settings, templateStatus = {} }) {
             {activeTab === 'legal' && (
               <form onSubmit={e => submitSection(e, 'legal')} className="space-y-5">
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
-                  <h3 className="font-bold text-gray-900 pb-3 border-b border-gray-50">Legal Pages</h3>
-                  <Field label="Terms & Conditions (HTML/Text)" error={errors.terms_content}><textarea value={data.terms_content} onChange={e => setData('terms_content', e.target.value)} rows={10} className={inputClass} /></Field>
-                  <Field label="Privacy Policy (HTML/Text)" error={errors.privacy_content}><textarea value={data.privacy_content} onChange={e => setData('privacy_content', e.target.value)} rows={10} className={inputClass} /></Field>
-                  <Field label="Refund Policy (HTML/Text)" error={errors.refund_content}><textarea value={data.refund_content} onChange={e => setData('refund_content', e.target.value)} rows={10} className={inputClass} /></Field>
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-50">
+                    <div>
+                      <h3 className="font-bold text-gray-900">Legal Pages</h3>
+                      <p className="mt-1 text-xs text-gray-400">Preview HTML and CSS before saving. The preview uses your current, unsaved editor content.</p>
+                    </div>
+                    <a href="/refund-policy" target="_blank" rel="noreferrer" className="text-xs font-semibold text-orange-500 hover:underline">View saved Refund Policy ↗</a>
+                  </div>
+                  <Field label="Terms & Conditions (HTML/Text)" error={errors.terms_content}>
+                    <textarea value={data.terms_content} onChange={e => setData('terms_content', e.target.value)} rows={10} className={inputClass} />
+                    <button type="button" onClick={() => setLegalPreview({ title: 'Terms & Conditions preview', content: data.terms_content })} className="mt-2 text-xs font-semibold text-orange-600 hover:text-orange-700 hover:underline">Preview unsaved changes ↗</button>
+                  </Field>
+                  <Field label="Privacy Policy (HTML/Text)" error={errors.privacy_content}>
+                    <textarea value={data.privacy_content} onChange={e => setData('privacy_content', e.target.value)} rows={10} className={inputClass} />
+                    <button type="button" onClick={() => setLegalPreview({ title: 'Privacy Policy preview', content: data.privacy_content })} className="mt-2 text-xs font-semibold text-orange-600 hover:text-orange-700 hover:underline">Preview unsaved changes ↗</button>
+                  </Field>
+                  <Field label="Refund Policy (HTML/Text)" error={errors.refund_content}>
+                    <textarea value={data.refund_content} onChange={e => setData('refund_content', e.target.value)} rows={10} className={inputClass} />
+                    <button type="button" onClick={() => setLegalPreview({ title: 'Refund Policy preview', content: data.refund_content })} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-orange-50 px-3 py-2 text-xs font-bold text-orange-600 transition-colors hover:bg-orange-100">Preview unsaved changes <span aria-hidden="true">↗</span></button>
+                  </Field>
                 </div>
                 <button type="submit" disabled={processing} className="px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-xl">Save Legal Pages</button>
               </form>
+            )}
+
+            {legalPreview && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4" role="dialog" aria-modal="true" aria-label={legalPreview.title}>
+                <div className="flex h-[min(820px,calc(100vh-32px))] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+                  <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+                    <div>
+                      <h2 className="font-bold text-gray-900">{legalPreview.title}</h2>
+                      <p className="mt-0.5 text-xs text-gray-400">Unsaved changes are shown safely in an isolated preview.</p>
+                    </div>
+                    <button type="button" onClick={() => setLegalPreview(null)} className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900" aria-label="Close preview">
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6 6 18" /></svg>
+                    </button>
+                  </div>
+                  <iframe title={legalPreview.title} srcDoc={policyPreviewDocument(legalPreview.title, legalPreview.content)} sandbox="" className="min-h-0 w-full flex-1 border-0 bg-slate-50" />
+                </div>
+              </div>
             )}
 
             {activeTab === 'courier' && (
