@@ -146,6 +146,8 @@ class SettingController extends Controller
                 'site_name'       => ['required', 'string', 'max:120'],
                 'tagline'         => ['nullable', 'string', 'max:200'],
                 'footer_text'     => ['nullable', 'string', 'max:400'],
+                'footer_copyright_enabled' => ['nullable', 'boolean'],
+                'footer_copyright_text'    => ['nullable', 'string', 'max:200'],
                 'footer_developer_enabled' => ['nullable', 'boolean'],
                 'footer_developer_label'   => ['nullable', 'string', 'max:60'],
                 'footer_developer_name'    => ['nullable', 'string', 'max:100'],
@@ -372,7 +374,7 @@ class SettingController extends Controller
 
         $keys = match ($section) {
             'brand' => [
-                'site_name', 'tagline', 'footer_text',
+                'site_name', 'tagline', 'footer_text', 'footer_copyright_text',
                 'footer_developer_label', 'footer_developer_name', 'footer_developer_url',
                 'contact_phone', 'contact_email', 'contact_address',
                 'contact_hours', 'contact_title', 'contact_intro',
@@ -516,6 +518,7 @@ class SettingController extends Controller
         }
 
         if ($section === 'brand') {
+            Setting::put('footer_copyright_enabled', $request->boolean('footer_copyright_enabled') ? '1' : '0');
             Setting::put('footer_developer_enabled', $request->boolean('footer_developer_enabled') ? '1' : '0');
         }
 

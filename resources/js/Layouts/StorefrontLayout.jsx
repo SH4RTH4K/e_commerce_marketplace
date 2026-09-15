@@ -49,6 +49,8 @@ export default function StorefrontLayout({ children, title, description, activeC
   const hasCall = !!chatSettings.call_number;
   const hasMessenger = !!chatSettings.messenger_page;
   const showChat = chatSettings.chat_enabled !== false && (hasWhatsapp || hasCall || hasMessenger);
+  const showCopyright = chatSettings.footer_copyright_enabled !== false;
+  const copyrightText = chatSettings.footer_copyright_text?.trim() || `© ${new Date().getFullYear()} ${app?.name || 'Store'}. All rights reserved.`;
   const developerCredit = {
     enabled: chatSettings.footer_developer_enabled === true,
     label: chatSettings.footer_developer_label || 'Developed by',
@@ -460,7 +462,7 @@ export default function StorefrontLayout({ children, title, description, activeC
               </div>
             </div>
             <div className="template-1-footer-bottom flex flex-wrap items-center justify-between gap-3">
-              <p>&copy; {new Date().getFullYear()} {app?.name || 'Store'}. All rights reserved.</p>
+              {showCopyright && <p>{copyrightText}</p>}
               {showDeveloperCredit && (developerCredit.url ? (
                 <a href={developerCredit.url} target="_blank" rel="noopener noreferrer" className="text-sm hover:text-white hover:underline">{developerCredit.label} {developerCredit.name}</a>
               ) : (
@@ -503,9 +505,7 @@ export default function StorefrontLayout({ children, title, description, activeC
               </div>
             </div>
             <div className="border-t border-gray-100 mt-12 pt-8 text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-4">
-              <p className="text-gray-400 text-sm font-medium">
-                &copy; {new Date().getFullYear()} {app?.name || 'SHARTHAK'}. All rights reserved.
-              </p>
+              {showCopyright && <p className="text-gray-400 text-sm font-medium">{copyrightText}</p>}
               {showDeveloperCredit && (developerCredit.url ? (
                 <a href={developerCredit.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 border border-gray-100 bg-white rounded-full px-3 py-1.5 shadow-sm hover:shadow-md hover:border-gray-200 transition-all">
                   <span className="text-[11px] font-extrabold text-slate-500 tracking-wider">{developerCredit.label.toUpperCase()}</span>
