@@ -1235,9 +1235,27 @@ export default function Settings({ settings, templateStatus = {} }) {
               <form onSubmit={e => submitSection(e, 'seo')} className="space-y-5">
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
                   <h3 className="font-bold text-gray-900 pb-3 border-b border-gray-50">Default SEO Setup</h3>
-                  <Field label="Default Meta Title" error={errors.default_meta_title}><input value={data.default_meta_title} onChange={e => setData('default_meta_title', e.target.value)} className={inputClass} /></Field>
-                  <Field label="Default Meta Description" error={errors.default_meta_description}><textarea value={data.default_meta_description} onChange={e => setData('default_meta_description', e.target.value)} rows={3} className={inputClass} /></Field>
-                  <Field label="Default Meta Keywords" error={errors.default_meta_keywords}><textarea value={data.default_meta_keywords} onChange={e => setData('default_meta_keywords', e.target.value)} rows={2} className={inputClass} placeholder="store, shop, etc..." /></Field>
+                  <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-950">
+                    <h4 className="font-bold">SEO setup helper</h4>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5 text-emerald-900">
+                      <li>These values are the fallback for storefront pages. Product and category SEO fields override them when filled.</li>
+                      <li>Use a unique, clear title (about 50–60 characters) and a helpful description (about 120–160 characters).</li>
+                      <li>Keyword tags are optional for modern search engines, but can be kept for internal consistency.</li>
+                      <li>Your crawl files are generated automatically: <a href="/sitemap.xml" target="_blank" rel="noreferrer" className="font-semibold underline">View sitemap.xml</a> and <a href="/robots.txt" target="_blank" rel="noreferrer" className="font-semibold underline">View robots.txt</a>. Submit the sitemap URL to Google Search Console after the site is public.</li>
+                    </ul>
+                  </div>
+                  <Field label="Default Meta Title" error={errors.default_meta_title}>
+                    <input value={data.default_meta_title} onChange={e => setData('default_meta_title', e.target.value)} className={inputClass} />
+                    <p className="mt-1.5 text-xs text-gray-500">{data.default_meta_title.length}/60 characters recommended.</p>
+                  </Field>
+                  <Field label="Default Meta Description" error={errors.default_meta_description}>
+                    <textarea value={data.default_meta_description} onChange={e => setData('default_meta_description', e.target.value)} rows={3} className={inputClass} />
+                    <p className="mt-1.5 text-xs text-gray-500">{data.default_meta_description.length}/160 characters recommended.</p>
+                  </Field>
+                  <Field label="Default Meta Keywords" error={errors.default_meta_keywords}>
+                    <textarea value={data.default_meta_keywords} onChange={e => setData('default_meta_keywords', e.target.value)} rows={2} className={inputClass} placeholder="store, shop, etc..." />
+                    <p className="mt-1.5 text-xs text-gray-500">Optional. Use comma-separated terms; do not repeat the same phrase.</p>
+                  </Field>
                 </div>
                 <button type="submit" disabled={processing} className="px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-xl">Save SEO Settings</button>
               </form>

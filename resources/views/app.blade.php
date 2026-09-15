@@ -19,6 +19,7 @@
     <meta property="og:title" content="{{ $defaultMetaTitle }}" />
     @if($defaultMetaDescription)<meta property="og:description" content="{{ $defaultMetaDescription }}" />@endif
     <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="{{ url()->current() }}" />
     <link rel="icon" href="{{ favicon_url() }}" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

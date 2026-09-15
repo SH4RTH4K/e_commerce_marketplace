@@ -65,6 +65,9 @@ export default function StorefrontLayout({ children, title, description, activeC
   const seoDescription = pageSeo.description?.trim() || chatSettings.default_meta_description?.trim();
   const seoKeywords = pageSeo.keywords?.trim() || chatSettings.default_meta_keywords?.trim();
   const seoImage = pageSeo.image ? imageUrl(pageSeo.image) : null;
+  const canonicalUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}${window.location.pathname}`
+    : null;
   const typography = chatSettings[`theme_typography_${storefrontTemplate.replace('-', '_')}`] || {};
   const typographyStyle = Object.entries(typography).reduce((styles, [area, values]) => ({
     ...styles,
@@ -138,6 +141,7 @@ export default function StorefrontLayout({ children, title, description, activeC
         {seoDescription && <meta head-key="twitter:description" name="twitter:description" content={seoDescription} />}
         {seoImage && <meta head-key="twitter:image" name="twitter:image" content={seoImage} />}
         {pageSeo.robots && <meta head-key="robots" name="robots" content={pageSeo.robots} />}
+        {canonicalUrl && <link head-key="canonical" rel="canonical" href={canonicalUrl} />}
       </Head>
       {title ? (
         <Head title={title}>
