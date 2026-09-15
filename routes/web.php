@@ -207,6 +207,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // Media
         Route::get('media', [AdminMediaController::class, 'index'])->name('media.index');
         Route::post('media', [AdminMediaController::class, 'store'])->name('media.store');
+        Route::post('media/banners', [AdminMediaController::class, 'createBanners'])->name('media.banners.store');
         Route::delete('media/{image}', [AdminMediaController::class, 'destroy'])->name('media.destroy');
 
         // Orders + verification workflow
@@ -258,6 +259,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::patch('categories/{category:id}', [AdminCategoryController::class, 'update']);
         Route::delete('categories/{category:id}', [AdminCategoryController::class, 'destroy'])->name('categories.destroy');
         Route::patch('banners/{banner}/toggle', [AdminBannerController::class, 'toggle'])->name('banners.toggle');
+        Route::patch('banners/bulk-status', [AdminBannerController::class, 'bulkStatus'])->name('banners.bulk-status');
+        Route::patch('banners/bulk-position', [AdminBannerController::class, 'bulkPosition'])->name('banners.bulk-position');
         Route::resource('banners', AdminBannerController::class)->except('show');
         Route::post('features/bulk', [AdminFeatureController::class, 'bulk'])->name('features.bulk');
         Route::resource('features', AdminFeatureController::class)->except('show');

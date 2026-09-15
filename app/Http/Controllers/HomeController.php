@@ -64,6 +64,9 @@ class HomeController extends Controller
                 'slug' => $banner->product->slug,
             ] : null,
             'style' => $banner->style,
+            'text_position' => $banner->text_position,
+            'image_position' => $banner->image_position,
+            'image_orientation' => $banner->image_orientation,
         ]);
 
         $trending = Product::query()->tap($withImages)->where('is_featured', true)->take($overviewLimits['featured'])->get();

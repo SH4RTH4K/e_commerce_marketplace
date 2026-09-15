@@ -1,11 +1,18 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { fileToBase64 } from '@/lib/utils';
+import { fileToBase64, imageUrl } from '@/lib/utils';
+
+const positionOptions = [
+  ['top-left', 'Top - Left'], ['top-center', 'Top - Center'], ['top-right', 'Top - Right'],
+  ['center-left', 'Center - Left'], ['center-center', 'Center - Center'], ['center-right', 'Center - Right'],
+  ['bottom-left', 'Bottom - Left'], ['bottom-center', 'Bottom - Center'], ['bottom-right', 'Bottom - Right'],
+];
 
 /* ─── Image card ─────────────────────────────────────────────────── */
-function ImageCard({ image, selected, onSelect, onDelete }) {
-  const src = image.path?.startsWith('http') ? image.path : `/${image.path}`;
+function ImageCard({ image, selectedOrder, onSelect, onDelete, onMoveEarlier, onMoveLater }) {
+  const src = imageUrl(image.path, image.alt || image.product?.name);
+  const selected = selectedOrder > 0;
 
   return (
     <div
@@ -39,13 +46,34 @@ function ImageCard({ image, selected, onSelect, onDelete }) {
       {/* Checkbox */}
       <div className={`absolute top-2 right-2 transition-opacity ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
         <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${selected ? 'bg-orange-500 border-orange-500' : 'bg-white border-gray-300'}`}>
-          {selected && (
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-              <path d="M20 6L9 17l-5-5"/>
-            </svg>
-          )}
+          {selected && <span className="text-[10px] leading-none font-extrabold text-white">{selectedOrder}</span>}
         </div>
       </div>
+
+      {/* Slider order controls */}
+      {selected && (
+        <div className="absolute top-9 right-2 flex overflow-hidden rounded-lg border border-white/80 bg-white shadow-sm">
+          <button
+            type="button"
+            disabled={selectedOrder === 1}
+            onClick={e => { e.stopPropagation(); onMoveEarlier(image.id); }}
+            className="grid h-6 w-6 place-items-center text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-300"
+            title="Move earlier in slider"
+            aria-label="Move earlier in slider"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m18 15-6-6-6 6" /></svg>
+          </button>
+          <button
+            type="button"
+            onClick={e => { e.stopPropagation(); onMoveLater(image.id); }}
+            className="grid h-6 w-6 place-items-center border-l border-gray-100 text-gray-600 hover:bg-gray-100"
+            title="Move later in slider"
+            aria-label="Move later in slider"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
+        </div>
+      )}
 
       {/* Copy URL btn */}
       <button
@@ -82,6 +110,9 @@ function ImageCard({ image, selected, onSelect, onDelete }) {
 export default function MediaIndex({ images, q, total }) {
   const [search, setSearch] = useState(q || '');
   const [selected, setSelected] = useState([]);
+  const [textPosition, setTextPosition] = useState('center-left');
+  const [imagePosition, setImagePosition] = useState('center-center');
+  const [imageOrientation, setImageOrientation] = useState('landscape');
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -123,6 +154,15 @@ export default function MediaIndex({ images, q, total }) {
   const toggleSelect = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const selectAll    = () => setSelected(images.data?.map(i => i.id) || []);
   const clearSelect  = () => setSelected([]);
+  const moveSelected = (id, direction) => setSelected(prev => {
+    const index = prev.indexOf(id);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= prev.length) return prev;
+
+    const next = [...prev];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    return next;
+  });
 
   const handleDelete = (image) => {
     window.showConfirm('Delete this image? This cannot be undone.', () => {
@@ -136,6 +176,27 @@ export default function MediaIndex({ images, q, total }) {
       selected.forEach(id => router.delete(`/admin/media/${id}`, { preserveScroll: true }));
       setSelected([]);
     });
+  };
+
+  const createBanners = (placement) => {
+    if (selected.length === 0) return;
+
+    const isHero = placement === 'hero';
+    const label = isHero
+      ? (selected.length === 1 ? 'a Hero Slider slide' : `${selected.length} Hero Slider slides`)
+      : (selected.length === 1 ? 'a Middle Banner' : `${selected.length} Middle Banners`);
+
+    window.showConfirm(
+      `Create ${label} from the selected media? They will be active and ordered by your selection. You can edit their text, style, and links afterward.`,
+      () => router.post('/admin/media/banners', {
+        image_ids: selected,
+        placement,
+        style: 'brand',
+        text_position: textPosition,
+        image_position: imagePosition,
+        image_orientation: imageOrientation,
+      })
+    );
   };
 
   return (
@@ -181,16 +242,46 @@ export default function MediaIndex({ images, q, total }) {
             </form>
 
             {selected.length > 0 ? (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-xl">
                   {selected.length} selected
                 </span>
+                {selected.length > 1 && <span className="text-xs text-gray-500">Use the arrows on each image to set slider order.</span>}
+                <label className="flex items-center gap-1.5 rounded-xl border border-indigo-100 bg-indigo-50/50 px-2.5 py-1.5 text-xs font-medium text-indigo-800">
+                  Text
+                  <select value={textPosition} onChange={event => setTextPosition(event.target.value)} className="bg-transparent font-semibold outline-none">
+                    {positionOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </label>
+                <span className="text-[11px] text-indigo-700">Landscape: choose the Center row. Portrait: choose Top or Bottom.</span>
+                <label className="flex items-center gap-1.5 rounded-xl border border-indigo-100 bg-indigo-50/50 px-2.5 py-1.5 text-xs font-medium text-indigo-800">
+                  Image focus
+                  <select value={imagePosition} onChange={event => setImagePosition(event.target.value)} className="bg-transparent font-semibold outline-none">
+                    {positionOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </label>
+                <label className="flex items-center gap-1.5 rounded-xl border border-indigo-100 bg-indigo-50/50 px-2.5 py-1.5 text-xs font-medium text-indigo-800">
+                  Orientation
+                  <select value={imageOrientation} onChange={event => setImageOrientation(event.target.value)} className="bg-transparent font-semibold outline-none">
+                    <option value="landscape">Landscape / Wide</option>
+                    <option value="portrait">Portrait / Tall</option>
+                    <option value="square">Square</option>
+                  </select>
+                </label>
                 <button onClick={handleBulkDelete}
                   className="px-3.5 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors flex items-center gap-1.5">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                   </svg>
                   Delete selected
+                </button>
+                <button onClick={() => createBanners('hero')}
+                  className="px-3.5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors">
+                  {selected.length === 1 ? 'Make Hero Slide' : 'Make Hero Slider'}
+                </button>
+                <button onClick={() => createBanners('middle')}
+                  className="px-3.5 py-2 text-sm font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-colors">
+                  {selected.length === 1 ? 'Make Middle Banner' : 'Make Middle Banners'}
                 </button>
                 <button onClick={clearSelect}
                   className="px-3.5 py-2 text-sm text-gray-500 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors">
@@ -220,9 +311,11 @@ export default function MediaIndex({ images, q, total }) {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
               {(images.data || []).map(image => (
                 <ImageCard key={image.id} image={image}
-                  selected={selected.includes(image.id)}
+                  selectedOrder={selected.indexOf(image.id) + 1}
                   onSelect={toggleSelect}
-                  onDelete={handleDelete} />
+                  onDelete={handleDelete}
+                  onMoveEarlier={id => moveSelected(id, -1)}
+                  onMoveLater={id => moveSelected(id, 1)} />
               ))}
             </div>
           )}

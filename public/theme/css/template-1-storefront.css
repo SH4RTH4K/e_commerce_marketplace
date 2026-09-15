@@ -325,6 +325,26 @@ body:has(.template-1-storefront) {
   text-align: right;
 }
 
+/* Per-slide position controls set in Admin → Banners. */
+.template-1-hero-slide .template-1-hero-content.template-1-hero-content-position-center {
+  align-items: center;
+  text-align: center;
+}
+
+.template-1-hero-slide .template-1-hero-content.template-1-hero-content-position-center .template-1-hero-copy {
+  text-align: center;
+}
+
+.template-1-hero-slide .template-1-hero-content.template-1-hero-content-position-right {
+  align-items: flex-end;
+  margin-left: auto;
+  text-align: right;
+}
+
+.template-1-hero-slide .template-1-hero-content.template-1-hero-content-position-right .template-1-hero-copy {
+  text-align: right;
+}
+
 .template-1-hero-content a {
   display: inline-flex;
   min-width: 161px;

@@ -1,9 +1,32 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, useForm, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { fileToBase64 } from '@/lib/utils';
+import { fileToBase64, imageUrl } from '@/lib/utils';
 
 const inputClass = "w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300";
+const positionOptions = [
+  ['top-left', 'Top - Left'], ['top-center', 'Top - Center'], ['top-right', 'Top - Right'],
+  ['center-left', 'Center - Left'], ['center-center', 'Center - Center'], ['center-right', 'Center - Right'],
+  ['bottom-left', 'Bottom - Left'], ['bottom-center', 'Bottom - Center'], ['bottom-right', 'Bottom - Right'],
+];
+
+function normalizePosition(value, fallback) {
+  return { left: 'center-left', center: 'center-center', right: 'center-right' }[value] || value || fallback;
+}
+
+function imageFocusCss(position) {
+  const [vertical, horizontal] = normalizePosition(position, 'center-center').split('-');
+  return `${horizontal} ${vertical}`;
+}
+
+function textPositionStyle(position) {
+  const [vertical, horizontal] = normalizePosition(position, 'center-left').split('-');
+  return {
+    alignItems: { left: 'flex-start', center: 'center', right: 'flex-end' }[horizontal],
+    justifyContent: { top: 'flex-start', center: 'center', bottom: 'flex-end' }[vertical],
+    textAlign: horizontal,
+  };
+}
 
 function Field({ label, error, children, required }) {
   return (
@@ -27,11 +50,15 @@ export default function BannerForm({ banner, placements, styles, products = [] }
     button_text: banner.button_text || '',
     placement: banner.placement || 'hero',
     style: banner.style || 'brand',
+    text_position: normalizePosition(banner.text_position, 'center-left'),
+    image_position: normalizePosition(banner.image_position, 'center-center'),
+    image_orientation: banner.image_orientation || 'landscape',
     position: banner.position || 0,
     is_active: banner.is_active ?? true,
     image_file: null,
     image_url: banner.image?.startsWith('http') ? banner.image : '',
   });
+  const previewImage = data.image_url || (banner.image ? imageUrl(banner.image, banner.title) : '');
 
   const submit = async (e) => {
     e.preventDefault();
@@ -110,12 +137,54 @@ export default function BannerForm({ banner, placements, styles, products = [] }
                 <input type="number" min="0" value={data.position} onChange={e => setData('position', e.target.value)} className={inputClass} />
               </Field>
             </div>
+            {['hero', 'middle'].includes(data.placement) && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+                <Field label="Text & Button Position" error={errors.text_position}>
+                  <select value={data.text_position} onChange={e => setData('text_position', e.target.value)} className={inputClass}>
+                    {positionOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </Field>
+                <Field label="Image Focus Area" error={errors.image_position}>
+                  <select value={data.image_position} onChange={e => setData('image_position', e.target.value)} className={inputClass}>
+                    {positionOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </Field>
+                <Field label="Image Orientation" error={errors.image_orientation}>
+                  <select value={data.image_orientation} onChange={e => setData('image_orientation', e.target.value)} className={inputClass}>
+                    <option value="landscape">Landscape / Wide — fill slider</option>
+                    <option value="portrait">Portrait / Tall — show full image</option>
+                    <option value="square">Square — show full image</option>
+                  </select>
+                </Field>
+                <p className="sm:col-span-3 text-xs text-indigo-700">Landscape fills the banner and uses Image Focus Area for cropping. Portrait and Square show the complete image without cutting it off. These settings apply to both Hero Slider slides and Middle Banners.</p>
+                <div className="sm:col-span-3 overflow-hidden rounded-xl border border-indigo-200 bg-slate-100">
+                  <div className="flex items-center justify-between border-b border-indigo-100 bg-white px-3 py-2">
+                    <p className="text-xs font-bold uppercase tracking-wide text-indigo-800">Live placement preview</p>
+                    <p className="text-[11px] text-gray-500">Focus: {positionOptions.find(([value]) => value === data.image_position)?.[1]}</p>
+                  </div>
+                  <div
+                    className="relative aspect-[16/7] bg-slate-200 bg-cover"
+                    style={previewImage ? { backgroundImage: `url("${previewImage}")`, backgroundPosition: imageFocusCss(data.image_position), backgroundSize: data.image_orientation === 'landscape' ? 'cover' : 'contain', backgroundRepeat: 'no-repeat' } : undefined}
+                  >
+                    <div className="absolute inset-0 bg-black/10" />
+                    <div className="absolute inset-0 flex flex-col p-4 sm:p-7" style={textPositionStyle(data.text_position)}>
+                      <div className="max-w-[70%] rounded-lg bg-slate-900/85 px-3 py-2.5 text-white shadow-lg sm:px-5 sm:py-4">
+                        <p className="text-base font-bold sm:text-xl">{data.title || 'Banner title'}</p>
+                        {data.subtitle && <p className="mt-1 text-xs text-white/85 sm:text-sm">{data.subtitle}</p>}
+                        <span className="mt-2 inline-block rounded-full bg-indigo-500 px-3 py-1 text-[10px] font-bold uppercase">{data.button_text || 'Shop now'}</span>
+                      </div>
+                    </div>
+                    {!previewImage && <div className="absolute inset-0 grid place-items-center text-sm font-medium text-gray-500">Add an image to preview its focus area.</div>}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-4">
             <h3 className="font-semibold text-gray-900 pb-3 border-b border-gray-50">Image</h3>
             {isEdit && banner.image && (
-              <img src={banner.image.startsWith('http') ? banner.image : `/${banner.image}`} alt="" className="h-24 rounded-xl object-cover border border-gray-100" />
+              <img src={imageUrl(banner.image, banner.title)} alt="" className="h-24 rounded-xl object-cover border border-gray-100" />
             )}
             <Field label="Upload Image" error={errors.image_file}>
               <input type="file" accept="image/*" onChange={e => setData('image_file', e.target.files[0])} className={inputClass} />

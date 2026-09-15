@@ -75,6 +75,42 @@ class BannerController extends Controller
         return back()->with('status', $banner->is_active ? 'Banner is now visible on the storefront.' : 'Banner hidden from the storefront.');
     }
 
+    /** Update visibility for several banner records at once. */
+    public function bulkStatus(Request $request)
+    {
+        $data = $request->validate([
+            'ids'         => ['required', 'array', 'min:1', 'max:200'],
+            'ids.*'       => ['integer', 'distinct', 'exists:banners,id'],
+            'bulk_action' => ['required', 'in:activate,deactivate'],
+        ]);
+
+        $active = $data['bulk_action'] === 'activate';
+        Banner::whereIn('id', $data['ids'])->update(['is_active' => $active]);
+
+        return back()->with('status', count($data['ids']) . ' banner(s) ' . ($active ? 'activated.' : 'hidden.'));
+    }
+
+    /** Apply display placement settings to several banners at once. */
+    public function bulkPosition(Request $request)
+    {
+        $positions = 'top-left,top-center,top-right,center-left,center-center,center-right,bottom-left,bottom-center,bottom-right';
+        $data = $request->validate([
+            'ids'               => ['required', 'array', 'min:1', 'max:200'],
+            'ids.*'             => ['integer', 'distinct', 'exists:banners,id'],
+            'text_position'     => ['required', 'in:' . $positions],
+            'image_position'    => ['required', 'in:' . $positions],
+            'image_orientation' => ['required', 'in:landscape,portrait,square'],
+        ]);
+
+        Banner::whereIn('id', $data['ids'])->update([
+            'text_position'     => $data['text_position'],
+            'image_position'    => $data['image_position'],
+            'image_orientation' => $data['image_orientation'],
+        ]);
+
+        return back()->with('status', count($data['ids']) . ' banner(s) display position updated.');
+    }
+
     public function destroy(Banner $banner)
     {
         $this->deleteStoredImage($banner->image);
@@ -94,6 +130,9 @@ class BannerController extends Controller
             'button_text' => ['nullable', 'string', 'max:60'],
             'placement'   => ['required', 'in:' . implode(',', array_keys(Banner::PLACEMENTS))],
             'style'       => ['required', 'in:' . implode(',', array_keys(Banner::STYLES))],
+            'text_position'  => ['nullable', 'in:top-left,top-center,top-right,center-left,center-center,center-right,bottom-left,bottom-center,bottom-right,left,center,right'],
+            'image_position' => ['nullable', 'in:top-left,top-center,top-right,center-left,center-center,center-right,bottom-left,bottom-center,bottom-right,left,center,right'],
+            'image_orientation' => ['nullable', 'in:landscape,portrait,square'],
             'position'    => ['nullable', 'integer', 'min:0'],
             'image_file'  => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,gif', 'max:5120'],
             'image_url'   => ['nullable', 'url', 'max:255'],
@@ -146,6 +185,22 @@ class BannerController extends Controller
                 $trimmed = trim((string) $data[$field]);
                 $data[$field] = $trimmed !== '' ? $trimmed : null;
             }
+        }
+
+        $positions = ['top-left', 'top-center', 'top-right', 'center-left', 'center-center', 'center-right', 'bottom-left', 'bottom-center', 'bottom-right'];
+        $legacyPositions = ['left' => 'center-left', 'center' => 'center-center', 'right' => 'center-right'];
+        foreach (['text_position' => 'center-left', 'image_position' => 'center-center'] as $field => $default) {
+            if (array_key_exists($field, $data)) {
+                $raw = (string) ($data[$field] ?? '');
+                $value = $legacyPositions[$raw] ?? $raw;
+                $data[$field] = in_array($value, $positions, true) ? $value : $default;
+            }
+        }
+
+        if (array_key_exists('image_orientation', $data)) {
+            $data['image_orientation'] = in_array($data['image_orientation'], ['landscape', 'portrait', 'square'], true)
+                ? $data['image_orientation']
+                : 'landscape';
         }
 
         return $data;

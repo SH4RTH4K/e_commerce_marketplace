@@ -12,6 +12,51 @@ function hexToRgba(hex, opacity) {
   return `rgba(${(number >> 16) & 255}, ${(number >> 8) & 255}, ${number & 255}, ${opacity})`;
 }
 
+const POSITION_MAP = {
+  'top-left': ['left', 'top'],
+  'top-center': ['center', 'top'],
+  'top-right': ['right', 'top'],
+  'center-left': ['left', 'center'],
+  'center-center': ['center', 'center'],
+  'center-right': ['right', 'center'],
+  'bottom-left': ['left', 'bottom'],
+  'bottom-center': ['center', 'bottom'],
+  'bottom-right': ['right', 'bottom'],
+};
+
+function normalizePosition(value, fallback = 'center-center') {
+  const legacy = { left: 'center-left', center: 'center-center', right: 'center-right' };
+  const position = legacy[value] || value;
+  if (POSITION_MAP[position]) return position;
+
+  return legacy[fallback] || (POSITION_MAP[fallback] ? fallback : 'center-center');
+}
+
+function imageFocusPosition(value) {
+  const [horizontal, vertical] = POSITION_MAP[normalizePosition(value)];
+  return `${horizontal} ${vertical}`;
+}
+
+function imageFit(value) {
+  return value === 'portrait' || value === 'square' ? 'contain' : 'cover';
+}
+
+function textPositionStyle(value, fallback) {
+  const [horizontal, vertical] = POSITION_MAP[normalizePosition(value, fallback)];
+  return {
+    alignItems: { left: 'flex-start', center: 'center', right: 'flex-end' }[horizontal],
+    justifyContent: { top: 'flex-start', center: 'center', bottom: 'flex-end' }[vertical],
+    textAlign: horizontal,
+  };
+}
+
+function contentPositionClasses(position) {
+  const [horizontal, vertical] = POSITION_MAP[normalizePosition(position, 'center-left')];
+  const horizontalClass = { left: 'items-start text-left', center: 'items-center text-center', right: 'items-end text-right' }[horizontal];
+  const verticalClass = { top: 'justify-start', center: 'justify-center', bottom: 'justify-end' }[vertical];
+  return `${horizontalClass} ${verticalClass}`;
+}
+
 export default function HomePage({ 
   heroBanners, 
   middleBanners,
@@ -28,29 +73,6 @@ export default function HomePage({
   const ctaDefault = app?.settings?.default_cta_text || 'Shop now';
   const viewMore = app?.settings?.home_view_more_label || 'View all';
   const isTemplateOne = app?.settings?.storefront_template === 'template-1';
-  const defaultTemplateOneSlides = [
-    {
-      id: 'template-1-slide-01',
-      title: 'NEW SEASON',
-      subtitle: 'Women Collection 2018',
-      image: '/templates/template-1/images/slide-01.jpg',
-      link: '/shop',
-    },
-    {
-      id: 'template-1-slide-02',
-      title: 'Jackets & Coats',
-      subtitle: 'Men New-Season',
-      image: '/templates/template-1/images/slide-02.jpg',
-      link: '/shop',
-    },
-    {
-      id: 'template-1-slide-03',
-      title: 'New arrivals',
-      subtitle: 'Men Collection 2018',
-      image: '/templates/template-1/images/slide-03.jpg',
-      link: '/shop',
-    },
-  ];
   const heroOverlayColor = app?.settings?.template_1_hero_overlay_color || '#ffffff';
   const heroOverlayOpacity = Math.max(0, Math.min(80, Number(app?.settings?.template_1_hero_overlay_opacity ?? 28))) / 100;
   const heroTextBackgroundColor = app?.settings?.template_1_hero_text_background_color || '#1f2430';
@@ -77,13 +99,11 @@ export default function HomePage({
     ? app.settings.template_1_category_text_align
     : 'left';
   const displayHeroBanners = isTemplateOne
-    ? (heroBanners?.length > 0
-      ? heroBanners.map((banner) => ({
-          ...banner,
-          button: banner.button || banner.button_text,
-          link: banner.link || banner.link_url,
-        }))
-      : defaultTemplateOneSlides)
+    ? (heroBanners || []).map((banner) => ({
+        ...banner,
+        button: banner.button || banner.button_text,
+        link: banner.link || banner.link_url,
+      }))
     : (heroBanners || []);
   const resolveHeroImage = (path, fallback) => path?.startsWith('/templates/') ? path : imageUrl(path, fallback);
   const templateOneBanners = featuredCategories?.length > 0 
@@ -305,7 +325,7 @@ export default function HomePage({
       <StorefrontLayout>
         <Head title="" />
 
-        <section
+        {heroCount > 0 && <section
           className={`template-1-hero storefront-hero-section template-1-hero-position-${heroTextPosition}`}
           style={{
             '--template-1-hero-overlay-color': heroOverlayColor,
@@ -319,11 +339,16 @@ export default function HomePage({
               <div
                 key={banner.id || index}
                 className={`template-1-hero-slide ${activeHeroIndex === index ? 'is-active' : ''}`}
-                style={{ backgroundImage: `url(${resolveHeroImage(banner.image, banner.title)})` }}
+                style={{
+                  backgroundImage: `url(${resolveHeroImage(banner.image, banner.title)})`,
+                  backgroundPosition: imageFocusPosition(banner.image_position),
+                  backgroundSize: imageFit(banner.image_orientation),
+                  backgroundRepeat: 'no-repeat',
+                }}
                 aria-hidden={activeHeroIndex !== index}
               >
-                <div className="template-1-container template-1-hero-content">
-                  <div className="template-1-hero-copy">
+                <div className="template-1-container template-1-hero-content" style={textPositionStyle(banner.text_position, heroTextPosition)}>
+                  <div className="template-1-hero-copy" style={{ textAlign: textPositionStyle(banner.text_position, heroTextPosition).textAlign }}>
                     <p>{banner.subtitle}</p>
                     <h1>{banner.title}</h1>
                     <Link href={banner.link || '/shop'}>{banner.button || 'Shop Now'}</Link>
@@ -343,7 +368,7 @@ export default function HomePage({
               </button>
             </>
           )}
-        </section>
+        </section>}
 
         <section
           className={`template-1-container storefront-section py-12 md:py-20 grid gap-[30px] grid-cols-1 sm:grid-cols-2 ${bannerGridCols}`}
@@ -377,6 +402,44 @@ export default function HomePage({
             </Link>
           ))}
         </section>
+
+        {/* Middle Banners — displayed between the category promos and product overview. */}
+        {middleBanners?.length > 0 && (
+          <section className="template-1-container storefront-section space-y-6 pb-12 md:pb-16">
+            {middleBanners.map(banner => (
+              <a
+                key={banner.id}
+                href={banner.link || '/shop'}
+                className="group relative block overflow-hidden rounded-2xl bg-[#f2f2f2] shadow-sm transition-shadow hover:shadow-md"
+              >
+                {banner.image ? (
+                  <img
+                    src={imageUrl(banner.image, banner.title)}
+                    alt={banner.title || 'Promotional banner'}
+                    className="aspect-[2/1] w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] sm:aspect-[3/1]"
+                    style={{ objectPosition: imageFocusPosition(banner.image_position), objectFit: imageFit(banner.image_orientation) }}
+                  />
+                ) : (
+                  <div className="flex h-56 items-center justify-center bg-gradient-to-r from-[#717fe0] to-[#5967c8] p-6 text-center text-white">
+                    <div>
+                      {banner.title && <h2 className="text-2xl font-bold md:text-4xl">{banner.title}</h2>}
+                      {banner.subtitle && <p className="mt-2 text-sm md:text-lg">{banner.subtitle}</p>}
+                    </div>
+                  </div>
+                )}
+                {(banner.title || banner.subtitle || banner.button) && (
+                  <div className={`absolute inset-0 flex flex-col justify-center p-5 sm:p-10 ${contentPositionClasses(banner.text_position)}`}>
+                    <div className="max-w-xl rounded-xl bg-[#1f2430]/85 px-5 py-4 text-white shadow-lg sm:px-7 sm:py-6">
+                      {banner.title && <h2 className="text-xl font-bold sm:text-3xl">{banner.title}</h2>}
+                      {banner.subtitle && <p className="mt-2 text-sm text-white/90 sm:text-base">{banner.subtitle}</p>}
+                      {banner.button && <span className="mt-4 inline-flex rounded-full bg-[#717fe0] px-5 py-2 text-xs font-bold uppercase tracking-wide text-white">{banner.button}</span>}
+                    </div>
+                  </div>
+                )}
+              </a>
+            ))}
+          </section>
+        )}
 
         <section className="template-1-products storefront-section template-1-container">
           <div className="template-1-section-head">
@@ -428,7 +491,7 @@ export default function HomePage({
                    displayHeroBanners.map((banner, index) => (
                      <div key={index} className="relative w-full shrink-0 snap-center h-full flex flex-col justify-center">
                        {banner.image ? (
-                         <img src={resolveHeroImage(banner.image, banner.title)} className="absolute inset-0 w-full h-full object-cover" alt={banner.title} />
+                         <img src={resolveHeroImage(banner.image, banner.title)} className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: imageFocusPosition(banner.image_position), objectFit: imageFit(banner.image_orientation) }} alt={banner.title} />
                        ) : (
                          <div className="absolute inset-0 bg-gradient-to-r from-[#f15a24] to-[#f37c4f] mix-blend-overlay opacity-90"></div>
                        )}
@@ -481,7 +544,7 @@ export default function HomePage({
             {/* Right Static Banner */}
             <div className="hidden lg:flex relative rounded-xl overflow-hidden min-h-[400px] bg-orange-50 group">
               {displayHeroBanners?.length > 1 ? (
-                 <img src={resolveHeroImage(displayHeroBanners[1].image, displayHeroBanners[1].title)} className="absolute inset-0 w-full h-full object-cover" alt="Offer" />
+                 <img src={resolveHeroImage(displayHeroBanners[1].image, displayHeroBanners[1].title)} className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: imageFocusPosition(displayHeroBanners[1].image_position), objectFit: imageFit(displayHeroBanners[1].image_orientation) }} alt="Offer" />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-center p-6 bg-gradient-to-br from-orange-100 to-orange-50">
                    <div className="w-20 h-20 bg-orange-200 rounded-full flex items-center justify-center mb-4">
@@ -624,18 +687,21 @@ export default function HomePage({
                   <img 
                     src={imageUrl(banner.image)} 
                     alt={banner.title || 'Banner'} 
-                    className="w-full h-auto object-cover max-h-[400px] group-hover:scale-[1.02] transition-transform duration-500"
+                    className="aspect-[2/1] w-full object-cover transition-transform duration-500 group-hover:scale-[1.02] sm:aspect-[3/1]"
+                    style={{ objectPosition: imageFocusPosition(banner.image_position), objectFit: imageFit(banner.image_orientation) }}
                   />
                 ) : (
                   <div className="w-full h-[300px] flex items-center justify-center text-gray-400 bg-gray-200">
                     <span className="font-semibold">Banner Image (Upload via Admin)</span>
                   </div>
                 )}
-                {/* Fallback text if no image but there's a title/subtitle */}
-                {!banner.image && (banner.title || banner.subtitle) && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 bg-gradient-to-r from-gray-900/60 to-gray-800/60 text-white">
-                    {banner.title && <h2 className="text-2xl md:text-4xl font-extrabold mb-2 drop-shadow-md">{banner.title}</h2>}
-                    {banner.subtitle && <p className="text-base md:text-lg font-medium drop-shadow-md">{banner.subtitle}</p>}
+                {(banner.title || banner.subtitle || banner.button) && (
+                  <div className={`absolute inset-0 flex flex-col justify-center p-5 sm:p-10 ${contentPositionClasses(banner.text_position)}`}>
+                    <div className="max-w-xl rounded-xl bg-[#1f2430]/85 px-5 py-4 text-white shadow-lg sm:px-7 sm:py-6">
+                      {banner.title && <h2 className="text-xl font-bold sm:text-3xl">{banner.title}</h2>}
+                      {banner.subtitle && <p className="mt-2 text-sm text-white/90 sm:text-base">{banner.subtitle}</p>}
+                      {banner.button && <span className="mt-4 inline-flex rounded-full bg-[#f15a24] px-5 py-2 text-xs font-bold uppercase tracking-wide text-white">{banner.button}</span>}
+                    </div>
                   </div>
                 )}
               </a>

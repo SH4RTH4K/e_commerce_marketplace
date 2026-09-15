@@ -1,21 +1,83 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router } from '@inertiajs/react';
+import { useState } from 'react';
+import { imageUrl } from '@/lib/utils';
+
+const positionOptions = [
+  ['top-left', 'Top - Left'], ['top-center', 'Top - Center'], ['top-right', 'Top - Right'],
+  ['center-left', 'Center - Left'], ['center-center', 'Center - Center'], ['center-right', 'Center - Right'],
+  ['bottom-left', 'Bottom - Left'], ['bottom-center', 'Bottom - Center'], ['bottom-right', 'Bottom - Right'],
+];
 
 export default function BannersIndex({ banners, placements }) {
+  const [selected, setSelected] = useState([]);
+  const [textPosition, setTextPosition] = useState('center-left');
+  const [imagePosition, setImagePosition] = useState('center-center');
+  const [imageOrientation, setImageOrientation] = useState('landscape');
   const handleToggle = (id) => router.patch(`/admin/banners/${id}/toggle`);
   const handleDelete = (banner) => {
     window.showConfirm(`Delete "${banner.title || 'this banner'}" permanently?`, () => { router.delete(`/admin/banners/${banner.id}`); });
   };
 
   const placementLabel = (key) => placements?.[key] || key;
+  const toggleSelected = (id) => setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
+  const selectAll = () => setSelected((banners || []).map(banner => banner.id));
+  const clearSelected = () => setSelected([]);
+  const updateSelectedStatus = (bulkAction) => {
+    if (selected.length === 0) return;
+    const label = bulkAction === 'activate' ? 'activate' : 'hide';
+    window.showConfirm(`${label[0].toUpperCase() + label.slice(1)} ${selected.length} selected banner(s)?`, () => {
+      router.patch('/admin/banners/bulk-status', { ids: selected, bulk_action: bulkAction }, {
+        preserveScroll: true,
+        onSuccess: () => clearSelected(),
+      });
+    });
+  };
+  const updateSelectedPosition = () => {
+    if (selected.length === 0) return;
+    window.showConfirm(`Apply these display settings to ${selected.length} selected banner(s)?`, () => {
+      router.patch('/admin/banners/bulk-position', {
+        ids: selected,
+        text_position: textPosition,
+        image_position: imagePosition,
+        image_orientation: imageOrientation,
+      }, {
+        preserveScroll: true,
+        onSuccess: () => clearSelected(),
+      });
+    });
+  };
 
   return (
     <>
       <Head title="Banners" />
       <AdminLayout title="Banners">
         <div className="space-y-5">
-          <div className="flex items-center justify-between">
-            <div />
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {selected.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-700">{selected.length} selected</span>
+                <button onClick={() => updateSelectedStatus('activate')} className="rounded-xl bg-green-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700">Set Active</button>
+                <button onClick={() => updateSelectedStatus('deactivate')} className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50">Set Inactive</button>
+                <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-indigo-100 bg-indigo-50/60 p-1.5">
+                  <select value={textPosition} onChange={event => setTextPosition(event.target.value)} className="rounded-lg border border-indigo-100 bg-white px-2 py-1.5 text-xs font-semibold text-indigo-900 outline-none">
+                    {positionOptions.map(([value, label]) => <option key={value} value={value}>Text: {label}</option>)}
+                  </select>
+                  <select value={imagePosition} onChange={event => setImagePosition(event.target.value)} className="rounded-lg border border-indigo-100 bg-white px-2 py-1.5 text-xs font-semibold text-indigo-900 outline-none">
+                    {positionOptions.map(([value, label]) => <option key={value} value={value}>Focus: {label}</option>)}
+                  </select>
+                  <select value={imageOrientation} onChange={event => setImageOrientation(event.target.value)} className="rounded-lg border border-indigo-100 bg-white px-2 py-1.5 text-xs font-semibold text-indigo-900 outline-none">
+                    <option value="landscape">Landscape</option>
+                    <option value="portrait">Portrait</option>
+                    <option value="square">Square</option>
+                  </select>
+                  <button onClick={updateSelectedPosition} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-indigo-700">Apply Position</button>
+                </div>
+                <button onClick={clearSelected} className="px-2 text-sm text-gray-500 hover:text-gray-800">Clear</button>
+              </div>
+            ) : (
+              <button onClick={selectAll} disabled={(banners || []).length === 0} className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">Select all</button>
+            )}
             <a href="/admin/banners/create" className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
               Add Banner
@@ -27,6 +89,9 @@ export default function BannersIndex({ banners, placements }) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50/50">
+                    <th className="w-12 px-5 py-3 text-left">
+                      <input type="checkbox" checked={(banners || []).length > 0 && selected.length === (banners || []).length} onChange={event => event.target.checked ? selectAll() : clearSelected()} className="h-4 w-4 rounded accent-orange-500" aria-label="Select all banners" />
+                    </th>
                     {['Banner', 'Placement', 'Style', 'Position', 'Status', 'Actions'].map(h => (
                       <th key={h} className={`px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left ${h === 'Actions' ? 'text-right' : ''}`}>{h}</th>
                     ))}
@@ -34,13 +99,16 @@ export default function BannersIndex({ banners, placements }) {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {(banners || []).length === 0 ? (
-                    <tr><td colSpan="6" className="px-5 py-12 text-center text-gray-400">No banners found.</td></tr>
+                    <tr><td colSpan="7" className="px-5 py-12 text-center text-gray-400">No banners found.</td></tr>
                   ) : (banners || []).map(banner => (
                     <tr key={banner.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-5 py-3.5">
+                        <input type="checkbox" checked={selected.includes(banner.id)} onChange={() => toggleSelected(banner.id)} className="h-4 w-4 rounded accent-orange-500" aria-label={`Select ${banner.title || 'banner'}`} />
+                      </td>
+                      <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           {banner.image
-                            ? <img src={banner.image.startsWith('http') ? banner.image : `/${banner.image}`} alt="" className="h-10 w-20 rounded-lg object-cover shrink-0 border border-gray-100" />
+                            ? <img src={imageUrl(banner.image, banner.title)} alt="" className="h-10 w-20 rounded-lg object-cover shrink-0 border border-gray-100" />
                             : <div className="h-10 w-20 rounded-lg bg-gray-100 shrink-0 flex items-center justify-center text-xs text-gray-400">No image</div>
                           }
                           <div>
