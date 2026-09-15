@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-DJsynTpu.css",
+    "file": "assets/app-DCR5Dv9E.css",
     "name": "app",
     "names": [
       "app.css"
@@ -9,12 +9,12 @@
     "isEntry": true
   },
   "resources/js/app.jsx": {
-    "file": "assets/app-BTC6V2S6.js",
+    "file": "assets/app-Dun_PuYn.js",
     "name": "app",
     "src": "resources/js/app.jsx",
     "isEntry": true,
     "css": [
-      "assets/app-DJsynTpu.css"
+      "assets/app-DCR5Dv9E.css"
     ]
   }
 }

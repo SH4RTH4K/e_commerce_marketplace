@@ -24,6 +24,13 @@ function shippingPreviewContent(data) {
   return `<h2>Shipping Charges</h2><p>Your delivery charge is calculated at checkout from the delivery area you choose.</p><ul><li><strong>${insideLabel}:</strong> ${currency}${insideCharge}</li><li><strong>${outsideLabel}:</strong> ${currency}${outsideCharge}</li></ul>${additionalContent || defaultInformation}`;
 }
 
+const legalPageEditors = [
+  { id: 'terms_content', tab: 'Terms', title: 'Terms & Conditions', path: '/terms' },
+  { id: 'privacy_content', tab: 'Privacy', title: 'Privacy Policy', path: '/privacy' },
+  { id: 'refund_content', tab: 'Refund', title: 'Refund Policy', path: '/refund-policy' },
+  { id: 'shipping_content', tab: 'Shipping', title: 'Additional Shipping Information', path: '/shipping', isShipping: true },
+];
+
 function policyPreviewDocument(title, content) {
   return `<!doctype html>
 <html lang="en">
@@ -159,6 +166,7 @@ export default function Settings({ settings, templateStatus = {} }) {
   const [testEmail, setTestEmail] = useState('');
   const [processing, setProcessing] = useState(false);
   const [legalPreview, setLegalPreview] = useState(null);
+  const [activeLegalEditor, setActiveLegalEditor] = useState('terms_content');
 
   const { data, setData, errors, setError, clearErrors } = useForm({
     // Brand
@@ -319,6 +327,8 @@ export default function Settings({ settings, templateStatus = {} }) {
     theme_typography_template_1: readTypography(settings.theme_typography_template_1, 'template-1'),
     theme_typography_template_2: readTypography(settings.theme_typography_template_2, 'template-2'),
   });
+
+  const selectedLegalPage = legalPageEditors.find(page => page.id === activeLegalEditor) || legalPageEditors[0];
 
   const submitSection = async (e, section) => {
     e.preventDefault();
@@ -1328,32 +1338,40 @@ export default function Settings({ settings, templateStatus = {} }) {
                       <h3 className="font-bold text-gray-900">Legal Pages</h3>
                       <p className="mt-1 text-xs text-gray-400">Preview HTML and CSS before saving. The preview uses your current, unsaved editor content.</p>
                     </div>
-                    <div className="flex items-center gap-3 text-xs font-semibold text-orange-500">
-                      <a href="/refund-policy" target="_blank" rel="noreferrer" className="hover:underline">View saved Refund Policy ↗</a>
-                      <a href="/shipping" target="_blank" rel="noreferrer" className="hover:underline">View Shipping page ↗</a>
-                    </div>
                   </div>
-                  <Field label="Terms & Conditions (HTML/Text)" error={errors.terms_content}>
-                    <textarea value={data.terms_content} onChange={e => setData('terms_content', e.target.value)} rows={10} className={inputClass} />
-                    <button type="button" onClick={() => setLegalPreview({ title: 'Terms & Conditions preview', content: data.terms_content })} className="mt-2 text-xs font-semibold text-orange-600 hover:text-orange-700 hover:underline">Preview unsaved changes ↗</button>
-                  </Field>
-                  <Field label="Privacy Policy (HTML/Text)" error={errors.privacy_content}>
-                    <textarea value={data.privacy_content} onChange={e => setData('privacy_content', e.target.value)} rows={10} className={inputClass} />
-                    <button type="button" onClick={() => setLegalPreview({ title: 'Privacy Policy preview', content: data.privacy_content })} className="mt-2 text-xs font-semibold text-orange-600 hover:text-orange-700 hover:underline">Preview unsaved changes ↗</button>
-                  </Field>
-                  <Field label="Refund Policy (HTML/Text)" error={errors.refund_content}>
-                    <textarea value={data.refund_content} onChange={e => setData('refund_content', e.target.value)} rows={10} className={inputClass} />
-                    <button type="button" onClick={() => setLegalPreview({ title: 'Refund Policy preview', content: data.refund_content })} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-orange-50 px-3 py-2 text-xs font-bold text-orange-600 transition-colors hover:bg-orange-100">Preview unsaved changes <span aria-hidden="true">↗</span></button>
-                  </Field>
-                  <Field label="Additional Shipping Information (HTML/Text)" error={errors.shipping_content}>
-                    <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                      <input type="checkbox" checked={data.shipping_page_enabled} onChange={e => setData('shipping_page_enabled', e.target.checked)} className={checkboxClass} />
-                      <span className="text-sm font-semibold text-gray-800">Enable Shipping page and show the Shipping link in the footer</span>
-                    </label>
-                    <textarea value={data.shipping_content} onChange={e => setData('shipping_content', e.target.value)} rows={10} className={inputClass} placeholder="Add delivery areas, delivery times, and shipping terms..." />
-                    <p className="mt-2 text-xs leading-5 text-gray-500">The current charges from Shipping &amp; Currency always appear first and cannot be replaced here. Add HTML/CSS only for information below them; put CSS inside a <code>&lt;style&gt;...&lt;/style&gt;</code> block. JavaScript is not supported.</p>
-                    <button type="button" onClick={() => setLegalPreview({ title: 'Shipping Information preview', content: shippingPreviewContent(data) })} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-orange-50 px-3 py-2 text-xs font-bold text-orange-600 transition-colors hover:bg-orange-100">Preview charges and unsaved changes <span aria-hidden="true">↗</span></button>
-                  </Field>
+                  <div className="flex flex-wrap gap-2" role="tablist" aria-label="Legal page editors">
+                    {legalPageEditors.map(page => (
+                      <button key={page.id} type="button" role="tab" aria-selected={selectedLegalPage.id === page.id} onClick={() => setActiveLegalEditor(page.id)} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${selectedLegalPage.id === page.id ? 'bg-orange-500 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                        {page.tab}
+                      </button>
+                    ))}
+                  </div>
+                  <section className="rounded-xl border border-gray-200 bg-gray-50/70 p-4 sm:p-5">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <h4 className="font-bold text-gray-900">{selectedLegalPage.title}</h4>
+                        <p className="mt-1 text-xs text-gray-500">HTML and CSS editor. Other legal pages remain unchanged while you edit this page.</p>
+                      </div>
+                      <a href={selectedLegalPage.path} target="_blank" rel="noreferrer" className="text-xs font-semibold text-orange-600 hover:underline">View saved page ↗</a>
+                    </div>
+                    {selectedLegalPage.isShipping && (
+                      <label className="mb-4 flex cursor-pointer items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
+                        <input type="checkbox" checked={data.shipping_page_enabled} onChange={e => setData('shipping_page_enabled', e.target.checked)} className={checkboxClass} />
+                        <span className="text-sm font-semibold text-gray-800">Enable Shipping page and footer link</span>
+                      </label>
+                    )}
+                    <Field label={`${selectedLegalPage.title} content`} error={errors[selectedLegalPage.id]}>
+                      <textarea value={data[selectedLegalPage.id]} onChange={e => setData(selectedLegalPage.id, e.target.value)} rows={22} spellCheck="false" className={`${inputClass} min-h-[420px] resize-y font-mono text-xs leading-6`} placeholder={selectedLegalPage.isShipping ? 'Add delivery areas, delivery times, and shipping terms...' : 'Write or paste page content here...'} />
+                    </Field>
+                    <p className="mt-3 text-xs leading-5 text-gray-500">
+                      {selectedLegalPage.isShipping
+                        ? <>Shipping charges from Shipping &amp; Currency always appear above this content. Add HTML/CSS only for information below them; use a <code>&lt;style&gt;...&lt;/style&gt;</code> block for CSS.</>
+                        : <>Add HTML directly. Use a <code>&lt;style&gt;...&lt;/style&gt;</code> block for CSS. JavaScript is not supported.</>}
+                    </p>
+                    <button type="button" onClick={() => setLegalPreview({ title: `${selectedLegalPage.title} preview`, content: selectedLegalPage.isShipping ? shippingPreviewContent(data) : data[selectedLegalPage.id] })} className="mt-4 inline-flex items-center gap-1 rounded-lg bg-orange-50 px-3 py-2 text-xs font-bold text-orange-600 transition-colors hover:bg-orange-100">
+                      {selectedLegalPage.isShipping ? 'Preview charges and unsaved changes' : 'Preview unsaved changes'} <span aria-hidden="true">↗</span>
+                    </button>
+                  </section>
                 </div>
                 <button type="submit" disabled={processing} className="px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-xl">Save Legal Pages</button>
               </form>
