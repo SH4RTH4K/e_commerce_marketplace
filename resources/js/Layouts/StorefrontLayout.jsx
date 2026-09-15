@@ -49,6 +49,13 @@ export default function StorefrontLayout({ children, title, description, activeC
   const hasCall = !!chatSettings.call_number;
   const hasMessenger = !!chatSettings.messenger_page;
   const showChat = chatSettings.chat_enabled !== false && (hasWhatsapp || hasCall || hasMessenger);
+  const developerCredit = {
+    enabled: chatSettings.footer_developer_enabled === true,
+    label: chatSettings.footer_developer_label || 'Developed by',
+    name: chatSettings.footer_developer_name?.trim(),
+    url: chatSettings.footer_developer_url?.trim(),
+  };
+  const showDeveloperCredit = developerCredit.enabled && Boolean(developerCredit.name);
   const typography = chatSettings[`theme_typography_${storefrontTemplate.replace('-', '_')}`] || {};
   const typographyStyle = Object.entries(typography).reduce((styles, [area, values]) => ({
     ...styles,
@@ -452,8 +459,13 @@ export default function StorefrontLayout({ children, title, description, activeC
                 </form>
               </div>
             </div>
-            <div className="template-1-footer-bottom">
+            <div className="template-1-footer-bottom flex flex-wrap items-center justify-between gap-3">
               <p>&copy; {new Date().getFullYear()} {app?.name || 'Store'}. All rights reserved.</p>
+              {showDeveloperCredit && (developerCredit.url ? (
+                <a href={developerCredit.url} target="_blank" rel="noopener noreferrer" className="text-sm hover:text-white hover:underline">{developerCredit.label} {developerCredit.name}</a>
+              ) : (
+                <p className="text-sm">{developerCredit.label} {developerCredit.name}</p>
+              ))}
             </div>
           </div>
         </footer>
@@ -494,10 +506,14 @@ export default function StorefrontLayout({ children, title, description, activeC
               <p className="text-gray-400 text-sm font-medium">
                 &copy; {new Date().getFullYear()} {app?.name || 'SHARTHAK'}. All rights reserved.
               </p>
-              <a href="https://sharthak.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 border border-gray-100 bg-white rounded-full px-3 py-1.5 shadow-sm hover:shadow-md hover:border-gray-200 transition-all">
-                <span className="text-[11px] font-extrabold text-slate-500 tracking-wider">DESIGNED BY</span>
-                <span className="bg-[#f15a24] text-white text-[11px] font-extrabold px-3 py-1 rounded-full tracking-wider">SHARTHAK</span>
-              </a>
+              {showDeveloperCredit && (developerCredit.url ? (
+                <a href={developerCredit.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 border border-gray-100 bg-white rounded-full px-3 py-1.5 shadow-sm hover:shadow-md hover:border-gray-200 transition-all">
+                  <span className="text-[11px] font-extrabold text-slate-500 tracking-wider">{developerCredit.label.toUpperCase()}</span>
+                  <span className="bg-[#f15a24] text-white text-[11px] font-extrabold px-3 py-1 rounded-full tracking-wider">{developerCredit.name}</span>
+                </a>
+              ) : (
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{developerCredit.label} {developerCredit.name}</p>
+              ))}
             </div>
           </div>
         </div>

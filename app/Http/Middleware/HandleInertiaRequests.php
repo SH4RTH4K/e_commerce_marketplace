@@ -90,6 +90,10 @@ class HandleInertiaRequests extends Middleware
                 'footer_text'     => setting('footer_text', 'Your one-stop marketplace for quality products at great prices. We deliver the best items directly to your doorstep with care.'),
                 'settings'        => [
                     'footer_text'      => setting('footer_text', 'Your one-stop marketplace for quality products at great prices. We deliver the best items directly to your doorstep with care.'),
+                    'footer_developer_enabled' => setting('footer_developer_enabled', '0') === '1',
+                    'footer_developer_label' => setting('footer_developer_label', 'Developed by'),
+                    'footer_developer_name' => setting('footer_developer_name', ''),
+                    'footer_developer_url' => setting('footer_developer_url', ''),
                     'storefront_template' => setting('storefront_template', 'template-2'),
                     'template_1_navbar_menu' => setting('template_1_navbar_menu', 'coza'),
                     'template_1_show_search' => setting('template_1_show_search', '0') === '1',

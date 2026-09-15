@@ -145,6 +145,8 @@ export default function Settings({ settings, templateStatus = {} }) {
   const { data, setData, errors, setError, clearErrors } = useForm({
     // Brand
     site_name: settings.site_name || '', tagline: settings.tagline || '', footer_text: settings.footer_text || '',
+    footer_developer_enabled: settings.footer_developer_enabled === '1' || settings.footer_developer_enabled === true,
+    footer_developer_label: settings.footer_developer_label || 'Developed by', footer_developer_name: settings.footer_developer_name || '', footer_developer_url: settings.footer_developer_url || '',
     contact_phone: settings.contact_phone || '', contact_email: settings.contact_email || '', contact_address: settings.contact_address || '',
     contact_hours: settings.contact_hours || '', contact_title: settings.contact_title || '', contact_intro: settings.contact_intro || '',
     facebook_url: settings.facebook_url || '', instagram_url: settings.instagram_url || '', twitter_url: settings.twitter_url || '', search_placeholder: settings.search_placeholder || '',
@@ -431,6 +433,18 @@ export default function Settings({ settings, templateStatus = {} }) {
                     />
                     <p className="text-xs text-gray-400 mt-1">This text appears directly under the store logo in the website footer across all pages.</p>
                   </Field>
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-4">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input type="checkbox" checked={data.footer_developer_enabled} onChange={e => setData('footer_developer_enabled', e.target.checked)} className={checkboxClass} />
+                      <span className="text-sm font-semibold text-gray-800">Show developer credit in footer</span>
+                    </label>
+                    <p className="text-xs text-gray-400">Shown next to the copyright line only when enabled and a developer name is provided.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Field label="Credit label" error={errors.footer_developer_label}><input value={data.footer_developer_label} onChange={e => setData('footer_developer_label', e.target.value)} className={inputClass} placeholder="Developed by" /></Field>
+                      <Field label="Developer name" error={errors.footer_developer_name}><input value={data.footer_developer_name} onChange={e => setData('footer_developer_name', e.target.value)} className={inputClass} placeholder="Your agency or developer" /></Field>
+                    </div>
+                    <Field label="Developer website URL (optional)" error={errors.footer_developer_url}><input type="url" value={data.footer_developer_url} onChange={e => setData('footer_developer_url', e.target.value)} className={inputClass} placeholder="https://example.com" /></Field>
+                  </div>
                   
                   <div className="grid grid-cols-2 gap-6 pt-4 border-t border-gray-50">
                     <div>
