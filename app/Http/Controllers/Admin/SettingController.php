@@ -330,6 +330,7 @@ class SettingController extends Controller
                 'privacy_content' => ['nullable', 'string', 'max:20000'],
                 'refund_content'  => ['nullable', 'string', 'max:20000'],
                 'shipping_content' => ['nullable', 'string', 'max:20000'],
+                'shipping_page_enabled' => ['nullable', 'boolean'],
             ],
             'courier' => [
                 'courier_default'          => ['nullable', 'in:steadfast,pathao,redx'],
@@ -424,7 +425,7 @@ class SettingController extends Controller
             ],
             'seo' => ['default_meta_title', 'default_meta_description', 'default_meta_keywords'],
             'tracking' => ['tracking_gtm_id', 'tracking_ga4_id', 'tracking_meta_pixel_id'],
-            'legal' => ['terms_content', 'privacy_content', 'refund_content', 'shipping_content'],
+            'legal' => ['terms_content', 'privacy_content', 'refund_content', 'shipping_content', 'shipping_page_enabled'],
             'courier' => [
                 'courier_default', 'steadfast_api_key', 'steadfast_secret_key',
                 'pathao_client_id', 'pathao_client_secret', 'pathao_username', 'pathao_password', 'pathao_store_id',
@@ -468,6 +469,10 @@ class SettingController extends Controller
 
         if ($section === 'shipping') {
             Setting::put('checkout_delivery_note_enabled', $request->boolean('checkout_delivery_note_enabled') ? '1' : '0');
+        }
+
+        if ($section === 'legal') {
+            Setting::put('shipping_page_enabled', $request->boolean('shipping_page_enabled') ? '1' : '0');
         }
 
         if ($section === 'theme') {

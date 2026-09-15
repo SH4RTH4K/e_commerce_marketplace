@@ -228,7 +228,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '',
     
     // Legal
-    terms_content: settings.terms_content || '', privacy_content: settings.privacy_content || '', refund_content: settings.refund_content || '', shipping_content: settings.shipping_content || '',
+    terms_content: settings.terms_content || '', privacy_content: settings.privacy_content || '', refund_content: settings.refund_content || '', shipping_content: settings.shipping_content || '', shipping_page_enabled: settings.shipping_page_enabled !== '0',
 
     // Courier APIs
     courier_default:      settings.courier_default      || 'steadfast',
@@ -1283,7 +1283,12 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <button type="button" onClick={() => setLegalPreview({ title: 'Refund Policy preview', content: data.refund_content })} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-orange-50 px-3 py-2 text-xs font-bold text-orange-600 transition-colors hover:bg-orange-100">Preview unsaved changes <span aria-hidden="true">↗</span></button>
                   </Field>
                   <Field label="Shipping Information (HTML/Text)" error={errors.shipping_content}>
+                    <label className="mb-3 flex cursor-pointer items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                      <input type="checkbox" checked={data.shipping_page_enabled} onChange={e => setData('shipping_page_enabled', e.target.checked)} className={checkboxClass} />
+                      <span className="text-sm font-semibold text-gray-800">Enable Shipping page and show the Shipping link in the footer</span>
+                    </label>
                     <textarea value={data.shipping_content} onChange={e => setData('shipping_content', e.target.value)} rows={10} className={inputClass} placeholder="Add delivery areas, delivery times, and shipping terms..." />
+                    <p className="mt-2 text-xs leading-5 text-gray-500">Add HTML directly here. For custom styling, place a <code>&lt;style&gt;...&lt;/style&gt;</code> block before your HTML. Select Preview unsaved changes to check it before saving. JavaScript is not supported.</p>
                     <button type="button" onClick={() => setLegalPreview({ title: 'Shipping Information preview', content: data.shipping_content })} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-orange-50 px-3 py-2 text-xs font-bold text-orange-600 transition-colors hover:bg-orange-100">Preview unsaved changes <span aria-hidden="true">↗</span></button>
                   </Field>
                 </div>

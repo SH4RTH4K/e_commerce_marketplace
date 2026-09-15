@@ -98,6 +98,7 @@ class HandleInertiaRequests extends Middleware
                     'footer_developer_label' => setting('footer_developer_label', 'Developed by'),
                     'footer_developer_name' => setting('footer_developer_name', ''),
                     'footer_developer_url' => setting('footer_developer_url', ''),
+                    'shipping_page_enabled' => setting('shipping_page_enabled', '1') === '1',
                     'storefront_template' => setting('storefront_template', 'template-2'),
                     'template_1_navbar_menu' => setting('template_1_navbar_menu', 'coza'),
                     'template_1_show_search' => setting('template_1_show_search', '0') === '1',

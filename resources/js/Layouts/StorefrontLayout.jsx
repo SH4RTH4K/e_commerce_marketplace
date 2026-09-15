@@ -432,7 +432,9 @@ export default function StorefrontLayout({ children, title, description, activeC
                 <ul>
                   <li><a href="/track">Track Order</a></li>
                   <li><a href="/refund-policy">Returns</a></li>
-                  <li><a href="/shipping">Shipping</a></li>
+                  {chatSettings.shipping_page_enabled !== false && (
+                    <li><a href="/shipping">Shipping</a></li>
+                  )}
                   <li><a href="/contact">FAQs &amp; Contact</a></li>
                 </ul>
               </div>
