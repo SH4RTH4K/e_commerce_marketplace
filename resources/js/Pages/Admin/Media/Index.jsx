@@ -107,11 +107,17 @@ function ImageCard({ image, selectedOrder, onSelect, onDelete, onMoveEarlier, on
 }
 
 /* ─── Main page ──────────────────────────────────────────────────── */
-export default function MediaIndex({ images, q, filter = 'all', productStatus = 'all', stockFilter = 'all', total }) {
+export default function MediaIndex({
+  images, q, filter = 'all', categories = [], category = '', productStatus = 'all',
+  stockOperator = 'any', stockValue = '', perPage = 24, total,
+}) {
   const [search, setSearch] = useState(q || '');
   const [activeFilter, setActiveFilter] = useState(filter);
+  const [categoryFilter, setCategoryFilter] = useState(category || '');
   const [activeProductStatus, setActiveProductStatus] = useState(productStatus);
-  const [activeStockFilter, setActiveStockFilter] = useState(stockFilter);
+  const [activeStockOperator, setActiveStockOperator] = useState(stockOperator);
+  const [activeStockValue, setActiveStockValue] = useState(stockValue ?? '');
+  const [rowsPerPage, setRowsPerPage] = useState(String(perPage));
   const [selected, setSelected] = useState([]);
   const [textPosition, setTextPosition] = useState('center-left');
   const [imagePosition, setImagePosition] = useState('center-center');
@@ -120,8 +126,11 @@ export default function MediaIndex({ images, q, filter = 'all', productStatus = 
   const visitMedia = (overrides = {}) => router.get('/admin/media', {
     q: search,
     filter: activeFilter,
-    product_status: activeProductStatus,
-    stock: activeStockFilter,
+    category: categoryFilter,
+    status: activeProductStatus,
+    stock_operator: activeStockOperator,
+    stock_value: activeStockValue,
+    per_page: rowsPerPage,
     ...overrides,
   }, { preserveState: true });
 
@@ -130,19 +139,15 @@ export default function MediaIndex({ images, q, filter = 'all', productStatus = 
     visitMedia();
   };
 
-  const setFilter = (nextFilter) => {
-    setActiveFilter(nextFilter);
-    visitMedia({ filter: nextFilter });
-  };
-
-  const setProductStatus = (nextStatus) => {
-    setActiveProductStatus(nextStatus);
-    visitMedia({ product_status: nextStatus });
-  };
-
-  const setStockFilter = (nextStockFilter) => {
-    setActiveStockFilter(nextStockFilter);
-    visitMedia({ stock: nextStockFilter });
+  const clearFilters = () => {
+    setSearch('');
+    setActiveFilter('all');
+    setCategoryFilter('');
+    setActiveProductStatus('all');
+    setActiveStockOperator('any');
+    setActiveStockValue('');
+    setRowsPerPage('24');
+    router.get('/admin/media', {}, { preserveState: true });
   };
 
   const handleUpload = async (e) => {
@@ -251,50 +256,67 @@ export default function MediaIndex({ images, q, filter = 'all', productStatus = 
           </div>
 
           {/* ── Toolbar ── */}
-          <div className="flex flex-wrap items-center gap-3">
-            <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1 min-w-[240px]">
-              <div className="relative flex-1">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                </svg>
-                <input value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder="Search by product name or alt text…"
-                  className="w-full border border-gray-200 rounded-xl pl-9 pr-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-              </div>
-              <button type="submit"
-                className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition-colors">
-                Search
-              </button>
-            </form>
-
-            <div className="flex items-center rounded-xl border border-gray-200 bg-white p-1">
-              <button onClick={() => setFilter('all')}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${activeFilter === 'all' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-                All Images
-              </button>
-              <button onClick={() => setFilter('primary')}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${activeFilter === 'primary' ? 'bg-orange-500 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-                Primary Only
-              </button>
+          <form onSubmit={handleSearch} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="min-w-[220px] flex-1">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Search media or products</span>
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Name, SKU, or image alt text"
+                  className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange-300" />
+              </label>
+              <label className="min-w-[150px]">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Category</span>
+                <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
+                  <option value="">All categories</option>
+                  {categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+                </select>
+              </label>
+              <label className="min-w-[150px]">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Status</span>
+                <select value={activeProductStatus} onChange={e => setActiveProductStatus(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
+                  <option value="all">All statuses</option>
+                  <option value="published">Published</option>
+                  <option value="unpublished">Unpublished</option>
+                </select>
+              </label>
+              <label className="min-w-[135px]">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Image type</span>
+                <select value={activeFilter} onChange={e => setActiveFilter(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
+                  <option value="all">All images</option>
+                  <option value="primary">Primary only</option>
+                </select>
+              </label>
+              <label className="min-w-[160px]">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Stock comparison</span>
+                <select value={activeStockOperator} onChange={e => setActiveStockOperator(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
+                  <option value="any">Any stock</option>
+                  <option value="in_stock">In stock</option>
+                  <option value="out_of_stock">Out of stock</option>
+                  <option value="gt">Greater than</option>
+                  <option value="gte">Greater than or equal</option>
+                  <option value="eq">Equal to</option>
+                  <option value="lte">Less than or equal</option>
+                  <option value="lt">Less than</option>
+                </select>
+              </label>
+              <label className="w-[130px]">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Stock value</span>
+                <input type="number" min="0" value={activeStockValue} onChange={e => setActiveStockValue(e.target.value)} disabled={!['gt', 'gte', 'eq', 'lte', 'lt'].includes(activeStockOperator)} placeholder="e.g. 10"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange-300" />
+              </label>
+              <label className="w-[120px]">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Rows per page</span>
+                <select value={rowsPerPage} onChange={e => setRowsPerPage(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
+                  <option value="24">24</option>
+                  <option value="48">48</option>
+                  <option value="100">100</option>
+                </select>
+              </label>
+              <button type="submit" className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-600">Apply filters</button>
+              <button type="button" onClick={clearFilters} className="rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-200">Clear</button>
             </div>
+          </form>
 
-            <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600">
-              Product
-              <select value={activeProductStatus} onChange={e => setProductStatus(e.target.value)} className="bg-transparent font-semibold text-gray-800 outline-none">
-                <option value="all">All status</option>
-                <option value="published">Published</option>
-                <option value="unpublished">Unpublished</option>
-              </select>
-            </label>
-
-            <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600">
-              Stock
-              <select value={activeStockFilter} onChange={e => setStockFilter(e.target.value)} className="bg-transparent font-semibold text-gray-800 outline-none">
-                <option value="all">All stock</option>
-                <option value="in_stock">In stock</option>
-                <option value="out_of_stock">Out of stock</option>
-              </select>
-            </label>
+          <div className="flex flex-wrap items-center gap-3">
 
             {selected.length > 0 ? (
               <div className="flex flex-wrap items-center gap-2">

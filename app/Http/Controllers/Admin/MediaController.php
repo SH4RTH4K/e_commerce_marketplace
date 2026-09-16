@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
+use App\Models\Category;
 use App\Models\ProductImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,12 +19,24 @@ class MediaController extends Controller
             ->orderByDesc('created_at');
 
         $filter = $request->input('filter', 'all');
-        $productStatus = $request->input('product_status', 'all');
-        $stockFilter = $request->input('stock', 'all');
+        $category = $request->input('category');
+        $productStatus = $request->input('status', $request->input('product_status', 'all'));
+        $stockOperator = $request->input('stock_operator', 'any');
+        $stockValue = $request->input('stock_value');
+        $perPage = (int) $request->input('per_page', 24);
 
         $filter = in_array($filter, ['all', 'primary'], true) ? $filter : 'all';
-        $productStatus = in_array($productStatus, ['all', 'published', 'unpublished'], true) ? $productStatus : 'all';
-        $stockFilter = in_array($stockFilter, ['all', 'in_stock', 'out_of_stock'], true) ? $stockFilter : 'all';
+        $category = is_numeric($category) ? (int) $category : null;
+        $productStatus = match ($productStatus) {
+            'active', 'published' => 'published',
+            'inactive', 'unpublished' => 'unpublished',
+            default => 'all',
+        };
+        $stockOperator = in_array($stockOperator, ['any', 'in_stock', 'out_of_stock', 'gt', 'gte', 'eq', 'lte', 'lt'], true)
+            ? $stockOperator
+            : 'any';
+        $stockValue = is_numeric($stockValue) ? max(0, min(1000000, (int) $stockValue)) : null;
+        $perPage = in_array($perPage, [24, 48, 100], true) ? $perPage : 24;
 
         if ($filter === 'primary') {
             $query->where('is_primary', true);
@@ -35,15 +48,22 @@ class MediaController extends Controller
             $query->whereHas('product', fn ($productQuery) => $productQuery->where('is_published', false));
         }
 
-        if ($stockFilter === 'in_stock') {
+        if ($category) {
+            $query->whereHas('product', fn ($productQuery) => $productQuery->where('category_id', $category));
+        }
+
+        if ($stockOperator === 'in_stock') {
             $query->whereHas('product', fn ($productQuery) => $productQuery->where(function ($stockQuery) {
                 $stockQuery->where('stock_quantity', '>', 0)
                     ->orWhereHas('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0));
             }));
-        } elseif ($stockFilter === 'out_of_stock') {
+        } elseif ($stockOperator === 'out_of_stock') {
             $query->whereHas('product', fn ($productQuery) => $productQuery
                 ->where('stock_quantity', '<=', 0)
                 ->whereDoesntHave('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0)));
+        } elseif ($stockValue !== null && in_array($stockOperator, ['gt', 'gte', 'eq', 'lte', 'lt'], true)) {
+            $operator = ['gt' => '>', 'gte' => '>=', 'eq' => '=', 'lte' => '<=', 'lt' => '<'][$stockOperator];
+            $query->whereHas('product', fn ($productQuery) => $productQuery->where('stock_quantity', $operator, $stockValue));
         }
 
         if ($request->filled('q')) {
@@ -55,7 +75,7 @@ class MediaController extends Controller
         }
 
         return Inertia::render('Admin/Media/Index', [
-            'images' => $query->paginate(24)->withQueryString()->through(fn($img) => [
+            'images' => $query->paginate($perPage)->withQueryString()->through(fn($img) => [
                 'id'         => $img->id,
                 'path'       => $img->path,
                 'alt'        => $img->alt,
@@ -68,11 +88,15 @@ class MediaController extends Controller
                     'stock_quantity' => $img->product->stock_quantity,
                 ] : null,
             ]),
-            'q'              => $request->input('q'),
-            'filter'         => $filter,
-            'productStatus'  => $productStatus,
-            'stockFilter'    => $stockFilter,
-            'total'          => ProductImage::count(),
+            'categories'      => Category::orderBy('name')->get(['id', 'name']),
+            'q'               => $request->input('q'),
+            'filter'          => $filter,
+            'category'        => $category,
+            'productStatus'   => $productStatus,
+            'stockOperator'   => $stockOperator,
+            'stockValue'      => $stockValue,
+            'perPage'         => $perPage,
+            'total'           => ProductImage::count(),
         ]);
     }
     public function store(Request $request)
