@@ -180,7 +180,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     footer_developer_label: settings.footer_developer_label || 'Developed by', footer_developer_name: settings.footer_developer_name || '', footer_developer_url: settings.footer_developer_url || '',
     contact_phone: settings.contact_phone || '', contact_email: settings.contact_email || '', contact_address: settings.contact_address || '',
     contact_hours: settings.contact_hours || '', contact_title: settings.contact_title || '', contact_intro: settings.contact_intro || '',
-    facebook_url: settings.facebook_url || '', instagram_url: settings.instagram_url || '', twitter_url: settings.twitter_url || '', search_placeholder: settings.search_placeholder || '',
+    facebook_url: settings.facebook_url || '', instagram_url: settings.instagram_url || '', twitter_url: settings.twitter_url || '', youtube_url: settings.youtube_url || '', search_placeholder: settings.search_placeholder || '',
     logo_file: null, favicon_file: null, remove_logo: false, remove_favicon: false,
     
     // Chat
@@ -528,6 +528,7 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <Field label="Facebook URL" error={errors.facebook_url}><input value={data.facebook_url} onChange={e => setData('facebook_url', e.target.value)} className={inputClass} placeholder="https://facebook.com/yourpage" /></Field>
                     <Field label="Instagram URL" error={errors.instagram_url}><input value={data.instagram_url} onChange={e => setData('instagram_url', e.target.value)} className={inputClass} placeholder="https://instagram.com/yourpage" /></Field>
                     <Field label="Twitter / X URL" error={errors.twitter_url}><input value={data.twitter_url} onChange={e => setData('twitter_url', e.target.value)} className={inputClass} placeholder="https://x.com/yourpage" /></Field>
+                    <Field label="YouTube URL" error={errors.youtube_url}><input value={data.youtube_url} onChange={e => setData('youtube_url', e.target.value)} className={inputClass} placeholder="https://youtube.com/@yourchannel" /></Field>
                   </div>
                 </div>
 

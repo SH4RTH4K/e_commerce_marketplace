@@ -88,6 +88,7 @@ class DatabaseSeeder extends Seeder
             'facebook_url'             => 'https://facebook.com/',
             'instagram_url'            => 'https://instagram.com/',
             'twitter_url'              => 'https://twitter.com/',
+            'youtube_url'              => '',
             'bkash_number'             => '01700000000',
             'nagad_number'             => '01800000000',
             'rocket_number'            => '01900000000',

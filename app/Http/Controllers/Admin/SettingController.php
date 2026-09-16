@@ -162,6 +162,7 @@ class SettingController extends Controller
                 'facebook_url'    => ['nullable', 'url', 'max:255'],
                 'instagram_url'   => ['nullable', 'url', 'max:255'],
                 'twitter_url'     => ['nullable', 'url', 'max:255'],
+                'youtube_url'     => ['nullable', 'url', 'max:255'],
                 'search_placeholder' => ['nullable', 'string', 'max:120'],
                 // Use mimes for reliable MIME-type validation of uploaded branding assets.
                 'logo_file'       => ['nullable', 'file', 'mimes:png,jpg,jpeg,svg,webp', 'max:4096'],
@@ -383,7 +384,7 @@ class SettingController extends Controller
                 'footer_developer_label', 'footer_developer_name', 'footer_developer_url',
                 'contact_phone', 'contact_email', 'contact_address',
                 'contact_hours', 'contact_title', 'contact_intro',
-                'facebook_url', 'instagram_url', 'twitter_url',
+                'facebook_url', 'instagram_url', 'twitter_url', 'youtube_url',
                 'search_placeholder',
             ],
             'chat' => [

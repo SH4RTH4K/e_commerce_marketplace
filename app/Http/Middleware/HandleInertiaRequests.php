@@ -152,6 +152,7 @@ class HandleInertiaRequests extends Middleware
                     'facebook_url'     => setting('facebook_url', ''),
                     'instagram_url'    => setting('instagram_url', ''),
                     'twitter_url'      => setting('twitter_url', ''),
+                    'youtube_url'      => setting('youtube_url', ''),
                     'product_card_bg_color'        => setting('product_card_bg_color', '#FFFFFF'),
                     'product_card_text_color'      => setting('product_card_text_color', '#111827'),
                     'product_card_btn_bg_color'    => setting('product_card_btn_bg_color', '#f15a24'),

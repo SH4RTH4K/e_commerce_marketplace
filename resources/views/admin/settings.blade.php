@@ -74,10 +74,11 @@
 
       <div class="border-t border-gray-100 pt-4">
         <h4 class="text-sm font-semibold text-ink mb-3">Social links</h4>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <div><label class="lbl">Facebook URL</label><input name="facebook_url" class="inp" value="{{ $settings['facebook_url'] ?? '' }}" /></div>
           <div><label class="lbl">Instagram URL</label><input name="instagram_url" class="inp" value="{{ $settings['instagram_url'] ?? '' }}" /></div>
           <div><label class="lbl">Twitter URL</label><input name="twitter_url" class="inp" value="{{ $settings['twitter_url'] ?? '' }}" /></div>
+          <div><label class="lbl">YouTube URL</label><input name="youtube_url" class="inp" value="{{ $settings['youtube_url'] ?? '' }}" /></div>
         </div>
       </div>
     </div>

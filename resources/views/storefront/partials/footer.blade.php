@@ -3,6 +3,7 @@
   $facebook = setting('facebook_url');
   $instagram = setting('instagram_url');
   $twitter = setting('twitter_url');
+  $youtube = setting('youtube_url');
   $footerText = trim((string) setting('footer_text', ''));
 
   $paymentBadges = [];
@@ -27,7 +28,7 @@
         @if($footerText !== '')
           <p class="mt-4 max-w-xs text-sm text-slate-500">{{ $footerText }}</p>
         @endif
-        @if($facebook || $instagram || $twitter)
+        @if($facebook || $instagram || $twitter || $youtube)
           <div class="mt-5 flex gap-3">
             @if($facebook)
               <a href="{{ $facebook }}" target="_blank" rel="noopener" class="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-brand-500 hover:text-white transition" aria-label="Facebook">
@@ -42,6 +43,11 @@
             @if($twitter)
               <a href="{{ $twitter }}" target="_blank" rel="noopener" class="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-brand-500 hover:text-white transition" aria-label="X (Twitter)">
                 <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2H21.5l-7.5 8.57L22.5 22h-6.59l-5.16-6.74L5.2 22H1.94l8.03-9.17L1.5 2h6.75l4.66 6.18L18.244 2Zm-1.16 18.1h1.83L7.05 3.79H5.09L17.084 20.1Z"/></svg>
+              </a>
+            @endif
+            @if($youtube)
+              <a href="{{ $youtube }}" target="_blank" rel="noopener" class="grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-500 hover:bg-brand-500 hover:text-white transition" aria-label="YouTube">
+                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8ZM9.6 15.6V8.4l6.3 3.6-6.3 3.6Z"/></svg>
               </a>
             @endif
           </div>

@@ -466,22 +466,24 @@ export default function StorefrontLayout({ children, title, description, activeC
                 <h4>Get In Touch</h4>
                 <p>{app?.settings?.footer_text || app?.footer_text || 'Any questions? Let us know in store support or contact us online.'}</p>
                 <div className="template-1-footer-social">
-                  {app?.settings?.facebook_url && <a href={app.settings.facebook_url} target="_blank" rel="noreferrer">f</a>}
-                  {app?.settings?.instagram_url && <a href={app.settings.instagram_url} target="_blank" rel="noreferrer">i</a>}
-                  {app?.settings?.twitter_url && <a href={app.settings.twitter_url} target="_blank" rel="noreferrer">x</a>}
-                  {app?.settings?.facebook_url && (
-                    <a href={app.settings.facebook_url} target="_blank" rel="noreferrer" aria-label="Facebook" title="Facebook">
+                  {app?.settings?.facebook_url?.trim() && (
+                    <a href={app.settings.facebook_url.trim()} target="_blank" rel="noreferrer" aria-label="Facebook" title="Facebook">
                       <svg className="template-1-social-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-1.56 19.88v-7.04H7.9v-2.84h2.54V9.84c0-2.51 1.5-3.9 3.78-3.9 1.09 0 2.23.2 2.23.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.45 2.84h-2.33v7.04A10 10 0 0 0 12 2Z" /></svg>
                     </a>
                   )}
-                  {app?.settings?.instagram_url && (
-                    <a href={app.settings.instagram_url} target="_blank" rel="noreferrer" aria-label="Instagram" title="Instagram">
+                  {app?.settings?.instagram_url?.trim() && (
+                    <a href={app.settings.instagram_url.trim()} target="_blank" rel="noreferrer" aria-label="Instagram" title="Instagram">
                       <svg className="template-1-social-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" /><circle cx="12" cy="12" r="4" /><circle cx="17.4" cy="6.6" r=".8" fill="currentColor" stroke="none" /></svg>
                     </a>
                   )}
-                  {app?.settings?.twitter_url && (
-                    <a href={app.settings.twitter_url} target="_blank" rel="noreferrer" aria-label="X" title="X">
+                  {app?.settings?.twitter_url?.trim() && (
+                    <a href={app.settings.twitter_url.trim()} target="_blank" rel="noreferrer" aria-label="X" title="X">
                       <svg className="template-1-social-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.24 2.25h3.31l-7.23 8.26 8.5 11.24h-6.66l-5.22-6.83-5.98 6.83H1.65l7.73-8.84L1.22 2.25h6.83l4.72 6.24 5.47-6.24Zm-1.16 17.52h1.83L7.08 4.12H5.12l11.96 15.65Z" /></svg>
+                    </a>
+                  )}
+                  {app?.settings?.youtube_url?.trim() && (
+                    <a href={app.settings.youtube_url.trim()} target="_blank" rel="noreferrer" aria-label="YouTube" title="YouTube">
+                      <svg className="template-1-social-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1C24 15.9 24 12 24 12s0-3.9-.5-5.8ZM9.6 15.6V8.4l6.3 3.6-6.3 3.6Z" /></svg>
                     </a>
                   )}
                 </div>
