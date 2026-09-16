@@ -107,22 +107,42 @@ function ImageCard({ image, selectedOrder, onSelect, onDelete, onMoveEarlier, on
 }
 
 /* ─── Main page ──────────────────────────────────────────────────── */
-export default function MediaIndex({ images, q, filter = 'all', total }) {
+export default function MediaIndex({ images, q, filter = 'all', productStatus = 'all', stockFilter = 'all', total }) {
   const [search, setSearch] = useState(q || '');
   const [activeFilter, setActiveFilter] = useState(filter);
+  const [activeProductStatus, setActiveProductStatus] = useState(productStatus);
+  const [activeStockFilter, setActiveStockFilter] = useState(stockFilter);
   const [selected, setSelected] = useState([]);
   const [textPosition, setTextPosition] = useState('center-left');
   const [imagePosition, setImagePosition] = useState('center-center');
   const [imageOrientation, setImageOrientation] = useState('landscape');
 
+  const visitMedia = (overrides = {}) => router.get('/admin/media', {
+    q: search,
+    filter: activeFilter,
+    product_status: activeProductStatus,
+    stock: activeStockFilter,
+    ...overrides,
+  }, { preserveState: true });
+
   const handleSearch = (e) => {
     e.preventDefault();
-    router.get('/admin/media', { q: search, filter: activeFilter }, { preserveState: true });
+    visitMedia();
   };
 
   const setFilter = (nextFilter) => {
     setActiveFilter(nextFilter);
-    router.get('/admin/media', { q: search, filter: nextFilter }, { preserveState: true });
+    visitMedia({ filter: nextFilter });
+  };
+
+  const setProductStatus = (nextStatus) => {
+    setActiveProductStatus(nextStatus);
+    visitMedia({ product_status: nextStatus });
+  };
+
+  const setStockFilter = (nextStockFilter) => {
+    setActiveStockFilter(nextStockFilter);
+    visitMedia({ stock: nextStockFilter });
   };
 
   const handleUpload = async (e) => {
@@ -257,6 +277,24 @@ export default function MediaIndex({ images, q, filter = 'all', total }) {
                 Primary Only
               </button>
             </div>
+
+            <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600">
+              Product
+              <select value={activeProductStatus} onChange={e => setProductStatus(e.target.value)} className="bg-transparent font-semibold text-gray-800 outline-none">
+                <option value="all">All status</option>
+                <option value="published">Published</option>
+                <option value="unpublished">Unpublished</option>
+              </select>
+            </label>
+
+            <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600">
+              Stock
+              <select value={activeStockFilter} onChange={e => setStockFilter(e.target.value)} className="bg-transparent font-semibold text-gray-800 outline-none">
+                <option value="all">All stock</option>
+                <option value="in_stock">In stock</option>
+                <option value="out_of_stock">Out of stock</option>
+              </select>
+            </label>
 
             {selected.length > 0 ? (
               <div className="flex flex-wrap items-center gap-2">

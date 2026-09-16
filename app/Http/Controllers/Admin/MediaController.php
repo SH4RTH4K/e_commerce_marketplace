@@ -14,12 +14,36 @@ class MediaController extends Controller
 {
     public function index(Request $request)
     {
-        $query = ProductImage::with('product:id,name,slug')
+        $query = ProductImage::with('product:id,name,slug,is_published,stock_quantity')
             ->orderByDesc('created_at');
 
         $filter = $request->input('filter', 'all');
+        $productStatus = $request->input('product_status', 'all');
+        $stockFilter = $request->input('stock', 'all');
+
+        $filter = in_array($filter, ['all', 'primary'], true) ? $filter : 'all';
+        $productStatus = in_array($productStatus, ['all', 'published', 'unpublished'], true) ? $productStatus : 'all';
+        $stockFilter = in_array($stockFilter, ['all', 'in_stock', 'out_of_stock'], true) ? $stockFilter : 'all';
+
         if ($filter === 'primary') {
             $query->where('is_primary', true);
+        }
+
+        if ($productStatus === 'published') {
+            $query->whereHas('product', fn ($productQuery) => $productQuery->where('is_published', true));
+        } elseif ($productStatus === 'unpublished') {
+            $query->whereHas('product', fn ($productQuery) => $productQuery->where('is_published', false));
+        }
+
+        if ($stockFilter === 'in_stock') {
+            $query->whereHas('product', fn ($productQuery) => $productQuery->where(function ($stockQuery) {
+                $stockQuery->where('stock_quantity', '>', 0)
+                    ->orWhereHas('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0));
+            }));
+        } elseif ($stockFilter === 'out_of_stock') {
+            $query->whereHas('product', fn ($productQuery) => $productQuery
+                ->where('stock_quantity', '<=', 0)
+                ->whereDoesntHave('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0)));
         }
 
         if ($request->filled('q')) {
@@ -38,13 +62,17 @@ class MediaController extends Controller
                 'is_primary' => $img->is_primary,
                 'created_at' => $img->created_at?->format('d M Y'),
                 'product'    => $img->product ? [
-                    'id'   => $img->product->id,
-                    'name' => $img->product->name,
+                    'id'           => $img->product->id,
+                    'name'         => $img->product->name,
+                    'is_published' => $img->product->is_published,
+                    'stock_quantity' => $img->product->stock_quantity,
                 ] : null,
             ]),
-            'q'          => $request->input('q'),
-            'filter'     => $filter,
-            'total'      => ProductImage::count(),
+            'q'              => $request->input('q'),
+            'filter'         => $filter,
+            'productStatus'  => $productStatus,
+            'stockFilter'    => $stockFilter,
+            'total'          => ProductImage::count(),
         ]);
     }
     public function store(Request $request)
