@@ -346,7 +346,7 @@ export default function ProductForm({ product, categories }) {
                     <input value={data.name} onChange={e => setData('name', e.target.value)} className={inputClass} required placeholder="e.g. Premium Cotton Casual Shirt" />
                   </Field>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Field label="Slug (URL)" error={errors.slug} hint="Auto-generated from name if left empty">
+                    <Field label="Slug (URL)" error={errors.slug} hint="Automatically shortened. Existing links keep working after changes.">
                       <input value={data.slug} onChange={e => setData('slug', e.target.value)} className={inputClass} placeholder="auto-generated" />
                     </Field>
                     <Field label="SKU" error={errors.sku} hint="Stock Keeping Unit / Product Code">

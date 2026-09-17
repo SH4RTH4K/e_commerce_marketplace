@@ -44,6 +44,9 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
   const whatsappDigits = whatsappNumber(configuredWhatsappNumber);
   const whatsappBgColor = settings.product_page_whatsapp_bg_color || '#25D366';
   const whatsappTextColor = settings.product_page_whatsapp_text_color || '#ffffff';
+  const productShareUrl = seo?.canonical || (typeof window !== 'undefined'
+    ? `${window.location.origin}${window.location.pathname}`
+    : '');
 
   const isCallEnabled = settings.product_page_call_enabled !== false;
   const callText = settings.product_page_call_text || 'Call For Order';
@@ -712,7 +715,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
 
                       {isWhatsappEnabled && whatsappDigits && (
                         <a
-                          href={`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(`Hi, I want to order ${product.name}. Link: ${typeof window !== 'undefined' ? window.location.href : ''}`)}`}
+                          href={`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(`Hi, I want to order ${product.name}. Link: ${productShareUrl}`)}`}
                           target="_blank"
                           rel="noreferrer"
                           className={`font-semibold rounded-md shadow-sm transition-all hover:opacity-90 h-[40px] sm:h-[46px] flex items-center justify-center gap-1.5 sm:gap-2 px-1 sm:px-2 min-w-0 overflow-hidden ${!isCallEnabled ? 'col-span-2' : ''}`}

@@ -2,13 +2,44 @@
 
 namespace App\Models;
 
+use App\Support\ProductSlug;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class Product extends Model
 {
+    protected static function booted(): void
+    {
+        static::saving(function (Product $product) {
+            if (! $product->exists || $product->isDirty('slug')) {
+                $product->slug = ProductSlug::unique(
+                    $product->slug ?: $product->name,
+                    $product->exists ? (int) $product->getKey() : null,
+                );
+            }
+
+            // Reserve the previous URL before changing it. Every alias resolves
+            // directly to this product's current slug, without redirect chains.
+            if ($product->exists && $product->isDirty('slug') && $product->getRawOriginal('slug')) {
+                DB::table('product_slug_aliases')->insertOrIgnore([
+                    'product_id' => $product->getKey(),
+                    'slug' => $product->getRawOriginal('slug'),
+                ]);
+            }
+        });
+
+        static::saved(function (Product $product) {
+            if ($product->wasRecentlyCreated || $product->wasChanged(['slug', 'is_published'])) {
+                Cache::forget('sitemap_urls');
+            }
+        });
+        static::deleted(fn () => Cache::forget('sitemap_urls'));
+    }
+
     protected $fillable = [
         'category_id',
         'name',
@@ -235,6 +266,7 @@ class Product extends Model
         }
 
         return $this->where('slug', $value)->first()
+            ?? $this->whereIn('id', DB::table('product_slug_aliases')->select('product_id')->where('slug', $value))->first()
             ?? (is_numeric($value) ? $this->where('id', $value)->first() : null);
     }
 

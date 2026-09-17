@@ -9,7 +9,6 @@ use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Support\PublicUploader;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class ProductController extends Controller
@@ -59,7 +58,7 @@ class ProductController extends Controller
     {
         $data = $this->validateData($request);
         $data = $this->sanitizeProductData($data, $request);
-        $data['slug'] = $this->uniqueSlug(($data['slug'] ?? '') ?: $data['name']);
+        $data['slug'] = ($data['slug'] ?? '') ?: $data['name'];
         $this->applyFlags($request, $data, null);
         $data['specifications'] = $this->normalizeSpecifications($request);
 
@@ -116,7 +115,7 @@ class ProductController extends Controller
     {
         $data = $this->validateData($request, $product);
         $data = $this->sanitizeProductData($data, $request);
-        $data['slug'] = $this->uniqueSlug(($data['slug'] ?? '') ?: $data['name'], $product->id);
+        $data['slug'] = ($data['slug'] ?? '') ?: $product->slug;
         $this->applyFlags($request, $data, $product);
         $data['specifications'] = $this->normalizeSpecifications($request);
 
@@ -348,19 +347,6 @@ class ProductController extends Controller
         } else {
             $data['flash_sale_position'] = 0;
         }
-    }
-
-    private function uniqueSlug(string $value, ?int $ignoreId = null): string
-    {
-        $base = Str::slug($value) ?: Str::random(8);
-        $base = Str::limit($base, 150, '');
-        $slug = $base;
-        $i = 2;
-        while (Product::where('slug', $slug)->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))->exists()) {
-            $slug = $base . '-' . $i++;
-        }
-
-        return $slug;
     }
 
     private function syncVariants(Product $product, Request $request): void

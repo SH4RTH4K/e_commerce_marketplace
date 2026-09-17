@@ -65,10 +65,12 @@ export default function StorefrontLayout({ children, title, description, activeC
   const seoTitle = pageSeo.title?.trim() || defaultSeoTitle;
   const seoDescription = pageSeo.description?.trim() || chatSettings.default_meta_description?.trim();
   const seoKeywords = pageSeo.keywords?.trim() || chatSettings.default_meta_keywords?.trim();
-  const seoImage = pageSeo.image ? imageUrl(pageSeo.image) : null;
-  const canonicalUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}${window.location.pathname}`
+  const seoImage = pageSeo.image
+    ? (/^https?:\/\//i.test(pageSeo.image) ? pageSeo.image : imageUrl(pageSeo.image))
     : null;
+  const canonicalUrl = pageSeo.canonical || (typeof window !== 'undefined'
+    ? `${window.location.origin}${window.location.pathname}`
+    : null);
   const typography = chatSettings[`theme_typography_${storefrontTemplate.replace('-', '_')}`] || {};
   const typographyStyle = Object.entries(typography).reduce((styles, [area, values]) => ({
     ...styles,
@@ -137,6 +139,7 @@ export default function StorefrontLayout({ children, title, description, activeC
         <meta head-key="og:title" property="og:title" content={seoTitle} />
         {seoDescription && <meta head-key="og:description" property="og:description" content={seoDescription} />}
         <meta head-key="og:type" property="og:type" content={pageSeo.type || 'website'} />
+        {canonicalUrl && <meta head-key="og:url" property="og:url" content={canonicalUrl} />}
         {seoImage && <meta head-key="og:image" property="og:image" content={seoImage} />}
         <meta head-key="twitter:card" name="twitter:card" content="summary_large_image" />
         <meta head-key="twitter:title" name="twitter:title" content={seoTitle} />

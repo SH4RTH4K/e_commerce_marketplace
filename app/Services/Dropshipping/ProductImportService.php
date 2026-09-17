@@ -54,7 +54,6 @@ class ProductImportService
             $product = Product::create([
                 'category_id' => $category->getKey(),
                 'name' => Str::limit(trim($source->name), 255, ''),
-                'slug' => $this->newSlug($source),
                 'sku' => $source->product_code,
                 'description' => $this->descriptionFormatter->format($source),
                 'regular_price' => $price->regularSellingPrice ?? $price->finalPrice ?? $source->max_price ?? $source->cost_price ?? 0,
@@ -93,14 +92,6 @@ class ProductImportService
 
             return new ProductImportResult(ProductImportResult::IMPORTED, $product);
         });
-    }
-
-    private function newSlug(DropshipSupplierProduct $source): string
-    {
-        $base = Str::slug($source->name);
-        $base = $base !== '' ? $base : 'supplier-product';
-
-        return Str::limit($base, 220, '') . '-ds-' . $source->getKey() . '-' . Str::lower(Str::random(6));
     }
 
     private function stockQuantity(DropshipSupplierProduct $source): int

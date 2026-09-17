@@ -6,12 +6,21 @@ use Inertia\Inertia;
 use App\Models\Feature;
 use App\Models\Product;
 use App\Models\ProductReview;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
-    public function show(Product $product)
+    public function show(Request $request, Product $product)
     {
         abort_unless($product->is_published, 404);
+
+        $canonical = route('product.show', $product);
+        if ((string) $request->route()->originalParameter('product') !== $product->slug) {
+            $query = $request->server('QUERY_STRING');
+
+            return redirect()->to($canonical.($query ? '?'.$query : ''), 301);
+        }
 
         $product->load('images', 'variants', 'category');
 
@@ -62,10 +71,11 @@ class ProductController extends Controller
         ), [
             'seo' => [
                 'title' => $product->meta_title ?: $product->name,
-                'description' => $product->meta_description ?: $product->short_description,
+                'description' => Str::limit(trim(strip_tags((string) ($product->meta_description ?: $product->short_description ?: $product->description))), 300),
                 'keywords' => $product->meta_keywords,
-                'image' => $product->images->first()?->path,
+                'image' => $product->primaryImage() ? image_url($product->primaryImage()->path, $product->slug) : null,
                 'type' => 'product',
+                'canonical' => $canonical,
             ],
         ]));
     }
