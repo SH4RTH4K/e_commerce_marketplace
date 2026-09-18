@@ -51,3 +51,4 @@ echo "  Your site should be live now."
 echo "  If you have a queue worker (for dropshipping sync),"
 echo "  restart it: php artisan queue:restart"
 echo ""
+
