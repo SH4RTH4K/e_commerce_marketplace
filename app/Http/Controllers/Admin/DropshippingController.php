@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\Dropshipping\StartSupplierCatalogSync;
+use App\Jobs\Dropshipping\StartImportedProductSync;
 use App\Jobs\Dropshipping\StartSupplierPriceStockSync;
 use App\Jobs\Dropshipping\SyncSupplierCatalogPage;
 use App\Jobs\Dropshipping\TestSupplierConnection;
@@ -647,30 +648,43 @@ class DropshippingController extends Controller
         return back()->with('status', "{$unpublished} imported product(s) unpublished.");
     }
 
-    public function bulkSyncImportedProducts(Request $request, ProductImportService $importService, \App\Services\Dropshipping\PriceStockSyncService $priceStockService)
+    public function bulkSyncImportedProducts(Request $request, SyncRunService $syncRuns)
     {
         $data = $request->validate([
             'ids' => ['required', 'array', 'min:1', 'max:100'],
             'ids.*' => ['integer', 'distinct', 'exists:products,id'],
         ]);
 
-        $products = Product::query()
-            ->whereIn('id', $data['ids'])
-            ->with(['supplierLinks.supplierProduct'])
+        $sources = DropshipSupplierProduct::query()
+            ->whereHas('productLink', fn ($query) => $query
+                ->whereIn('product_id', $data['ids'])
+                ->where('product_created_by_integration', true)
+                ->where('sync_status', 'active'))
+            ->with(['supplier', 'productLink'])
             ->get();
 
-        $synced = 0;
-        foreach ($products as $product) {
-            $link = $product->supplierLinks->first();
-            if ($link?->supplierProduct) {
-                // syncProductContent handles updates via import
-                $importService->import($link->supplierProduct);
-                $priceStockService->sync($link->supplierProduct);
-                ++$synced;
+        $runs = 0;
+        foreach ($sources->groupBy('supplier_id') as $supplierSources) {
+            $supplier = $supplierSources->first()->supplier;
+            if ($supplier === null || ! $supplier->is_active) {
+                continue;
             }
+
+            $run = $syncRuns->createRun(
+                $supplier,
+                'imported_product_sync',
+                $request->user(),
+                ['supplier_product_ids' => $supplierSources->modelKeys()],
+            );
+            StartImportedProductSync::dispatch($run->id);
+            ++$runs;
         }
 
-        return back()->with('status', "{$synced} imported product(s) successfully synchronized from supplier.");
+        $synced = $sources->count();
+
+        return back()->with('status', $runs === 0
+            ? 'No active imported products were available to synchronize.'
+            : "Queued {$synced} imported product(s) for price and data synchronization.");
     }
 
     private function publishFlags(Request $request, Product $product): array
