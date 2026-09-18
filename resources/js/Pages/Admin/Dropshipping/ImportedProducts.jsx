@@ -77,6 +77,14 @@ export default function ImportedProducts({ products = [], categories = [], searc
     router.post('/admin/dropshipping/imported/bulk-sync', { ids: selected }, { preserveScroll: true, onSuccess: () => setSelected([]) });
   };
 
+  const syncFiltered = () => router.post('/admin/dropshipping/imported/bulk-sync-filtered', {
+    q: search.trim(),
+    category,
+    status,
+    stock_operator: stockOperator,
+    stock_value: stockValue,
+  }, { preserveScroll: true, onSuccess: () => setSelected([]) });
+
   const syncOne = id => router.post('/admin/dropshipping/imported/bulk-sync', { ids: [id] }, { preserveScroll: true });
   const setFlag = key => setFlags(current => ({ ...current, [key]: !current[key] }));
 
@@ -174,7 +182,7 @@ export default function ImportedProducts({ products = [], categories = [], searc
       <div className="flex flex-col gap-4 border-b border-gray-100 px-5 py-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div><h2 className="font-bold text-gray-900">Local imported products</h2><p className="mt-1 text-xs text-gray-500">Supplier variants are automatically created and linked after import or catalog resync.</p></div>
-          <div className="flex flex-wrap items-center gap-3"><span className="text-xs text-gray-400">Showing {products.length} of {pagination.total || products.length}</span><button type="button" disabled={selected.length === 0} onClick={publishSelected} className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400">Publish selected</button><button type="button" disabled={selected.length === 0} onClick={syncSelected} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400">Sync selected</button></div>
+          <div className="flex flex-wrap items-center gap-3"><span className="text-xs text-gray-400">Showing {products.length} of {pagination.total || products.length}</span><button type="button" disabled={selected.length === 0} onClick={publishSelected} className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400">Publish selected</button><button type="button" disabled={totalProducts === 0} onClick={syncFiltered} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400">Sync filtered ({totalProducts})</button><button type="button" disabled={selected.length === 0} onClick={syncSelected} className="rounded-lg bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-200 disabled:bg-gray-200 disabled:text-gray-400">Sync selected</button></div>
         </div>
         <div className="flex flex-wrap gap-4 border-t border-gray-100 pt-3 text-xs text-gray-700">
           <label className="flex items-center gap-2"><input type="checkbox" checked={flags.is_featured} onChange={() => setFlag('is_featured')} /> Featured / Trending</label>

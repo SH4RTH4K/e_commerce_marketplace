@@ -663,6 +663,56 @@ class DropshippingController extends Controller
             ->with(['supplier', 'productLink'])
             ->get();
 
+        return $this->queueImportedProductSyncs($sources, $request, $syncRuns);
+    }
+
+    public function bulkSyncFilteredImportedProducts(Request $request, SyncRunService $syncRuns)
+    {
+        $data = $request->validate([
+            'q' => ['nullable', 'string', 'max:255'],
+            'category' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', 'in:published,draft'],
+            'stock_operator' => ['nullable', 'in:gt,lt,eq'],
+            'stock_value' => ['nullable', 'numeric'],
+        ]);
+
+        $search = trim($data['q'] ?? '');
+        $category = trim($data['category'] ?? '');
+        $status = $data['status'] ?? '';
+        $stockOperator = $data['stock_operator'] ?? '';
+        $stockValue = $data['stock_value'] ?? null;
+
+        $productIds = Product::query()
+            ->whereHas('supplierLinks', fn ($query) => $query
+                ->where('product_created_by_integration', true)
+                ->where('sync_status', 'active')
+                ->whereHas('supplierProduct', fn ($supplierProductQuery) => $supplierProductQuery
+                    ->when($category !== '', fn ($categoryQuery) => $categoryQuery->where('supplier_category_key', $category))))
+            ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search) {
+                $searchQuery->where('name', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%");
+            }))
+            ->when($status === 'published', fn ($query) => $query->where('is_published', true))
+            ->when($status === 'draft', fn ($query) => $query->where('is_published', false))
+            ->when($stockOperator !== '' && is_numeric($stockValue), function ($query) use ($stockOperator, $stockValue) {
+                $operator = ['gt' => '>', 'lt' => '<', 'eq' => '='][$stockOperator];
+                $query->where('stock_quantity', $operator, (float) $stockValue);
+            })
+            ->pluck('id');
+
+        $sources = DropshipSupplierProduct::query()
+            ->whereHas('productLink', fn ($query) => $query
+                ->whereIn('product_id', $productIds)
+                ->where('product_created_by_integration', true)
+                ->where('sync_status', 'active'))
+            ->with(['supplier', 'productLink'])
+            ->get();
+
+        return $this->queueImportedProductSyncs($sources, $request, $syncRuns);
+    }
+
+    private function queueImportedProductSyncs($sources, Request $request, SyncRunService $syncRuns)
+    {
         $runs = 0;
         foreach ($sources->groupBy('supplier_id') as $supplierSources) {
             $supplier = $supplierSources->first()->supplier;

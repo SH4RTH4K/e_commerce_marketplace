@@ -191,6 +191,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                  Route::post('imported/bulk-publish', [\App\Http\Controllers\Admin\DropshippingController::class, 'bulkPublishImportedProducts'])->name('imported.bulk-publish');
                  Route::post('imported/bulk-unpublish', [\App\Http\Controllers\Admin\DropshippingController::class, 'bulkUnpublishImportedProducts'])->name('imported.bulk-unpublish');
                  Route::post('imported/bulk-sync', [\App\Http\Controllers\Admin\DropshippingController::class, 'bulkSyncImportedProducts'])->name('imported.bulk-sync');
+                 Route::post('imported/bulk-sync-filtered', [\App\Http\Controllers\Admin\DropshippingController::class, 'bulkSyncFilteredImportedProducts'])->name('imported.bulk-sync-filtered');
                 Route::post('suppliers/{supplier}/test', [\App\Http\Controllers\Admin\DropshippingController::class, 'testConnection'])->name('suppliers.test');
                 Route::post('suppliers/{supplier}/catalog', [\App\Http\Controllers\Admin\DropshippingController::class, 'catalog'])->name('suppliers.catalog');
                 Route::post('suppliers/{supplier}/catalog/work', [\App\Http\Controllers\Admin\DropshippingController::class, 'workCatalogQueue'])->name('suppliers.catalog.work');
