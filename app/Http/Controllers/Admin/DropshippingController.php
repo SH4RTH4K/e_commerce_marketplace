@@ -714,9 +714,20 @@ class DropshippingController extends Controller
     private function queueImportedProductSyncs($sources, Request $request, SyncRunService $syncRuns)
     {
         $runs = 0;
+        $alreadyRunning = 0;
+        $queuedProducts = 0;
         foreach ($sources->groupBy('supplier_id') as $supplierSources) {
             $supplier = $supplierSources->first()->supplier;
             if ($supplier === null || ! $supplier->is_active) {
+                continue;
+            }
+
+            $hasActiveRun = $supplier->syncRuns()
+                ->where('type', 'imported_product_sync')
+                ->whereIn('status', [SyncRunState::QUEUED, SyncRunState::RUNNING])
+                ->exists();
+            if ($hasActiveRun) {
+                ++$alreadyRunning;
                 continue;
             }
 
@@ -728,13 +739,21 @@ class DropshippingController extends Controller
             );
             StartImportedProductSync::dispatch($run->id);
             ++$runs;
+            $queuedProducts += $supplierSources->count();
         }
 
-        $synced = $sources->count();
+        if ($runs === 0) {
+            return back()->with('status', $alreadyRunning > 0
+                ? 'A price and data synchronization is already running for the selected supplier(s).'
+                : 'No active imported products were available to synchronize.');
+        }
 
-        return back()->with('status', $runs === 0
-            ? 'No active imported products were available to synchronize.'
-            : "Queued {$synced} imported product(s) for price and data synchronization.");
+        $message = "Queued {$queuedProducts} imported product(s) for price and data synchronization.";
+        if ($alreadyRunning > 0) {
+            $message .= " {$alreadyRunning} supplier(s) already had a sync in progress and were skipped.";
+        }
+
+        return back()->with('status', $message);
     }
 
     private function publishFlags(Request $request, Product $product): array

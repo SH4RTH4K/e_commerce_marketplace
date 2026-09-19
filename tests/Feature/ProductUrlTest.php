@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\User;
 use App\Support\ProductSlug;
 use DOMDocument;
 use DOMXPath;
@@ -60,7 +61,7 @@ class ProductUrlTest extends TestCase
 
         $this->assertSame(self::SHORT_SLUG, $first->slug);
         $this->assertNotSame($first->slug, $second->slug);
-        $this->assertStringStartsWith(self::SHORT_SLUG . '-', $second->slug);
+        $this->assertStringStartsWith(self::SHORT_SLUG.'-', $second->slug);
 
         $first->update(['slug' => 'jbl-flip-seven-speaker']);
         $third = $this->product(['slug' => self::LONG_SLUG]);
@@ -71,7 +72,7 @@ class ProductUrlTest extends TestCase
             'product_id' => $first->id,
             'slug' => self::SHORT_SLUG,
         ]);
-        $this->get('/product/' . self::SHORT_SLUG)
+        $this->get('/product/'.self::SHORT_SLUG)
             ->assertStatus(301)
             ->assertRedirect(route('product.show', $first));
     }
@@ -97,7 +98,7 @@ class ProductUrlTest extends TestCase
         $product->update(['slug' => self::LONG_SLUG]);
 
         foreach (['original-speaker', 'updated-speaker'] as $oldSlug) {
-            $this->get('/product/' . $oldSlug)
+            $this->get('/product/'.$oldSlug)
                 ->assertStatus(301)
                 ->assertRedirect(route('product.show', $product));
         }
@@ -112,13 +113,13 @@ class ProductUrlTest extends TestCase
         $product->update(['slug' => 'short-speaker']);
         $query = 'utm_source=facebook&tag=red&tag=blue&search=portable%20speaker&fbclid=abc%2Fdef';
 
-        $this->get('/product/original-speaker?' . $query)
+        $this->get('/product/original-speaker?'.$query)
             ->assertStatus(301)
-            ->assertRedirect(route('product.show', $product) . '?' . $query);
+            ->assertRedirect(route('product.show', $product).'?'.$query);
 
-        $this->get('/product/' . $product->id . '?' . $query)
+        $this->get('/product/'.$product->id.'?'.$query)
             ->assertStatus(301)
-            ->assertRedirect(route('product.show', $product) . '?' . $query);
+            ->assertRedirect(route('product.show', $product).'?'.$query);
     }
 
     public function test_unpublished_and_missing_products_never_redirect_or_render(): void
@@ -127,7 +128,7 @@ class ProductUrlTest extends TestCase
         $product->update(['slug' => 'updated-draft-speaker']);
 
         foreach (['draft-speaker', $product->slug, (string) $product->id, 'missing-speaker'] as $slug) {
-            $this->get('/product/' . $slug)->assertNotFound();
+            $this->get('/product/'.$slug)->assertNotFound();
         }
     }
 
@@ -141,9 +142,16 @@ class ProductUrlTest extends TestCase
 
         $this->assertSame($product->id, $bound?->id);
         $this->assertSame($product->id, $adminBound?->id);
-        $this->post('/product/original-speaker/reviews')->assertRedirect(route('login', [
-            'redirect' => route('product.show', $product) . '#reviews',
-        ]));
+        $this->actingAs(User::factory()->create())
+            ->post('/product/original-speaker/reviews', [
+                'rating' => 5,
+                'body' => 'The historical product URL still resolves correctly.',
+            ])
+            ->assertRedirect(route('product.show', $product).'#reviews');
+        $this->assertDatabaseHas('product_reviews', [
+            'product_id' => $product->id,
+            'body' => 'The historical product URL still resolves correctly.',
+        ]);
     }
 
     public function test_existing_catalog_is_shortened_automatically_with_collision_safe_aliases(): void
@@ -175,16 +183,16 @@ class ProductUrlTest extends TestCase
 
         $this->assertSame(self::SHORT_SLUG, $existingShort->fresh()->slug);
         $this->assertNotSame(self::SHORT_SLUG, $published->slug);
-        $this->assertStringStartsWith(self::SHORT_SLUG . '-', $published->slug);
+        $this->assertStringStartsWith(self::SHORT_SLUG.'-', $published->slug);
         $this->assertLessThanOrEqual(55, strlen($published->slug));
         $this->assertSame('sony-portable-wireless-bluetooth-speaker-with-bass', $draft->slug);
         $this->assertSame('JBL Flip 7 With Full Specifications', $published->name);
         $this->assertDatabaseHas('product_slug_aliases', ['product_id' => $publishedId, 'slug' => self::LONG_SLUG]);
         $this->assertDatabaseHas('product_slug_aliases', ['product_id' => $draftId, 'slug' => $draftOldSlug]);
-        $this->get('/product/' . self::LONG_SLUG)
+        $this->get('/product/'.self::LONG_SLUG)
             ->assertStatus(301)
             ->assertRedirect(route('product.show', $published));
-        $this->get('/product/' . $draftOldSlug)->assertNotFound();
+        $this->get('/product/'.$draftOldSlug)->assertNotFound();
 
         $migration->up();
 
@@ -198,7 +206,7 @@ class ProductUrlTest extends TestCase
         $product = $this->product(['slug' => self::LONG_SLUG]);
         $canonical = route('product.show', $product);
 
-        $this->get($canonical . '?utm_source=whatsapp&reviews_page=2')
+        $this->get($canonical.'?utm_source=whatsapp&reviews_page=2')
             ->assertOk()
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Storefront/Product')
@@ -216,7 +224,7 @@ class ProductUrlTest extends TestCase
         $imageUrl = 'https://images.example.test/jbl-flip-7.jpg';
         ProductImage::create(['product_id' => $product->id, 'path' => $imageUrl, 'is_primary' => true]);
         $canonical = route('product.show', $product);
-        $response = $this->get($canonical . '?utm_source=facebook')->assertOk();
+        $response = $this->get($canonical.'?utm_source=facebook')->assertOk();
         $document = new DOMDocument;
         @$document->loadHTML($response->getContent());
         $xpath = new DOMXPath($document);
@@ -227,7 +235,7 @@ class ProductUrlTest extends TestCase
         $this->assertSame($product->meta_title, $xpath->evaluate('string(//title)'));
         $this->assertSame($product->meta_title, $xpath->evaluate('string(//meta[@property="og:title"]/@content)'));
         $this->assertSame($product->meta_description, $xpath->evaluate('string(//meta[@name="description"]/@content)'));
-        $this->assertSame($imageUrl, $xpath->evaluate('string(//meta[@property="og:image"]/@content)'));
+        $this->assertSame(image_url($imageUrl, $product->slug), $xpath->evaluate('string(//meta[@property="og:image"]/@content)'));
         $this->assertSame('product', $xpath->evaluate('string(//meta[@property="og:type"]/@content)'));
     }
 
@@ -236,19 +244,19 @@ class ProductUrlTest extends TestCase
         $product = $this->product(['slug' => 'original-speaker']);
         $oldUrl = route('product.show', $product);
 
-        $this->get('/sitemap.xml')->assertOk()->assertSee('<loc>' . $oldUrl . '</loc>', false);
+        $this->get('/sitemap.xml')->assertOk()->assertSee('<loc>'.$oldUrl.'</loc>', false);
 
         $product->update(['slug' => self::LONG_SLUG]);
         $newUrl = route('product.show', $product);
 
         $this->get('/sitemap.xml')
             ->assertOk()
-            ->assertSee('<loc>' . $newUrl . '</loc>', false)
-            ->assertDontSee('<loc>' . $oldUrl . '</loc>', false);
+            ->assertSee('<loc>'.$newUrl.'</loc>', false)
+            ->assertDontSee('<loc>'.$oldUrl.'</loc>', false);
 
         $product->update(['is_published' => false]);
 
-        $this->get('/sitemap.xml')->assertOk()->assertDontSee('<loc>' . $newUrl . '</loc>', false);
+        $this->get('/sitemap.xml')->assertOk()->assertDontSee('<loc>'.$newUrl.'</loc>', false);
     }
 
     private function category(): Category

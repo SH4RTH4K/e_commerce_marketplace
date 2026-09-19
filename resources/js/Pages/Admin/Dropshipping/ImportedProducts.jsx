@@ -61,6 +61,7 @@ export default function ImportedProducts({ products = [], categories = [], searc
   const [pageSize, setPageSize] = useState(String(pagination.per_page || 100));
   const [prices, setPrices] = useState({});
   const [batchType, setBatchType] = useState('');
+  const [batchSyncing, setBatchSyncing] = useState(false);
   const [flags, setFlags] = useState({ is_featured: false, is_new_arrival: false, is_best_seller: false, is_flash_sale: false });
   const currentPage = pagination.current_page || 1;
   const lastPage = pagination.last_page || 1;
@@ -77,13 +78,20 @@ export default function ImportedProducts({ products = [], categories = [], searc
     router.post('/admin/dropshipping/imported/bulk-sync', { ids: selected }, { preserveScroll: true, onSuccess: () => setSelected([]) });
   };
 
-  const syncFiltered = () => router.post('/admin/dropshipping/imported/bulk-sync-filtered', {
-    q: search.trim(),
-    category,
-    status,
-    stock_operator: stockOperator,
-    stock_value: stockValue,
-  }, { preserveScroll: true, onSuccess: () => setSelected([]) });
+  const syncFiltered = () => {
+    setBatchSyncing(true);
+    router.post('/admin/dropshipping/imported/bulk-sync-filtered', {
+      q: search.trim(),
+      category,
+      status,
+      stock_operator: stockOperator,
+      stock_value: stockValue,
+    }, {
+      preserveScroll: true,
+      onSuccess: () => setSelected([]),
+      onFinish: () => setBatchSyncing(false),
+    });
+  };
 
   const syncOne = id => router.post('/admin/dropshipping/imported/bulk-sync', { ids: [id] }, { preserveScroll: true });
   const setFlag = key => setFlags(current => ({ ...current, [key]: !current[key] }));
@@ -165,6 +173,14 @@ export default function ImportedProducts({ products = [], categories = [], searc
       <button type="button" disabled={selected.length === 0} onClick={publishSelected} className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400">Publish selected ({selected.length})</button>
       <button type="button" disabled={selected.length === 0} onClick={unpublishSelected} className="rounded-lg bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400">Unpublish selected</button>
     </div>
+    <section className="rounded-2xl border border-orange-100 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div><h2 className="font-bold text-gray-900">Batch synchronize imported products</h2><p className="mt-1 text-sm text-gray-500">Queue price, stock, description, and supplier image updates from the latest catalog data for all {totalProducts} products matching the current filters.</p></div>
+        <button type="button" disabled={totalProducts === 0 || batchSyncing} onClick={syncFiltered} className="shrink-0 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-orange-600 disabled:bg-gray-200 disabled:text-gray-400">
+          {batchSyncing ? 'Queueing sync...' : `Batch sync prices & data (${totalProducts})`}
+        </button>
+      </div>
+    </section>
     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><strong>Review process:</strong> open the image preview, confirm price, stock, and mapped variants, then publish or leave the product as a draft. Use Unpublish when the image or listing no longer meets the storefront standard.</div>
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -182,7 +198,7 @@ export default function ImportedProducts({ products = [], categories = [], searc
       <div className="flex flex-col gap-4 border-b border-gray-100 px-5 py-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div><h2 className="font-bold text-gray-900">Local imported products</h2><p className="mt-1 text-xs text-gray-500">Supplier variants are automatically created and linked after import or catalog resync.</p></div>
-          <div className="flex flex-wrap items-center gap-3"><span className="text-xs text-gray-400">Showing {products.length} of {pagination.total || products.length}</span><button type="button" disabled={selected.length === 0} onClick={publishSelected} className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400">Publish selected</button><button type="button" disabled={totalProducts === 0} onClick={syncFiltered} className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400">Sync filtered ({totalProducts})</button><button type="button" disabled={selected.length === 0} onClick={syncSelected} className="rounded-lg bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-200 disabled:bg-gray-200 disabled:text-gray-400">Sync selected</button></div>
+          <div className="flex flex-wrap items-center gap-3"><span className="text-xs text-gray-400">Showing {products.length} of {pagination.total || products.length}</span><button type="button" disabled={selected.length === 0} onClick={publishSelected} className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400">Publish selected</button><button type="button" disabled={selected.length === 0} onClick={syncSelected} className="rounded-lg bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-200 disabled:bg-gray-200 disabled:text-gray-400">Sync selected</button></div>
         </div>
         <div className="flex flex-wrap gap-4 border-t border-gray-100 pt-3 text-xs text-gray-700">
           <label className="flex items-center gap-2"><input type="checkbox" checked={flags.is_featured} onChange={() => setFlag('is_featured')} /> Featured / Trending</label>
