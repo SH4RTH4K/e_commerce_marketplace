@@ -57,6 +57,39 @@ function contentPositionClasses(position) {
   return `${horizontalClass} ${verticalClass}`;
 }
 
+function HeroDots({ banners, activeIndex, onSelect, controlsId }) {
+  if (!banners || banners.length < 2) return null;
+
+  return (
+    <div
+      className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-0.5 rounded-full bg-black/30 px-2 py-1 shadow-sm backdrop-blur-[2px]"
+      role="group"
+      aria-label={`Hero slider: ${banners.length} slides`}
+    >
+      {banners.map((banner, index) => {
+        const isActive = activeIndex === index;
+
+        return (
+          <button
+            key={banner.id || index}
+            type="button"
+            onClick={() => onSelect(index)}
+            aria-label={`Show slide ${index + 1} of ${banners.length}${banner.title ? `: ${banner.title}` : ''}`}
+            aria-controls={controlsId}
+            aria-current={isActive ? 'true' : undefined}
+            className="grid h-7 w-7 place-items-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <span
+              aria-hidden="true"
+              className={`block h-2.5 w-2.5 rounded-full border border-white shadow transition-all ${isActive ? 'scale-125 bg-[#717fe0]' : 'bg-white/80 hover:bg-white'}`}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function HomePage({ 
   heroBanners, 
   middleBanners,
@@ -334,7 +367,7 @@ export default function HomePage({
             '--template-1-hero-text-background-opacity': heroTextBackgroundOpacity,
           }}
         >
-          <div className="template-1-hero-track">
+          <div id="template-1-hero-slider" className="template-1-hero-track">
             {displayHeroBanners.map((banner, index) => (
               <div
                 key={banner.id || index}
@@ -366,6 +399,12 @@ export default function HomePage({
               <button type="button" onClick={() => moveHeroSlide(1)} className="template-1-hero-arrow template-1-hero-next" aria-label="Next banner">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 5 7 7-7 7" /></svg>
               </button>
+              <HeroDots
+                banners={displayHeroBanners}
+                activeIndex={activeHeroIndex}
+                onSelect={scrollToHeroSlide}
+                controlsId="template-1-hero-slider"
+              />
             </>
           )}
         </section>}
@@ -523,20 +562,12 @@ export default function HomePage({
                     <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
                   </button>
                   
-                  {/* Dots */}
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
-                    {displayHeroBanners.map((banner, index) => (
-                      <button
-                        key={banner.id || index}
-                        type="button"
-                        onClick={() => scrollToHeroSlide(index)}
-                        aria-label={`Show banner ${index + 1}`}
-                        aria-controls="hero-slider"
-                        aria-current={activeHeroIndex === index ? 'true' : undefined}
-                        className={`h-3 w-3 rounded-full border border-white/30 transition-all focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-transparent ${activeHeroIndex === index ? 'bg-[#f15a24] scale-110' : 'bg-white/70 hover:bg-white'}`}
-                      />
-                    ))}
-                  </div>
+                  <HeroDots
+                    banners={displayHeroBanners}
+                    activeIndex={activeHeroIndex}
+                    onSelect={scrollToHeroSlide}
+                    controlsId="hero-slider"
+                  />
                 </>
               )}
             </div>

@@ -74,13 +74,29 @@ class MediaController extends Controller
             });
         }
 
+        $images = $query->paginate($perPage)->withQueryString();
+        $paths = $images->getCollection()->pluck('path')->filter()->unique()->values();
+        $bannerUsage = Banner::query()
+            ->whereIn('image', $paths)
+            ->orderBy('placement')
+            ->orderBy('position')
+            ->orderBy('id')
+            ->get(['id', 'image', 'placement', 'position', 'is_active'])
+            ->groupBy('image');
+
         return Inertia::render('Admin/Media/Index', [
-            'images' => $query->paginate($perPage)->withQueryString()->through(fn($img) => [
+            'images' => $images->through(fn($img) => [
                 'id'         => $img->id,
                 'path'       => $img->path,
                 'alt'        => $img->alt,
                 'is_primary' => $img->is_primary,
                 'created_at' => $img->created_at?->format('d M Y'),
+                'banner_usage' => $bannerUsage->get($img->path, collect())->map(fn (Banner $banner) => [
+                    'id'        => $banner->id,
+                    'placement' => $banner->placement,
+                    'position'  => (int) $banner->position,
+                    'is_active' => (bool) $banner->is_active,
+                ])->values(),
                 'product'    => $img->product ? [
                     'id'           => $img->product->id,
                     'name'         => $img->product->name,
@@ -160,10 +176,24 @@ class MediaController extends Controller
         $textPosition = $data['text_position'] ?? 'center-left';
         $imagePosition = $data['image_position'] ?? 'center-center';
         $imageOrientation = $data['image_orientation'] ?? 'landscape';
-        DB::transaction(function () use ($images, $data, $style, $textPosition, $imagePosition, $imageOrientation) {
+        $createdCount = 0;
+        $skippedCount = 0;
+
+        DB::transaction(function () use ($images, $data, $style, $textPosition, $imagePosition, $imageOrientation, &$createdCount, &$skippedCount) {
             $position = (int) Banner::where('placement', $data['placement'])->max('position') + 1;
+            $existingPaths = Banner::query()
+                ->where('placement', $data['placement'])
+                ->whereIn('image', $images->pluck('path'))
+                ->pluck('image')
+                ->flip()
+                ->all();
 
             foreach ($images as $image) {
+                if (isset($existingPaths[$image->path])) {
+                    $skippedCount++;
+                    continue;
+                }
+
                 $title = Str::limit(trim((string) ($image->alt ?: $image->product?->name ?: 'Banner')), 180, '');
 
                 Banner::create([
@@ -178,12 +208,26 @@ class MediaController extends Controller
                     'position'    => $position++,
                     'is_active'   => true,
                 ]);
+
+                $existingPaths[$image->path] = true;
+                $createdCount++;
             }
         });
 
         $type = $data['placement'] === 'hero' ? 'hero slider' : 'middle banner';
 
+        if ($createdCount === 0) {
+            return back()->withErrors([
+                'image_ids' => 'The selected ' . Str::plural('image', $skippedCount) . ' already ' . ($skippedCount === 1 ? 'exists' : 'exist') . ' in the ' . $type . '.',
+            ]);
+        }
+
+        $status = $createdCount . ' ' . Str::plural($type, $createdCount) . ' created from Media Manager.';
+        if ($skippedCount > 0) {
+            $status .= ' ' . $skippedCount . ' already-added ' . Str::plural('image', $skippedCount) . ' skipped.';
+        }
+
         return redirect()->route('admin.banners.index')
-            ->with('status', $images->count() . ' ' . Str::plural($type, $images->count()) . ' created from Media Manager.');
+            ->with('status', $status);
     }
 }

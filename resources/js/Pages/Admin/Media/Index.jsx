@@ -13,6 +13,15 @@ const positionOptions = [
 function ImageCard({ image, selectedOrder, onSelect, onDelete, onMoveEarlier, onMoveLater }) {
   const src = imageUrl(image.path, image.alt || image.product?.name);
   const selected = selectedOrder > 0;
+  const bannerUsage = image.banner_usage || [];
+  const heroUsage = bannerUsage.filter(usage => usage.placement === 'hero');
+  const middleUsage = bannerUsage.filter(usage => usage.placement === 'middle');
+
+  const usageBadge = (usage, label, activeClass) => (
+    <span className={`${usage.is_active ? activeClass : 'bg-gray-700'} max-w-[165px] truncate rounded-md px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm`}>
+      {label} #{usage.position}{!usage.is_active ? ' · HIDDEN' : ''}
+    </span>
+  );
 
   return (
     <div
@@ -36,12 +45,24 @@ function ImageCard({ image, selectedOrder, onSelect, onDelete, onMoveEarlier, on
         </div>
       </div>
 
-      {/* Primary badge */}
-      {image.is_primary && (
-        <div className="absolute top-2 left-2">
-          <span className="bg-orange-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">PRIMARY</span>
-        </div>
-      )}
+      {/* Image and storefront usage badges */}
+      <div className="absolute top-2 left-2 flex max-w-[calc(100%-3rem)] flex-col items-start gap-1">
+        {image.is_primary && (
+          <span className="rounded-md bg-orange-500 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm">PRIMARY</span>
+        )}
+        {heroUsage.slice(0, 1).map(usage => (
+          <span key={usage.id}>{usageBadge(usage, 'IN HERO SLIDER', 'bg-indigo-600')}</span>
+        ))}
+        {heroUsage.length > 1 && (
+          <span className="rounded-md bg-indigo-800 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm">+{heroUsage.length - 1} HERO DUPLICATE</span>
+        )}
+        {middleUsage.slice(0, 1).map(usage => (
+          <span key={usage.id}>{usageBadge(usage, 'IN MIDDLE BANNER', 'bg-emerald-600')}</span>
+        ))}
+        {middleUsage.length > 1 && (
+          <span className="rounded-md bg-emerald-800 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm">+{middleUsage.length - 1} MIDDLE DUPLICATE</span>
+        )}
+      </div>
 
       {/* Checkbox */}
       <div className={`absolute top-2 right-2 transition-opacity ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
@@ -212,15 +233,32 @@ export default function MediaIndex({
   const createBanners = (placement) => {
     if (selected.length === 0) return;
 
+    const selectedImages = selected
+      .map(id => (images.data || []).find(image => image.id === id))
+      .filter(Boolean);
+    const eligibleImages = selectedImages.filter(image =>
+      !(image.banner_usage || []).some(usage => usage.placement === placement)
+    );
+    const skippedCount = selectedImages.length - eligibleImages.length;
     const isHero = placement === 'hero';
+    const placementLabel = isHero ? 'Hero Slider' : 'Middle Banner';
+
+    if (eligibleImages.length === 0) {
+      alert(`All selected images are already in the ${placementLabel}.`);
+      return;
+    }
+
     const label = isHero
-      ? (selected.length === 1 ? 'a Hero Slider slide' : `${selected.length} Hero Slider slides`)
-      : (selected.length === 1 ? 'a Middle Banner' : `${selected.length} Middle Banners`);
+      ? (eligibleImages.length === 1 ? 'a Hero Slider slide' : `${eligibleImages.length} Hero Slider slides`)
+      : (eligibleImages.length === 1 ? 'a Middle Banner' : `${eligibleImages.length} Middle Banners`);
+    const skippedMessage = skippedCount > 0
+      ? ` ${skippedCount} already-added image${skippedCount === 1 ? '' : 's'} will be skipped.`
+      : '';
 
     window.showConfirm(
-      `Create ${label} from the selected media? They will be active and ordered by your selection. You can edit their text, style, and links afterward.`,
+      `Create ${label} from the selected media? They will be active and ordered by your selection.${skippedMessage} You can edit their text, style, and links afterward.`,
       () => router.post('/admin/media/banners', {
-        image_ids: selected,
+        image_ids: eligibleImages.map(image => image.id),
         placement,
         style: 'brand',
         text_position: textPosition,
@@ -317,6 +355,12 @@ export default function MediaIndex({
           </form>
 
           <div className="flex flex-wrap items-center gap-3">
+
+            <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold">
+              <span className="rounded-md bg-indigo-600 px-2 py-1 text-white">IN HERO SLIDER</span>
+              <span className="rounded-md bg-emerald-600 px-2 py-1 text-white">IN MIDDLE BANNER</span>
+              <span className="text-gray-400">Badges identify media already used on the homepage.</span>
+            </div>
 
             {selected.length > 0 ? (
               <div className="flex flex-wrap items-center gap-2">
