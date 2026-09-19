@@ -151,13 +151,13 @@ export default function HomePage({
         { title: 'Men', subtitle: 'Spring 2018', image: '/templates/template-1/images/banner-02.jpg', href: '/shop' },
         { title: 'Accessories', subtitle: 'New Trend', image: '/templates/template-1/images/banner-03.jpg', href: '/shop' },
       ];
-  // Resolve dynamic grid class for template-1 banners
   const catPerRow = parseInt(app?.settings?.template_1_category_per_row || '3');
-  let bannerGridCols = 'lg:grid-cols-3';
-  if (catPerRow === 2) bannerGridCols = 'lg:grid-cols-2';
-  if (catPerRow === 3) bannerGridCols = 'lg:grid-cols-3';
-  if (catPerRow === 4) bannerGridCols = 'lg:grid-cols-4';
-  if (catPerRow === 5) bannerGridCols = 'lg:grid-cols-5';
+  const categorySlideWidth = {
+    2: 'calc(50% - 15px)',
+    3: 'calc(33.333333% - 20px)',
+    4: 'calc(25% - 22.5px)',
+    5: 'calc(20% - 24px)',
+  }[catPerRow] || 'calc(33.333333% - 20px)';
 
   const productGridClasses = {
     2: 'grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2',
@@ -286,6 +286,24 @@ export default function HomePage({
     scrollToHeroSlide(visibleIndex + direction);
   };
 
+  const moveCategorySlide = (direction) => {
+    const slider = catSliderRef.current;
+    if (!slider) return;
+
+    const atStart = slider.scrollLeft <= 8;
+    const atEnd = slider.scrollLeft + slider.clientWidth >= slider.scrollWidth - 8;
+    if (direction < 0 && atStart) {
+      slider.scrollTo({ left: slider.scrollWidth, behavior: 'smooth' });
+      return;
+    }
+    if (direction > 0 && atEnd) {
+      slider.scrollTo({ left: 0, behavior: 'smooth' });
+      return;
+    }
+
+    slider.scrollBy({ left: direction * Math.max(240, slider.clientWidth * 0.85), behavior: 'smooth' });
+  };
+
   useEffect(() => {
     setActiveHeroIndex(0);
     heroSliderRef.current?.scrollTo({ left: 0, behavior: 'auto' });
@@ -410,7 +428,7 @@ export default function HomePage({
         </section>}
 
         <section
-          className={`template-1-container storefront-section py-12 md:py-20 grid gap-[30px] grid-cols-1 sm:grid-cols-2 ${bannerGridCols}`}
+          className="template-1-container storefront-section py-12 md:py-20"
           style={{
             '--template-1-category-overlay-background': hexToRgba(categoryOverlayColor, categoryOverlayOpacity),
             '--template-1-category-hover-overlay-background': hexToRgba(categoryOverlayColor, categoryHoverOverlayOpacity),
@@ -422,24 +440,56 @@ export default function HomePage({
             '--template-1-category-title-transform': categoryTitleTransform,
             '--template-1-category-text-align': categoryTextAlign,
             '--template-1-category-text-shadow': app?.settings?.template_1_category_text_shadow === false ? 'none' : '0 2px 8px rgb(0 0 0 / .32)',
+            '--template-1-category-slide-width': categorySlideWidth,
           }}
         >
-          {templateOneBanners.map(banner => (
-            <Link key={banner.title} href={banner.href} className="template-1-banner-card">
-              {banner.image ? (
-                <img src={banner.image} alt={banner.title} />
-              ) : (
-                <div className="w-full aspect-[370/248] bg-white"></div>
-              )}
-              <span className="template-1-banner-overlay">
-                <span>
-                  <strong>{banner.title}</strong>
-                  <em>{banner.subtitle}</em>
-                </span>
-                <b>Shop Now</b>
-              </span>
-            </Link>
-          ))}
+          <div className="template-1-category-carousel">
+            <div
+              ref={catSliderRef}
+              id="template-1-category-slider"
+              className="template-1-category-track no-scrollbar"
+            >
+              {templateOneBanners.map(banner => (
+                <Link key={banner.title} href={banner.href} className="template-1-banner-card template-1-category-slide">
+                  {banner.image ? (
+                    <img src={banner.image} alt={banner.title} />
+                  ) : (
+                    <div className="w-full aspect-[370/248] bg-white"></div>
+                  )}
+                  <span className="template-1-banner-overlay">
+                    <span>
+                      <strong>{banner.title}</strong>
+                      <em>{banner.subtitle}</em>
+                    </span>
+                    <b>Shop Now</b>
+                  </span>
+                </Link>
+              ))}
+            </div>
+
+            {templateOneBanners.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => moveCategorySlide(-1)}
+                  className="template-1-category-arrow template-1-category-prev"
+                  aria-label="Previous categories"
+                  aria-controls="template-1-category-slider"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 19-7-7 7-7" /></svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveCategorySlide(1)}
+                  className="template-1-category-arrow template-1-category-next"
+                  aria-label="Next categories"
+                  aria-controls="template-1-category-slider"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+                </button>
+              </>
+            )}
+          </div>
         </section>
 
         {/* Middle Banners — displayed between the category promos and product overview. */}
@@ -666,14 +716,14 @@ export default function HomePage({
             
             {/* Hover Arrows for Categories */}
             <button 
-              onClick={() => catSliderRef.current?.scrollBy({ left: -300, behavior: 'smooth' })}
+              onClick={() => moveCategorySlide(-1)}
               className="hidden md:flex absolute -left-4 top-14 -translate-y-1/2 w-10 h-10 rounded-full bg-white shadow-md border border-gray-100 text-[#f15a24] items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-gray-50"
               aria-label="Previous"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
             </button>
             <button 
-              onClick={() => catSliderRef.current?.scrollBy({ left: 300, behavior: 'smooth' })}
+              onClick={() => moveCategorySlide(1)}
               className="hidden md:flex absolute -right-4 top-14 -translate-y-1/2 w-10 h-10 rounded-full bg-white shadow-md border border-gray-100 text-[#f15a24] items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-gray-50"
               aria-label="Next"
             >
