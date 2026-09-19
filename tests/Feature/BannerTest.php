@@ -98,4 +98,31 @@ class BannerTest extends TestCase
         $response->assertSessionHasErrors('image_ids');
         $this->assertDatabaseCount('banners', 1);
     }
+
+    #[Test]
+    public function media_manager_can_filter_images_by_banner_placement(): void
+    {
+        $heroImage = ProductImage::create(['path' => 'uploads/media/hero.jpg', 'alt' => 'Hero']);
+        $middleImage = ProductImage::create(['path' => 'uploads/media/middle.jpg', 'alt' => 'Middle']);
+        ProductImage::create(['path' => 'uploads/media/unused.jpg', 'alt' => 'Unused']);
+
+        Banner::create(['image' => $heroImage->path, 'placement' => 'hero']);
+        Banner::create(['image' => $middleImage->path, 'placement' => 'middle']);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->get('/admin/media?banner_usage=hero')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('bannerUsageFilter', 'hero')
+                ->has('images.data', 1)
+                ->where('images.data.0.id', $heroImage->id));
+
+        $this->actingAs($admin)->get('/admin/media?banner_usage=middle')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('bannerUsageFilter', 'middle')
+                ->has('images.data', 1)
+                ->where('images.data.0.id', $middleImage->id));
+    }
 }

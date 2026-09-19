@@ -130,12 +130,13 @@ function ImageCard({ image, selectedOrder, onSelect, onDelete, onMoveEarlier, on
 /* ─── Main page ──────────────────────────────────────────────────── */
 export default function MediaIndex({
   images, q, filter = 'all', categories = [], category = '', productStatus = 'all',
-  stockOperator = 'any', stockValue = '', perPage = 24, total,
+  bannerUsageFilter = 'all', stockOperator = 'any', stockValue = '', perPage = 24, total,
 }) {
   const [search, setSearch] = useState(q || '');
   const [activeFilter, setActiveFilter] = useState(filter);
   const [categoryFilter, setCategoryFilter] = useState(category || '');
   const [activeProductStatus, setActiveProductStatus] = useState(productStatus);
+  const [activeBannerUsage, setActiveBannerUsage] = useState(bannerUsageFilter);
   const [activeStockOperator, setActiveStockOperator] = useState(stockOperator);
   const [activeStockValue, setActiveStockValue] = useState(stockValue ?? '');
   const [rowsPerPage, setRowsPerPage] = useState(String(perPage));
@@ -149,6 +150,7 @@ export default function MediaIndex({
     filter: activeFilter,
     category: categoryFilter,
     status: activeProductStatus,
+    banner_usage: activeBannerUsage,
     stock_operator: activeStockOperator,
     stock_value: activeStockValue,
     per_page: rowsPerPage,
@@ -165,6 +167,7 @@ export default function MediaIndex({
     setActiveFilter('all');
     setCategoryFilter('');
     setActiveProductStatus('all');
+    setActiveBannerUsage('all');
     setActiveStockOperator('any');
     setActiveStockValue('');
     setRowsPerPage('24');
@@ -321,6 +324,14 @@ export default function MediaIndex({
                 <select value={activeFilter} onChange={e => setActiveFilter(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
                   <option value="all">All images</option>
                   <option value="primary">Primary only</option>
+                </select>
+              </label>
+              <label className="min-w-[175px]">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Banner usage</span>
+                <select value={activeBannerUsage} onChange={e => setActiveBannerUsage(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
+                  <option value="all">All banner usage</option>
+                  <option value="hero">In Hero Slider</option>
+                  <option value="middle">In Middle Banner</option>
                 </select>
               </label>
               <label className="min-w-[160px]">

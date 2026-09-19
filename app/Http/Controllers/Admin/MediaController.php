@@ -21,6 +21,7 @@ class MediaController extends Controller
         $filter = $request->input('filter', 'all');
         $category = $request->input('category');
         $productStatus = $request->input('status', $request->input('product_status', 'all'));
+        $bannerUsageFilter = $request->input('banner_usage', 'all');
         $stockOperator = $request->input('stock_operator', 'any');
         $stockValue = $request->input('stock_value');
         $perPage = (int) $request->input('per_page', 24);
@@ -32,6 +33,9 @@ class MediaController extends Controller
             'inactive', 'unpublished' => 'unpublished',
             default => 'all',
         };
+        $bannerUsageFilter = in_array($bannerUsageFilter, ['all', 'hero', 'middle'], true)
+            ? $bannerUsageFilter
+            : 'all';
         $stockOperator = in_array($stockOperator, ['any', 'in_stock', 'out_of_stock', 'gt', 'gte', 'eq', 'lte', 'lt'], true)
             ? $stockOperator
             : 'any';
@@ -50,6 +54,13 @@ class MediaController extends Controller
 
         if ($category) {
             $query->whereHas('product', fn ($productQuery) => $productQuery->where('category_id', $category));
+        }
+
+        if ($bannerUsageFilter !== 'all') {
+            $query->whereIn('path', Banner::query()
+                ->select('image')
+                ->where('placement', $bannerUsageFilter)
+                ->whereNotNull('image'));
         }
 
         if ($stockOperator === 'in_stock') {
@@ -76,7 +87,7 @@ class MediaController extends Controller
 
         $images = $query->paginate($perPage)->withQueryString();
         $paths = $images->getCollection()->pluck('path')->filter()->unique()->values();
-        $bannerUsage = Banner::query()
+        $bannerUsageByPath = Banner::query()
             ->whereIn('image', $paths)
             ->orderBy('placement')
             ->orderBy('position')
@@ -91,7 +102,7 @@ class MediaController extends Controller
                 'alt'        => $img->alt,
                 'is_primary' => $img->is_primary,
                 'created_at' => $img->created_at?->format('d M Y'),
-                'banner_usage' => $bannerUsage->get($img->path, collect())->map(fn (Banner $banner) => [
+                'banner_usage' => $bannerUsageByPath->get($img->path, collect())->map(fn (Banner $banner) => [
                     'id'        => $banner->id,
                     'placement' => $banner->placement,
                     'position'  => (int) $banner->position,
@@ -109,6 +120,7 @@ class MediaController extends Controller
             'filter'          => $filter,
             'category'        => $category,
             'productStatus'   => $productStatus,
+            'bannerUsageFilter' => $bannerUsageFilter,
             'stockOperator'   => $stockOperator,
             'stockValue'      => $stockValue,
             'perPage'         => $perPage,
