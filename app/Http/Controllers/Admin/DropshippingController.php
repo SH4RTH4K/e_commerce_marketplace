@@ -26,6 +26,7 @@ use App\Services\Dropshipping\PricingEngine;
 use App\Services\Dropshipping\Support\SyncRunState;
 use App\Services\Dropshipping\SyncRunService;
 use App\Services\Dropshipping\SupplierRegistry;
+use App\Services\Dropshipping\SupplierVariantAutoMapper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -391,25 +392,74 @@ class DropshippingController extends Controller
 
     public function variationMapping(Request $request)
     {
-        $variants = DropshipSupplierVariant::query()
-            ->with(['supplierProduct.supplier:id,name,key', 'supplierProduct.productLink.product:id,name'])
+        $search = trim((string) $request->input('q', ''));
+        $supplierId = $request->integer('supplier_id') ?: null;
+        $status = in_array($request->input('status'), ['mapped', 'unmapped', 'ready', 'awaiting_import'], true)
+            ? $request->input('status')
+            : 'all';
+        $perPage = in_array($request->integer('per_page'), [25, 50, 100], true)
+            ? $request->integer('per_page')
+            : 50;
+
+        $query = DropshipSupplierVariant::query()
+            ->with([
+                'supplierProduct.supplier:id,name,key',
+                'supplierProduct.productLink.product:id,name',
+                'variantLink.productVariant:id,product_id,type,value',
+            ]);
+
+        if ($search !== '') {
+            $query->where(function ($variantQuery) use ($search): void {
+                $variantQuery->where('supplier_variant_id', 'like', "%{$search}%")
+                    ->orWhere('sku', 'like', "%{$search}%")
+                    ->orWhere('attributes', 'like', "%{$search}%")
+                    ->orWhereHas('supplierProduct', fn ($productQuery) => $productQuery->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($supplierId) {
+            $query->whereHas('supplierProduct', fn ($productQuery) => $productQuery->where('supplier_id', $supplierId));
+        }
+
+        if ($status === 'mapped') {
+            $query->whereHas('variantLink', fn ($linkQuery) => $linkQuery->whereNotNull('product_variant_id'));
+        } elseif ($status === 'unmapped') {
+            $query->whereDoesntHave('variantLink', fn ($linkQuery) => $linkQuery->whereNotNull('product_variant_id'));
+        } elseif ($status === 'ready') {
+            $query->whereHas('supplierProduct.productLink', fn ($linkQuery) => $linkQuery->whereNotNull('product_id'))
+                ->whereDoesntHave('variantLink', fn ($linkQuery) => $linkQuery->whereNotNull('product_variant_id'));
+        } elseif ($status === 'awaiting_import') {
+            $query->whereDoesntHave('supplierProduct.productLink', fn ($linkQuery) => $linkQuery->whereNotNull('product_id'))
+                ->whereDoesntHave('variantLink', fn ($linkQuery) => $linkQuery->whereNotNull('product_variant_id'));
+        }
+
+        $variants = $query
             ->latest('id')
-            ->paginate(50)
+            ->paginate($perPage)
             ->withQueryString();
 
         $variantRows = $variants->getCollection()
-            ->map(fn (DropshipSupplierVariant $variant): array => [
-                'id' => $variant->id,
-                'supplier' => $variant->supplierProduct?->supplier?->name,
-                'product' => $variant->supplierProduct?->name,
-                'variant_id' => $variant->supplier_variant_id,
-                'sku' => $variant->sku,
-                'attributes' => $variant->attributes ?? [],
-                'stock_qty' => $variant->stock_qty,
-                'local_product_id' => $variant->supplierProduct?->productLink?->product_id,
-                'local_product_name' => $variant->supplierProduct?->productLink?->product?->name,
-                'linked' => $variant->variantLink()->whereNotNull('product_variant_id')->exists(),
-            ])
+            ->map(function (DropshipSupplierVariant $variant): array {
+                $localProductId = $variant->supplierProduct?->productLink?->product_id;
+                $localVariant = $variant->variantLink?->productVariant;
+
+                return [
+                    'id' => $variant->id,
+                    'supplier_id' => $variant->supplierProduct?->supplier_id,
+                    'supplier' => $variant->supplierProduct?->supplier?->name,
+                    'product' => $variant->supplierProduct?->name,
+                    'variant_id' => $variant->supplier_variant_id,
+                    'sku' => $variant->sku,
+                    'attributes' => $variant->attributes ?? [],
+                    'stock_qty' => $variant->stock_qty,
+                    'local_product_id' => $localProductId,
+                    'local_product_name' => $variant->supplierProduct?->productLink?->product?->name,
+                    'mapped_variant_id' => $localVariant?->id,
+                    'mapped_variant_label' => $localVariant ? "{$localVariant->type}: {$localVariant->value}" : null,
+                    'linked' => $localVariant !== null,
+                    'mapping_status' => $localVariant ? 'mapped' : ($localProductId ? 'ready' : 'awaiting_import'),
+                ];
+            })
             ->values();
 
         $productIds = $variantRows->pluck('local_product_id')->filter()->unique()->values();
@@ -421,12 +471,82 @@ class DropshippingController extends Controller
                 'last_page' => $variants->lastPage(),
                 'total' => $variants->total(),
             ],
+            'filters' => [
+                'q' => $search,
+                'supplier_id' => $supplierId,
+                'status' => $status,
+                'per_page' => $perPage,
+            ],
+            'counts' => $this->variationMappingCounts($supplierId),
             'local_variants' => ProductVariant::query()->with('product:id,name')->whereIn('product_id', $productIds)->latest('id')->get(['id', 'product_id', 'type', 'value']),
             'suppliers' => DropshipSupplier::query()
                 ->withCount(['variants', 'products'])
                 ->latest('id')
                 ->get(['id', 'name', 'key', 'is_active', 'last_connection_status']),
         ]);
+    }
+
+    public function autoMapVariations(Request $request, SupplierVariantAutoMapper $mapper)
+    {
+        $data = $request->validate([
+            'supplier_id' => ['nullable', 'integer', 'exists:dropship_suppliers,id'],
+        ]);
+
+        $products = DropshipSupplierProduct::query()
+            ->with(['variants.variantLink', 'productLink'])
+            ->whereHas('productLink', fn ($query) => $query->whereNotNull('product_id'))
+            ->whereHas('variants', fn ($query) => $query
+                ->whereDoesntHave('variantLink', fn ($linkQuery) => $linkQuery->whereNotNull('product_variant_id')));
+
+        if (! empty($data['supplier_id'])) {
+            $products->where('supplier_id', $data['supplier_id']);
+        }
+
+        $mapped = 0;
+        $products->chunkById(100, function ($supplierProducts) use ($mapper, &$mapped): void {
+            foreach ($supplierProducts as $supplierProduct) {
+                $before = $supplierProduct->variants
+                    ->filter(fn (DropshipSupplierVariant $variant) => ! $variant->variantLink?->product_variant_id)
+                    ->count();
+                if ($before === 0) {
+                    continue;
+                }
+
+                $mapper->sync($supplierProduct);
+                $remaining = $supplierProduct->variants()
+                    ->whereDoesntHave('variantLink', fn ($query) => $query->whereNotNull('product_variant_id'))
+                    ->count();
+                $mapped += max(0, $before - $remaining);
+            }
+        });
+
+        return back()->with('status', $mapped > 0
+            ? "{$mapped} ready supplier variation(s) mapped automatically."
+            : 'No ready variations needed automatic mapping. Import supplier products first for the remaining variations.');
+    }
+
+    private function variationMappingCounts(?int $supplierId = null): array
+    {
+        $baseQuery = DropshipSupplierVariant::query();
+        if ($supplierId) {
+            $baseQuery->whereHas('supplierProduct', fn ($query) => $query->where('supplier_id', $supplierId));
+        }
+
+        $mapped = (clone $baseQuery)
+            ->whereHas('variantLink', fn ($query) => $query->whereNotNull('product_variant_id'))
+            ->count();
+        $ready = (clone $baseQuery)
+            ->whereHas('supplierProduct.productLink', fn ($query) => $query->whereNotNull('product_id'))
+            ->whereDoesntHave('variantLink', fn ($query) => $query->whereNotNull('product_variant_id'))
+            ->count();
+        $total = (clone $baseQuery)->count();
+
+        return [
+            'total' => $total,
+            'mapped' => $mapped,
+            'ready' => $ready,
+            'awaiting_import' => max(0, $total - $mapped - $ready),
+        ];
     }
 
     public function pricingRules()

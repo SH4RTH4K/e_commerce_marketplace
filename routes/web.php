@@ -175,6 +175,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                  Route::post('categories/{supplierCategory}/map', [\App\Http\Controllers\Admin\DropshippingController::class, 'mapCategory'])->name('categories.map');
                  Route::post('categories/{supplierCategory}/image', [\App\Http\Controllers\Admin\DropshippingController::class, 'uploadCategoryImage'])->name('categories.image');
                  Route::get('variations', [\App\Http\Controllers\Admin\DropshippingController::class, 'variationMapping'])->name('variations');
+                 Route::post('variations/auto-map', [\App\Http\Controllers\Admin\DropshippingController::class, 'autoMapVariations'])->name('variations.auto-map');
                  Route::post('variations/{variant}/map', [\App\Http\Controllers\Admin\DropshippingController::class, 'mapVariation'])->name('variations.map');
                  Route::get('pricing', [\App\Http\Controllers\Admin\DropshippingController::class, 'pricingRules'])->name('pricing');
                  Route::patch('suppliers/{supplier}/pricing', [\App\Http\Controllers\Admin\DropshippingController::class, 'updatePricing'])->name('suppliers.pricing');
