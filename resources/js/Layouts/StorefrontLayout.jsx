@@ -41,6 +41,9 @@ export default function StorefrontLayout({ children, title, description, activeC
   const chatRef = useRef(null);
 
   const chatSettings = app?.settings || {};
+  const headerLogoHeight = Math.min(96, Math.max(24, Number(chatSettings.header_logo_height) || 48));
+  const headerTitleSize = Math.min(40, Math.max(12, Number(chatSettings.header_title_size) || 18));
+  const headerTaglineSize = Math.min(24, Math.max(8, Number(chatSettings.header_tagline_size) || 11));
   const storefrontTemplate = chatSettings.storefront_template || 'template-2';
   const isTemplateOne = storefrontTemplate === 'template-1';
   const templateOneNavbarMenu = chatSettings.template_1_navbar_menu || 'coza';
@@ -180,7 +183,7 @@ export default function StorefrontLayout({ children, title, description, activeC
       {/* Main header */}
       <header className={`storefront-header-area sticky z-40 transition-all duration-300 ${isTemplateOne ? 'template-1-header' : ''} ${isScrolled ? 'top-0 sm:top-4 px-0 sm:px-4 lg:px-8 mb-4 pointer-events-none' : 'top-0 px-0'}`}>
         <div className={`mx-auto max-w-7xl transition-all duration-300 ${isTemplateOne ? 'template-1-header-inner' : ''} ${isScrolled ? 'bg-white/70 sm:bg-white/60 backdrop-blur-xl sm:border border-white/50 sm:shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:rounded-[2rem] px-4 md:px-6 pointer-events-auto border-b sm:border-b-0 border-gray-100' : 'bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-8'}`}>
-          <div className="flex h-16 md:h-20 items-center gap-4 md:gap-6 lg:gap-10">
+          <div className="flex h-16 md:h-20 items-center gap-4 md:gap-6 lg:gap-10" style={{ minHeight: `${Math.max(64, headerLogoHeight + 16)}px` }}>
             
             {/* Mobile Hamburger */}
             <button onClick={() => setMenuOpen(true)} className="md:hidden p-2 -ml-2 text-gray-800" aria-label="Menu">
@@ -191,12 +194,12 @@ export default function StorefrontLayout({ children, title, description, activeC
 
             <a href="/" className={`flex items-center gap-2.5 shrink-0 md:mr-4 flex-1 md:flex-none justify-center md:justify-start ${isTemplateOne ? 'template-1-logo-block' : ''}`} aria-label={app?.name || 'Home'}>
               {app?.logo_url
-                ? <img src={app.logo_url} alt="" className="h-10 md:h-12 w-auto max-w-[72px] object-contain" />
+                ? <img src={app.logo_url} alt="" className="w-auto max-w-[96px] object-contain" style={{ height: `${headerLogoHeight}px` }} />
                 : null
               }
               <span className="hidden sm:flex min-w-0 flex-col text-left leading-tight">
-                <span className="truncate text-base md:text-lg font-black tracking-tight text-[#0b1c21]">{app?.name || 'SHARTHAK'}</span>
-                {app?.tagline && <span className="mt-0.5 truncate text-[10px] md:text-[11px] font-medium text-gray-500">{app.tagline}</span>}
+                <span className="truncate font-black tracking-tight text-[#0b1c21]" style={{ fontSize: `${headerTitleSize}px` }}>{app?.name || 'SHARTHAK'}</span>
+                {app?.tagline && <span className="mt-0.5 truncate font-medium text-gray-500" style={{ fontSize: `${headerTaglineSize}px` }}>{app.tagline}</span>}
               </span>
             </a>
 

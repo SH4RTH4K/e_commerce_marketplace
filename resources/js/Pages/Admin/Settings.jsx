@@ -172,7 +172,9 @@ export default function Settings({ settings, templateStatus = {} }) {
 
   const { data, setData, errors, setError, clearErrors } = useForm({
     // Brand
-    site_name: settings.site_name || '', tagline: settings.tagline || '', footer_text: settings.footer_text || '',
+    site_name: settings.site_name || '', tagline: settings.tagline || '',
+    header_logo_height: settings.header_logo_height || '48', header_title_size: settings.header_title_size || '18', header_tagline_size: settings.header_tagline_size || '11',
+    footer_text: settings.footer_text || '',
     footer_copyright_enabled: settings.footer_copyright_enabled !== '0' && settings.footer_copyright_enabled !== false,
     footer_copyright_text: settings.footer_copyright_text || '',
     footer_copyright_url: settings.footer_copyright_url || '',
@@ -457,6 +459,23 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <Field label="Search Placeholder" error={errors.search_placeholder}><input value={data.search_placeholder} onChange={e => setData('search_placeholder', e.target.value)} className={inputClass} /></Field>
                   </div>
                   <Field label="Tagline" error={errors.tagline}><input value={data.tagline} onChange={e => setData('tagline', e.target.value)} className={inputClass} /></Field>
+                  <div className="rounded-xl border border-orange-100 bg-orange-50/50 p-4 space-y-3">
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-900">Storefront Header Size</h4>
+                      <p className="text-xs text-gray-500 mt-0.5">Controls the logo, title, and slogan displayed in the website header.</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <Field label="Logo height (px)" error={errors.header_logo_height}>
+                        <input type="number" min="24" max="96" value={data.header_logo_height} onChange={e => setData('header_logo_height', e.target.value)} className={inputClass} />
+                      </Field>
+                      <Field label="Title size (px)" error={errors.header_title_size}>
+                        <input type="number" min="12" max="40" value={data.header_title_size} onChange={e => setData('header_title_size', e.target.value)} className={inputClass} />
+                      </Field>
+                      <Field label="Slogan size (px)" error={errors.header_tagline_size}>
+                        <input type="number" min="8" max="24" value={data.header_tagline_size} onChange={e => setData('header_tagline_size', e.target.value)} className={inputClass} />
+                      </Field>
+                    </div>
+                  </div>
                   <Field label="Footer Marketplace Description (About Us Text)" error={errors.footer_text}>
                     <textarea 
                       value={data.footer_text} 
