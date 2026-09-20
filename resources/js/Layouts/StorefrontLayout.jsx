@@ -203,7 +203,7 @@ export default function StorefrontLayout({ children, title, description, activeC
                 ? <img src={app.logo_url} alt="" className="w-auto max-w-[180px] object-contain" style={{ height: `${headerLogoHeight}px` }} />
                 : null
               }
-              <div className="hidden sm:flex min-w-0 flex-col text-left leading-tight">
+              <div className="hidden sm:flex w-40 min-w-0 flex-col items-start text-left leading-tight">
                 {isTemplateOne && templateOneSiteNameStyle === 'particle' ? (
                   <ParticleText
                     text={headerSiteName}
@@ -224,12 +224,12 @@ export default function StorefrontLayout({ children, title, description, activeC
                     glow={false}
                     align="left"
                     className="storefront-site-name-effect"
-                    style={{ width: 'clamp(100px, 13vw, 180px)', height: `${Math.max(22, headerTitleSize * 1.35)}px` }}
+                    style={{ width: '100%', height: `${Math.max(22, headerTitleSize * 1.35)}px` }}
                   />
                 ) : isTemplateOne && templateOneSiteNameStyle === 'focus' ? (
                   <TrueFocus
                     sentence={focusSiteName}
-                    blurAmount={0.65}
+                    blurAmount={1.15}
                     borderColor="#f15a24"
                     glowColor="rgb(241 90 36 / 0.4)"
                     animationDuration={0.55}

@@ -161,7 +161,7 @@ export default function ParticleText({
       const pixels = offContext.getImageData(0, 0, offscreen.width, offscreen.height).data;
       const targets = [];
       const step = Math.max(1, Math.floor(density));
-      const targetOffsetX = align === 'left' ? padding : align === 'right' ? width - offscreen.width - padding : width / 2 - offscreen.width / 2;
+      const targetOffsetX = align === 'left' ? 1 - padding : align === 'right' ? width - offscreen.width - padding : width / 2 - offscreen.width / 2;
       for (let y = 0; y < offscreen.height; y += step) {
         for (let x = 0; x < offscreen.width; x += step) {
           const alpha = pixels[(y * offscreen.width + x) * 4 + 3];
