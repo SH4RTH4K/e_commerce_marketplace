@@ -71,16 +71,16 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function edit(User $customer)
+    public function edit(string $customer)
     {
-        $this->ensureCustomer($customer);
+        $customer = $this->findCustomer($customer);
 
         return Inertia::render('Admin/Customers/Form', compact('customer'));
     }
 
-    public function update(Request $request, User $customer)
+    public function update(Request $request, string $customer)
     {
-        $this->ensureCustomer($customer);
+        $customer = $this->findCustomer($customer);
 
         $data = $request->validate([
             'name'        => ['required', 'string', 'max:120'],
@@ -97,18 +97,18 @@ class CustomerController extends Controller
         return redirect()->route('admin.customers.index')->with('status', 'Customer account updated.');
     }
 
-    public function toggle(User $customer)
+    public function toggle(string $customer)
     {
-        $this->ensureCustomer($customer);
+        $customer = $this->findCustomer($customer);
 
         $customer->update(['is_active' => ! $customer->isActive()]);
 
         return back()->with('status', $customer->isActive() ? 'Customer account activated.' : 'Customer account deactivated.');
     }
 
-    public function destroy(User $customer)
+    public function destroy(string $customer)
     {
-        $this->ensureCustomer($customer);
+        $customer = $this->findCustomer($customer);
         $customer->delete();
 
         return redirect()->route('admin.customers.index')->with('status', 'Customer account deleted.');
@@ -117,5 +117,16 @@ class CustomerController extends Controller
     private function ensureCustomer(User $customer): void
     {
         abort_unless($customer->isCustomer(), 404);
+    }
+
+    private function findCustomer(string $identifier): User
+    {
+        $customer = ctype_digit($identifier)
+            ? User::findOrFail($identifier)
+            : User::where('email', $identifier)->firstOrFail();
+
+        $this->ensureCustomer($customer);
+
+        return $customer;
     }
 }

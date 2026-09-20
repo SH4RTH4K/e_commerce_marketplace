@@ -22,6 +22,16 @@ class CustomerManagementTest extends TestCase
         $this->assertDatabaseMissing('users', ['id' => $customer->id]);
     }
 
+    public function test_admin_can_edit_a_customer_account_by_email_address(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $customer = User::factory()->create(['role' => 'customer']);
+
+        $this->actingAs($admin)
+            ->get(route('admin.customers.edit', ['customer' => $customer->email]))
+            ->assertOk();
+    }
+
     public function test_admin_can_deactivate_a_customer_account(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
