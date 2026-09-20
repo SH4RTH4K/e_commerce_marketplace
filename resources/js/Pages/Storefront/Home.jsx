@@ -664,7 +664,7 @@ export default function HomePage({
         {features?.length > 0 && (
           <div className="grid grid-cols-2 gap-3 xl:hidden mt-4">
             {features.slice(0, 4).map((feature) => (
-              <div key={feature.id} className="rounded-xl bg-white border border-gray-100 p-3 flex items-center gap-2.5">
+                <div key={feature.id} className="rounded-xl bg-white border border-gray-100 p-3 flex items-center gap-2.5 min-h-24">
                 <div className="grid h-9 w-9 place-items-center rounded-full bg-[#f15a24]/10 text-[#f15a24] shrink-0">
                    {feature.icon ? (
                      <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d={feature.icon}/></svg>
@@ -672,9 +672,9 @@ export default function HomePage({
                      <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                    )}
                 </div>
-                <div className="min-w-0">
-                  <p className="text-[13px] font-bold leading-snug truncate text-gray-800">{feature.title}</p>
-                  {feature.subtitle && <p className="text-[11px] text-gray-500 truncate">{feature.subtitle}</p>}
+                  <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-bold leading-snug text-gray-800 line-clamp-2">{feature.title}</p>
+                  {feature.subtitle && <p className="text-[11px] leading-snug text-gray-500 line-clamp-2">{feature.subtitle}</p>}
                 </div>
               </div>
             ))}
