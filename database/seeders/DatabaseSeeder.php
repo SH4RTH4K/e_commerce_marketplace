@@ -142,6 +142,7 @@ class DatabaseSeeder extends Seeder
             'mail_encryption'          => 'tls',
             'mail_from_address'        => 'no-reply@sharthak.test',
             'mail_from_name'           => 'SHARTHAK',
+            'template_1_site_name_style' => 'default',
         ];
 
         foreach ($settings as $key => $value) {

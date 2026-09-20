@@ -17,6 +17,7 @@
     "dependencies": {
         "@inertiajs/react": "^3.6.1",
         "@vitejs/plugin-react": "^6.0.5",
+        "motion": "^13.4.0",
         "react": "^19.2.8",
         "react-confetti": "^6.4.0",
         "react-dom": "^19.2.8",

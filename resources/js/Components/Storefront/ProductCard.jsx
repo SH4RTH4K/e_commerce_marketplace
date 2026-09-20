@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { money, imageUrl } from '@/lib/utils';
+import PulseHeart from './PulseHeart';
 
 export default function ProductCard({ product }) {
   const { app, cartItems = [] } = usePage().props;
   const isTemplateOne = app?.settings?.storefront_template === 'template-1';
   const [imageError, setImageError] = useState(false);
   const [inWishlist, setInWishlist] = useState(false);
+  const [wishlistCount, setWishlistCount] = useState(0);
 
   useEffect(() => {
     const checkWishlist = () => {
@@ -14,10 +16,13 @@ export default function ProductCard({ product }) {
       if (saved) {
         try {
           const list = JSON.parse(saved);
-          setInWishlist(list.some(p => p.id === product.id));
+          const wishlist = Array.isArray(list) ? list : [];
+          setInWishlist(wishlist.some(p => p.id === product.id));
+          setWishlistCount(wishlist.length);
         } catch (e) {}
       } else {
         setInWishlist(false);
+        setWishlistCount(0);
       }
     };
     checkWishlist();
@@ -25,9 +30,7 @@ export default function ProductCard({ product }) {
     return () => window.removeEventListener('wishlist-updated', checkWishlist);
   }, [product.id]);
 
-  const toggleWishlist = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const toggleWishlist = (nextLiked) => {
     const saved = localStorage.getItem('sharthak_wishlist');
     let list = [];
     if (saved) {
@@ -39,14 +42,15 @@ export default function ProductCard({ product }) {
       }
     }
     
-    if (inWishlist) {
+    if (!nextLiked) {
       list = list.filter(p => p.id !== product.id);
     } else {
-      list.push(product);
+      if (!list.some(p => p.id === product.id)) list.push(product);
     }
     
     localStorage.setItem('sharthak_wishlist', JSON.stringify(list));
-    setInWishlist(!inWishlist);
+    setInWishlist(nextLiked);
+    setWishlistCount(list.length);
     window.dispatchEvent(new Event('wishlist-updated'));
   };
   
@@ -108,18 +112,28 @@ export default function ProductCard({ product }) {
             </div>
           )}
         </Link>
-        <button
-          type="button"
-          onClick={toggleWishlist}
-          aria-label={inWishlist ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
-          aria-pressed={inWishlist}
-          title={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-          className={`product-card-wishlist absolute right-2.5 top-2.5 z-10 grid h-10 w-10 place-items-center rounded-full bg-white/95 text-gray-500 opacity-100 visible pointer-events-auto shadow-md border border-gray-200 transition-all hover:bg-white hover:text-red-500 hover:shadow-lg ${inWishlist ? 'is-active' : ''}`}
-        >
-          <svg className="h-5 w-5" fill={inWishlist ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-          </svg>
-        </button>
+        <PulseHeart
+          liked={inWishlist}
+          count={wishlistCount}
+          onChange={toggleWishlist}
+          showCount
+          icon="heart"
+          idleOutline
+          size={20}
+          corner={32}
+          likedColor="#ff4d6d"
+          idleColor="#8b8b93"
+          pillColor="#232326"
+          textColor="#f5f5f5"
+          duration={560}
+          dotSize={0.3}
+          overshoot={1.7}
+          beat={3}
+          rollDuration={350}
+          disabled={false}
+          label={inWishlist ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+          className="product-card-pulse-heart absolute right-2.5 top-2.5 z-10"
+        />
       </div>
       
       <div className="p-3 sm:p-4 flex-1 flex flex-col min-w-0">

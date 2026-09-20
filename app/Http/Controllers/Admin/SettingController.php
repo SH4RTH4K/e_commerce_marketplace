@@ -252,6 +252,7 @@ class SettingController extends Controller
             'theme' => [
                 'storefront_template' => ['required', 'in:template-1,template-2'],
                 'template_1_navbar_menu' => ['nullable', 'in:coza,categories'],
+                'template_1_site_name_style' => ['nullable', 'in:default,particle,focus'],
                 'template_1_show_search' => ['nullable', 'boolean'],
                 'template_1_category_per_row' => ['nullable', 'integer', 'min:2', 'max:5'],
                 'template_1_product_per_row' => ['nullable', 'integer', 'min:2', 'max:6'],
@@ -444,7 +445,7 @@ class SettingController extends Controller
                 'fog_bdcourier_api_key', 'fog_bdcourier_min_success_rate', 'fog_bdcourier_block_risk_levels',
             ],
             'theme' => [
-                'storefront_template', 'template_1_navbar_menu', 'template_1_category_per_row',
+                'storefront_template', 'template_1_navbar_menu', 'template_1_site_name_style', 'template_1_category_per_row',
                 'template_1_product_per_row', 'template_2_product_per_row',
                 'template_1_products_per_page', 'template_2_products_per_page',
                 'template_1_hero_overlay_color', 'template_1_hero_overlay_opacity',

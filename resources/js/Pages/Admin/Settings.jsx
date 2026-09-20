@@ -299,6 +299,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     // Storefront Template
     storefront_template: settings.storefront_template || 'template-2',
     template_1_navbar_menu: settings.template_1_navbar_menu || 'coza',
+    template_1_site_name_style: settings.template_1_site_name_style || 'default',
     template_1_show_search: settings.template_1_show_search === '1',
     template_1_category_per_row: settings.template_1_category_per_row || '3',
     template_1_product_per_row: settings.template_1_product_per_row || '5',
@@ -928,6 +929,14 @@ export default function Settings({ settings, templateStatus = {} }) {
                             <option value="coza">Coza Menu (Home, Shop, Features, Track, Contact)</option>
                             <option value="categories">Category Menu (from store categories)</option>
                           </select>
+                        </Field>
+                        <Field label="Site Name Style" error={errors.template_1_site_name_style}>
+                          <select value={data.template_1_site_name_style} onChange={e => setData('template_1_site_name_style', e.target.value)} className={inputClass}>
+                            <option value="default">Style 1 — Default</option>
+                            <option value="particle">Style 2 — Particle text</option>
+                            <option value="focus">Style 3 — True Focus</option>
+                          </select>
+                          <p className="mt-1 text-xs text-gray-500">Styles 2 and 3 add an animated site name in the Template 1 header.</p>
                         </Field>
                         <div className="flex items-end pb-2">
                           <label className="flex items-center gap-3">

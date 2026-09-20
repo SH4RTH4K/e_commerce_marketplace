@@ -107,6 +107,7 @@ class HandleInertiaRequests extends Middleware
                     'default_meta_keywords' => setting('default_meta_keywords', ''),
                     'storefront_template' => setting('storefront_template', 'template-2'),
                     'template_1_navbar_menu' => setting('template_1_navbar_menu', 'coza'),
+                    'template_1_site_name_style' => setting('template_1_site_name_style', 'default'),
                     'template_1_show_search' => setting('template_1_show_search', '0') === '1',
                     'template_1_category_per_row' => setting('template_1_category_per_row', '3'),
                     'template_1_product_per_row' => setting('template_1_product_per_row', '5'),

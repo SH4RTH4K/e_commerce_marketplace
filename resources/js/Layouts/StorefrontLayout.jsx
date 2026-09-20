@@ -3,6 +3,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Head } from '@inertiajs/react';
 import CartDrawer from '@/Components/Storefront/CartDrawer';
 import VisitorPopupModal from '@/Components/Storefront/VisitorPopupModal';
+import ParticleText from '@/Components/Storefront/ParticleText';
+import TrueFocus from '@/Components/Storefront/TrueFocus';
 import { imageUrl, whatsappNumber } from '@/lib/utils';
 
 function CartIcon({ count = 0, onClick }) {
@@ -44,8 +46,12 @@ export default function StorefrontLayout({ children, title, description, activeC
   const headerLogoHeight = Math.min(160, Math.max(24, Number(chatSettings.header_logo_height) || 48));
   const headerTitleSize = Math.min(40, Math.max(12, Number(chatSettings.header_title_size) || 18));
   const headerTaglineSize = Math.min(24, Math.max(8, Number(chatSettings.header_tagline_size) || 11));
+  const siteName = app?.name || 'SHARTHAK';
+  const headerSiteName = /^taqi\s*life$/i.test(siteName) ? 'T\u2009A\u2009Q\u2009I\u2003L\u2009I\u2009F\u2009E' : siteName;
+  const focusSiteName = /^taqi\s*life$/i.test(siteName) ? 'TAQI LIFE' : siteName;
   const storefrontTemplate = chatSettings.storefront_template || 'template-2';
   const isTemplateOne = storefrontTemplate === 'template-1';
+  const templateOneSiteNameStyle = chatSettings.template_1_site_name_style || 'default';
   const templateOneNavbarMenu = chatSettings.template_1_navbar_menu || 'coza';
   const templateOneShowSearch = chatSettings.template_1_show_search !== false;
   const whatsappDigits = whatsappNumber(chatSettings.whatsapp_number);
@@ -197,10 +203,46 @@ export default function StorefrontLayout({ children, title, description, activeC
                 ? <img src={app.logo_url} alt="" className="w-auto max-w-[180px] object-contain" style={{ height: `${headerLogoHeight}px` }} />
                 : null
               }
-              <span className="hidden sm:flex min-w-0 flex-col text-left leading-tight">
-                <span className="truncate font-black tracking-tight text-[#0b1c21]" style={{ fontSize: `${headerTitleSize}px` }}>{app?.name || 'SHARTHAK'}</span>
+              <div className="hidden sm:flex min-w-0 flex-col text-left leading-tight">
+                {isTemplateOne && templateOneSiteNameStyle === 'particle' ? (
+                  <ParticleText
+                    text={headerSiteName}
+                    particleSize={1.7}
+                    density={1}
+                    color="#111827"
+                    highlightColor="#c2410c"
+                    scatter={28}
+                    gatherDuration={700}
+                    stagger={180}
+                    pointerRepel={9}
+                    repelRadius={44}
+                    idleDrift={0.25}
+                    trigger="hover"
+                    fontSize={headerTitleSize}
+                    fontWeight={900}
+                    fontFamily="inherit"
+                    glow={false}
+                    align="left"
+                    className="storefront-site-name-effect"
+                    style={{ width: 'clamp(100px, 13vw, 180px)', height: `${Math.max(22, headerTitleSize * 1.35)}px` }}
+                  />
+                ) : isTemplateOne && templateOneSiteNameStyle === 'focus' ? (
+                  <TrueFocus
+                    sentence={focusSiteName}
+                    blurAmount={0.65}
+                    borderColor="#f15a24"
+                    glowColor="rgb(241 90 36 / 0.4)"
+                    animationDuration={0.55}
+                    pauseBetweenAnimations={1.35}
+                    fontSize={`${headerTitleSize}px`}
+                    fontWeight={900}
+                    textColor="#0b1c21"
+                  />
+                ) : (
+                  <span className="truncate font-black tracking-tight text-[#0b1c21]" style={{ fontSize: `${headerTitleSize}px` }}>{siteName}</span>
+                )}
                 {app?.tagline && <span className="mt-0.5 truncate font-medium text-gray-500" style={{ fontSize: `${headerTaglineSize}px` }}>{app.tagline}</span>}
-              </span>
+              </div>
             </a>
 
             {isTemplateOne && templateOneNavbarMenu === 'coza' && (
