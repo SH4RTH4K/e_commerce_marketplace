@@ -466,7 +466,7 @@ export default function Settings({ settings, templateStatus = {} }) {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <Field label="Logo height (px)" error={errors.header_logo_height}>
-                        <input type="number" min="24" max="96" value={data.header_logo_height} onChange={e => setData('header_logo_height', e.target.value)} className={inputClass} />
+                        <input type="number" min="24" max="160" value={data.header_logo_height} onChange={e => setData('header_logo_height', e.target.value)} className={inputClass} />
                       </Field>
                       <Field label="Title size (px)" error={errors.header_title_size}>
                         <input type="number" min="12" max="40" value={data.header_title_size} onChange={e => setData('header_title_size', e.target.value)} className={inputClass} />

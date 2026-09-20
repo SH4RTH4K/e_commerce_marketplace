@@ -41,7 +41,7 @@ export default function StorefrontLayout({ children, title, description, activeC
   const chatRef = useRef(null);
 
   const chatSettings = app?.settings || {};
-  const headerLogoHeight = Math.min(96, Math.max(24, Number(chatSettings.header_logo_height) || 48));
+  const headerLogoHeight = Math.min(160, Math.max(24, Number(chatSettings.header_logo_height) || 48));
   const headerTitleSize = Math.min(40, Math.max(12, Number(chatSettings.header_title_size) || 18));
   const headerTaglineSize = Math.min(24, Math.max(8, Number(chatSettings.header_tagline_size) || 11));
   const storefrontTemplate = chatSettings.storefront_template || 'template-2';
@@ -194,7 +194,7 @@ export default function StorefrontLayout({ children, title, description, activeC
 
             <a href="/" className={`flex items-center gap-2.5 shrink-0 md:mr-4 flex-1 md:flex-none justify-center md:justify-start ${isTemplateOne ? 'template-1-logo-block' : ''}`} aria-label={app?.name || 'Home'}>
               {app?.logo_url
-                ? <img src={app.logo_url} alt="" className="w-auto max-w-[96px] object-contain" style={{ height: `${headerLogoHeight}px` }} />
+                ? <img src={app.logo_url} alt="" className="w-auto max-w-[180px] object-contain" style={{ height: `${headerLogoHeight}px` }} />
                 : null
               }
               <span className="hidden sm:flex min-w-0 flex-col text-left leading-tight">

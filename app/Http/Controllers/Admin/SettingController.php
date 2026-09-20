@@ -145,7 +145,7 @@ class SettingController extends Controller
             'brand' => [
                 'site_name'       => ['required', 'string', 'max:120'],
                 'tagline'         => ['nullable', 'string', 'max:200'],
-                'header_logo_height' => ['nullable', 'integer', 'min:24', 'max:96'],
+                'header_logo_height' => ['nullable', 'integer', 'min:24', 'max:160'],
                 'header_title_size'  => ['nullable', 'integer', 'min:12', 'max:40'],
                 'header_tagline_size'=> ['nullable', 'integer', 'min:8', 'max:24'],
                 'footer_text'     => ['nullable', 'string', 'max:400'],
