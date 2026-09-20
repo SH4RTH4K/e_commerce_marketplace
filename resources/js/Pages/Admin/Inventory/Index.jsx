@@ -13,9 +13,9 @@ function Icon({ d, size = 15, className = '' }) {
 }
 
 // ─── Summary Stat Card ─────────────────────────────────────────────────────────
-function SummaryCard({ label, value, color, iconD }) {
+function SummaryCard({ label, value, color, iconD, href }) {
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3">
+    <a href={href} aria-label={`Filter inventory by ${label}`} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3 hover:border-orange-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-300 transition-all">
       <div className="p-2.5 rounded-xl shrink-0" style={{ background: `${color}18` }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d={iconD} />
@@ -25,7 +25,7 @@ function SummaryCard({ label, value, color, iconD }) {
         <p className="text-xl font-bold text-gray-900">{value}</p>
         <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium">{label}</p>
       </div>
-    </div>
+    </a>
   );
 }
 
@@ -72,17 +72,30 @@ function StockEditor({ product }) {
 }
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-export default function InventoryIndex({ products, categories, q, category, stock_level, summary }) {
+export default function InventoryIndex({ products, categories, q, category, stock_level, visibility, order, summary }) {
   const { props } = usePage();
   const sym = props.app?.currency_symbol || '৳';
 
   const [search, setSearch]     = useState(q || '');
   const [catFilter, setCatFilter] = useState(category || '');
   const [levelFilter, setLevelFilter] = useState(stock_level || '');
+  const [visibilityFilter, setVisibilityFilter] = useState(visibility || '');
+  const [orderFilter, setOrderFilter] = useState(order || 'stock_asc');
 
   const handleFilter = (overrides = {}) => {
-    router.get('/admin/inventory', { q: search, category: catFilter, stock_level: levelFilter, ...overrides }, { preserveState: true });
+    router.get('/admin/inventory', { q: search, category: catFilter, stock_level: levelFilter, visibility: visibilityFilter, order: orderFilter, ...overrides }, { preserveState: true });
   };
+
+  const clearFilters = () => {
+    setSearch('');
+    setCatFilter('');
+    setLevelFilter('');
+    setVisibilityFilter('');
+    setOrderFilter('stock_asc');
+    router.get('/admin/inventory');
+  };
+
+  const hasFilters = Boolean(search || catFilter || levelFilter || visibilityFilter || orderFilter !== 'stock_asc');
 
   const outCount = summary?.out_stock ?? (products.data || []).filter(p => (p.stock_quantity ?? 0) <= 0).length;
   const lowCount = summary?.low_stock ?? (products.data || []).filter(p => (p.stock_quantity ?? 0) > 0 && (p.stock_quantity ?? 0) <= 5).length;
@@ -108,13 +121,13 @@ export default function InventoryIndex({ products, categories, q, category, stoc
 
           {/* ── Summary cards ── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <SummaryCard label="Total Products" value={(summary?.total ?? 0).toLocaleString()} color="#6366f1"
+            <SummaryCard label="Total Products" value={(summary?.total ?? 0).toLocaleString()} color="#6366f1" href="/admin/inventory"
               iconD="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            <SummaryCard label="In Stock" value={(summary?.in_stock ?? 0).toLocaleString()} color="#10b981"
+            <SummaryCard label="In Stock" value={(summary?.in_stock ?? 0).toLocaleString()} color="#10b981" href="/admin/inventory?stock_level=in"
               iconD="M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3" />
-            <SummaryCard label="Low Stock" value={lowCount.toLocaleString()} color="#f59e0b"
+            <SummaryCard label="Low Stock" value={lowCount.toLocaleString()} color="#f59e0b" href="/admin/inventory?stock_level=low"
               iconD="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-            <SummaryCard label="Out of Stock" value={outCount.toLocaleString()} color="#ef4444"
+            <SummaryCard label="Out of Stock" value={outCount.toLocaleString()} color="#ef4444" href="/admin/inventory?stock_level=out"
               iconD="M18 6L6 18M6 6l12 12" />
           </div>
 
@@ -128,23 +141,40 @@ export default function InventoryIndex({ products, categories, q, category, stoc
                     placeholder="Search by name, code or SKU..."
                     className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
                 </div>
-                <select value={catFilter} onChange={e => { setCatFilter(e.target.value); handleFilter({ category: e.target.value }); }}
+                <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
                   className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none bg-white text-gray-600 min-w-[150px]">
                   <option value="">All Categories</option>
                   {(categories || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
-                <select value={levelFilter} onChange={e => { setLevelFilter(e.target.value); handleFilter({ stock_level: e.target.value }); }}
+                <select value={levelFilter} onChange={e => setLevelFilter(e.target.value)}
                   className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none bg-white text-gray-600 min-w-[160px]">
                   <option value="">All Stock Levels</option>
                   <option value="out">Out of Stock</option>
                   <option value="low">Low Stock (≤5)</option>
                   <option value="in">In Stock (&gt;5)</option>
                 </select>
+                <select value={visibilityFilter} onChange={e => setVisibilityFilter(e.target.value)}
+                  className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none bg-white text-gray-600 min-w-[145px]">
+                  <option value="">All Visibility</option>
+                  <option value="published">Published</option>
+                  <option value="draft">Draft</option>
+                </select>
+                <select value={orderFilter} onChange={e => setOrderFilter(e.target.value)}
+                  className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none bg-white text-gray-600 min-w-[175px]">
+                  <option value="stock_asc">Stock: Low to High</option>
+                  <option value="stock_desc">Stock: High to Low</option>
+                  <option value="updated">Recently Updated</option>
+                  <option value="name_asc">Name: A to Z</option>
+                  <option value="name_desc">Name: Z to A</option>
+                  <option value="price_asc">Price: Low to High</option>
+                  <option value="price_desc">Price: High to Low</option>
+                </select>
                 <button type="submit"
                   className="flex items-center gap-1.5 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm shadow-orange-200">
                   <Icon d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" size={13} />
-                  Filter
+                  Apply
                 </button>
+                {hasFilters && <button type="button" onClick={clearFilters} className="px-3 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700">Clear</button>}
               </div>
             </form>
           </div>
@@ -238,7 +268,7 @@ export default function InventoryIndex({ products, categories, q, category, stoc
                               className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors">
                               <Icon d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" size={14} />
                             </a>
-                            <a href={`/products/${product.slug || product.id}`} target="_blank"
+                            <a href={`/product/${product.slug || product.id}`} target="_blank" rel="noreferrer"
                               className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
                               <Icon d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" size={14} />
                             </a>

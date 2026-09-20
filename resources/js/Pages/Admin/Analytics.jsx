@@ -61,6 +61,9 @@ export default function Analytics({
   courierStats = [],
   reviewsSummary = {},
   customerSummary = {},
+  paymentHealth = {},
+  customerInsights = {},
+  inventorySummary = {},
 }) {
   const [chartMetric, setChartMetric] = useState('revenue'); // 'revenue' | 'orders'
   const [hoveredPoint, setHoveredPoint] = useState(null);
@@ -669,6 +672,59 @@ export default function Analytics({
               </div>
             </div>
 
+          </div>
+
+          {/* ── Operational reports ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                <h3 className="font-bold text-gray-900 text-sm">Payment Clearance</h3>
+                <a href="/admin/orders" className="text-xs font-semibold text-orange-600 hover:underline">Review orders →</a>
+              </div>
+              <div className="space-y-2.5 text-xs">
+                {[
+                  ['Verified', paymentHealth.verified, 'bg-emerald-50 text-emerald-800'],
+                  ['Awaiting verification', paymentHealth.pending, 'bg-amber-50 text-amber-800'],
+                  ['Rejected', paymentHealth.rejected, 'bg-red-50 text-red-800'],
+                ].map(([label, data, color]) => (
+                  <div key={label} className={`rounded-xl p-3 ${color}`}>
+                    <div className="flex justify-between gap-3"><span>{label}</span><strong>{data?.count || 0} orders</strong></div>
+                    <div className="mt-1 font-bold">৳{Number(data?.revenue || 0).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                <h3 className="font-bold text-gray-900 text-sm">Customer Loyalty &amp; Cities</h3>
+                <a href="/admin/customers" className="text-xs font-semibold text-orange-600 hover:underline">View customers →</a>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-xl bg-blue-50 p-3"><span className="text-blue-700">Unique buyers</span><strong className="block mt-1 text-lg text-blue-950">{customerInsights.unique_buyers || 0}</strong></div>
+                <div className="rounded-xl bg-purple-50 p-3"><span className="text-purple-700">Returning buyers</span><strong className="block mt-1 text-lg text-purple-950">{customerInsights.repeat_buyers || 0}</strong></div>
+              </div>
+              <p className="text-xs text-gray-500">Repeat buyers: <strong className="text-gray-900">{customerInsights.repeat_buyer_rate || 0}%</strong> · Repeat orders: <strong className="text-gray-900">{customerInsights.repeat_order_rate || 0}%</strong></p>
+              {(customerInsights.top_cities || []).length > 0 ? (
+                <div className="space-y-1.5 text-xs">
+                  {customerInsights.top_cities.map((city) => <div key={city.name} className="flex justify-between gap-3"><span className="truncate text-gray-600">{city.name}</span><strong className="shrink-0 text-gray-900">{city.orders} · ৳{Number(city.revenue).toLocaleString()}</strong></div>)}
+                </div>
+              ) : <p className="text-xs text-gray-400 text-center py-2">No delivery-city data for this period.</p>}
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                <h3 className="font-bold text-gray-900 text-sm">Inventory Readiness</h3>
+                <a href="/admin/inventory" className="text-xs font-semibold text-orange-600 hover:underline">Manage stock →</a>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <a href="/admin/inventory?stock_level=out" className="rounded-xl bg-red-50 p-3 hover:bg-red-100"><span className="text-red-700">Out of stock</span><strong className="block mt-1 text-lg text-red-950">{inventorySummary.out_of_stock || 0}</strong></a>
+                <a href="/admin/inventory?stock_level=low" className="rounded-xl bg-amber-50 p-3 hover:bg-amber-100"><span className="text-amber-700">Low stock</span><strong className="block mt-1 text-lg text-amber-950">{inventorySummary.low_stock || 0}</strong></a>
+                <div className="rounded-xl bg-emerald-50 p-3"><span className="text-emerald-700">Published</span><strong className="block mt-1 text-lg text-emerald-950">{inventorySummary.published_products || 0}</strong></div>
+                <div className="rounded-xl bg-gray-50 p-3"><span className="text-gray-600">Units on hand</span><strong className="block mt-1 text-lg text-gray-950">{Number(inventorySummary.units_on_hand || 0).toLocaleString()}</strong></div>
+              </div>
+              <p className="text-xs text-gray-500">{inventorySummary.total_products || 0} products total · {inventorySummary.draft_products || 0} drafts</p>
+            </div>
           </div>
 
         </div>

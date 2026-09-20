@@ -106,7 +106,7 @@ export default function Dashboard({ ordersCount, pendingCount, revenue, products
           <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
       ),
-      href: '/admin/inventory', accent: '#ef4444', bg: '#fef2f2',
+      href: '/admin/inventory?stock_level=low', accent: '#ef4444', bg: '#fef2f2',
     },
   ];
 

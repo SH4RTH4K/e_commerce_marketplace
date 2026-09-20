@@ -342,6 +342,59 @@ class AnalyticsController extends Controller
         $recoveredAbandoned = AbandonedCheckout::whereBetween('created_at', [$start, $end])->where('is_recovered', true)->count();
         $recoveredRevenue = (float) AbandonedCheckout::whereBetween('created_at', [$start, $end])->where('is_recovered', true)->sum('cart_total');
 
+        // ── 12. Payment Clearance, Customer Loyalty & Inventory Readiness ──
+        $paymentHealth = [
+            'verified' => ['count' => 0, 'revenue' => 0],
+            'pending' => ['count' => 0, 'revenue' => 0],
+            'rejected' => ['count' => 0, 'revenue' => 0],
+        ];
+
+        Order::whereBetween('created_at', [$start, $end])
+            ->select('payment_status', DB::raw('COUNT(*) as count'), DB::raw('SUM(total) as revenue'))
+            ->groupBy('payment_status')
+            ->get()
+            ->each(function ($payment) use (&$paymentHealth) {
+                if (isset($paymentHealth[$payment->payment_status])) {
+                    $paymentHealth[$payment->payment_status] = [
+                        'count' => (int) $payment->count,
+                        'revenue' => (float) $payment->revenue,
+                    ];
+                }
+            });
+
+        $buyerGroups = Order::whereBetween('created_at', [$start, $end])
+            ->whereNotNull('customer_phone')
+            ->where('customer_phone', '!=', '')
+            ->select('customer_phone', DB::raw('COUNT(*) as orders_count'))
+            ->groupBy('customer_phone')
+            ->get();
+        $uniqueBuyers = $buyerGroups->count();
+        $repeatBuyers = $buyerGroups->filter(fn ($buyer) => $buyer->orders_count > 1);
+        $repeatOrderCount = (int) $repeatBuyers->sum('orders_count');
+
+        $topCities = Order::whereBetween('created_at', [$start, $end])
+            ->whereNotNull('city')
+            ->where('city', '!=', '')
+            ->select('city', DB::raw('COUNT(*) as orders'), DB::raw('SUM(total) as revenue'))
+            ->groupBy('city')
+            ->orderByDesc('revenue')
+            ->take(5)
+            ->get()
+            ->map(fn ($city) => [
+                'name' => $city->city,
+                'orders' => (int) $city->orders,
+                'revenue' => (float) $city->revenue,
+            ]);
+
+        $inventorySummary = [
+            'total_products' => Product::count(),
+            'published_products' => Product::where('is_published', true)->count(),
+            'draft_products' => Product::where('is_published', false)->count(),
+            'out_of_stock' => Product::where('stock_quantity', '<=', 0)->count(),
+            'low_stock' => Product::whereBetween('stock_quantity', [1, 5])->count(),
+            'units_on_hand' => (int) Product::sum('stock_quantity'),
+        ];
+
         return Inertia::render('Admin/Analytics', [
             'range'                => $range,
             'rangeLabel'           => $rangeLabel,
@@ -382,6 +435,15 @@ class AnalyticsController extends Controller
                 'recovery_rate'      => $abandonedCount > 0 ? round(($recoveredAbandoned / $abandonedCount) * 100, 1) : 0,
                 'recovered_revenue'  => $recoveredRevenue,
             ],
+            'paymentHealth'         => $paymentHealth,
+            'customerInsights'      => [
+                'unique_buyers' => $uniqueBuyers,
+                'repeat_buyers' => $repeatBuyers->count(),
+                'repeat_buyer_rate' => $uniqueBuyers > 0 ? round(($repeatBuyers->count() / $uniqueBuyers) * 100, 1) : 0,
+                'repeat_order_rate' => $totalOrders > 0 ? round(($repeatOrderCount / $totalOrders) * 100, 1) : 0,
+                'top_cities' => $topCities,
+            ],
+            'inventorySummary'      => $inventorySummary,
         ]);
     }
 }
