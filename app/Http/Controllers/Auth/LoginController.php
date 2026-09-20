@@ -44,6 +44,12 @@ class LoginController extends Controller
 
         $user = Auth::user();
 
+        if (! $user->isActive()) {
+            Auth::logout();
+
+            return back()->withErrors(['email' => 'This customer account has been deactivated.'])->onlyInput('email');
+        }
+
         // Admins who use the storefront login go straight to the panel.
         if ($user->isAdmin()) {
             $request->session()->regenerate();

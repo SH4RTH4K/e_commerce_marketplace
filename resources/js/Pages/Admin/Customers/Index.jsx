@@ -7,6 +7,12 @@ export default function CustomersIndex({ customers, term }) {
   const { data = [], links = [] } = customers || {};
 
   const handleSearch = () => router.get('/admin/customers', { q: search }, { preserveState: true });
+  const toggleCustomer = customer => router.patch(`/admin/customers/${customer.account_id}/toggle`, {}, { preserveScroll: true });
+  const deleteCustomer = customer => {
+    window.showConfirm(`Delete customer account "${customer.customer_name}"? This cannot be undone.`, () => {
+      router.delete(`/admin/customers/${customer.account_id}`, { preserveScroll: true });
+    });
+  };
 
   return (
     <>
@@ -24,14 +30,14 @@ export default function CustomersIndex({ customers, term }) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50/50">
-                    {['Customer', 'Phone', 'Email', 'Orders', 'Total Spent', 'Last Order', 'Actions'].map(h => (
+                    {['Customer', 'Phone', 'Email', 'Orders', 'Total Spent', 'Last Order', 'Status', 'Actions'].map(h => (
                       <th key={h} className={`px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left ${h === 'Actions' ? 'text-right' : ''}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {data.length === 0 ? (
-                    <tr><td colSpan="7" className="px-5 py-12 text-center text-gray-400">No customers found.</td></tr>
+                    <tr><td colSpan="8" className="px-5 py-12 text-center text-gray-400">No customers found.</td></tr>
                   ) : data.map((customer, i) => (
                     <tr key={i} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-5 py-3.5">
@@ -51,8 +57,26 @@ export default function CustomersIndex({ customers, term }) {
                       <td className="px-5 py-3.5 text-gray-400 text-xs">
                         {customer.last_order_at ? new Date(customer.last_order_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                       </td>
+                      <td className="px-5 py-3.5">
+                        {customer.account_id ? (
+                          <button onClick={() => toggleCustomer(customer)} className={`px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${customer.is_active ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                            {customer.is_active ? 'Active' : 'Inactive'}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-400">Guest order</span>
+                        )}
+                      </td>
                       <td className="px-5 py-3.5 text-right">
-                        <a href={`/admin/customers/${encodeURIComponent(customer.customer_phone)}`} className="px-2.5 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-medium transition-colors">View Orders</a>
+                        {customer.account_id ? (
+                          <div className="flex justify-end gap-1.5">
+                            <a href={`/admin/customers/${customer.account_id}/edit`} className="px-2.5 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors">Edit</a>
+                            <button onClick={() => deleteCustomer(customer)} className="px-2.5 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-medium transition-colors">Delete</button>
+                          </div>
+                        ) : Number(customer.orders_count) > 0 ? (
+                          <a href={`/admin/customers/${encodeURIComponent(customer.customer_phone)}`} className="px-2.5 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-medium transition-colors">View Orders</a>
+                        ) : (
+                          <span className="text-xs text-gray-400">No orders yet</span>
+                        )}
                       </td>
                     </tr>
                   ))}

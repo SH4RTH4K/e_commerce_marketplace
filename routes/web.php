@@ -308,6 +308,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // People
         Route::get('customers', [AdminCustomerController::class, 'index'])->name('customers.index');
+        Route::get('customers/{customer}/edit', [AdminCustomerController::class, 'edit'])->name('customers.edit');
+        Route::put('customers/{customer}', [AdminCustomerController::class, 'update'])->name('customers.update');
+        Route::patch('customers/{customer}/toggle', [AdminCustomerController::class, 'toggle'])->name('customers.toggle');
+        Route::delete('customers/{customer}', [AdminCustomerController::class, 'destroy'])->name('customers.destroy');
         Route::get('customers/{phone}', [AdminCustomerController::class, 'show'])->name('customers.show');
 
         // Product card button (text + action)
