@@ -71,6 +71,53 @@ class ImportedProductBatchSyncTest extends TestCase
         Queue::assertPushed(StartImportedProductSync::class, 1);
     }
 
+    public function test_imported_products_page_exposes_active_price_and_data_sync_runs(): void
+    {
+        Queue::fake();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $supplier = $this->supplier();
+        $this->linkedProduct($supplier, 'Portable Speaker', true);
+
+        $this->actingAs($admin)->post('/admin/dropshipping/imported/bulk-sync-filtered')->assertRedirect();
+
+        $this->actingAs($admin)->get('/admin/dropshipping/imported')
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Dropshipping/ImportedProducts')
+                ->has('sync_runs', 1)
+                ->where('sync_runs.0.supplier.name', 'Supplier')
+                ->where('sync_runs.0.status', 'queued')
+                ->where('sync_runs.0.requested_items', 1)
+            );
+    }
+
+    public function test_imported_products_can_be_ordered_by_name(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $supplier = $this->supplier();
+        $this->linkedProduct($supplier, 'Alpha Speaker', true);
+        $this->linkedProduct($supplier, 'Zulu Speaker', true);
+
+        $this->actingAs($admin)->get('/admin/dropshipping/imported?order_by=name_desc')
+            ->assertInertia(fn ($page) => $page
+                ->where('order_by', 'name_desc')
+                ->where('products.0.name', 'Zulu Speaker')
+            );
+    }
+
+    public function test_supplier_products_can_be_ordered_by_name(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $supplier = $this->supplier();
+        $this->linkedProduct($supplier, 'Alpha Speaker', true);
+        $this->linkedProduct($supplier, 'Zulu Speaker', true);
+
+        $this->actingAs($admin)->get('/admin/dropshipping/products?order_by=name_desc')
+            ->assertInertia(fn ($page) => $page
+                ->where('order_by', 'name_desc')
+                ->where('products.0.name', 'Zulu Speaker')
+            );
+    }
+
     private function supplier(): DropshipSupplier
     {
         return DropshipSupplier::create([

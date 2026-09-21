@@ -110,8 +110,9 @@ class DropshippingController extends Controller
         $perPage = is_numeric($requestedPerPage) && in_array((int) $requestedPerPage, [25, 50, 100], true)
             ? (int) $requestedPerPage
             : 100;
+        $orderBy = $this->dropshippingProductOrder($request->string('order_by')->toString());
         
-        $products = DropshipSupplierProduct::query()
+        $productQuery = DropshipSupplierProduct::query()
             ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search) {
                 $searchQuery->where('name', 'like', "%{$search}%")
                     ->orWhere('supplier_product_id', 'like', "%{$search}%")
@@ -124,9 +125,21 @@ class DropshippingController extends Controller
                 $query->where('stock_qty', $operator, (float) $stockValue);
             })
             ->when($importStatusFilter === 'imported', fn ($query) => $query->has('productLink'))
-            ->when($importStatusFilter === 'not_imported', fn ($query) => $query->doesntHave('productLink'))
+            ->when($importStatusFilter === 'not_imported', fn ($query) => $query->doesntHave('productLink'));
+
+        match ($orderBy) {
+            'oldest' => $productQuery->oldest('id'),
+            'name_asc' => $productQuery->orderBy('name')->orderBy('id'),
+            'name_desc' => $productQuery->orderByDesc('name')->orderByDesc('id'),
+            'price_asc' => $productQuery->orderBy('cost_price')->orderBy('id'),
+            'price_desc' => $productQuery->orderByDesc('cost_price')->orderByDesc('id'),
+            'stock_asc' => $productQuery->orderBy('stock_qty')->orderBy('id'),
+            'stock_desc' => $productQuery->orderByDesc('stock_qty')->orderByDesc('id'),
+            default => $productQuery->latest('id'),
+        };
+
+        $products = $productQuery
             ->with(['supplier:id,name,key,pricing_rules', 'productLink.product:id,name,is_published'])
-            ->latest('id')
             ->paginate($perPage)
             ->withQueryString();
 
@@ -170,6 +183,7 @@ class DropshippingController extends Controller
             'search_filter' => $search,
             'status_filter' => in_array($importStatusFilter, ['imported', 'not_imported'], true) ? $importStatusFilter : '',
             'import_status_filter' => in_array($importStatusFilter, ['imported', 'not_imported']) ? $importStatusFilter : '',
+            'order_by' => $orderBy,
             'categories' => DropshipSupplierProduct::query()->whereNotNull('supplier_category_key')->distinct()->orderBy('supplier_category_key')->pluck('supplier_category_key')->values(),
             'pagination' => [
                 'current_page' => $products->currentPage(),
@@ -216,8 +230,9 @@ class DropshippingController extends Controller
         $perPage = is_numeric($requestedPerPage) && in_array((int) $requestedPerPage, [25, 50, 100], true)
             ? (int) $requestedPerPage
             : 100;
+        $orderBy = $this->dropshippingProductOrder($request->string('order_by')->toString());
         
-        $products = Product::query()
+        $productQuery = Product::query()
             ->whereHas('supplierLinks.supplierProduct', fn ($query) => $query->when($categoryFilter !== '', fn ($categoryQuery) => $categoryQuery->where('supplier_category_key', $categoryFilter)))
             ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search) {
                 $searchQuery->where('name', 'like', "%{$search}%")
@@ -228,7 +243,20 @@ class DropshippingController extends Controller
             ->when(in_array($stockOperator, ['gt', 'lt', 'eq'], true) && is_numeric($stockValue), function ($query) use ($stockOperator, $stockValue) {
                 $operator = ['gt' => '>', 'lt' => '<', 'eq' => '='][$stockOperator];
                 $query->where('stock_quantity', $operator, (float) $stockValue);
-            })
+            });
+
+        match ($orderBy) {
+            'oldest' => $productQuery->oldest('id'),
+            'name_asc' => $productQuery->orderBy('name')->orderBy('id'),
+            'name_desc' => $productQuery->orderByDesc('name')->orderByDesc('id'),
+            'price_asc' => $productQuery->orderBy('regular_price')->orderBy('id'),
+            'price_desc' => $productQuery->orderByDesc('regular_price')->orderByDesc('id'),
+            'stock_asc' => $productQuery->orderBy('stock_quantity')->orderBy('id'),
+            'stock_desc' => $productQuery->orderByDesc('stock_quantity')->orderByDesc('id'),
+            default => $productQuery->latest('id'),
+        };
+
+        $products = $productQuery
             ->with([
                 'images' => fn ($query) => $query
                     ->select(['id', 'product_id', 'path', 'alt', 'is_primary', 'position'])
@@ -237,7 +265,6 @@ class DropshippingController extends Controller
                 'supplierLinks.supplierProduct.supplier:id,name,key',
                 'supplierLinks.supplierProduct.variants.variantLink',
             ])
-            ->latest('id')
             ->paginate($perPage)
             ->withQueryString();
 
@@ -267,11 +294,34 @@ class DropshippingController extends Controller
 
         return Inertia::render('Admin/Dropshipping/ImportedProducts', [
             'products' => $productRows,
+            'sync_runs' => DropshipSyncRun::query()
+                ->with('supplier:id,name,key')
+                ->where('type', 'imported_product_sync')
+                ->whereIn('status', [SyncRunState::QUEUED, SyncRunState::RUNNING])
+                ->latest('id')
+                ->get()
+                ->map(fn (DropshipSyncRun $run): array => [
+                    'id' => $run->id,
+                    'supplier' => $run->supplier ? [
+                        'name' => $run->supplier->name,
+                        'key' => $run->supplier->key,
+                    ] : null,
+                    'status' => $run->status,
+                    'total_items' => $run->total_items,
+                    'requested_items' => count(((array) $run->filters)['supplier_product_ids'] ?? []),
+                    'processed_items' => $run->processed_items,
+                    'success_items' => $run->success_items,
+                    'failed_items' => $run->failed_items,
+                    'started_at' => $run->started_at?->toIso8601String(),
+                    'created_at' => $run->created_at?->toIso8601String(),
+                ])
+                ->values(),
             'search_filter' => $search,
             'category_filter' => $categoryFilter,
             'status_filter' => $statusFilter,
             'stock_operator' => in_array($stockOperator, ['gt', 'lt', 'eq'], true) ? $stockOperator : '',
             'stock_value' => is_numeric($stockValue) ? (string) $stockValue : '',
+            'order_by' => $orderBy,
             'categories' => DropshipSupplierProduct::query()
                 ->whereNotNull('supplier_category_key')
                 ->distinct()
@@ -1297,5 +1347,12 @@ class DropshippingController extends Controller
             'mirrored_products' => $supplier->products()->count(),
             'mirrored_variants' => $supplier->variants()->count(),
         ];
+    }
+
+    private function dropshippingProductOrder(string $orderBy): string
+    {
+        return in_array($orderBy, [
+            'newest', 'oldest', 'name_asc', 'name_desc', 'price_asc', 'price_desc', 'stock_asc', 'stock_desc',
+        ], true) ? $orderBy : 'newest';
     }
 }

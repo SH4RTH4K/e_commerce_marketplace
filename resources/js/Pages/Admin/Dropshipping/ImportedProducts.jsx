@@ -1,6 +1,49 @@
 import DropshippingSubpage from './Subpage';
 import { router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+function SyncStatus({ status }) {
+  const styles = {
+    queued: 'bg-amber-100 text-amber-800',
+    running: 'bg-blue-100 text-blue-800',
+  };
+
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold capitalize ${styles[status] || 'bg-gray-100 text-gray-700'}`}>{status || 'unknown'}</span>;
+}
+
+function ImportedProductSyncQueue({ runs }) {
+  if (runs.length === 0) return null;
+
+  const cancelRun = id => router.post(`/admin/dropshipping/runs/${id}/cancel`, {}, { preserveScroll: true });
+
+  return <section aria-live="polite" className="overflow-hidden rounded-2xl border border-blue-200 bg-blue-50 shadow-sm">
+    <div className="flex flex-col gap-3 border-b border-blue-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h2 className="font-bold text-blue-950">Price & data synchronization queue</h2>
+        <p className="mt-1 text-sm text-blue-800">A price and data synchronization is already running for the selected supplier(s).</p>
+      </div>
+      <span className="w-fit rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-blue-800 shadow-sm">{runs.length} active {runs.length === 1 ? 'run' : 'runs'}</span>
+    </div>
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead><tr className="bg-blue-100/50 text-[10px] uppercase tracking-wider text-blue-700"><th className="px-5 py-3 text-left">Supplier</th><th className="px-5 py-3 text-left">Status</th><th className="px-5 py-3 text-left">Progress</th><th className="px-5 py-3 text-left">Queue detail</th><th className="px-5 py-3 text-right">Action</th></tr></thead>
+        <tbody className="divide-y divide-blue-100 bg-white/70">
+          {runs.map(run => {
+            const total = run.total_items ?? run.requested_items;
+            const isQueued = run.status === 'queued';
+            return <tr key={run.id}>
+              <td className="px-5 py-3"><p className="font-semibold text-gray-800">{run.supplier?.name || 'Unknown supplier'}</p><p className="text-xs text-gray-500">Run #{run.id}</p></td>
+              <td className="px-5 py-3"><SyncStatus status={run.status} /></td>
+              <td className="px-5 py-3 text-xs text-gray-700"><p className="font-semibold">{run.processed_items || 0} / {total || 0} products</p><p className="mt-0.5 text-gray-500">{run.success_items || 0} updated{run.failed_items ? ` · ${run.failed_items} failed` : ''}</p></td>
+              <td className="px-5 py-3 text-xs text-gray-600">{isQueued ? 'Waiting for a queue worker to start.' : 'Updates are being processed now.'}</td>
+              <td className="px-5 py-3 text-right"><button type="button" onClick={() => cancelRun(run.id)} className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100">Cancel</button></td>
+            </tr>;
+          })}
+        </tbody>
+      </table>
+    </div>
+  </section>;
+}
 
 function ImagePreview({ product }) {
   const [imageFailed, setImageFailed] = useState(false);
@@ -51,13 +94,14 @@ function ImagePreview({ product }) {
   </>;
 }
 
-export default function ImportedProducts({ products = [], categories = [], search_filter = '', category_filter = '', status_filter = '', stock_operator = '', stock_value = '', pagination = {} }) {
+export default function ImportedProducts({ products = [], categories = [], sync_runs = [], search_filter = '', category_filter = '', status_filter = '', stock_operator = '', stock_value = '', order_by = 'newest', pagination = {} }) {
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState(search_filter);
   const [category, setCategory] = useState(category_filter);
   const [status, setStatus] = useState(status_filter);
   const [stockOperator, setStockOperator] = useState(stock_operator);
   const [stockValue, setStockValue] = useState(stock_value);
+  const [orderBy, setOrderBy] = useState(order_by);
   const [pageSize, setPageSize] = useState(String(pagination.per_page || 100));
   const [prices, setPrices] = useState({});
   const [batchType, setBatchType] = useState('');
@@ -69,6 +113,17 @@ export default function ImportedProducts({ products = [], categories = [], searc
   const totalProducts = pagination.total ?? products.length;
   const firstResult = totalProducts === 0 ? 0 : ((currentPage - 1) * perPage) + 1;
   const lastResult = Math.min(currentPage * perPage, totalProducts);
+  const hasActiveSync = sync_runs.length > 0;
+
+  useEffect(() => {
+    if (!hasActiveSync) return undefined;
+
+    const interval = window.setInterval(() => {
+      router.reload({ only: ['sync_runs'], preserveScroll: true, preserveState: true });
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [hasActiveSync]);
 
   const toggle = id => setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
   const toggleAll = () => setSelected(selected.length === products.length ? [] : products.map(product => product.id));
@@ -156,6 +211,7 @@ export default function ImportedProducts({ products = [], categories = [], searc
       params.append('stock_operator', stockOperator);
       params.append('stock_value', stockValue);
     }
+    params.append('order_by', orderBy);
     params.append('per_page', pageSize);
     return params.toString() ? `?${params.toString()}` : '';
   };
@@ -165,7 +221,7 @@ export default function ImportedProducts({ products = [], categories = [], searc
   const publishOne = id => router.patch(`/admin/dropshipping/imported/${id}/publish`, { ...flags, ...(prices[id] || {}) }, { preserveScroll: true });
   const unpublishOne = id => router.post('/admin/dropshipping/imported/bulk-unpublish', { ids: [id] }, { preserveScroll: true });
   const filterList = () => { setSelected([]); router.get(`/admin/dropshipping/imported${filterParams()}`, {}, { preserveScroll: true, preserveState: true }); };
-  const clearFilter = () => { setSearch(''); setCategory(''); setStatus(''); setStockOperator(''); setStockValue(''); setPageSize('100'); setSelected([]); router.get('/admin/dropshipping/imported?per_page=100', {}, { preserveScroll: true, preserveState: true }); };
+  const clearFilter = () => { setSearch(''); setCategory(''); setStatus(''); setStockOperator(''); setStockValue(''); setOrderBy('newest'); setPageSize('100'); setSelected([]); router.get('/admin/dropshipping/imported?per_page=100', {}, { preserveScroll: true, preserveState: true }); };
   const goToPage = page => { setSelected([]); router.get(`/admin/dropshipping/imported?page=${page}${filterParams().replace('?', '&')}`, {}, { preserveScroll: true, preserveState: true }); };
 
   return <DropshippingSubpage title="Imported Products" description="Review integration-created local products before publishing them to the storefront.">
@@ -173,6 +229,7 @@ export default function ImportedProducts({ products = [], categories = [], searc
       <button type="button" disabled={selected.length === 0} onClick={publishSelected} className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400">Publish selected ({selected.length})</button>
       <button type="button" disabled={selected.length === 0} onClick={unpublishSelected} className="rounded-lg bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400">Unpublish selected</button>
     </div>
+    <ImportedProductSyncQueue runs={sync_runs} />
     <section className="rounded-2xl border border-orange-100 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div><h2 className="font-bold text-gray-900">Batch synchronize imported products</h2><p className="mt-1 text-sm text-gray-500">Queue price, stock, description, and supplier image updates from the latest catalog data for all {totalProducts} products matching the current filters.</p></div>
@@ -183,12 +240,13 @@ export default function ImportedProducts({ products = [], categories = [], searc
     </section>
     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><strong>Review process:</strong> open the image preview, confirm price, stock, and mapped variants, then publish or leave the product as a draft. Use Unpublish when the image or listing no longer meets the storefront standard.</div>
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div className="flex flex-col gap-3 xl:flex-row xl:flex-wrap xl:items-end">
         <label className="min-w-[240px] flex-1 text-sm font-semibold text-gray-600">Search products<input type="search" value={search} onChange={event => setSearch(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') filterList(); }} placeholder="Search by name or SKU" className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" /></label>
         <label className="flex-1 text-sm font-semibold text-gray-600">Category<select value={category} onChange={event => setCategory(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="">All categories</option>{categories.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
         <label className="w-40 text-sm font-semibold text-gray-600">Status<select value={status} onChange={event => setStatus(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="">All statuses</option><option value="published">Published</option><option value="draft">Draft (Unpublished)</option></select></label>
         <label className="w-40 text-sm font-semibold text-gray-600">Stock comparison<select value={stockOperator} onChange={event => setStockOperator(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="">Any stock</option><option value="gt">Greater than</option><option value="lt">Less than</option><option value="eq">Equal to</option></select></label>
         <label className="w-36 text-sm font-semibold text-gray-600">Stock value<input type="number" min="0" step="any" value={stockValue} onChange={event => setStockValue(event.target.value)} placeholder="e.g. 10" className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" /></label>
+        <label className="w-44 text-sm font-semibold text-gray-600">Order by<select value={orderBy} onChange={event => setOrderBy(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="name_asc">Name: A to Z</option><option value="name_desc">Name: Z to A</option><option value="price_asc">Price: Low to High</option><option value="price_desc">Price: High to Low</option><option value="stock_asc">Stock: Low to High</option><option value="stock_desc">Stock: High to Low</option></select></label>
         <label className="w-28 text-sm font-semibold text-gray-600">Rows per page<select value={pageSize} onChange={event => setPageSize(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
         <button type="button" onClick={filterList} className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-600">Apply filters</button>
         <button type="button" onClick={clearFilter} className="rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-200">Clear</button>
