@@ -87,7 +87,28 @@ class ImportedProductBatchSyncTest extends TestCase
                 ->where('sync_runs.0.supplier.name', 'Supplier')
                 ->where('sync_runs.0.status', 'queued')
                 ->where('sync_runs.0.requested_items', 1)
+                ->has('sync_suppliers', 1)
+                ->where('sync_suppliers.0.name', 'Supplier')
+                ->where('sync_suppliers.0.imported_products_count', 1)
             );
+    }
+
+    public function test_supplier_card_sync_only_queues_that_suppliers_imported_products(): void
+    {
+        Queue::fake();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $firstSupplier = $this->supplier();
+        $secondSupplier = $this->supplier();
+        $firstSource = $this->linkedProduct($firstSupplier, 'First supplier speaker', true);
+        $this->linkedProduct($secondSupplier, 'Second supplier speaker', true);
+
+        $this->actingAs($admin)->post('/admin/dropshipping/imported/bulk-sync-filtered', [
+            'supplier_id' => $firstSupplier->id,
+        ])->assertRedirect();
+
+        $run = DropshipSyncRun::query()->sole();
+        $this->assertSame($firstSupplier->id, $run->supplier_id);
+        $this->assertSame([$firstSource->id], $run->filters['supplier_product_ids']);
     }
 
     public function test_imported_products_can_be_ordered_by_name(): void

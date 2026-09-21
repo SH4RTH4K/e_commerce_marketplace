@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react';
 
 function SyncStatus({ status }) {
   const styles = {
+    success: 'bg-green-100 text-green-800',
     queued: 'bg-amber-100 text-amber-800',
     running: 'bg-blue-100 text-blue-800',
+    failed: 'bg-red-100 text-red-800',
+    untested: 'bg-gray-100 text-gray-700',
   };
 
   return <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold capitalize ${styles[status] || 'bg-gray-100 text-gray-700'}`}>{status || 'unknown'}</span>;
@@ -43,6 +46,21 @@ function ImportedProductSyncQueue({ runs }) {
       </table>
     </div>
   </section>;
+}
+
+function ImportedSupplierSyncCard({ supplier, run, syncing, onSync }) {
+  const isRunning = Boolean(run && ['queued', 'running'].includes(run.status));
+  const disabled = syncing || isRunning || !supplier.is_active || supplier.imported_products_count === 0;
+
+  return <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-gray-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <p className="font-semibold text-gray-800">{supplier.name}</p>
+      <p className="text-xs text-gray-500">{supplier.imported_products_count || 0} imported products · connection <SyncStatus status={supplier.last_connection_status || 'untested'} /></p>
+    </div>
+    <button type="button" disabled={disabled} onClick={() => onSync(supplier.id)} className="shrink-0 rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-600 disabled:bg-gray-200 disabled:text-gray-400">
+      {syncing ? 'Queueing sync...' : isRunning ? 'Sync in progress' : 'Sync prices & data'}
+    </button>
+  </div>;
 }
 
 function ImagePreview({ product }) {
@@ -94,7 +112,7 @@ function ImagePreview({ product }) {
   </>;
 }
 
-export default function ImportedProducts({ products = [], categories = [], sync_runs = [], search_filter = '', category_filter = '', status_filter = '', stock_operator = '', stock_value = '', order_by = 'newest', pagination = {} }) {
+export default function ImportedProducts({ products = [], categories = [], sync_runs = [], sync_suppliers = [], search_filter = '', category_filter = '', status_filter = '', stock_operator = '', stock_value = '', order_by = 'newest', pagination = {} }) {
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState(search_filter);
   const [category, setCategory] = useState(category_filter);
@@ -133,7 +151,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
     router.post('/admin/dropshipping/imported/bulk-sync', { ids: selected }, { preserveScroll: true, onSuccess: () => setSelected([]) });
   };
 
-  const syncFiltered = () => {
+  const syncSupplier = supplierId => {
     setBatchSyncing(true);
     router.post('/admin/dropshipping/imported/bulk-sync-filtered', {
       q: search.trim(),
@@ -141,6 +159,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
       status,
       stock_operator: stockOperator,
       stock_value: stockValue,
+      supplier_id: supplierId,
     }, {
       preserveScroll: true,
       onSuccess: () => setSelected([]),
@@ -229,15 +248,14 @@ export default function ImportedProducts({ products = [], categories = [], sync_
       <button type="button" disabled={selected.length === 0} onClick={publishSelected} className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400">Publish selected ({selected.length})</button>
       <button type="button" disabled={selected.length === 0} onClick={unpublishSelected} className="rounded-lg bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400">Unpublish selected</button>
     </div>
-    <ImportedProductSyncQueue runs={sync_runs} />
-    <section className="rounded-2xl border border-orange-100 bg-white p-5 shadow-sm">
+    {sync_suppliers.length > 0 && <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div><h2 className="font-bold text-gray-900">Batch synchronize imported products</h2><p className="mt-1 text-sm text-gray-500">Queue price, stock, description, and supplier image updates from the latest catalog data for all {totalProducts} products matching the current filters.</p></div>
-        <button type="button" disabled={totalProducts === 0 || batchSyncing} onClick={syncFiltered} className="shrink-0 rounded-xl bg-orange-500 px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-orange-600 disabled:bg-gray-200 disabled:text-gray-400">
-          {batchSyncing ? 'Queueing sync...' : `Batch sync prices & data (${totalProducts})`}
-        </button>
+        <div><h2 className="font-bold text-gray-900">Synchronize imported products</h2><p className="mt-1 text-sm text-gray-500">Price and data sync runs in the queue for each supplier and updates imported products matching the current filters.</p></div>
+        <a href="/admin/dropshipping/settings" className="text-sm font-semibold text-orange-600 underline">API settings</a>
       </div>
-    </section>
+      <div className="mt-4 space-y-3">{sync_suppliers.map(supplier => <ImportedSupplierSyncCard key={supplier.id} supplier={supplier} run={sync_runs.find(run => run.supplier_id === supplier.id)} syncing={batchSyncing} onSync={syncSupplier} />)}</div>
+    </section>}
+    <ImportedProductSyncQueue runs={sync_runs} />
     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><strong>Review process:</strong> open the image preview, confirm price, stock, and mapped variants, then publish or leave the product as a draft. Use Unpublish when the image or listing no longer meets the storefront standard.</div>
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 xl:flex-row xl:flex-wrap xl:items-end">

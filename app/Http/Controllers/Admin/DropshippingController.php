@@ -302,6 +302,7 @@ class DropshippingController extends Controller
                 ->get()
                 ->map(fn (DropshipSyncRun $run): array => [
                     'id' => $run->id,
+                    'supplier_id' => $run->supplier_id,
                     'supplier' => $run->supplier ? [
                         'name' => $run->supplier->name,
                         'key' => $run->supplier->key,
@@ -314,6 +315,23 @@ class DropshippingController extends Controller
                     'failed_items' => $run->failed_items,
                     'started_at' => $run->started_at?->toIso8601String(),
                     'created_at' => $run->created_at?->toIso8601String(),
+                ])
+                ->values(),
+            'sync_suppliers' => DropshipSupplier::query()
+                ->withCount([
+                    'products as imported_products_count' => fn ($query) => $query->whereHas('productLink', fn ($linkQuery) => $linkQuery
+                        ->where('product_created_by_integration', true)
+                        ->where('sync_status', 'active')),
+                ])
+                ->latest('id')
+                ->get(['id', 'name', 'key', 'is_active', 'last_connection_status'])
+                ->map(fn (DropshipSupplier $supplier): array => [
+                    'id' => $supplier->id,
+                    'name' => $supplier->name,
+                    'key' => $supplier->key,
+                    'is_active' => $supplier->is_active,
+                    'last_connection_status' => $supplier->last_connection_status,
+                    'imported_products_count' => $supplier->imported_products_count,
                 ])
                 ->values(),
             'search_filter' => $search,
@@ -844,6 +862,7 @@ class DropshippingController extends Controller
             'status' => ['nullable', 'in:published,draft'],
             'stock_operator' => ['nullable', 'in:gt,lt,eq'],
             'stock_value' => ['nullable', 'numeric'],
+            'supplier_id' => ['nullable', 'integer', 'exists:dropship_suppliers,id'],
         ]);
 
         $search = trim($data['q'] ?? '');
@@ -851,12 +870,14 @@ class DropshippingController extends Controller
         $status = $data['status'] ?? '';
         $stockOperator = $data['stock_operator'] ?? '';
         $stockValue = $data['stock_value'] ?? null;
+        $supplierId = $data['supplier_id'] ?? null;
 
         $productIds = Product::query()
             ->whereHas('supplierLinks', fn ($query) => $query
                 ->where('product_created_by_integration', true)
                 ->where('sync_status', 'active')
                 ->whereHas('supplierProduct', fn ($supplierProductQuery) => $supplierProductQuery
+                    ->when($supplierId !== null, fn ($supplierQuery) => $supplierQuery->where('supplier_id', $supplierId))
                     ->when($category !== '', fn ($categoryQuery) => $categoryQuery->where('supplier_category_key', $category))))
             ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search) {
                 $searchQuery->where('name', 'like', "%{$search}%")
