@@ -65,6 +65,9 @@ class PriceStockSyncService
                         $warnings = array_merge($warnings, $price->warnings);
                         $priceUpdated = true;
                     } else {
+                        // Keep the latest breakdown so the administrator can
+                        // see why the existing storefront price was protected.
+                        $linkUpdates['pricing_snapshot'] = $price->toArray();
                         $warnings[] = 'pricing_' . $price->reason;
                     }
                 }

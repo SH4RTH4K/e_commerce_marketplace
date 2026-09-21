@@ -202,6 +202,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
                 Route::patch('suppliers/{supplier}/toggle', [\App\Http\Controllers\Admin\DropshippingController::class, 'toggle'])->name('suppliers.toggle');
                 Route::get('suppliers/{supplier}/active-run', [\App\Http\Controllers\Admin\DropshippingController::class, 'activeRun'])->name('suppliers.active-run');
                 Route::post('runs/{run}/cancel', [\App\Http\Controllers\Admin\DropshippingController::class, 'cancelRun'])->name('runs.cancel');
+                Route::post('runs/{run}/work-imported', [\App\Http\Controllers\Admin\DropshippingController::class, 'workImportedProductQueue'])->name('runs.work-imported');
+                Route::post('runs/{run}/retry-imported', [\App\Http\Controllers\Admin\DropshippingController::class, 'retryFailedImportedProductSync'])->name('runs.retry-imported');
                 Route::post('runs/{run}/pause-catalog', [\App\Http\Controllers\Admin\DropshippingController::class, 'pauseCatalogRun'])->name('runs.pause-catalog');
                 Route::post('runs/{run}/resume-catalog', [\App\Http\Controllers\Admin\DropshippingController::class, 'resumeCatalogRun'])->name('runs.resume-catalog');
             });

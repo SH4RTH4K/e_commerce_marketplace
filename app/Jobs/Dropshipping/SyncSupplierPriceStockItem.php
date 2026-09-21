@@ -36,18 +36,16 @@ class SyncSupplierPriceStockItem implements ShouldQueue
         }
 
         try {
-            $result = $priceStockSync->sync($source);
+            $priceStockSync->sync($source);
         } catch (Throwable $exception) {
             $syncRuns->requeueItem($run, $itemKey);
 
             throw $exception;
         }
 
-        if ($this->hasPricingConflict($result->warnings)) {
-            $syncRuns->failItem($run, $itemKey, 'Supplier price could not be synchronized within configured constraints.');
-        } else {
-            $syncRuns->succeedItem($run, $itemKey);
-        }
+        // Pricing safeguards can leave the existing price in place while
+        // stock and other safe fields still synchronize successfully.
+        $syncRuns->succeedItem($run, $itemKey);
 
         $syncRuns->finalize($run);
     }
@@ -62,17 +60,5 @@ class SyncSupplierPriceStockItem implements ShouldQueue
         $syncRuns = app(SyncRunService::class);
         $syncRuns->failPendingItem($run, 'product:' . $this->supplierProductRowId, 'Supplier price and stock could not be synchronized.');
         $syncRuns->finalize($run);
-    }
-
-    /** @param list<string> $warnings */
-    private function hasPricingConflict(array $warnings): bool
-    {
-        foreach ($warnings as $warning) {
-            if (str_starts_with($warning, 'pricing_') || $warning === 'unsupported_currency') {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

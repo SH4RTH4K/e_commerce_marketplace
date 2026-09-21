@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Jobs\Dropshipping\StartSupplierCatalogSync;
 use App\Jobs\Dropshipping\StartImportedProductSync;
+use App\Jobs\Dropshipping\SyncImportedProductItem;
 use App\Jobs\Dropshipping\StartSupplierPriceStockSync;
 use App\Jobs\Dropshipping\SyncSupplierCatalogPage;
 use App\Jobs\Dropshipping\TestSupplierConnection;
@@ -154,25 +155,27 @@ class DropshippingController extends Controller
                 return [
                     'id' => $product->id,
                     'supplier' => $product->supplier ? ['name' => $product->supplier->name, 'key' => $product->supplier->key] : null,
-                'supplier_product_id' => $product->supplier_product_id,
-                'name' => $product->name,
-                'currency' => $product->currency,
-                'cost_price' => $product->cost_price,
-                'max_price' => $product->max_price,
-                'calculated_selling' => $price->rawSellingPrice ?? $price->targetSellingPrice,
-                'calculated_minimum' => $price->calculatedMinimumPrice ?? $price->minimumPrice,
-                'calculated_maximum' => $price->calculatedMaximumPrice ?? $price->ceilingPrice,
-                'calculated_discounted' => $price->finalSalePrice,
-                'stock_qty' => $product->stock_qty,
-                'is_available' => $product->is_available,
-                'linked_product' => $product->productLink?->product ? [
-                    'id' => $product->productLink->product->id,
-                    'name' => $product->productLink->product->name,
-                    'is_published' => $product->productLink->product->is_published,
-                ] : null,
-                'fetched_at' => $product->fetched_at?->toIso8601String(),
-            ];
-        })->values();
+                    'supplier_product_id' => $product->supplier_product_id,
+                    'product_code' => $product->product_code ?: $product->supplier_product_id,
+                    'name' => $product->name,
+                    'category' => $product->supplier_category_key,
+                    'currency' => $product->currency,
+                    'cost_price' => $product->cost_price,
+                    'max_price' => $product->max_price,
+                    'calculated_selling' => $price->rawSellingPrice ?? $price->targetSellingPrice,
+                    'calculated_minimum' => $price->calculatedMinimumPrice ?? $price->minimumPrice,
+                    'calculated_maximum' => $price->calculatedMaximumPrice ?? $price->ceilingPrice,
+                    'calculated_discounted' => $price->finalSalePrice,
+                    'stock_qty' => $product->stock_qty,
+                    'is_available' => $product->is_available,
+                    'linked_product' => $product->productLink?->product ? [
+                        'id' => $product->productLink->product->id,
+                        'name' => $product->productLink->product->name,
+                        'is_published' => $product->productLink->product->is_published,
+                    ] : null,
+                    'fetched_at' => $product->fetched_at?->toIso8601String(),
+                ];
+            })->values();
 
         return Inertia::render('Admin/Dropshipping/SupplierProducts', [
             'products' => $productRows,
@@ -286,11 +289,21 @@ class DropshippingController extends Controller
                     'pricing' => $product->supplierLinks->first()?->pricing_snapshot,
                     'category' => $product->supplierLinks->first()?->supplierProduct?->supplier_category_key,
                     'supplier' => $product->supplierLinks->first()?->supplierProduct?->supplier?->name,
+                    'product_code' => $product->supplierLinks->first()?->supplierProduct?->product_code
+                        ?: $product->supplierLinks->first()?->supplierProduct?->supplier_product_id,
                     'supplier_variants' => $product->supplierLinks->first()?->supplierProduct?->variants->count() ?? 0,
                     'mapped_variants' => $product->supplierLinks->first()?->supplierProduct?->variants->filter(fn ($variant) => $variant->variantLink !== null)->count() ?? 0,
                 ];
             })
             ->values();
+
+        $retriedRunIds = DropshipSyncRun::query()
+            ->where('type', 'imported_product_sync')
+            ->whereNotNull('filters')
+            ->get(['filters'])
+            ->map(fn (DropshipSyncRun $run): ?int => ((array) $run->filters)['retry_of_run_id'] ?? null)
+            ->filter()
+            ->all();
 
         return Inertia::render('Admin/Dropshipping/ImportedProducts', [
             'products' => $productRows,
@@ -315,6 +328,25 @@ class DropshippingController extends Controller
                     'failed_items' => $run->failed_items,
                     'started_at' => $run->started_at?->toIso8601String(),
                     'created_at' => $run->created_at?->toIso8601String(),
+                ])
+                ->values(),
+            'failed_sync_runs' => DropshipSyncRun::query()
+                ->with('supplier:id,name,key')
+                ->where('type', 'imported_product_sync')
+                ->whereIn('status', [SyncRunState::FAILED, SyncRunState::COMPLETED_WITH_ERRORS])
+                ->where('failed_items', '>', 0)
+                ->latest('id')
+                ->limit(30)
+                ->get()
+                ->reject(fn (DropshipSyncRun $run): bool => in_array($run->id, $retriedRunIds, true))
+                ->take(10)
+                ->map(fn (DropshipSyncRun $run): array => [
+                    'id' => $run->id,
+                    'supplier' => $run->supplier ? ['name' => $run->supplier->name] : null,
+                    'failed_items' => $run->failed_items,
+                    'processed_items' => $run->processed_items,
+                    'total_items' => $run->total_items,
+                    'error_summary' => $run->error_summary,
                 ])
                 ->values(),
             'sync_suppliers' => DropshipSupplier::query()
@@ -1235,6 +1267,73 @@ class DropshippingController extends Controller
         abort_unless($syncRuns->cancel($run), 409, 'This sync run is no longer cancellable.');
 
         return back()->with('status', 'Sync run cancellation requested.');
+    }
+
+    public function workImportedProductQueue(Request $request, DropshipSyncRun $run, SyncRunService $syncRuns)
+    {
+        $data = $request->validate([
+            'batch_size' => ['nullable', 'integer', 'min:1', 'max:25'],
+        ]);
+        abort_unless($run->type === 'imported_product_sync', 404);
+        abort_unless(in_array($run->status, [SyncRunState::QUEUED, SyncRunState::RUNNING], true), 409, 'No active imported-product sync run exists.');
+
+        if ($run->status === SyncRunState::QUEUED) {
+            StartImportedProductSync::dispatchSync($run->id, false);
+            $run->refresh();
+        }
+
+        $processed = 0;
+        $batchSize = $data['batch_size'] ?? config('dropshipping.imported_sync.browser_batch_size', 10);
+        while ($processed < $batchSize && $run->status === SyncRunState::RUNNING) {
+            $next = $run->items()
+                ->where('status', SyncRunState::ITEM_QUEUED)
+                ->orderBy('id')
+                ->first(['item_key']);
+
+            if ($next === null || ! preg_match('/^product:(\d+)$/', $next->item_key, $matches)) {
+                $syncRuns->finalize($run);
+                break;
+            }
+
+            SyncImportedProductItem::dispatchSync($run->id, (int) $matches[1], false);
+            ++$processed;
+            $run->refresh();
+        }
+
+        return response()->json(['run' => $run->fresh(), 'processed' => $processed]);
+    }
+
+    public function retryFailedImportedProductSync(DropshipSyncRun $run, SyncRunService $syncRuns)
+    {
+        abort_unless($run->type === 'imported_product_sync', 404);
+        abort_unless($run->supplier !== null, 409, 'The supplier for this sync run is no longer available.');
+
+        $ids = $run->items()
+            ->where('status', SyncRunState::ITEM_FAILED)
+            ->pluck('item_key')
+            ->map(fn (string $key): ?int => preg_match('/^product:(\d+)$/', $key, $matches) ? (int) $matches[1] : null)
+            ->filter()
+            ->values()
+            ->all();
+        abort_if($ids === [], 409, 'This run has no failed imported products to retry.');
+
+        $hasActiveRun = $run->supplier->syncRuns()
+            ->where('type', 'imported_product_sync')
+            ->whereIn('status', [SyncRunState::QUEUED, SyncRunState::RUNNING])
+            ->exists();
+        if ($hasActiveRun) {
+            return back()->with('status', 'A price and data synchronization is already running for the selected supplier(s).');
+        }
+
+        $retry = $syncRuns->createRun(
+            $run->supplier,
+            'imported_product_sync',
+            request()->user(),
+            ['supplier_product_ids' => $ids, 'retry_of_run_id' => $run->id],
+        );
+        StartImportedProductSync::dispatch($retry->id);
+
+        return back()->with('status', count($ids).' failed imported product(s) were queued for retry.');
     }
 
     public function pauseCatalogRun(DropshipSyncRun $run)

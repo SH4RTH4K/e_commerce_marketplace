@@ -21,7 +21,11 @@ class SyncImportedProductItem implements ShouldQueue
     public int $tries = 2;
     public int $timeout = 120;
 
-    public function __construct(public int $syncRunId, public int $supplierProductRowId)
+    public function __construct(
+        public int $syncRunId,
+        public int $supplierProductRowId,
+        public bool $dispatchNextItem = true,
+    )
     {
     }
 
@@ -36,22 +40,28 @@ class SyncImportedProductItem implements ShouldQueue
 
         try {
             $importService->import($source);
-            $result = $priceStockSync->sync($source);
+            $priceStockSync->sync($source);
         } catch (Throwable $exception) {
+            if (! $this->dispatchNextItem) {
+                $syncRuns->failItem($run, $itemKey, 'Imported product could not be synchronized.');
+                $syncRuns->finalize($run);
+
+                return;
+            }
+
             $syncRuns->requeueItem($run, $itemKey);
 
             throw $exception;
         }
 
-        $hasPricingConflict = collect($result->warnings)->contains(
-            fn (string $warning): bool => str_starts_with($warning, 'pricing_') || $warning === 'unsupported_currency',
-        );
-        if ($hasPricingConflict) {
-            $syncRuns->failItem($run, $itemKey, 'Supplier price could not be synchronized within configured constraints.');
+        // A pricing conflict is a deliberate price-protection rule, not a
+        // failed sync. Stock and description updates can still be applied.
+        $syncRuns->succeedItem($run, $itemKey);
+        if ($this->dispatchNextItem) {
+            $this->queueNextItem($run, $syncRuns);
         } else {
-            $syncRuns->succeedItem($run, $itemKey);
+            $syncRuns->finalize($run);
         }
-        $syncRuns->finalize($run);
     }
 
     public function failed(Throwable $exception): void
@@ -63,6 +73,31 @@ class SyncImportedProductItem implements ShouldQueue
 
         $syncRuns = app(SyncRunService::class);
         $syncRuns->failPendingItem($run, 'product:' . $this->supplierProductRowId, 'Imported product could not be synchronized.');
+        if ($this->dispatchNextItem) {
+            $this->queueNextItem($run, $syncRuns);
+        } else {
+            $syncRuns->finalize($run);
+        }
+    }
+
+    private function queueNextItem(DropshipSyncRun $run, SyncRunService $syncRuns): void
+    {
+        $run = DropshipSyncRun::query()->find($run->id);
+        if ($run === null || $run->status !== 'running') {
+            return;
+        }
+
+        $next = $run->items()
+            ->where('status', 'queued')
+            ->orderBy('id')
+            ->first(['item_key']);
+
+        if ($next !== null && preg_match('/^product:(\d+)$/', $next->item_key, $matches)) {
+            self::dispatch($run->id, (int) $matches[1]);
+
+            return;
+        }
+
         $syncRuns->finalize($run);
     }
 }

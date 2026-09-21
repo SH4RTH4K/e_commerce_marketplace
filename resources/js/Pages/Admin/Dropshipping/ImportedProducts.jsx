@@ -1,6 +1,6 @@
 import DropshippingSubpage from './Subpage';
 import { router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 function SyncStatus({ status }) {
   const styles = {
@@ -48,18 +48,81 @@ function ImportedProductSyncQueue({ runs }) {
   </section>;
 }
 
+function FailedImportedProductSyncRuns({ runs }) {
+  if (runs.length === 0) return null;
+
+  return <section className="overflow-hidden rounded-2xl border border-red-200 bg-red-50 shadow-sm">
+    <div className="px-5 py-4"><h2 className="font-bold text-red-950">Failed product syncs</h2><p className="mt-1 text-sm text-red-800">Retry only after fixing a real supplier or connection error. Price-protection conflicts keep the current storefront price but no longer fail a sync.</p></div>
+    <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-red-100/60 text-[10px] uppercase tracking-wider text-red-700"><th className="px-5 py-3 text-left">Supplier</th><th className="px-5 py-3 text-left">Failed products</th><th className="px-5 py-3 text-left">Last error</th><th className="px-5 py-3 text-right">Action</th></tr></thead><tbody className="divide-y divide-red-100 bg-white/70">{runs.map(run => <tr key={run.id}><td className="px-5 py-3"><p className="font-semibold text-gray-800">{run.supplier?.name || 'Unknown supplier'}</p><p className="text-xs text-gray-500">Run #{run.id}</p></td><td className="px-5 py-3 text-sm font-semibold text-red-700">{run.failed_items}</td><td className="max-w-md px-5 py-3 text-xs text-gray-600">{run.error_summary || 'Review the supplier response or price rules, then retry.'}</td><td className="px-5 py-3 text-right"><button type="button" onClick={() => router.post(`/admin/dropshipping/runs/${run.id}/retry-imported`, {}, { preserveScroll: true })} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700">Retry failed</button></td></tr>)}</tbody></table></div>
+  </section>;
+}
+
 function ImportedSupplierSyncCard({ supplier, run, syncing, onSync }) {
   const isRunning = Boolean(run && ['queued', 'running'].includes(run.status));
+  const workerBusy = useRef(false);
+  const [webWorkerActive, setWebWorkerActive] = useState(false);
+  const [batchSize, setBatchSize] = useState('10');
   const disabled = syncing || isRunning || !supplier.is_active || supplier.imported_products_count === 0;
+  const total = run?.total_items ?? run?.requested_items ?? 0;
+  const processed = run?.processed_items ?? 0;
+  const progress = total > 0 ? Math.round((processed / total) * 100) : 0;
+  const cancelRun = () => run && router.post(`/admin/dropshipping/runs/${run.id}/cancel`, {}, { preserveScroll: true });
+  const processNextProduct = async () => {
+    if (!run?.id || workerBusy.current) return;
 
-  return <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-gray-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <p className="font-semibold text-gray-800">{supplier.name}</p>
-      <p className="text-xs text-gray-500">{supplier.imported_products_count || 0} imported products · connection <SyncStatus status={supplier.last_connection_status || 'untested'} /></p>
+    workerBusy.current = true;
+    setWebWorkerActive(true);
+    try {
+      await fetch(`/admin/dropshipping/runs/${run.id}/work-imported`, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+        body: JSON.stringify({ batch_size: Math.min(25, Math.max(1, Number(batchSize) || 1)) }),
+      });
+      router.reload({ only: ['sync_runs'], preserveScroll: true, preserveState: true });
+    } catch (_) {
+    } finally {
+      workerBusy.current = false;
+      setWebWorkerActive(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isRunning) return undefined;
+
+    processNextProduct();
+    const interval = window.setInterval(processNextProduct, 750);
+    return () => window.clearInterval(interval);
+  }, [isRunning, run?.id]);
+
+  return <div className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-gray-50/50 p-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="font-semibold text-gray-800">{supplier.name}</p>
+        <p className="text-xs text-gray-500">{supplier.imported_products_count || 0} imported products · connection <SyncStatus status={supplier.last_connection_status || 'untested'} /></p>
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600">Batch (1–25)<input type="number" min="1" max="25" value={batchSize} onChange={event => setBatchSize(event.target.value)} disabled={webWorkerActive} title="1 to 25 products per browser batch" className="w-16 rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700 disabled:opacity-50" /></label>
+        {isRunning && <button type="button" onClick={processNextProduct} disabled={webWorkerActive} className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-800 disabled:bg-blue-200">Process next batch</button>}
+        {isRunning && <button type="button" onClick={cancelRun} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-red-700">Cancel</button>}
+        <button type="button" disabled={disabled} onClick={() => onSync(supplier.id)} className="shrink-0 rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-600 disabled:bg-gray-200 disabled:text-gray-400">
+          {syncing ? 'Queueing sync...' : isRunning ? 'Sync in progress' : 'Sync prices & data'}
+        </button>
+      </div>
     </div>
-    <button type="button" disabled={disabled} onClick={() => onSync(supplier.id)} className="shrink-0 rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-orange-600 disabled:bg-gray-200 disabled:text-gray-400">
-      {syncing ? 'Queueing sync...' : isRunning ? 'Sync in progress' : 'Sync prices & data'}
-    </button>
+    {isRunning && <div className="mt-2 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="mb-2 flex items-center justify-between text-xs">
+        <span className="font-semibold text-gray-700">{run.status === 'queued' ? 'Waiting for queue worker to start price and data sync...' : 'Syncing imported products...'}</span>
+        <span className="font-mono text-gray-500">{processed} / {total}</span>
+      </div>
+      <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-100"><div className="h-2.5 rounded-full bg-orange-500 transition-all duration-300" style={{ width: `${progress}%` }} /></div>
+      {webWorkerActive && <p className="mt-2 text-[10px] font-semibold text-blue-700">Processing the next safe batch of queued products...</p>}
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+        <div className="rounded-lg bg-gray-50 p-2"><span className="block text-gray-500">Queued products</span><strong>{total}</strong></div>
+        <div className="rounded-lg bg-gray-50 p-2"><span className="block text-gray-500">Processed</span><strong>{processed}</strong></div>
+        <div className="rounded-lg bg-gray-50 p-2"><span className="block text-gray-500">Updated</span><strong>{run.success_items || 0}</strong></div>
+        <div className="rounded-lg bg-gray-50 p-2"><span className="block text-gray-500">Run status</span><strong className="capitalize">{run.status}</strong></div>
+      </div>
+    </div>}
   </div>;
 }
 
@@ -112,7 +175,7 @@ function ImagePreview({ product }) {
   </>;
 }
 
-export default function ImportedProducts({ products = [], categories = [], sync_runs = [], sync_suppliers = [], search_filter = '', category_filter = '', status_filter = '', stock_operator = '', stock_value = '', order_by = 'newest', pagination = {} }) {
+export default function ImportedProducts({ products = [], categories = [], sync_runs = [], failed_sync_runs = [], sync_suppliers = [], search_filter = '', category_filter = '', status_filter = '', stock_operator = '', stock_value = '', order_by = 'newest', pagination = {} }) {
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState(search_filter);
   const [category, setCategory] = useState(category_filter);
@@ -256,6 +319,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
       <div className="mt-4 space-y-3">{sync_suppliers.map(supplier => <ImportedSupplierSyncCard key={supplier.id} supplier={supplier} run={sync_runs.find(run => run.supplier_id === supplier.id)} syncing={batchSyncing} onSync={syncSupplier} />)}</div>
     </section>}
     <ImportedProductSyncQueue runs={sync_runs} />
+    <FailedImportedProductSyncRuns runs={failed_sync_runs} />
     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><strong>Review process:</strong> open the image preview, confirm price, stock, and mapped variants, then publish or leave the product as a draft. Use Unpublish when the image or listing no longer meets the storefront standard.</div>
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 xl:flex-row xl:flex-wrap xl:items-end">
@@ -286,15 +350,16 @@ export default function ImportedProducts({ products = [], categories = [], sync_
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead><tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-400"><th className="px-5 py-3 text-left"><input type="checkbox" aria-label="Select all products" checked={products.length > 0 && selected.length === products.length} onChange={toggleAll} /></th><th className="px-5 py-3 text-left">SL</th><th className="px-3 py-3 text-left">Image</th><th className="px-5 py-3 text-left">Product</th><th className="px-5 py-3 text-left">Category</th><th className="px-5 py-3 text-left">Supplier</th><th className="px-5 py-3 text-left">Variants</th><th className="min-w-[200px] px-5 py-3 text-left">Storefront Price</th><th className="px-5 py-3 text-left">Stock</th><th className="px-5 py-3 text-left">Status</th><th className="px-5 py-3 text-right">Action</th></tr></thead>
+          <thead><tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-400"><th className="px-5 py-3 text-left"><input type="checkbox" aria-label="Select all products" checked={products.length > 0 && selected.length === products.length} onChange={toggleAll} /></th><th className="px-5 py-3 text-left">SL</th><th className="px-3 py-3 text-left">Image</th><th className="px-5 py-3 text-left">Product</th><th className="px-5 py-3 text-left">Product code</th><th className="px-5 py-3 text-left">Category</th><th className="px-5 py-3 text-left">Supplier</th><th className="px-5 py-3 text-left">Variants</th><th className="min-w-[200px] px-5 py-3 text-left">Storefront Price</th><th className="px-5 py-3 text-left">Stock</th><th className="px-5 py-3 text-left">Status</th><th className="px-5 py-3 text-right">Action</th></tr></thead>
           <tbody className="divide-y divide-gray-50">
-            {products.length === 0 ? <tr><td colSpan="11" className="px-5 py-12 text-center text-sm text-gray-400">No imported products match the current filters.</td></tr> : products.map((product, index) => {
+            {products.length === 0 ? <tr><td colSpan="12" className="px-5 py-12 text-center text-sm text-gray-400">No imported products match the current filters.</td></tr> : products.map((product, index) => {
               const pData = getPriceData(product.id);
               return <tr key={product.id} className="transition-colors hover:bg-orange-50/20">
                 <td className="px-5 py-4"><input type="checkbox" aria-label={`Select ${product.name}`} checked={selected.includes(product.id)} onChange={() => toggle(product.id)} /></td>
                 <td className="px-5 py-4 text-xs font-medium text-gray-500">{((pagination.current_page || 1) - 1) * (pagination.per_page || 100) + index + 1}</td>
                 <td className="px-3 py-4"><ImagePreview product={product} /></td>
                 <td className="px-5 py-4"><a href={`/admin/products/${product.id}/edit`} className="font-semibold text-orange-600 hover:underline">{product.name}</a><p className="mt-0.5 text-xs text-gray-400">SKU: {product.sku || '?'}</p></td>
+                <td className="px-5 py-4 text-xs font-mono text-gray-600">{product.product_code || '—'}</td>
                 <td className="px-5 py-4 text-xs capitalize text-gray-600">{product.category ? product.category.replace(/-/g, ' ') : '-'}</td>
                 <td className="px-5 py-4 text-xs text-gray-600">{product.supplier || '?'}</td>
                 <td className="px-5 py-4 text-xs"><a href="/admin/dropshipping/variations" className={product.supplier_variants === product.mapped_variants ? 'text-green-700' : 'text-amber-700'}>{product.mapped_variants}/{product.supplier_variants} mapped</a></td>

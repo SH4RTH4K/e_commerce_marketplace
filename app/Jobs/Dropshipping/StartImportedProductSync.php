@@ -20,7 +20,7 @@ class StartImportedProductSync implements ShouldQueue
     public int $tries = 2;
     public int $timeout = 120;
 
-    public function __construct(public int $syncRunId)
+    public function __construct(public int $syncRunId, public bool $dispatchFirstItem = true)
     {
     }
 
@@ -47,12 +47,14 @@ class StartImportedProductSync implements ShouldQueue
                 ->where('product_created_by_integration', true)
                 ->where('sync_status', 'active')
                 ->whereNotNull('product_id'))
+            ->orderBy('id')
             ->pluck('id');
 
         $keys = $queued->map(fn (int $id): string => 'product:' . $id)->all();
         $syncRuns->queueItems($run, $keys);
-        foreach ($queued as $id) {
-            SyncImportedProductItem::dispatch($run->id, $id);
+        $nextId = $queued->first();
+        if ($nextId !== null && $this->dispatchFirstItem) {
+            SyncImportedProductItem::dispatch($run->id, $nextId);
         }
         if ($queued->isEmpty()) {
             $syncRuns->finalize($run);
