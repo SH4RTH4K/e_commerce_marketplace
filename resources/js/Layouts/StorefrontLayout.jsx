@@ -366,15 +366,21 @@ export default function StorefrontLayout({ children, title, description, activeC
 
       {/* Category nav (Dark Green) */}
       {categoryList.length > 0 && !isTemplateOne && (
-        <div className={`hidden lg:block ${isTemplateOne ? 'template-1-category-nav bg-white border-b border-gray-100' : 'bg-[#0A2A22]'}`}>
-          <div className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-wrap items-center gap-x-3 lg:gap-x-4 xl:gap-x-5 gap-y-1 min-h-[44px] text-[13px] font-semibold ${isTemplateOne ? 'text-[#222]' : 'text-white'}`}>
+        <div className={`hidden lg:block overflow-x-hidden ${isTemplateOne ? 'template-1-category-nav bg-white border-b border-gray-100' : 'bg-[#0A2A22]'}`}>
+          {/*
+            Category names vary greatly in length. A flex bar full of long names
+            can make the page wider than a desktop viewport and hide edge items.
+            This grid keeps every category within the navigation bar and adds a
+            row when there is not enough horizontal room.
+          */}
+          <div className={`mx-auto grid w-full max-w-7xl grid-cols-6 items-stretch gap-x-2 px-4 sm:px-6 lg:px-8 xl:grid-cols-8 2xl:grid-cols-10 text-[13px] font-semibold ${isTemplateOne ? 'text-[#222]' : 'text-white'}`}>
             {categoryList.map(cat => (
-              <div key={cat.id} className="relative group h-full flex items-center shrink-0">
+              <div key={cat.id} className="relative group flex min-w-0 items-center">
                 <a href={`/category/${cat.slug}`}
-                  className={`flex items-center gap-1.5 whitespace-nowrap hover:text-[#f15a24] transition-colors py-3 ${activeCategory?.id === cat.id ? 'text-[#f15a24]' : ''}`}>
-                  {cat.name}
+                  className={`flex w-full items-center justify-center gap-1.5 px-1 py-3 text-center leading-tight hover:text-[#f15a24] transition-colors ${activeCategory?.id === cat.id ? 'text-[#f15a24]' : ''}`}>
+                  <span>{cat.name}</span>
                   {cat.children && cat.children.length > 0 && (
-                    <svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    <svg className="h-3.5 w-3.5 shrink-0 opacity-70" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
                   )}
                 </a>
                 
