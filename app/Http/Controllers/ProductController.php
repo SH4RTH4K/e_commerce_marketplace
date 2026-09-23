@@ -22,10 +22,17 @@ class ProductController extends Controller
             return redirect()->to($canonical.($query ? '?'.$query : ''), 301);
         }
 
-        $product->load('images', 'variants', 'category');
+        $product->load('images', 'variants', 'category', 'supplierLinks.supplierProduct');
+        // Supplier product codes are the SKU for imported products. Set the
+        // display value on the existing SKU attribute so it is always included
+        // in the serialized storefront product payload.
+        $product->sku = $product->sku
+            ?: $product->supplierLinks->first()?->supplierProduct?->product_code
+            ?: $product->supplierLinks->first()?->supplierProduct?->supplier_product_id;
+        $product->unsetRelation('supplierLinks');
 
         $related = Product::published()
-            ->with('images')
+            ->with('images', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([
                 'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
@@ -33,7 +40,14 @@ class ProductController extends Controller
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
             ->take(5)
-            ->get();
+            ->get()
+            ->each(static function (Product $relatedProduct): void {
+                $supplierProduct = $relatedProduct->supplierLinks->first()?->supplierProduct;
+                $relatedProduct->sku = $relatedProduct->sku
+                    ?: $supplierProduct?->product_code
+                    ?: $supplierProduct?->supplier_product_id;
+                $relatedProduct->unsetRelation('supplierLinks');
+            });
 
         $sizes   = $product->variants->where('type', 'Size')->values();
         $colors  = $product->variants->where('type', 'Color')->values();

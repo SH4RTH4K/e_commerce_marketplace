@@ -142,13 +142,16 @@ export default function ProductCard({ product }) {
         </span>
         
         <div className="flex items-start justify-between gap-3 mb-4">
-          <Link 
-            href={`/product/${product.slug || product.id}`} 
-            className="storefront-product-title block text-[13px] sm:text-[14px] hover:opacity-80 font-bold transition-colors leading-tight line-clamp-2 pr-2"
-            style={{ color: cardText }}
-          >
-            {product.name}
-          </Link>
+          <div className="min-w-0 flex-1">
+            <Link
+              href={`/product/${product.slug || product.id}`}
+              className="storefront-product-title block text-[13px] sm:text-[14px] hover:opacity-80 font-bold transition-colors leading-tight line-clamp-2 pr-2"
+              style={{ color: cardText }}
+            >
+              {product.name}
+            </Link>
+            <p className="mt-1 text-[10px] font-medium text-gray-400">SKU: <span className="font-mono text-gray-500">{product.sku || '—'}</span></p>
+          </div>
           
           <div className="flex flex-col items-end shrink-0 leading-tight mt-0.5">
             <span className="storefront-product-price whitespace-nowrap font-bold text-gray-900 text-[13px] sm:text-[14px]">

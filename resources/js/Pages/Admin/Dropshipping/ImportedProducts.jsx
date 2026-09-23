@@ -350,7 +350,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead><tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-400"><th className="px-5 py-3 text-left"><input type="checkbox" aria-label="Select all products" checked={products.length > 0 && selected.length === products.length} onChange={toggleAll} /></th><th className="px-5 py-3 text-left">SL</th><th className="px-3 py-3 text-left">Image</th><th className="px-5 py-3 text-left">Product</th><th className="px-5 py-3 text-left">Product code</th><th className="px-5 py-3 text-left">Category</th><th className="px-5 py-3 text-left">Supplier</th><th className="px-5 py-3 text-left">Variants</th><th className="min-w-[200px] px-5 py-3 text-left">Storefront Price</th><th className="px-5 py-3 text-left">Stock</th><th className="px-5 py-3 text-left">Status</th><th className="px-5 py-3 text-right">Action</th></tr></thead>
+          <thead><tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-400"><th className="px-5 py-3 text-left"><input type="checkbox" aria-label="Select all products" checked={products.length > 0 && selected.length === products.length} onChange={toggleAll} /></th><th className="px-5 py-3 text-left">SL</th><th className="px-3 py-3 text-left">Image</th><th className="px-5 py-3 text-left">Product</th><th className="px-5 py-3 text-left">SKU</th><th className="px-5 py-3 text-left">Category</th><th className="px-5 py-3 text-left">Supplier</th><th className="px-5 py-3 text-left">Variants</th><th className="min-w-[200px] px-5 py-3 text-left">Storefront Price</th><th className="px-5 py-3 text-left">Stock</th><th className="px-5 py-3 text-left">Status</th><th className="px-5 py-3 text-right">Action</th></tr></thead>
           <tbody className="divide-y divide-gray-50">
             {products.length === 0 ? <tr><td colSpan="12" className="px-5 py-12 text-center text-sm text-gray-400">No imported products match the current filters.</td></tr> : products.map((product, index) => {
               const pData = getPriceData(product.id);
@@ -358,8 +358,8 @@ export default function ImportedProducts({ products = [], categories = [], sync_
                 <td className="px-5 py-4"><input type="checkbox" aria-label={`Select ${product.name}`} checked={selected.includes(product.id)} onChange={() => toggle(product.id)} /></td>
                 <td className="px-5 py-4 text-xs font-medium text-gray-500">{((pagination.current_page || 1) - 1) * (pagination.per_page || 100) + index + 1}</td>
                 <td className="px-3 py-4"><ImagePreview product={product} /></td>
-                <td className="px-5 py-4"><a href={`/admin/products/${product.id}/edit`} className="font-semibold text-orange-600 hover:underline">{product.name}</a><p className="mt-0.5 text-xs text-gray-400">SKU: {product.sku || '?'}</p></td>
-                <td className="px-5 py-4 text-xs font-mono text-gray-600">{product.product_code || '—'}</td>
+                <td className="px-5 py-4"><a href={`/admin/products/${product.id}/edit`} className="font-semibold text-orange-600 hover:underline">{product.name}</a></td>
+                <td className="px-5 py-4 text-xs font-mono text-gray-600">{product.product_code || product.sku || '—'}</td>
                 <td className="px-5 py-4 text-xs capitalize text-gray-600">{product.category ? product.category.replace(/-/g, ' ') : '-'}</td>
                 <td className="px-5 py-4 text-xs text-gray-600">{product.supplier || '?'}</td>
                 <td className="px-5 py-4 text-xs"><a href="/admin/dropshipping/variations" className={product.supplier_variants === product.mapped_variants ? 'text-green-700' : 'text-amber-700'}>{product.mapped_variants}/{product.supplier_variants} mapped</a></td>

@@ -667,7 +667,7 @@ export default function SupplierProducts({
                                 </th>
                                 <th className="px-5 py-3 text-left">Product</th>
                                 <th className="px-5 py-3 text-left">
-                                    Product code
+                                    SKU
                                 </th>
                                 <th className="px-5 py-3 text-left">
                                     Category

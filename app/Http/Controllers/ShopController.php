@@ -13,7 +13,7 @@ class ShopController extends Controller
     public function index(Request $request, ?Category $category = null)
     {
         $query = Product::published()
-            ->with('images', 'category')
+            ->with('images', 'category', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([
                 'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
@@ -120,6 +120,13 @@ class ShopController extends Controller
         $productsPerPage = max(1, min(48, (int) setting($productsPerPageKey, '12')));
 
         $products = $query->paginate($productsPerPage)->withQueryString();
+        $products->getCollection()->each(static function (Product $product): void {
+            $supplierProduct = $product->supplierLinks->first()?->supplierProduct;
+            $product->sku = $product->sku
+                ?: $supplierProduct?->product_code
+                ?: $supplierProduct?->supplier_product_id;
+            $product->unsetRelation('supplierLinks');
+        });
 
         $priceCeiling = (int) Product::published()
             ->selectRaw('MAX(COALESCE(sale_price, regular_price)) as max_price')

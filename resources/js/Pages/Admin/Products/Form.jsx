@@ -349,7 +349,7 @@ export default function ProductForm({ product, categories }) {
                     <Field label="Slug (URL)" error={errors.slug} hint="Automatically shortened. Existing links keep working after changes.">
                       <input value={data.slug} onChange={e => setData('slug', e.target.value)} className={inputClass} placeholder="auto-generated" />
                     </Field>
-                    <Field label="SKU" error={errors.sku} hint="Stock Keeping Unit / Product Code">
+                    <Field label="SKU" error={errors.sku} hint="Stock Keeping Unit">
                       <input value={data.sku} onChange={e => setData('sku', e.target.value)} className={inputClass} placeholder="e.g. SHT-BLK-01" />
                     </Field>
                   </div>

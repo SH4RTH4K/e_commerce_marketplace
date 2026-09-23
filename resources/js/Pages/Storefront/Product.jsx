@@ -327,6 +327,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
                 {money(priceData.price)}
                 {priceData.comparePrice !== null && <del>{money(priceData.comparePrice)}</del>}
               </span>
+              <p className="mt-2 text-sm text-gray-500">SKU: <span className="font-mono font-semibold text-gray-700">{product.sku || '—'}</span></p>
               <div className="template-1-product-rating" aria-label={`${rating} out of 5 stars`}>{'★'.repeat(rating)}<span>{'★'.repeat(5 - rating)}</span> <small>({product.reviews_count || 0})</small></div>
               <div className="template-1-product-description" dangerouslySetInnerHTML={{ __html: descriptionMarkup }} />
 
@@ -520,12 +521,10 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
                 </div>
                 <span className="text-sm text-gray-500 ml-1 font-medium">({product.reviews_count || 0})</span>
               </div>
-              {product.sku && (
-                <>
-                  <span className="text-gray-300 hidden sm:inline">|</span>
-                  <span className="text-sm text-gray-500">SKU: <span className="font-semibold text-gray-900">{product.sku}</span></span>
-                </>
-              )}
+              <>
+                <span className="text-gray-300 hidden sm:inline">|</span>
+                <span className="text-sm text-gray-500">SKU: <span className="font-semibold text-gray-900">{product.sku || '—'}</span></span>
+              </>
             </div>
 
             <div className="flex items-baseline gap-3 mb-5 mt-3">

@@ -29,7 +29,7 @@ class HomeController extends Controller
         ];
         $withImages = fn ($q) => $q
             ->published()
-            ->with('images', 'category')
+            ->with('images', 'category', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([
                 'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
@@ -77,9 +77,17 @@ class HomeController extends Controller
             ? $query->inRandomOrder()
             : $query->orderByDesc('created_at')->orderByDesc('id');
 
-        $trending = Product::query()->tap($withImages)->where('is_featured', true)->tap($overviewOrder)->take($overviewLimits['featured'])->get();
-        $bestSellers = Product::query()->tap($withImages)->where('is_best_seller', true)->tap($overviewOrder)->take($overviewLimits['best'])->get();
-        $newArrivals = Product::query()->tap($withImages)->where('is_new_arrival', true)->tap($overviewOrder)->take($overviewLimits['new'])->get();
+        $setStorefrontSku = static function (Product $product): void {
+            $supplierProduct = $product->supplierLinks->first()?->supplierProduct;
+            $product->sku = $product->sku
+                ?: $supplierProduct?->product_code
+                ?: $supplierProduct?->supplier_product_id;
+            $product->unsetRelation('supplierLinks');
+        };
+
+        $trending = Product::query()->tap($withImages)->where('is_featured', true)->tap($overviewOrder)->take($overviewLimits['featured'])->get()->each($setStorefrontSku);
+        $bestSellers = Product::query()->tap($withImages)->where('is_best_seller', true)->tap($overviewOrder)->take($overviewLimits['best'])->get()->each($setStorefrontSku);
+        $newArrivals = Product::query()->tap($withImages)->where('is_new_arrival', true)->tap($overviewOrder)->take($overviewLimits['new'])->get()->each($setStorefrontSku);
         $overviewDisplayLimits = [
             'featured' => $isTemplateOne
                 ? min(48, max(1, (int) setting('template_1_overview_featured_count', '12')))
@@ -110,7 +118,7 @@ class HomeController extends Controller
                 ->filter(fn (Coupon $c) => $c->isCurrentlyActive())
                 ->values()
                 ->take(4),
-            'flashProducts'   => Product::query()->tap($withImages)->where('is_flash_sale', true)->orderBy('flash_sale_position')->orderBy('id')->get(),
+            'flashProducts'   => Product::query()->tap($withImages)->where('is_flash_sale', true)->orderBy('flash_sale_position')->orderBy('id')->get()->each($setStorefrontSku),
             'trending'        => $trending,
             'bestSellers'     => $bestSellers,
             'newArrivals'     => $newArrivals,
@@ -134,7 +142,7 @@ class HomeController extends Controller
         ]);
 
         $query = Product::published()
-            ->with('images', 'category')
+            ->with('images', 'category', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([
                 'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
@@ -159,7 +167,14 @@ class HomeController extends Controller
                 fn ($productQuery) => $productQuery->orderByDesc('created_at')->orderByDesc('id'),
             )
             ->limit($limit + 1)
-            ->get();
+            ->get()
+            ->each(static function (Product $product): void {
+                $supplierProduct = $product->supplierLinks->first()?->supplierProduct;
+                $product->sku = $product->sku
+                    ?: $supplierProduct?->product_code
+                    ?: $supplierProduct?->supplier_product_id;
+                $product->unsetRelation('supplierLinks');
+            });
 
         $hasMore = $products->count() > $limit;
 
