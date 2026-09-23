@@ -111,6 +111,19 @@ class BannerController extends Controller
         return back()->with('status', count($data['ids']) . ' banner(s) display position updated.');
     }
 
+    /** Delete several banners at once. */
+    public function bulkDelete(Request $request)
+    {
+        $data = $request->validate([
+            'ids'   => ['required', 'array', 'min:1', 'max:200'],
+            'ids.*' => ['integer', 'distinct', 'exists:banners,id'],
+        ]);
+
+        Banner::whereIn('id', $data['ids'])->delete();
+
+        return back()->with('status', count($data['ids']) . ' banner(s) deleted.');
+    }
+
     public function destroy(Banner $banner)
     {
         $this->deleteStoredImage($banner->image);

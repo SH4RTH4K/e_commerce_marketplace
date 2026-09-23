@@ -25,13 +25,13 @@ class SettingController extends Controller
             'footer' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#b2b2b2', 'size' => '13px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
         ],
         'template-2' => [
-            'body' => ['font' => 'Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#111827', 'size' => '14px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
-            'header' => ['font' => 'Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#0b1c21', 'size' => '14px', 'weight' => '700', 'style' => 'normal', 'transform' => 'none'],
-            'hero' => ['font' => 'Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#111827', 'size' => '16px', 'weight' => '500', 'style' => 'normal', 'transform' => 'none'],
-            'section' => ['font' => 'Outfit, Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#111827', 'size' => '24px', 'weight' => '800', 'style' => 'normal', 'transform' => 'none'],
-            'product' => ['font' => 'Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#111827', 'size' => '14px', 'weight' => '700', 'style' => 'normal', 'transform' => 'none'],
-            'button' => ['font' => 'Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#ffffff', 'size' => '14px', 'weight' => '700', 'style' => 'normal', 'transform' => 'none'],
-            'footer' => ['font' => 'Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#6b7280', 'size' => '14px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
+            'body' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#666666', 'size' => '14px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
+            'header' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#333333', 'size' => '14px', 'weight' => '700', 'style' => 'normal', 'transform' => 'none'],
+            'hero' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#333333', 'size' => '16px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
+            'section' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#222222', 'size' => '30px', 'weight' => '700', 'style' => 'normal', 'transform' => 'none'],
+            'product' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#333333', 'size' => '14px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
+            'button' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#ffffff', 'size' => '14px', 'weight' => '700', 'style' => 'normal', 'transform' => 'uppercase'],
+            'footer' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#b2b2b2', 'size' => '13px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
         ],
     ];
 
@@ -280,11 +280,9 @@ class SettingController extends Controller
                 'template_1_overview_new_count' => ['nullable', 'integer', 'min:1', 'max:48'],
                 'template_1_overview_best_count' => ['nullable', 'integer', 'min:1', 'max:48'],
                 'homepage_product_overview_order' => ['nullable', 'in:newest,shuffle'],
-                'template_2_overview_featured_count' => ['nullable', 'integer', 'min:1', 'max:48'],
-                'template_2_overview_new_count' => ['nullable', 'integer', 'min:1', 'max:48'],
-                'template_2_overview_best_count' => ['nullable', 'integer', 'min:1', 'max:48'],
                 'theme_typography_template_1' => ['required', 'json', 'max:20000'],
                 'theme_typography_template_2' => ['required', 'json', 'max:20000'],
+                'template_2_footer_config' => ['nullable', 'json', 'max:20000'],
             ],
             'payments' => [
                 'bkash_number'  => ['nullable', 'string', 'max:40'],
@@ -333,6 +331,7 @@ class SettingController extends Controller
                 'tracking_meta_pixel_id' => ['nullable', 'string', 'max:20', 'regex:/^(|\d+)$/'],
             ],
             'legal' => [
+                'about_content'   => ['nullable', 'string', 'max:20000'],
                 'terms_content'   => ['nullable', 'string', 'max:20000'],
                 'privacy_content' => ['nullable', 'string', 'max:20000'],
                 'refund_content'  => ['nullable', 'string', 'max:20000'],
@@ -434,7 +433,7 @@ class SettingController extends Controller
             ],
             'seo' => ['default_meta_title', 'default_meta_description', 'default_meta_keywords'],
             'tracking' => ['tracking_gtm_id', 'tracking_ga4_id', 'tracking_meta_pixel_id'],
-            'legal' => ['terms_content', 'privacy_content', 'refund_content', 'shipping_content', 'shipping_page_enabled'],
+            'legal' => ['about_content', 'terms_content', 'privacy_content', 'refund_content', 'shipping_content', 'shipping_page_enabled'],
             'courier' => [
                 'courier_default', 'steadfast_api_key', 'steadfast_secret_key',
                 'pathao_client_id', 'pathao_client_secret', 'pathao_username', 'pathao_password', 'pathao_store_id',
@@ -459,9 +458,7 @@ class SettingController extends Controller
                 'template_1_overview_all_count', 'template_1_overview_featured_count',
                 'template_1_overview_new_count', 'template_1_overview_best_count',
                 'homepage_product_overview_order',
-                'template_2_overview_featured_count', 'template_2_overview_new_count',
-                'template_2_overview_best_count',
-                'theme_typography_template_1', 'theme_typography_template_2',
+                'theme_typography_template_1', 'theme_typography_template_2', 'template_2_footer_config',
             ],
             default => [],
         };

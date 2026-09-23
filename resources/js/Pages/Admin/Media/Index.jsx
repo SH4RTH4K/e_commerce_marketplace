@@ -28,7 +28,7 @@ function ImageCard({ image, selectedOrder, onSelect, onDelete, onMoveEarlier, on
       className={`group relative rounded-2xl overflow-hidden border-2 transition-all cursor-pointer ${
         selected ? 'border-orange-400 ring-2 ring-orange-200' : 'border-transparent hover:border-gray-200'
       }`}
-      onClick={() => onSelect(image.id)}
+      onClick={() => onSelect(image)}
     >
       <div className="aspect-square bg-gray-50">
         <img src={src} alt={image.alt || 'Product image'}
@@ -206,8 +206,35 @@ export default function MediaIndex({
     }
   };
 
-  const toggleSelect = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  const selectAll    = () => setSelected(images.data?.map(i => i.id) || []);
+  const productSelectionKey = (image) => String(image?.product?.name || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLocaleLowerCase();
+
+  const toggleSelect = (image) => setSelected(prev => {
+    if (prev.includes(image.id)) return prev.filter(id => id !== image.id);
+
+    const productKey = productSelectionKey(image);
+    const matchingSelection = productKey && (images.data || []).some(candidate =>
+      prev.includes(candidate.id) && productSelectionKey(candidate) === productKey
+    );
+
+    if (matchingSelection) {
+      alert('A matching primary product image is already selected. Only one banner link can be created for that product.');
+      return prev;
+    }
+
+    return [...prev, image.id];
+  });
+  const selectAll = () => {
+    const productKeys = new Set();
+    setSelected((images.data || []).flatMap(image => {
+      const productKey = productSelectionKey(image);
+      if (productKey && productKeys.has(productKey)) return [];
+      if (productKey) productKeys.add(productKey);
+      return [image.id];
+    }));
+  };
   const clearSelect  = () => setSelected([]);
   const moveSelected = (id, direction) => setSelected(prev => {
     const index = prev.indexOf(id);

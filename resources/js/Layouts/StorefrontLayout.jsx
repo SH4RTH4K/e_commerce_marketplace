@@ -26,9 +26,39 @@ function CartIcon({ count = 0, onClick }) {
   );
 }
 
+const templateTwoFooterDefaults = {
+  show_services: true, show_stats: true, show_newsletter: true, show_payments: true,
+  services: [
+    { title: 'Free Shipping', text: 'On orders over Tk 2,000' }, { title: 'Secure Payment', text: 'Protected checkout' },
+    { title: 'Easy Returns', text: 'Simple return policy' }, { title: 'Customer Support', text: 'We are here to help' }, { title: 'Best Value', text: 'Quality products, fair prices' },
+  ],
+  shop: { title: 'Shop', links: [{ label: 'Shop All', url: '/shop' }, { label: 'New Arrivals', url: '/shop?new=1' }, { label: 'Featured Products', url: '/shop?featured=1' }, { label: 'Track Order', url: '/track' }] },
+  quick: { title: 'Quick Links', links: [{ label: 'About Us', url: '/about' }, { label: 'Contact Us', url: '/contact' }, { label: 'Terms & Conditions', url: '/terms' }, { label: 'Privacy Policy', url: '/privacy' }] },
+  contact_title: 'Contact Us', contact_empty_text: 'Visit our contact page for help with your order.', stats_title: 'The Smart Way to Shop Online',
+  stats: [{ title: 'Wide Selection', text: 'Products for every need' }, { title: 'Secure Checkout', text: 'Protected payment options' }, { title: 'Nationwide Delivery', text: 'Delivered across Bangladesh' }, { title: 'Customer First', text: 'Support when you need it' }],
+  newsletter_title: 'Join our newsletter', newsletter_text: 'Get exclusive deals, new arrivals & more.', newsletter_placeholder: 'Your email address', newsletter_button: 'Subscribe',
+  payment_labels: { cod: 'Cash on Delivery', bkash: 'bKash', nagad: 'Nagad', rocket: 'Rocket' },
+};
+
+function readTemplateTwoFooter(raw) {
+  let saved = raw;
+  if (typeof raw === 'string') {
+    try { saved = JSON.parse(raw); } catch (e) { saved = {}; }
+  }
+  const mergeItems = (defaults, values) => defaults.map((item, index) => ({ ...item, ...(values?.[index] || {}) }));
+  return {
+    ...templateTwoFooterDefaults, ...(saved || {}),
+    services: mergeItems(templateTwoFooterDefaults.services, saved?.services),
+    shop: { ...templateTwoFooterDefaults.shop, ...(saved?.shop || {}), links: mergeItems(templateTwoFooterDefaults.shop.links, saved?.shop?.links) },
+    quick: { ...templateTwoFooterDefaults.quick, ...(saved?.quick || {}), links: mergeItems(templateTwoFooterDefaults.quick.links, saved?.quick?.links) },
+    stats: mergeItems(templateTwoFooterDefaults.stats, saved?.stats),
+    payment_labels: { ...templateTwoFooterDefaults.payment_labels, ...(saved?.payment_labels || {}) },
+  };
+}
+
 export default function StorefrontLayout({ children, title, description, activeCategory = null }) {
   const { props } = usePage();
-  const { auth, app, flash, cartCount = 0, categories = [], hasFlashSale = false, promoText = '', promoLink = '', popup } = props;
+  const { auth, app, flash, cartCount = 0, categories = [], storefrontFeatures = [], hasFlashSale = false, promoText = '', promoLink = '', popup } = props;
   const hasPromoText = typeof promoText === 'string' && promoText.trim() !== '';
   const rawCategories = categories || [];
   const categoryList = Array.isArray(rawCategories)
@@ -51,6 +81,7 @@ export default function StorefrontLayout({ children, title, description, activeC
   const focusSiteName = /^taqi\s*life$/i.test(siteName) ? 'TAQI LIFE' : siteName;
   const storefrontTemplate = chatSettings.storefront_template || 'template-2';
   const isTemplateOne = storefrontTemplate === 'template-1';
+  const isTemplateTwo = storefrontTemplate === 'template-2';
   const templateOneSiteNameStyle = chatSettings.template_1_site_name_style || 'default';
   const templateOneNavbarMenu = chatSettings.template_1_navbar_menu || 'coza';
   const templateOneShowSearch = chatSettings.template_1_show_search !== false;
@@ -69,6 +100,20 @@ export default function StorefrontLayout({ children, title, description, activeC
     url: chatSettings.footer_developer_url?.trim(),
   };
   const showDeveloperCredit = developerCredit.enabled && Boolean(developerCredit.name);
+  const footerPhone = chatSettings.contact_phone?.trim() || chatSettings.call_number?.trim();
+  const footerEmail = chatSettings.contact_email?.trim();
+  const footerAddress = chatSettings.contact_address?.trim();
+  const templateTwoFooter = readTemplateTwoFooter(chatSettings.template_2_footer_config);
+  const sharedBenefits = Array.isArray(storefrontFeatures)
+    ? storefrontFeatures.filter(feature => feature?.title?.trim()).map(feature => ({ title: feature.title, text: feature.subtitle || '' }))
+    : [];
+  const footerBenefits = sharedBenefits.length > 0 ? sharedBenefits : templateTwoFooter.services;
+  const paymentMethods = [
+    chatSettings.pay_cod_enabled !== false && { label: templateTwoFooter.payment_labels.cod, tone: 'neutral' },
+    chatSettings.pay_bkash_enabled && { label: templateTwoFooter.payment_labels.bkash, tone: 'bkash' },
+    chatSettings.pay_nagad_enabled && { label: templateTwoFooter.payment_labels.nagad, tone: 'nagad' },
+    chatSettings.pay_rocket_enabled && { label: templateTwoFooter.payment_labels.rocket, tone: 'rocket' },
+  ].filter(Boolean);
   const pageSeo = props.seo || {};
   const defaultSeoTitle = chatSettings.default_meta_title?.trim() || app?.name || 'Store';
   const seoTitle = pageSeo.title?.trim() || defaultSeoTitle;
@@ -141,7 +186,7 @@ export default function StorefrontLayout({ children, title, description, activeC
 
   return (
     <>
-    <div className="storefront-theme-root" style={typographyStyle}>
+    <div className={`storefront-theme-root storefront-template-${storefrontTemplate}`} style={typographyStyle}>
       <Head>
         {seoDescription && <meta head-key="description" name="description" content={seoDescription} />}
         {seoKeywords && <meta head-key="keywords" name="keywords" content={seoKeywords} />}
@@ -563,57 +608,91 @@ export default function StorefrontLayout({ children, title, description, activeC
           </div>
         </footer>
       ) : (
-      <footer className="storefront-footer-area bg-transparent pb-8 pt-4 mb-[60px] md:mb-0">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm px-6 sm:px-10 py-12 lg:py-16">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
-              <div className="lg:col-span-2">
-                <a href="/" className="flex items-center gap-2 mb-5 inline-block">
-                  {app?.logo_url
-                    ? <img src={app.logo_url} alt="" className="h-10 w-auto object-contain" />
-                    : <span className="text-[#f15a24] font-black text-xl">{app?.name}</span>
-                  }
-                </a>
-                <p className="text-gray-500 text-sm leading-relaxed max-w-md">
-                  {app?.settings?.footer_text || app?.footer_text || 'Your one-stop marketplace for quality products at great prices. We deliver the best items directly to your doorstep with care.'}
-                </p>
+      <footer className="template-2-footer mb-[60px] md:mb-0">
+        {templateTwoFooter.show_services !== false && <div className="template-2-footer-services">
+          <div className="template-2-footer-shell template-2-footer-services-grid">
+            {footerBenefits.map((service, index) => {
+              const icon = ['truck', 'shield', 'return', 'chat', 'tag'][index] || 'tag';
+              return (
+              <div key={icon} className="template-2-footer-service">
+                <span className="template-2-footer-service-icon" aria-hidden="true">
+                  {icon === 'truck' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M3 5h12v11H3zM15 9h3l3 3v4h-6zM7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm10 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" /></svg>}
+                  {icon === 'shield' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 3 5 6v5c0 4.5 3 8.6 7 10 4-1.4 7-5.5 7-10V6l-7-3Zm-3.2 9 2.1 2.1 4.5-4.5" /></svg>}
+                  {icon === 'return' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M9 14 4 9l5-5M4 9h10a6 6 0 1 1-6 6" /></svg>}
+                  {icon === 'chat' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.4 8.4 0 0 1-3.3-.7L4 20l1.5-4.1A7 7 0 1 1 20 11.5Z" /></svg>}
+                  {icon === 'tag' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M20 13 13 20 4 11V4h7l9 9Z" /><circle cx="8.5" cy="8.5" r="1" fill="currentColor" /></svg>}
+                </span>
+                <span><strong>{service.title}</strong><small>{service.text}</small></span>
               </div>
-              <div>
-                <h4 className="font-bold text-gray-900 text-base mb-5 uppercase tracking-wider">Quick Links</h4>
-                <ul className="space-y-3 text-sm text-gray-500">
-                  <li><a href="/shop" className="hover:text-[#f15a24] transition-colors">Shop All</a></li>
-                  <li><a href="/contact" className="hover:text-[#f15a24] transition-colors">Contact Us</a></li>
-                  <li><a href="/track" className="hover:text-[#f15a24] transition-colors">Track Order</a></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-900 text-base mb-5 uppercase tracking-wider">Legal & Policy</h4>
-                <ul className="space-y-3 text-sm text-gray-500">
-                  <li><a href="/terms" className="hover:text-[#f15a24] transition-colors">Terms & Conditions</a></li>
-                  <li><a href="/privacy" className="hover:text-[#f15a24] transition-colors">Privacy Policy</a></li>
-                  <li><a href="/refund-policy" className="hover:text-[#f15a24] transition-colors">Refund Policy</a></li>
-                </ul>
-              </div>
-            </div>
-            <div className="border-t border-gray-100 mt-12 pt-8 text-center md:text-left flex flex-col md:flex-row items-center justify-between gap-4">
-              <p className="text-gray-400 text-sm font-medium">
-                &copy; {new Date().getFullYear()} {app?.name || 'SHARTHAK'}. All rights reserved.
-              </p>
-              <a href="https://sharthak.com/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 border border-gray-100 bg-white rounded-full px-3 py-1.5 shadow-sm hover:shadow-md hover:border-gray-200 transition-all">
-                <span className="text-[11px] font-extrabold text-slate-500 tracking-wider">DESIGNED BY</span>
-                <span className="bg-[#f15a24] text-white text-[11px] font-extrabold px-3 py-1 rounded-full tracking-wider">SHARTHAK</span>
+              );
+            })}
+          </div>
+        </div>}
+
+        <div className="template-2-footer-main">
+          <div className="template-2-footer-shell template-2-footer-columns">
+            <div className="template-2-footer-about">
+              <a href="/" className="template-2-footer-logo">
+                {app?.logo_url ? <img src={app.logo_url} alt={siteName} /> : <span>{siteName}</span>}
               </a>
-              {showCopyright && (copyrightUrl ? (
-                <a href={copyrightUrl} target="_blank" rel="noopener noreferrer" className="text-gray-400 text-sm font-medium hover:text-[#f15a24] hover:underline">{copyrightText}</a>
-              ) : <p className="text-gray-400 text-sm font-medium">{copyrightText}</p>)}
-              {showDeveloperCredit && (developerCredit.url ? (
-                <a href={developerCredit.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 border border-gray-100 bg-white rounded-full px-3 py-1.5 shadow-sm hover:shadow-md hover:border-gray-200 transition-all">
-                  <span className="text-[11px] font-extrabold text-slate-500 tracking-wider">{developerCredit.label.toUpperCase()}</span>
-                  <span className="bg-[#f15a24] text-white text-[11px] font-extrabold px-3 py-1 rounded-full tracking-wider">{developerCredit.name}</span>
-                </a>
-              ) : (
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{developerCredit.label} {developerCredit.name}</p>
-              ))}
+              <p>{app?.settings?.footer_text || app?.footer_text || 'Your one-stop marketplace for quality products at great prices. We deliver the best items directly to your doorstep with care.'}</p>
+            </div>
+            <div>
+              <h4>{templateTwoFooter.shop.title}</h4>
+              <ul>
+                {templateTwoFooter.shop.links.filter(link => link.label && link.url).map((link, index) => <li key={`${link.url}-${index}`}><a href={link.url}>{link.label}</a></li>)}
+              </ul>
+            </div>
+            <div>
+              <h4>{templateTwoFooter.quick.title}</h4>
+              <ul>
+                {templateTwoFooter.quick.links.filter(link => link.label && link.url).map((link, index) => <li key={`${link.url}-${index}`}><a href={link.url}>{link.label}</a></li>)}
+              </ul>
+            </div>
+            <div className="template-2-footer-contact">
+              <h4>{templateTwoFooter.contact_title}</h4>
+              {footerAddress && <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" /><circle cx="12" cy="10" r="2.5" /></svg>{footerAddress}</p>}
+              {footerPhone && <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M5 4h3l2 5-2 1.5a15 15 0 0 0 5.5 5.5L15 14l5 2v3c0 1.1-.9 2-2 2C10.3 21 3 13.7 3 6c0-1.1.9-2 2-2Z" /></svg><a href={`tel:${footerPhone}`}>{footerPhone}</a></p>}
+              {footerEmail && <p><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="5" width="18" height="14" rx="2" /><path strokeLinecap="round" strokeLinejoin="round" d="m4 7 8 6 8-6" /></svg><a href={`mailto:${footerEmail}`}>{footerEmail}</a></p>}
+              {!footerAddress && !footerPhone && !footerEmail && <p className="template-2-footer-contact-empty"><a href="/contact">{templateTwoFooter.contact_empty_text}</a></p>}
+            </div>
+          </div>
+        </div>
+
+        {templateTwoFooter.show_stats !== false && <div className="template-2-footer-stats">
+          <div className="template-2-footer-shell">
+            <h3>{templateTwoFooter.stats_title}</h3>
+            <div>
+              {templateTwoFooter.stats.map((stat, index) => <p key={`${stat.title}-${index}`}><strong>{stat.title}</strong><span>{stat.text}</span></p>)}
+            </div>
+          </div>
+        </div>}
+
+        {templateTwoFooter.show_newsletter !== false && <div className="template-2-footer-newsletter">
+          <div className="template-2-footer-shell template-2-footer-newsletter-grid">
+            <div><h3>{templateTwoFooter.newsletter_title}</h3><p>{templateTwoFooter.newsletter_text}</p></div>
+            <form onSubmit={event => event.preventDefault()}><label className="sr-only" htmlFor="template-2-newsletter">Email address</label><input id="template-2-newsletter" type="email" placeholder={templateTwoFooter.newsletter_placeholder} /><button type="submit">{templateTwoFooter.newsletter_button}</button></form>
+            <div className="template-2-footer-socials">
+              {chatSettings.facebook_url?.trim() && <a href={chatSettings.facebook_url.trim()} target="_blank" rel="noreferrer" aria-label="Facebook">f</a>}
+              {chatSettings.instagram_url?.trim() && <a href={chatSettings.instagram_url.trim()} target="_blank" rel="noreferrer" aria-label="Instagram">◎</a>}
+              {chatSettings.twitter_url?.trim() && <a href={chatSettings.twitter_url.trim()} target="_blank" rel="noreferrer" aria-label="X">𝕏</a>}
+              {chatSettings.youtube_url?.trim() && <a href={chatSettings.youtube_url.trim()} target="_blank" rel="noreferrer" aria-label="YouTube">▶</a>}
+            </div>
+          </div>
+        </div>}
+
+        <div className="template-2-footer-bottom">
+          <div className="template-2-footer-shell">
+            <div className="template-2-footer-copyright">
+              {showCopyright && (copyrightUrl ? <a href={copyrightUrl} target="_blank" rel="noopener noreferrer">{copyrightText}</a> : <p>{copyrightText}</p>)}
+            </div>
+            <div className="template-2-footer-payment-slot">
+              {chatSettings.show_cards_in_footer && templateTwoFooter.show_payments !== false && paymentMethods.length > 0 && <div className="template-2-footer-payments">
+                {paymentMethods.map(method => <span key={method.label} className={`template-2-payment-${method.tone}`}>{method.label}</span>)}
+              </div>}
+            </div>
+            <div className="template-2-footer-developer">
+              {showDeveloperCredit && (developerCredit.url ? <a href={developerCredit.url} target="_blank" rel="noopener noreferrer">{developerCredit.label} {developerCredit.name}</a> : <p>{developerCredit.label} {developerCredit.name}</p>)}
             </div>
           </div>
         </div>

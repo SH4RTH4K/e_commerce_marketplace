@@ -100,12 +100,14 @@ export default function HomePage({
   trending, 
   bestSellers, 
   newArrivals,
+  templateTwoCategorySections = [],
   homeOverviewHasMore = {},
   app 
 }) {
   const ctaDefault = app?.settings?.default_cta_text || 'Shop now';
   const viewMore = app?.settings?.home_view_more_label || 'View all';
   const isTemplateOne = app?.settings?.storefront_template === 'template-1';
+  const isTemplateTwo = app?.settings?.storefront_template === 'template-2';
   const heroOverlayColor = app?.settings?.template_1_hero_overlay_color || '#ffffff';
   const heroOverlayOpacity = Math.max(0, Math.min(80, Number(app?.settings?.template_1_hero_overlay_opacity ?? 0))) / 100;
   const heroTextBackgroundColor = app?.settings?.template_1_hero_text_background_color || '#1f2430';
@@ -427,6 +429,21 @@ export default function HomePage({
           )}
         </section>}
 
+        {features?.length > 0 && (
+          <section className="template-1-container storefront-section pb-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {features.slice(0, 4).map(feature => (
+                <div key={feature.id} className="flex min-w-0 items-center gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#717fe0]/10 text-[#717fe0]">
+                    {feature.icon ? <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path d={feature.icon}/></svg> : <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+                  </div>
+                  <div className="min-w-0"><p className="truncate text-sm font-bold text-gray-800">{feature.title}</p>{feature.subtitle && <p className="mt-0.5 truncate text-xs text-gray-500">{feature.subtitle}</p>}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section
           className="template-1-container storefront-section py-12 md:py-20"
           style={{
@@ -584,10 +601,10 @@ export default function HomePage({
                        ) : (
                          <div className="absolute inset-0 bg-gradient-to-r from-[#f15a24] to-[#f37c4f] mix-blend-overlay opacity-90"></div>
                        )}
-                       <div className={`relative z-10 p-6 sm:p-12 max-w-lg ${isTemplateOne ? 'text-[#222] drop-shadow-none' : 'text-white drop-shadow-md hidden'}`}>
-                          {isTemplateOne && banner.subtitle && <p className="text-xl md:text-2xl mb-3 font-light">{banner.subtitle}</p>}
-                          {isTemplateOne && banner.title && <h1 className="text-4xl md:text-6xl mb-8">{banner.title}</h1>}
-                          {isTemplateOne && <Link href={banner.link || '/shop'} className="inline-flex items-center justify-center rounded-full bg-[#717fe0] px-8 py-3 text-sm font-semibold uppercase text-white hover:bg-[#222] transition-colors">Shop Now</Link>}
+                       <div className={`relative z-10 p-6 sm:p-12 max-w-lg ${isTemplateOne ? 'text-[#222] drop-shadow-none' : isTemplateTwo ? 'text-white drop-shadow-md' : 'text-white drop-shadow-md hidden'}`}>
+                          {(isTemplateOne || isTemplateTwo) && banner.subtitle && <p className="text-xl md:text-2xl mb-3 font-light">{banner.subtitle}</p>}
+                          {(isTemplateOne || isTemplateTwo) && banner.title && <h1 className="text-4xl md:text-6xl mb-8">{banner.title}</h1>}
+                          {(isTemplateOne || isTemplateTwo) && <Link href={banner.link || '/shop'} className={`inline-flex items-center justify-center px-8 py-3 text-sm font-semibold uppercase text-white transition-colors ${isTemplateOne ? 'rounded-full bg-[#717fe0] hover:bg-[#222]' : 'rounded-lg bg-[#f2541c] hover:bg-[#d6431a]'}`}>Shop Now</Link>}
                        </div>
                      </div>
                    ))
@@ -639,7 +656,7 @@ export default function HomePage({
           </div>
 
           {/* Features Bottom Row */}
-          {features?.length > 0 && (
+          {!isTemplateTwo && features?.length > 0 && (
             <div className="hidden xl:flex items-center justify-between gap-4 mt-2">
               {features.slice(0, 4).map((feature) => (
                 <div key={feature.id} className="rounded-xl bg-white border border-gray-100 p-4 flex items-center gap-3 flex-1">
@@ -661,7 +678,7 @@ export default function HomePage({
         </div>
 
         {/* Mobile Features */}
-        {features?.length > 0 && (
+        {!isTemplateTwo && features?.length > 0 && (
           <div className="grid grid-cols-2 gap-3 xl:hidden mt-4">
             {features.slice(0, 4).map((feature) => (
                 <div key={feature.id} className="rounded-xl bg-white border border-gray-100 p-3 flex items-center gap-2.5 min-h-24">
@@ -733,8 +750,22 @@ export default function HomePage({
         </section>
       )}
 
+      {isTemplateTwo && templateTwoCategorySections.map(section => (
+        <section key={section.id} className="template-2-category-section storefront-section mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-between gap-4 mb-6 border-b border-gray-100 pb-4">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">{section.name}</h2>
+            <Link href={`/category/${section.slug}`} className="text-sm font-bold text-[#f15a24] hover:underline flex items-center gap-1">
+              {viewMore} <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </Link>
+          </div>
+          <div className={`grid ${productGridClass} gap-3 sm:gap-4 lg:gap-5`}>
+            {section.products.map(product => <ProductCard key={product.id} product={product} />)}
+          </div>
+        </section>
+      ))}
+
       {/* Trending / Featured Products */}
-      {overviewProductLists.featured?.length > 0 && (
+      {!isTemplateTwo && overviewProductLists.featured?.length > 0 && (
         <section className="storefront-section mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-end justify-between mb-6 border-b border-gray-100 pb-4">
             <div>
@@ -755,7 +786,7 @@ export default function HomePage({
       )}
 
       {/* Middle Banners */}
-      {middleBanners?.length > 0 && (
+      {!isTemplateTwo && middleBanners?.length > 0 && (
         <section className="storefront-section mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col gap-6">
             {middleBanners.map(banner => (
@@ -792,7 +823,7 @@ export default function HomePage({
       )}
 
       {/* New Arrivals */}
-      {overviewProductLists.new?.length > 0 && (
+      {!isTemplateTwo && overviewProductLists.new?.length > 0 && (
         <section className="storefront-section mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 bg-gray-50 rounded-3xl my-8">
           <div className="flex items-end justify-between mb-6 pb-2">
             <div>
@@ -813,7 +844,7 @@ export default function HomePage({
       )}
 
       {/* Best Sellers */}
-      {overviewProductLists.best?.length > 0 && (
+      {!isTemplateTwo && overviewProductLists.best?.length > 0 && (
         <section className="storefront-section mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 mb-12">
           <div className="flex items-end justify-between mb-6 border-b border-gray-100 pb-4">
             <div>

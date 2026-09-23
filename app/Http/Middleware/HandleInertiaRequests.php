@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\ContactMessage;
 use App\Models\Banner;
+use App\Models\Feature;
 use App\Models\Order;
 use App\Models\ProductReview;
 use Illuminate\Http\Request;
@@ -22,13 +23,13 @@ class HandleInertiaRequests extends Middleware
             'footer' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#b2b2b2', 'size' => '13px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
         ],
         'template-2' => [
-            'body' => ['font' => 'Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#111827', 'size' => '14px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
-            'header' => ['font' => 'Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#0b1c21', 'size' => '14px', 'weight' => '700', 'style' => 'normal', 'transform' => 'none'],
-            'hero' => ['font' => 'Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#111827', 'size' => '16px', 'weight' => '500', 'style' => 'normal', 'transform' => 'none'],
-            'section' => ['font' => 'Outfit, Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#111827', 'size' => '24px', 'weight' => '800', 'style' => 'normal', 'transform' => 'none'],
-            'product' => ['font' => 'Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#111827', 'size' => '14px', 'weight' => '700', 'style' => 'normal', 'transform' => 'none'],
-            'button' => ['font' => 'Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#ffffff', 'size' => '14px', 'weight' => '700', 'style' => 'normal', 'transform' => 'none'],
-            'footer' => ['font' => 'Mulish, ui-sans-serif, system-ui, sans-serif', 'color' => '#6b7280', 'size' => '14px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
+            'body' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#666666', 'size' => '14px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
+            'header' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#333333', 'size' => '14px', 'weight' => '700', 'style' => 'normal', 'transform' => 'none'],
+            'hero' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#333333', 'size' => '16px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
+            'section' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#222222', 'size' => '30px', 'weight' => '700', 'style' => 'normal', 'transform' => 'none'],
+            'product' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#333333', 'size' => '14px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
+            'button' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#ffffff', 'size' => '14px', 'weight' => '700', 'style' => 'normal', 'transform' => 'uppercase'],
+            'footer' => ['font' => 'CozaPoppins, Arial, sans-serif', 'color' => '#b2b2b2', 'size' => '13px', 'weight' => '400', 'style' => 'normal', 'transform' => 'none'],
         ],
     ];
 
@@ -143,11 +144,9 @@ class HandleInertiaRequests extends Middleware
                     'template_1_overview_featured_count' => (int) setting('template_1_overview_featured_count', '12'),
                     'template_1_overview_new_count' => (int) setting('template_1_overview_new_count', '12'),
                     'template_1_overview_best_count' => (int) setting('template_1_overview_best_count', '12'),
-                    'template_2_overview_featured_count' => (int) setting('template_2_overview_featured_count', '12'),
-                    'template_2_overview_new_count' => (int) setting('template_2_overview_new_count', '12'),
-                    'template_2_overview_best_count' => (int) setting('template_2_overview_best_count', '12'),
                     'theme_typography_template_1' => $this->typographySettings('template-1'),
                     'theme_typography_template_2' => $this->typographySettings('template-2'),
+                    'template_2_footer_config' => setting('template_2_footer_config', ''),
                     'chat_enabled'     => setting('chat_enabled', '1') === '1',
                     'whatsapp_number'  => setting('whatsapp_number', ''),
                     'call_number'      => setting('call_number', ''),
@@ -196,6 +195,10 @@ class HandleInertiaRequests extends Middleware
                     'ship_inside_label'  => setting('shipping_inside_label', 'ঢাকার ভেতরে'),
                     'ship_outside_label' => setting('shipping_outside_label', 'ঢাকার বাইরে'),
                     'pay_cod_enabled'    => setting('pay_cod_enabled', '1') === '1',
+                    'pay_bkash_enabled'  => setting('pay_bkash_enabled', '0') === '1',
+                    'pay_nagad_enabled'  => setting('pay_nagad_enabled', '0') === '1',
+                    'pay_rocket_enabled' => setting('pay_rocket_enabled', '0') === '1',
+                    'show_cards_in_footer' => setting('show_cards_in_footer', '0') === '1',
                     'currency_symbol'    => setting('currency_symbol', '৳'),
                     // Whether to show "Pay now (delivery)" split on Thank You page
                     'cod_delivery_upfront' => setting('cod_delivery_upfront', '1') === '1',
@@ -212,6 +215,16 @@ class HandleInertiaRequests extends Middleware
             'cartCount' => fn () => $isAdmin ? 0 : $cartService->count(),
             'cartItems' => fn () => $isAdmin ? collect() : $cartService->items(),
             'cartSubtotal' => fn () => $isAdmin ? 0.0 : $cartService->subtotal(),
+            'storefrontFeatures' => fn () => $isAdmin ? [] : Feature::query()
+                ->where('is_active', true)
+                ->whereNotNull('title')
+                ->where('title', '!=', '')
+                ->orderBy('position')
+                ->orderBy('id')
+                ->limit(5)
+                ->get(['id', 'title', 'subtitle', 'icon'])
+                ->values()
+                ->toArray(),
             'categories' => fn () => $isAdmin ? [] : \App\Models\Category::whereNull('parent_id')
                 ->with(['children' => fn($q) => $q->where('is_active', true)->where('show_in_menu', true)->select('id', 'name', 'slug', 'parent_id', 'icon', 'image')->orderBy('menu_order')->orderBy('name')])
                 ->where('is_active', true)

@@ -9,6 +9,15 @@ use Inertia\Response;
 
 class PageController extends Controller
 {
+    public function about(): Response
+    {
+        return Inertia::render('Storefront/Page', [
+            'title'   => 'About Us',
+            'heading' => 'About Us',
+            'body'    => setting('about_content') ?: $this->defaultAbout(),
+        ]);
+    }
+
     public function terms(): Response
     {
         return Inertia::render('Storefront/Page', [
@@ -75,6 +84,10 @@ class PageController extends Controller
             return $this->terms();
         }
 
+        if ($slug === 'about') {
+            return $this->about();
+        }
+
         if ($slug === 'privacy') {
             return $this->privacy();
         }
@@ -95,6 +108,13 @@ class PageController extends Controller
         $site = site_name();
 
         return "Welcome to {$site}. By placing an order you agree to provide accurate delivery and payment details, accept our shipping timelines, and understand that product availability may change. Orders may be cancelled if payment verification fails. For returns and support, contact us using the details on this website.";
+    }
+
+    private function defaultAbout(): string
+    {
+        $site = e(site_name());
+
+        return "<h2>Our Story</h2><p>{$site} makes everyday shopping simple, personal, and dependable. We bring together useful products, clear information, fair prices, and reliable delivery in one welcoming store.</p><h2>Our Mission</h2><p>We focus on giving every customer a clear, useful shopping experience and helpful support from discovery through delivery.</p><p>Have a question? Visit our <a href=\"/contact\">contact page</a> and our team will be happy to help.</p>";
     }
 
     private function defaultPrivacy(): string

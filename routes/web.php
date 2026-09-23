@@ -61,7 +61,7 @@ Route::get('/category/{category}', [ShopController::class, 'index'])->name('shop
 Route::get('/product/{product}', [ProductController::class, 'show'])->name('product.show');
 Route::get('/home-02', [HomeController::class, 'index'])->name('home.two');
 Route::get('/home-03', [HomeController::class, 'index'])->name('home.three');
-Route::get('/about', fn () => \Inertia\Inertia::render('Storefront/About'))->name('about');
+Route::get('/about', [PageController::class, 'about'])->name('about');
 Route::get('/blog', fn () => \Inertia\Inertia::render('Storefront/Blog'))->name('blog');
 Route::get('/blog/{slug}', fn (string $slug) => \Inertia\Inertia::render('Storefront/BlogDetail', compact('slug')))->name('blog.detail');
 Route::post('/product/{product}/reviews', [\App\Http\Controllers\ReviewController::class, 'store'])
@@ -265,6 +265,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::patch('banners/{banner}/toggle', [AdminBannerController::class, 'toggle'])->name('banners.toggle');
         Route::patch('banners/bulk-status', [AdminBannerController::class, 'bulkStatus'])->name('banners.bulk-status');
         Route::patch('banners/bulk-position', [AdminBannerController::class, 'bulkPosition'])->name('banners.bulk-position');
+        Route::delete('banners/bulk-delete', [AdminBannerController::class, 'bulkDelete'])->name('banners.bulk-delete');
         Route::resource('banners', AdminBannerController::class)->except('show');
         Route::post('features/bulk', [AdminFeatureController::class, 'bulk'])->name('features.bulk');
         Route::resource('features', AdminFeatureController::class)->except('show');

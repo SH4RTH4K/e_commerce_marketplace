@@ -175,10 +175,38 @@ class MediaController extends Controller
             'image_orientation' => ['nullable', 'in:landscape,portrait,square'],
         ]);
 
-        $imagesById = ProductImage::whereIn('id', $data['image_ids'])->get()->keyBy('id');
+        $imagesById = ProductImage::with('product:id,name')
+            ->whereIn('id', $data['image_ids'])
+            ->get()
+            ->keyBy('id');
+
+        // Supplier imports can create separate records for the same product.
+        // Keep a single banner destination for each normalized product name.
+        $selectedProductNames = [];
+        $duplicateProductCount = 0;
         $images = collect($data['image_ids'])
             ->map(fn (int $id) => $imagesById->get($id))
-            ->filter();
+            ->filter(function (?ProductImage $image) use (&$selectedProductNames, &$duplicateProductCount): bool {
+                if (! $image) {
+                    return false;
+                }
+
+                $productName = trim((string) $image->product?->name);
+                if ($productName === '') {
+                    return true;
+                }
+
+                $key = strtolower((string) preg_replace('/\s+/', ' ', $productName));
+                if (isset($selectedProductNames[$key])) {
+                    $duplicateProductCount++;
+
+                    return false;
+                }
+
+                $selectedProductNames[$key] = true;
+
+                return true;
+            });
 
         if ($images->isEmpty()) {
             return back()->withErrors(['image_ids' => 'Select at least one media image.']);
@@ -191,7 +219,7 @@ class MediaController extends Controller
         $createdCount = 0;
         $skippedCount = 0;
 
-        DB::transaction(function () use ($images, $data, $style, $textPosition, $imagePosition, $imageOrientation, &$createdCount, &$skippedCount) {
+        DB::transaction(function () use ($images, $data, $style, $textPosition, $imagePosition, $imageOrientation, &$createdCount, &$skippedCount, $duplicateProductCount) {
             $position = (int) Banner::where('placement', $data['placement'])->max('position') + 1;
             $existingPaths = Banner::query()
                 ->where('placement', $data['placement'])
@@ -200,8 +228,26 @@ class MediaController extends Controller
                 ->flip()
                 ->all();
 
+            $existingProductNames = Banner::query()
+                ->with('product:id,name')
+                ->where('placement', $data['placement'])
+                ->get()
+                ->mapWithKeys(function (Banner $banner): array {
+                    $name = trim((string) $banner->product?->name);
+
+                    return $name === '' ? [] : [strtolower((string) preg_replace('/\s+/', ' ', $name)) => true];
+                })
+                ->all();
+
+            $skippedCount += $duplicateProductCount;
+
             foreach ($images as $image) {
-                if (isset($existingPaths[$image->path])) {
+                $productName = trim((string) $image->product?->name);
+                $productKey = $productName === ''
+                    ? null
+                    : strtolower((string) preg_replace('/\s+/', ' ', $productName));
+
+                if (isset($existingPaths[$image->path]) || ($productKey !== null && isset($existingProductNames[$productKey]))) {
                     $skippedCount++;
                     continue;
                 }
@@ -222,6 +268,9 @@ class MediaController extends Controller
                 ]);
 
                 $existingPaths[$image->path] = true;
+                if ($productKey !== null) {
+                    $existingProductNames[$productKey] = true;
+                }
                 $createdCount++;
             }
         });

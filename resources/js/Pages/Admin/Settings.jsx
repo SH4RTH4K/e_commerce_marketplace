@@ -27,6 +27,7 @@ function shippingPreviewContent(data) {
 }
 
 const legalPageEditors = [
+  { id: 'about_content', tab: 'About', title: 'About Us', path: '/about' },
   { id: 'terms_content', tab: 'Terms', title: 'Terms & Conditions', path: '/terms' },
   { id: 'privacy_content', tab: 'Privacy', title: 'Privacy Policy', path: '/privacy' },
   { id: 'refund_content', tab: 'Refund', title: 'Refund Policy', path: '/refund-policy' },
@@ -71,13 +72,13 @@ const typographyDefaults = {
     footer: { font: 'CozaPoppins, Arial, sans-serif', color: '#b2b2b2', size: '13px', weight: '400', style: 'normal', transform: 'none' },
   },
   'template-2': {
-    body: { font: 'Mulish, ui-sans-serif, system-ui, sans-serif', color: '#111827', size: '14px', weight: '400', style: 'normal', transform: 'none' },
-    header: { font: 'Mulish, ui-sans-serif, system-ui, sans-serif', color: '#0b1c21', size: '14px', weight: '700', style: 'normal', transform: 'none' },
-    hero: { font: 'Mulish, ui-sans-serif, system-ui, sans-serif', color: '#111827', size: '16px', weight: '500', style: 'normal', transform: 'none' },
-    section: { font: 'Outfit, Mulish, ui-sans-serif, system-ui, sans-serif', color: '#111827', size: '24px', weight: '800', style: 'normal', transform: 'none' },
-    product: { font: 'Mulish, ui-sans-serif, system-ui, sans-serif', color: '#111827', size: '14px', weight: '700', style: 'normal', transform: 'none' },
-    button: { font: 'Mulish, ui-sans-serif, system-ui, sans-serif', color: '#ffffff', size: '14px', weight: '700', style: 'normal', transform: 'none' },
-    footer: { font: 'Mulish, ui-sans-serif, system-ui, sans-serif', color: '#6b7280', size: '14px', weight: '400', style: 'normal', transform: 'none' },
+    body: { font: 'CozaPoppins, Arial, sans-serif', color: '#666666', size: '14px', weight: '400', style: 'normal', transform: 'none' },
+    header: { font: 'CozaPoppins, Arial, sans-serif', color: '#333333', size: '14px', weight: '700', style: 'normal', transform: 'none' },
+    hero: { font: 'CozaPoppins, Arial, sans-serif', color: '#333333', size: '16px', weight: '400', style: 'normal', transform: 'none' },
+    section: { font: 'CozaPoppins, Arial, sans-serif', color: '#222222', size: '30px', weight: '700', style: 'normal', transform: 'none' },
+    product: { font: 'CozaPoppins, Arial, sans-serif', color: '#333333', size: '14px', weight: '400', style: 'normal', transform: 'none' },
+    button: { font: 'CozaPoppins, Arial, sans-serif', color: '#ffffff', size: '14px', weight: '700', style: 'normal', transform: 'uppercase' },
+    footer: { font: 'CozaPoppins, Arial, sans-serif', color: '#b2b2b2', size: '13px', weight: '400', style: 'normal', transform: 'none' },
   },
 };
 
@@ -90,6 +91,125 @@ function readTypography(raw, template) {
     ...result,
     [area]: { ...typographyDefaults[template][area], ...(saved?.[area] || {}) },
   }), {});
+}
+
+const templateTwoFooterDefaults = {
+  show_services: true,
+  show_stats: true,
+  show_newsletter: true,
+  show_payments: true,
+  services: [
+    { title: 'Free Shipping', text: 'On orders over Tk 2,000' },
+    { title: 'Secure Payment', text: 'Protected checkout' },
+    { title: 'Easy Returns', text: 'Simple return policy' },
+    { title: 'Customer Support', text: 'We are here to help' },
+    { title: 'Best Value', text: 'Quality products, fair prices' },
+  ],
+  shop: {
+    title: 'Shop',
+    links: [
+      { label: 'Shop All', url: '/shop' },
+      { label: 'New Arrivals', url: '/shop?new=1' },
+      { label: 'Featured Products', url: '/shop?featured=1' },
+      { label: 'Track Order', url: '/track' },
+    ],
+  },
+  quick: {
+    title: 'Quick Links',
+    links: [
+      { label: 'About Us', url: '/about' },
+      { label: 'Contact Us', url: '/contact' },
+      { label: 'Terms & Conditions', url: '/terms' },
+      { label: 'Privacy Policy', url: '/privacy' },
+    ],
+  },
+  contact_title: 'Contact Us',
+  contact_empty_text: 'Visit our contact page for help with your order.',
+  stats_title: 'The Smart Way to Shop Online',
+  stats: [
+    { title: 'Wide Selection', text: 'Products for every need' },
+    { title: 'Secure Checkout', text: 'Protected payment options' },
+    { title: 'Nationwide Delivery', text: 'Delivered across Bangladesh' },
+    { title: 'Customer First', text: 'Support when you need it' },
+  ],
+  newsletter_title: 'Join our newsletter',
+  newsletter_text: 'Get exclusive deals, new arrivals & more.',
+  newsletter_placeholder: 'Your email address',
+  newsletter_button: 'Subscribe',
+  payment_labels: { cod: 'Cash on Delivery', bkash: 'bKash', nagad: 'Nagad', rocket: 'Rocket' },
+};
+
+function readTemplateTwoFooter(raw) {
+  let saved = raw;
+  if (typeof raw === 'string') {
+    try { saved = JSON.parse(raw); } catch (e) { saved = {}; }
+  }
+  const mergeItems = (defaults, values) => defaults.map((item, index) => ({ ...item, ...(values?.[index] || {}) }));
+  return {
+    ...templateTwoFooterDefaults,
+    ...(saved || {}),
+    services: mergeItems(templateTwoFooterDefaults.services, saved?.services),
+    shop: { ...templateTwoFooterDefaults.shop, ...(saved?.shop || {}), links: mergeItems(templateTwoFooterDefaults.shop.links, saved?.shop?.links) },
+    quick: { ...templateTwoFooterDefaults.quick, ...(saved?.quick || {}), links: mergeItems(templateTwoFooterDefaults.quick.links, saved?.quick?.links) },
+    stats: mergeItems(templateTwoFooterDefaults.stats, saved?.stats),
+    payment_labels: { ...templateTwoFooterDefaults.payment_labels, ...(saved?.payment_labels || {}) },
+  };
+}
+
+function TemplateTwoFooterEditor({ value, onChange, errors, enabledPayments }) {
+  const update = (path, nextValue) => {
+    const next = structuredClone(value);
+    let target = next;
+    path.slice(0, -1).forEach(key => { target = target[key]; });
+    target[path[path.length - 1]] = nextValue;
+    onChange(next);
+  };
+  const updateItem = (group, index, key, nextValue) => update([group, index, key], nextValue);
+  const updateLink = (column, index, key, nextValue) => update([column, 'links', index, key], nextValue);
+
+  return (
+    <div className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4 sm:p-5 space-y-6">
+      <div>
+        <h4 className="font-bold text-gray-900">Template 2 Footer</h4>
+        <p className="mt-1 text-xs text-gray-500">Every label and link in the Template 2 footer can be changed here. Store description, contact details, social links, copyright, and developer credit use Brand &amp; General settings.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          ['show_services', 'Show service benefits bar'], ['show_stats', 'Show statistics strip'],
+          ['show_newsletter', 'Show newsletter section'], ['show_payments', 'Show payment methods'],
+        ].map(([key, label]) => <label key={key} className="flex cursor-pointer items-center gap-2 rounded-xl border border-orange-100 bg-white px-3 py-3 text-sm font-semibold text-gray-700"><input type="checkbox" checked={value[key] !== false} onChange={e => update([key], e.target.checked)} className={checkboxClass} />{label}</label>)}
+      </div>
+
+      <section className="space-y-3 border-t border-orange-100 pt-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-orange-100 bg-white p-4"><div><h5 className="font-bold text-gray-900">Shared store benefits</h5><p className="mt-1 text-xs text-gray-500">Manage the title, subtitle, icon, order, and visibility once. The active benefits are reused across all storefront templates.</p></div><a href="/admin/features" target="_blank" rel="noreferrer" className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600">Manage Features &amp; Badges ↗</a></div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 border-t border-orange-100 pt-5 lg:grid-cols-2">
+        {['shop', 'quick'].map(column => <div key={column} className="rounded-xl border border-gray-100 bg-white p-4 space-y-3"><Field label={`${column === 'shop' ? 'Shop' : 'Quick links'} column heading`}><input value={value[column].title} onChange={e => update([column, 'title'], e.target.value)} className={inputClass} /></Field>{value[column].links.map((link, index) => <div key={index} className="grid grid-cols-1 gap-2 sm:grid-cols-2"><Field label={`Link ${index + 1} label`}><input value={link.label} onChange={e => updateLink(column, index, 'label', e.target.value)} className={inputClass} /></Field><Field label="URL or path"><input value={link.url} onChange={e => updateLink(column, index, 'url', e.target.value)} className={inputClass} placeholder="/about or https://..." /></Field></div>)}</div>)}
+      </section>
+
+      <section className="border-t border-orange-100 pt-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2"><Field label="Contact column heading"><input value={value.contact_title} onChange={e => update(['contact_title'], e.target.value)} className={inputClass} /></Field><Field label="No-contact-details message"><input value={value.contact_empty_text} onChange={e => update(['contact_empty_text'], e.target.value)} className={inputClass} /></Field></div>
+        <p className="mt-1 text-xs text-gray-500">Address, phone, and email are taken from Brand &amp; General → Contact Information.</p>
+      </section>
+
+      <section className="space-y-3 border-t border-orange-100 pt-5">
+        <Field label="Statistics section heading"><input value={value.stats_title} onChange={e => update(['stats_title'], e.target.value)} className={inputClass} /></Field>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">{value.stats.map((stat, index) => <div key={index} className="rounded-xl border border-gray-100 bg-white p-3 space-y-2"><Field label={`Statistic ${index + 1} title`}><input value={stat.title} onChange={e => updateItem('stats', index, 'title', e.target.value)} className={inputClass} /></Field><Field label="Short text"><input value={stat.text} onChange={e => updateItem('stats', index, 'text', e.target.value)} className={inputClass} /></Field></div>)}</div>
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 border-t border-orange-100 pt-5 md:grid-cols-2">
+        <Field label="Newsletter heading"><input value={value.newsletter_title} onChange={e => update(['newsletter_title'], e.target.value)} className={inputClass} /></Field>
+        <Field label="Newsletter text"><input value={value.newsletter_text} onChange={e => update(['newsletter_text'], e.target.value)} className={inputClass} /></Field>
+        <Field label="Email field placeholder"><input value={value.newsletter_placeholder} onChange={e => update(['newsletter_placeholder'], e.target.value)} className={inputClass} /></Field>
+        <Field label="Subscribe button label"><input value={value.newsletter_button} onChange={e => update(['newsletter_button'], e.target.value)} className={inputClass} /></Field>
+      </section>
+
+      <section className="border-t border-orange-100 pt-5"><h5 className="font-bold text-gray-900">Payment method labels</h5><p className="mt-1 text-xs text-gray-500">Only payment methods enabled in Payments settings are shown. Enable or disable methods in Payments settings.</p><div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(value.payment_labels).filter(([key]) => enabledPayments[key]).map(([key, label]) => <Field key={key} label={key === 'cod' ? 'Cash on Delivery' : key}><input value={label} onChange={e => update(['payment_labels', key], e.target.value)} className={inputClass} /></Field>)}</div>{!Object.values(enabledPayments).some(Boolean) && <p className="mt-3 text-xs text-amber-700">No payment methods are enabled. Enable one in Payments settings to configure its footer label.</p>}</section>
+      {errors.template_2_footer_config && <p className="text-xs text-red-500">{errors.template_2_footer_config}</p>}
+    </div>
+  );
 }
 
 const typographyAreaLabels = {
@@ -258,7 +378,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '',
     
     // Legal
-    terms_content: settings.terms_content || '', privacy_content: settings.privacy_content || '', refund_content: settings.refund_content || '', shipping_content: settings.shipping_content || '', shipping_page_enabled: settings.shipping_page_enabled !== '0',
+    about_content: settings.about_content || '', terms_content: settings.terms_content || '', privacy_content: settings.privacy_content || '', refund_content: settings.refund_content || '', shipping_content: settings.shipping_content || '', shipping_page_enabled: settings.shipping_page_enabled !== '0',
 
     // Courier APIs
     courier_default:      settings.courier_default      || 'steadfast',
@@ -327,11 +447,9 @@ export default function Settings({ settings, templateStatus = {} }) {
     template_1_overview_new_count: settings.template_1_overview_new_count || '12',
     template_1_overview_best_count: settings.template_1_overview_best_count || '12',
     homepage_product_overview_order: settings.homepage_product_overview_order || 'newest',
-    template_2_overview_featured_count: settings.template_2_overview_featured_count || '12',
-    template_2_overview_new_count: settings.template_2_overview_new_count || '12',
-    template_2_overview_best_count: settings.template_2_overview_best_count || '12',
     theme_typography_template_1: readTypography(settings.theme_typography_template_1, 'template-1'),
     theme_typography_template_2: readTypography(settings.theme_typography_template_2, 'template-2'),
+    template_2_footer_config: readTemplateTwoFooter(settings.template_2_footer_config),
   });
 
   const selectedLegalPage = legalPageEditors.find(page => page.id === activeLegalEditor) || legalPageEditors[0];
@@ -350,7 +468,7 @@ export default function Settings({ settings, templateStatus = {} }) {
           formData.append(k + '_name', v.name || `${k}.jpg`);
         } else if (typeof v === 'boolean') {
           formData.append(k, v ? '1' : '0');
-        } else if (k === 'theme_typography_template_1' || k === 'theme_typography_template_2') {
+        } else if (k === 'theme_typography_template_1' || k === 'theme_typography_template_2' || k === 'template_2_footer_config') {
           formData.append(k, JSON.stringify(v));
         } else {
           formData.append(k, v);
@@ -852,7 +970,7 @@ export default function Settings({ settings, templateStatus = {} }) {
                       <p className="text-sm text-gray-500 mt-1">Choose the active customer-facing shop design.</p>
                     </div>
                     <span className="text-xs font-semibold rounded-full bg-orange-50 text-orange-600 px-3 py-1">
-                      Current: {data.storefront_template === 'template-1' ? 'Template 1' : 'Template 2'}
+                      Current: {data.storefront_template.replace('template-', 'Template ')}
                     </span>
                   </div>
 
@@ -867,8 +985,8 @@ export default function Settings({ settings, templateStatus = {} }) {
                       {
                         id: 'template-2',
                         name: 'Template 2',
-                        note: 'Current active Shopzy marketplace layout',
-                        palette: ['#f15a24', '#0A2A22', '#f8f9fa'],
+                        note: 'Smart marketplace layout with orange deals styling',
+                        palette: ['#f2541c', '#747d8c', '#ffffff'],
                       },
                     ].map(template => {
                       const selected = data.storefront_template === template.id;
@@ -1087,23 +1205,6 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 space-y-4">
                       <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
                         <div>
-                          <h4 className="text-sm font-bold text-gray-900">Template-2 Product Section Counts</h4>
-                          <p className="text-xs text-gray-500 mt-1">Choose how many products appear in the Featured, New Arrivals, and Best Sellers sections.</p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          <Field label="Featured / Just For You">
-                            <input type="number" min="1" max="48" value={data.template_2_overview_featured_count} onChange={e => setData('template_2_overview_featured_count', e.target.value)} className={inputClass} />
-                          </Field>
-                          <Field label="New Arrivals">
-                            <input type="number" min="1" max="48" value={data.template_2_overview_new_count} onChange={e => setData('template_2_overview_new_count', e.target.value)} className={inputClass} />
-                          </Field>
-                          <Field label="Best Sellers">
-                            <input type="number" min="1" max="48" value={data.template_2_overview_best_count} onChange={e => setData('template_2_overview_best_count', e.target.value)} className={inputClass} />
-                          </Field>
-                        </div>
-                      </div>
-                      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
-                        <div>
                           <h4 className="text-sm font-bold text-gray-900">Template-2 Layout Counts</h4>
                           <p className="text-xs text-gray-500 mt-1">Control catalog grid columns and pagination for Template-2.</p>
                         </div>
@@ -1117,6 +1218,15 @@ export default function Settings({ settings, templateStatus = {} }) {
                         </div>
                       </div>
                     </div>
+                  )}
+
+                  {data.storefront_template === 'template-2' && (
+                    <TemplateTwoFooterEditor
+                      value={data.template_2_footer_config}
+                      onChange={next => setData('template_2_footer_config', next)}
+                      errors={errors}
+                      enabledPayments={{ cod: data.pay_cod_enabled, bkash: data.pay_bkash_enabled, nagad: data.pay_nagad_enabled, rocket: data.pay_rocket_enabled }}
+                    />
                   )}
 
                   <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 space-y-4">
@@ -1134,7 +1244,7 @@ export default function Settings({ settings, templateStatus = {} }) {
                       return (
                         <div className="rounded-xl border border-gray-200 bg-gray-100/70 p-3 sm:p-4">
                           <div className="flex items-center justify-between gap-3 mb-3">
-                            <h4 className="text-sm font-bold text-gray-900">{template === 'template-1' ? 'Template 1' : 'Template 2'} typography</h4>
+                            <h4 className="text-sm font-bold text-gray-900">{template.replace('template-', 'Template ')} typography</h4>
                             <span className="text-xs text-green-600 font-semibold">Active template</span>
                           </div>
                           <TypographyEditor

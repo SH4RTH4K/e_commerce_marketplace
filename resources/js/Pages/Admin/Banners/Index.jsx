@@ -79,6 +79,12 @@ export default function BannersIndex({ banners, placements }) {
       });
     });
   };
+  const deleteSelected = () => {
+    if (selected.length === 0) return;
+    window.showConfirm(`Permanently delete ${selected.length} selected banner(s)? This cannot be undone.`, () => {
+      router.delete('/admin/banners/bulk-delete', { data: { ids: selected }, preserveScroll: true, onSuccess: () => clearSelected() });
+    });
+  };
   const updateSelectedPosition = () => {
     if (selected.length === 0) return;
     window.showConfirm(`Apply these display settings to ${selected.length} selected banner(s)?`, () => {
@@ -145,6 +151,7 @@ export default function BannersIndex({ banners, placements }) {
                 <span className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-700">{selected.length} selected</span>
                 <button onClick={() => updateSelectedStatus('activate')} className="rounded-xl bg-green-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700">Set Active</button>
                 <button onClick={() => updateSelectedStatus('deactivate')} className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50">Set Inactive</button>
+                <button onClick={deleteSelected} className="rounded-xl bg-red-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700">Delete Selected</button>
                 <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-indigo-100 bg-indigo-50/60 p-1.5">
                   <select value={textPosition} onChange={event => setTextPosition(event.target.value)} className="rounded-lg border border-indigo-100 bg-white px-2 py-1.5 text-xs font-semibold text-indigo-900 outline-none">
                     {positionOptions.map(([value, label]) => <option key={value} value={value}>Text: {label}</option>)}

@@ -15,17 +15,12 @@ class HomeController extends Controller
     public function index()
     {
         $isTemplateOne = setting('storefront_template', 'template-2') === 'template-1';
-        $overviewAllLimit = $isTemplateOne ? min(48, max(1, (int) setting('template_1_overview_all_count', '16'))) : 12;
+        $isTemplateTwo = setting('storefront_template', 'template-2') === 'template-2';
+        $overviewAllLimit = min(48, max(1, (int) setting('template_1_overview_all_count', '16')));
         $overviewLimits = [
-            'featured' => $isTemplateOne
-                ? max($overviewAllLimit, min(48, max(1, (int) setting('template_1_overview_featured_count', '12'))))
-                : min(48, max(1, (int) setting('template_2_overview_featured_count', '12'))),
-            'best' => $isTemplateOne
-                ? max($overviewAllLimit, min(48, max(1, (int) setting('template_1_overview_best_count', '12'))))
-                : min(48, max(1, (int) setting('template_2_overview_best_count', '12'))),
-            'new' => $isTemplateOne
-                ? max($overviewAllLimit, min(48, max(1, (int) setting('template_1_overview_new_count', '12'))))
-                : min(48, max(1, (int) setting('template_2_overview_new_count', '12'))),
+            'featured' => max($overviewAllLimit, min(48, max(1, (int) setting('template_1_overview_featured_count', '12')))),
+            'best' => max($overviewAllLimit, min(48, max(1, (int) setting('template_1_overview_best_count', '12')))),
+            'new' => max($overviewAllLimit, min(48, max(1, (int) setting('template_1_overview_new_count', '12')))),
         ];
         $withImages = fn ($q) => $q
             ->published()
@@ -85,19 +80,36 @@ class HomeController extends Controller
             $product->unsetRelation('supplierLinks');
         };
 
-        $trending = Product::query()->tap($withImages)->where('is_featured', true)->tap($overviewOrder)->take($overviewLimits['featured'])->get()->each($setStorefrontSku);
-        $bestSellers = Product::query()->tap($withImages)->where('is_best_seller', true)->tap($overviewOrder)->take($overviewLimits['best'])->get()->each($setStorefrontSku);
-        $newArrivals = Product::query()->tap($withImages)->where('is_new_arrival', true)->tap($overviewOrder)->take($overviewLimits['new'])->get()->each($setStorefrontSku);
+        $trending = $isTemplateOne ? Product::query()->tap($withImages)->where('is_featured', true)->tap($overviewOrder)->take($overviewLimits['featured'])->get()->each($setStorefrontSku) : collect();
+        $bestSellers = $isTemplateOne ? Product::query()->tap($withImages)->where('is_best_seller', true)->tap($overviewOrder)->take($overviewLimits['best'])->get()->each($setStorefrontSku) : collect();
+        $newArrivals = $isTemplateOne ? Product::query()->tap($withImages)->where('is_new_arrival', true)->tap($overviewOrder)->take($overviewLimits['new'])->get()->each($setStorefrontSku) : collect();
+        $templateTwoCategorySections = $isTemplateTwo
+            ? $categories
+                ->filter(fn (Category $category) => $category->products_count > 0)
+                ->take(12)
+                ->map(function (Category $category) use ($withImages, $setStorefrontSku): array {
+                    $products = Product::query()
+                        ->tap($withImages)
+                        ->where('category_id', $category->getKey())
+                        ->latest('id')
+                        ->take(10)
+                        ->get()
+                        ->each($setStorefrontSku);
+
+                    return [
+                        'id' => $category->getKey(),
+                        'name' => $category->name,
+                        'slug' => $category->slug,
+                        'products' => $products,
+                    ];
+                })
+                ->filter(fn (array $section) => $section['products']->isNotEmpty())
+                ->values()
+            : collect();
         $overviewDisplayLimits = [
-            'featured' => $isTemplateOne
-                ? min(48, max(1, (int) setting('template_1_overview_featured_count', '12')))
-                : $overviewLimits['featured'],
-            'new' => $isTemplateOne
-                ? min(48, max(1, (int) setting('template_1_overview_new_count', '12')))
-                : $overviewLimits['new'],
-            'best' => $isTemplateOne
-                ? min(48, max(1, (int) setting('template_1_overview_best_count', '12')))
-                : $overviewLimits['best'],
+            'featured' => min(48, max(1, (int) setting('template_1_overview_featured_count', '12'))),
+            'new' => min(48, max(1, (int) setting('template_1_overview_new_count', '12'))),
+            'best' => min(48, max(1, (int) setting('template_1_overview_best_count', '12'))),
         ];
         $overviewAllCount = $trending
             ->concat($newArrivals)
@@ -122,6 +134,7 @@ class HomeController extends Controller
             'trending'        => $trending,
             'bestSellers'     => $bestSellers,
             'newArrivals'     => $newArrivals,
+            'templateTwoCategorySections' => $templateTwoCategorySections,
             'homeOverviewHasMore' => [
                 'all' => Product::published()
                     ->where(fn ($query) => $query->where('is_featured', true)->orWhere('is_new_arrival', true)->orWhere('is_best_seller', true))
@@ -187,11 +200,9 @@ class HomeController extends Controller
     private function overviewBatchSize(string $tab): int
     {
         $isTemplateOne = setting('storefront_template', 'template-2') === 'template-1';
-        $key = $isTemplateOne
-            ? "template_1_overview_{$tab}_count"
-            : "template_2_overview_{$tab}_count";
+        $key = $isTemplateOne ? "template_1_overview_{$tab}_count" : null;
         $default = $tab === 'all' ? 16 : 12;
 
-        return max(1, min(48, (int) setting($key, (string) $default)));
+        return $key ? max(1, min(48, (int) setting($key, (string) $default))) : $default;
     }
 }
