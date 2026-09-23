@@ -223,7 +223,7 @@ export default function AccountIndex({ user, orders }) {
                       {wishlist.slice(0,6).map(p => {
                         const img = p.images?.find(i=>i.is_primary)?.path||p.images?.[0]?.path;
                         return (
-                          <Link key={p.id} href={`/product/${p.slug||p.id}`} className="shrink-0 w-14 sm:w-16">
+                          <Link key={p.id} href={`/product/${p.url_key || p.slug || p.id}`} className="shrink-0 w-14 sm:w-16">
                             <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl border border-gray-100 overflow-hidden bg-gray-50 hover:border-[#f15a24]/50 transition-colors">
                               <img src={imageUrl(img,p.name)} alt={p.name} className="w-full h-full object-cover" />
                             </div>
@@ -280,13 +280,13 @@ export default function AccountIndex({ user, orders }) {
                       const hasDiscount = p.sale_price && p.regular_price > p.sale_price;
                       return (
                         <div key={p.id} className="flex gap-3 p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
-                          <Link href={`/product/${p.slug||p.id}`} className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-xl overflow-hidden bg-gray-50 border border-gray-100">
+                          <Link href={`/product/${p.url_key || p.slug || p.id}`} className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-xl overflow-hidden bg-gray-50 border border-gray-100">
                             <img src={imageUrl(img,p.name)} alt={p.name} className="w-full h-full object-cover" />
                           </Link>
                           <div className="flex-1 min-w-0 flex flex-col justify-between">
                             <div>
                               <p className="text-[10px] text-gray-400">{p.category?.name||'Product'}</p>
-                              <Link href={`/product/${p.slug||p.id}`} className="text-sm font-bold text-gray-900 hover:text-[#f15a24] line-clamp-2">{p.name}</Link>
+                              <Link href={`/product/${p.url_key || p.slug || p.id}`} className="text-sm font-bold text-gray-900 hover:text-[#f15a24] line-clamp-2">{p.name}</Link>
                             </div>
                             <div className="flex items-center justify-between mt-1 gap-2 flex-wrap">
                               <div>

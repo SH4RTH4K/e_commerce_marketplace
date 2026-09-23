@@ -238,7 +238,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
 
   const submitReview = (e) => {
     e.preventDefault();
-    reviewForm.post(`/product/${product.slug || product.id}/reviews`, {
+    reviewForm.post(`/product/${product.url_key || product.slug || product.id}/reviews`, {
       preserveScroll: true,
       onSuccess: () => {
         reviewForm.reset('title', 'body');
@@ -875,7 +875,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
                     
                     {!auth?.user ? (
                       <div className="text-center">
-                        <Link href={`/login?redirect=/product/${product.slug}#reviews`} className="block w-full bg-[#f15a24] hover:bg-[#d94a1a] text-white font-bold px-5 py-3 rounded-xl transition-colors">
+                        <Link href={`/login?redirect=/product/${product.url_key || product.slug}#reviews`} className="block w-full bg-[#f15a24] hover:bg-[#d94a1a] text-white font-bold px-5 py-3 rounded-xl transition-colors">
                           Sign in to review
                         </Link>
                       </div>

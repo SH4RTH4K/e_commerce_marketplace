@@ -88,7 +88,7 @@ export default function ProductCard({ product }) {
       style={{ backgroundColor: cardBg }}
     >
       <div className="relative shrink-0 aspect-square">
-        <Link href={`/product/${product.slug || product.id}`} className="block w-full h-full overflow-hidden bg-gray-50 rounded-[14px]">
+        <Link href={`/product/${product.url_key || product.slug || product.id}`} className="block w-full h-full overflow-hidden bg-gray-50 rounded-[14px]">
           {discount > 0 && (
             <span className="absolute left-2.5 top-2.5 z-10 bg-[#00D06C] text-white text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md">
               -{discount}%
@@ -144,7 +144,7 @@ export default function ProductCard({ product }) {
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="min-w-0 flex-1">
             <Link
-              href={`/product/${product.slug || product.id}`}
+              href={`/product/${product.url_key || product.slug || product.id}`}
               className="storefront-product-title block text-[13px] sm:text-[14px] hover:opacity-80 font-bold transition-colors leading-tight line-clamp-2 pr-2"
               style={{ color: cardText }}
             >
@@ -168,7 +168,7 @@ export default function ProductCard({ product }) {
         <div className="mt-auto flex items-center">
           {hasVariants && inStock ? (
             <Link 
-              href={`/product/${product.slug || product.id}`}
+              href={`/product/${product.url_key || product.slug || product.id}`}
               onClick={alreadyOrdered ? previewCart : undefined}
               style={buttonStyle}
               className={buttonClassName}

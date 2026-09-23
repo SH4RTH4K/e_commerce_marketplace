@@ -126,7 +126,7 @@ export default function AccountShow({ order }) {
                        )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <Link href={`/product/${item.product?.slug || ''}`} className="text-sm font-bold text-gray-800 hover:text-[#f15a24] truncate block">
+                      <Link href={`/product/${item.product?.url_key || item.product?.slug || ''}`} className="text-sm font-bold text-gray-800 hover:text-[#f15a24] truncate block">
                         {item.product_name}
                       </Link>
                       {item.variant && <p className="text-xs text-gray-500 mt-0.5">{item.variant}</p>}

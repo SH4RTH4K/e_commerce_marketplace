@@ -15,20 +15,20 @@ class ProductController extends Controller
     {
         abort_unless($product->is_published, 404);
 
-        $canonical = route('product.show', $product);
-        if ((string) $request->route()->originalParameter('product') !== $product->slug) {
-            $query = $request->server('QUERY_STRING');
-
-            return redirect()->to($canonical.($query ? '?'.$query : ''), 301);
-        }
-
         $product->load('images', 'variants', 'category', 'supplierLinks.supplierProduct');
         // Supplier product codes are the SKU for imported products. Set the
         // display value on the existing SKU attribute so it is always included
         // in the serialized storefront product payload.
-        $product->sku = $product->sku
-            ?: $product->supplierLinks->first()?->supplierProduct?->product_code
+        $product->sku = $product->supplierLinks->first()?->supplierProduct?->product_code
+            ?: $product->sku
             ?: $product->supplierLinks->first()?->supplierProduct?->supplier_product_id;
+
+        $canonical = route('product.show', $product);
+        if ((string) $request->route()->originalParameter('product') !== $product->url_key) {
+            $query = $request->server('QUERY_STRING');
+
+            return redirect()->to($canonical.($query ? '?'.$query : ''), 301);
+        }
         $product->unsetRelation('supplierLinks');
 
         $related = Product::published()
@@ -43,8 +43,8 @@ class ProductController extends Controller
             ->get()
             ->each(static function (Product $relatedProduct): void {
                 $supplierProduct = $relatedProduct->supplierLinks->first()?->supplierProduct;
-                $relatedProduct->sku = $relatedProduct->sku
-                    ?: $supplierProduct?->product_code
+                $relatedProduct->sku = $supplierProduct?->product_code
+                    ?: $relatedProduct->sku
                     ?: $supplierProduct?->supplier_product_id;
                 $relatedProduct->unsetRelation('supplierLinks');
             });

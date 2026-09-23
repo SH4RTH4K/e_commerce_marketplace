@@ -74,8 +74,8 @@ class HomeController extends Controller
 
         $setStorefrontSku = static function (Product $product): void {
             $supplierProduct = $product->supplierLinks->first()?->supplierProduct;
-            $product->sku = $product->sku
-                ?: $supplierProduct?->product_code
+            $product->sku = $supplierProduct?->product_code
+                ?: $product->sku
                 ?: $supplierProduct?->supplier_product_id;
             $product->unsetRelation('supplierLinks');
         };
@@ -183,8 +183,8 @@ class HomeController extends Controller
             ->get()
             ->each(static function (Product $product): void {
                 $supplierProduct = $product->supplierLinks->first()?->supplierProduct;
-                $product->sku = $product->sku
-                    ?: $supplierProduct?->product_code
+                $product->sku = $supplierProduct?->product_code
+                    ?: $product->sku
                     ?: $supplierProduct?->supplier_product_id;
                 $product->unsetRelation('supplierLinks');
             });

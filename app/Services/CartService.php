@@ -108,7 +108,7 @@ class CartService
                 'product'    => $product,
                 'product_id' => $product->id,
                 'name'       => $product->name,
-                'slug'       => $product->slug,
+                'slug'       => $product->url_key,
                 // Keep the original reference in the cart payload.  The Inertia
                 // storefront resolves it when rendering; passing imageUrl() here
                 // made externally hosted images go through the image proxy twice.

@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 
 class Product extends Model
 {
+    protected $appends = ['url_key'];
+
     protected static function booted(): void
     {
         static::saving(function (Product $product) {
@@ -257,6 +259,25 @@ class Product extends Model
     }
 
     /**
+     * Customer-facing product URLs include the SKU, while the base slug stays
+     * stable in storage so an SKU correction does not break existing links.
+     */
+    public function getUrlKeyAttribute(): string
+    {
+        $slug = (string) ($this->attributes['slug'] ?? '');
+        $sku = trim((string) ($this->attributes['sku'] ?? ''));
+
+        return $slug !== '' && $sku !== '' && ! str_ends_with($slug, '-'.$sku)
+            ? $slug.'-'.$sku
+            : $slug;
+    }
+
+    public function getRouteKey(): mixed
+    {
+        return $this->url_key;
+    }
+
+    /**
      * Resolve route binding accepting both slug (storefront) and numeric ID (admin).
      */
     public function resolveRouteBinding($value, $field = null)
@@ -265,8 +286,22 @@ class Product extends Model
             return $this->where($field, $value)->first();
         }
 
-        return $this->where('slug', $value)->first()
-            ?? $this->whereIn('id', DB::table('product_slug_aliases')->select('product_id')->where('slug', $value))->first()
+        $exact = $this->where('slug', $value)->first();
+        if ($exact) {
+            return $exact;
+        }
+
+        $suffixPosition = strrpos($value, '-');
+        if ($suffixPosition !== false) {
+            $baseSlug = substr($value, 0, $suffixPosition);
+            $withSku = $this->where('slug', $baseSlug)->first();
+
+            if ($withSku && hash_equals($withSku->url_key, $value)) {
+                return $withSku;
+            }
+        }
+
+        return $this->whereIn('id', DB::table('product_slug_aliases')->select('product_id')->where('slug', $value))->first()
             ?? (is_numeric($value) ? $this->where('id', $value)->first() : null);
     }
 

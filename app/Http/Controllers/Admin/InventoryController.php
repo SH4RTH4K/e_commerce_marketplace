@@ -61,6 +61,7 @@ class InventoryController extends Controller
                 'id'             => $p->id,
                 'name'           => $p->name,
                 'slug'           => $p->slug,
+                'url_key'        => $p->url_key,
                 'sku'            => $p->sku,
                 'regular_price'  => $p->regular_price,
                 'stock_quantity' => $p->stock_quantity,
