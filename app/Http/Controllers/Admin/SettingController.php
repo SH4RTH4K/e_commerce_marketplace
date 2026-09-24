@@ -259,6 +259,7 @@ class SettingController extends Controller
                 'template_2_product_per_row' => ['nullable', 'integer', 'min:2', 'max:6'],
                 'template_1_products_per_page' => ['nullable', 'integer', 'min:1', 'max:48'],
                 'template_2_products_per_page' => ['nullable', 'integer', 'min:1', 'max:48'],
+                'template_2_category_product_order' => ['nullable', 'in:newest,shuffle'],
                 'template_1_hero_overlay_color' => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{6}$/'],
                 'template_1_hero_overlay_opacity' => ['nullable', 'numeric', 'min:0', 'max:80'],
                 'template_1_hero_text_background_color' => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -446,7 +447,7 @@ class SettingController extends Controller
             'theme' => [
                 'storefront_template', 'template_1_navbar_menu', 'template_1_site_name_style', 'template_1_category_per_row',
                 'template_1_product_per_row', 'template_2_product_per_row',
-                'template_1_products_per_page', 'template_2_products_per_page',
+                'template_1_products_per_page', 'template_2_products_per_page', 'template_2_category_product_order',
                 'template_1_hero_overlay_color', 'template_1_hero_overlay_opacity',
                 'template_1_hero_text_background_color',
                 'template_1_hero_text_background_opacity', 'template_1_hero_text_position',

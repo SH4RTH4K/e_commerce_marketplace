@@ -426,6 +426,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     template_2_product_per_row: settings.template_2_product_per_row || '5',
     template_1_products_per_page: settings.template_1_products_per_page || '12',
     template_2_products_per_page: settings.template_2_products_per_page || '12',
+    template_2_category_product_order: settings.template_2_category_product_order || 'newest',
     template_1_hero_overlay_color: settings.template_1_hero_overlay_color || '#ffffff',
     template_1_hero_overlay_opacity: settings.template_1_hero_overlay_opacity ?? '0',
     template_1_hero_text_background_color: settings.template_1_hero_text_background_color || '#1f2430',
@@ -1205,15 +1206,21 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 space-y-4">
                       <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
                         <div>
-                          <h4 className="text-sm font-bold text-gray-900">Template-2 Layout Counts</h4>
-                          <p className="text-xs text-gray-500 mt-1">Control catalog grid columns and pagination for Template-2.</p>
+                          <h4 className="text-sm font-bold text-gray-900">Template-2 Category Product Layout</h4>
+                          <p className="text-xs text-gray-500 mt-1">Control the category product grid, shop pagination, and category-section order on each homepage reload.</p>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                           <Field label="Products Per Row" error={errors.template_2_product_per_row}>
                             <input type="number" min="2" max="6" value={data.template_2_product_per_row} onChange={e => setData('template_2_product_per_row', e.target.value)} className={inputClass} />
                           </Field>
                           <Field label="Products Per Page" error={errors.template_2_products_per_page}>
                             <input type="number" min="1" max="48" value={data.template_2_products_per_page} onChange={e => setData('template_2_products_per_page', e.target.value)} className={inputClass} />
+                          </Field>
+                          <Field label="Refresh order" error={errors.template_2_category_product_order}>
+                            <select value={data.template_2_category_product_order} onChange={e => setData('template_2_category_product_order', e.target.value)} className={inputClass}>
+                              <option value="newest">Keep newest first</option>
+                              <option value="shuffle">Shuffle on each refresh</option>
+                            </select>
                           </Field>
                         </div>
                       </div>

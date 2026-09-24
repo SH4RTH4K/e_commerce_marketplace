@@ -83,6 +83,9 @@ class HomeController extends Controller
         $trending = $isTemplateOne ? Product::query()->tap($withImages)->where('is_featured', true)->tap($overviewOrder)->take($overviewLimits['featured'])->get()->each($setStorefrontSku) : collect();
         $bestSellers = $isTemplateOne ? Product::query()->tap($withImages)->where('is_best_seller', true)->tap($overviewOrder)->take($overviewLimits['best'])->get()->each($setStorefrontSku) : collect();
         $newArrivals = $isTemplateOne ? Product::query()->tap($withImages)->where('is_new_arrival', true)->tap($overviewOrder)->take($overviewLimits['new'])->get()->each($setStorefrontSku) : collect();
+        $templateTwoCategoryOrder = setting('template_2_category_product_order', 'newest') === 'shuffle'
+            ? fn ($query) => $query->inRandomOrder()
+            : fn ($query) => $query->latest('id');
         $templateTwoCategorySections = $isTemplateTwo
             ? $categories
                 ->filter(fn (Category $category) => $category->products_count > 0)
@@ -91,7 +94,7 @@ class HomeController extends Controller
                     $products = Product::query()
                         ->tap($withImages)
                         ->where('category_id', $category->getKey())
-                        ->latest('id')
+                        ->tap($templateTwoCategoryOrder)
                         ->take(10)
                         ->get()
                         ->each($setStorefrontSku);
