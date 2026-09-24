@@ -157,11 +157,7 @@ export default function ShopPage({
     const newSort = e.target.value;
     const currentParams = new URLSearchParams(window.location.search);
     currentParams.delete('page');
-    if (newSort) {
-      currentParams.set('sort', newSort);
-    } else {
-      currentParams.delete('sort');
-    }
+    currentParams.set('sort', newSort || 'popular');
     
     router.get(`${formAction}?${currentParams.toString()}`, {}, { preserveState: true });
   };
@@ -201,8 +197,8 @@ export default function ShopPage({
               </div>
               <label className="template-1-shop-sort">
                 <span>Order by</span>
-                <select value={sort || ''} onChange={handleSortChange} aria-label="Order products">
-                  <option value="">Popular</option>
+                <select value={sort || 'popular'} onChange={handleSortChange} aria-label="Order products">
+                  <option value="popular">Popular</option>
                   <option value="newest">Newest First</option>
                   <option value="price_low">Price: Low to High</option>
                   <option value="price_high">Price: High to Low</option>
@@ -552,11 +548,11 @@ export default function ShopPage({
               </div>
               <div className="shrink-0 w-full sm:w-auto">
                 <select 
-                  value={sort || ''} 
+                  value={sort || 'popular'}
                   onChange={handleSortChange} 
                   className="w-full sm:w-48 border-gray-200 rounded-lg text-sm px-3 py-2 focus:ring-[#f15a24] focus:border-[#f15a24] bg-gray-50 cursor-pointer font-medium text-gray-700"
                 >
-                  <option value="">Sort: Popular</option>
+                  <option value="popular">Sort: Popular</option>
                   <option value="newest">Newest First</option>
                   <option value="price_low">Price: Low to High</option>
                   <option value="price_high">Price: High to Low</option>

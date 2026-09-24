@@ -99,17 +99,25 @@ class ShopController extends Controller
             });
         }
 
-        $sort = $request->input('sort');
-        if ($isFlashPage && blank($sort)) {
+        $requestedSort = (string) $request->input('sort', '');
+        $sort = $requestedSort !== '' ? $requestedSort : 'popular';
+        if (! in_array($sort, ['popular', 'newest', 'price_low', 'price_high', 'rating', 'name'], true)) {
+            $sort = 'popular';
+        }
+        if ($isFlashPage && $requestedSort === '') {
             $query->orderBy('flash_sale_position')->orderBy('id');
         } else {
             match ($sort) {
-                'price_low'  => $query->orderByRaw('COALESCE(sale_price, regular_price) asc'),
-                'price_high' => $query->orderByRaw('COALESCE(sale_price, regular_price) desc'),
-                'rating'     => $query->orderByDesc('rating'),
-                'name'       => $query->orderBy('name'),
-                'newest'     => $query->latest(),
-                default      => $query->latest(),
+                'price_low'  => $query->orderByRaw('COALESCE(sale_price, regular_price) asc')->orderByDesc('id'),
+                'price_high' => $query->orderByRaw('COALESCE(sale_price, regular_price) desc')->orderByDesc('id'),
+                'rating'     => $query->orderByDesc('rating')->orderByDesc('reviews_count')->orderByDesc('id'),
+                'name'       => $query->orderBy('name')->orderByDesc('id'),
+                'newest'     => $query->orderByDesc('created_at')->orderByDesc('id'),
+                default      => $query->orderByDesc('is_best_seller')
+                    ->orderByDesc('is_featured')
+                    ->orderByDesc('reviews_count')
+                    ->orderByDesc('rating')
+                    ->orderByDesc('id'),
             };
         }
 
@@ -179,7 +187,7 @@ class ShopController extends Controller
             'allProductsCount' => Product::published()->count(),
             'brands'           => $brands,
             'variantFilters'   => $variantFilters,
-            'sort'             => $request->input('sort'),
+            'sort'             => $sort,
             'minRating'        => $request->input('min_rating'),
             'q'                => $term,
             'priceCeiling'     => $priceCeiling,

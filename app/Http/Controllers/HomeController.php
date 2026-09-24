@@ -90,7 +90,7 @@ class HomeController extends Controller
             ? $categories
                 ->filter(fn (Category $category) => $category->products_count > 0)
                 ->take(12)
-                ->map(function (Category $category) use ($withImages, $setStorefrontSku): array {
+                ->map(function (Category $category) use ($withImages, $setStorefrontSku, $templateTwoCategoryOrder): array {
                     $products = Product::query()
                         ->tap($withImages)
                         ->where('category_id', $category->getKey())
