@@ -616,7 +616,7 @@ export default function HomePage({
           {/* Hero Slider Area */}
           <div className="grid grid-cols-1 lg:grid-cols-[2.5fr_1fr] gap-4 w-full">
             {/* Left Slider Container */}
-            <div className="relative rounded-xl overflow-hidden min-h-[250px] sm:min-h-[400px] bg-gray-100 group">
+            <div className={`relative rounded-xl overflow-hidden bg-gray-100 group ${isTemplateTwo ? 'min-h-[360px] sm:min-h-[480px]' : 'min-h-[250px] sm:min-h-[400px]'}`}>
               {/* Scrollable Area */}
               <div id="hero-slider" ref={heroSliderRef} className="absolute inset-0 flex snap-x snap-mandatory overflow-hidden scroll-smooth">
                  {displayHeroBanners?.length > 0 ? (
@@ -675,7 +675,7 @@ export default function HomePage({
             </div>
 
             {/* Right Static Banner */}
-            <div className="hidden lg:flex relative rounded-xl overflow-hidden min-h-[400px] bg-orange-50 group">
+            <div className={`hidden lg:flex relative rounded-xl overflow-hidden bg-orange-50 group ${isTemplateTwo ? 'min-h-[480px]' : 'min-h-[400px]'}`}>
               {displayHeroBanners?.length > 1 ? (
                  <img src={resolveHeroImage(displayHeroBanners[1].image, displayHeroBanners[1].title)} className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: imageFocusPosition(displayHeroBanners[1].image_position), objectFit: imageFit(displayHeroBanners[1].image_orientation) }} alt="Offer" />
               ) : (
