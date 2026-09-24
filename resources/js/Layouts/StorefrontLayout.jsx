@@ -27,7 +27,7 @@ function CartIcon({ count = 0, onClick }) {
 }
 
 const templateTwoFooterDefaults = {
-  show_services: true, show_stats: true, show_newsletter: true, show_payments: true,
+  show_stats: true, show_newsletter: true,
   services: [
     { title: 'Free Shipping', text: 'On orders over Tk 2,000' }, { title: 'Secure Payment', text: 'Protected checkout' },
     { title: 'Easy Returns', text: 'Simple return policy' }, { title: 'Customer Support', text: 'We are here to help' }, { title: 'Best Value', text: 'Quality products, fair prices' },
@@ -107,7 +107,7 @@ export default function StorefrontLayout({ children, title, description, activeC
   const sharedBenefits = Array.isArray(storefrontFeatures)
     ? storefrontFeatures.filter(feature => feature?.title?.trim()).map(feature => ({ title: feature.title, text: feature.subtitle || '' }))
     : [];
-  const footerBenefits = sharedBenefits.length > 0 ? sharedBenefits : templateTwoFooter.services;
+  const footerBenefits = sharedBenefits;
   const paymentMethods = [
     chatSettings.pay_cod_enabled !== false && { label: templateTwoFooter.payment_labels.cod, tone: 'neutral' },
     chatSettings.pay_bkash_enabled && { label: templateTwoFooter.payment_labels.bkash, tone: 'bkash' },
@@ -609,7 +609,7 @@ export default function StorefrontLayout({ children, title, description, activeC
         </footer>
       ) : (
       <footer className="template-2-footer mb-[60px] md:mb-0">
-        {templateTwoFooter.show_services !== false && <div className="template-2-footer-services">
+        {footerBenefits.length > 0 && <div className="template-2-footer-services">
           <div className="template-2-footer-shell template-2-footer-services-grid">
             {footerBenefits.map((service, index) => {
               const icon = ['truck', 'shield', 'return', 'chat', 'tag'][index] || 'tag';
@@ -687,7 +687,7 @@ export default function StorefrontLayout({ children, title, description, activeC
               {showCopyright && (copyrightUrl ? <a href={copyrightUrl} target="_blank" rel="noopener noreferrer">{copyrightText}</a> : <p>{copyrightText}</p>)}
             </div>
             <div className="template-2-footer-payment-slot">
-              {chatSettings.show_cards_in_footer && templateTwoFooter.show_payments !== false && paymentMethods.length > 0 && <div className="template-2-footer-payments">
+              {chatSettings.show_cards_in_footer && paymentMethods.length > 0 && <div className="template-2-footer-payments">
                 {paymentMethods.map(method => <span key={method.label} className={`template-2-payment-${method.tone}`}>{method.label}</span>)}
               </div>}
             </div>

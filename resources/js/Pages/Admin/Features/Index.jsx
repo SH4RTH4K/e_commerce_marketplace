@@ -63,7 +63,7 @@ export default function FeaturesIndex({ features }) {
       <AdminLayout title="Features &amp; Badges">
         <div className="space-y-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500">Homepage feature badges displayed below the hero section.</p>
+            <p className="text-sm text-gray-500">Store benefits shared by all storefront templates. Active items are shown in each template's benefits area.</p>
             <a href="/admin/features/create" className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2 shadow-xs">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
               Add Feature

@@ -94,10 +94,8 @@ function readTypography(raw, template) {
 }
 
 const templateTwoFooterDefaults = {
-  show_services: true,
   show_stats: true,
   show_newsletter: true,
-  show_payments: true,
   services: [
     { title: 'Free Shipping', text: 'On orders over Tk 2,000' },
     { title: 'Secure Payment', text: 'Protected checkout' },
@@ -174,15 +172,15 @@ function TemplateTwoFooterEditor({ value, onChange, errors, enabledPayments }) {
         <p className="mt-1 text-xs text-gray-500">Every label and link in the Template 2 footer can be changed here. Store description, contact details, social links, copyright, and developer credit use Brand &amp; General settings.</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {[
-          ['show_services', 'Show service benefits bar'], ['show_stats', 'Show statistics strip'],
-          ['show_newsletter', 'Show newsletter section'], ['show_payments', 'Show payment methods'],
+          ['show_stats', 'Show statistics strip'],
+          ['show_newsletter', 'Show newsletter section'],
         ].map(([key, label]) => <label key={key} className="flex cursor-pointer items-center gap-2 rounded-xl border border-orange-100 bg-white px-3 py-3 text-sm font-semibold text-gray-700"><input type="checkbox" checked={value[key] !== false} onChange={e => update([key], e.target.checked)} className={checkboxClass} />{label}</label>)}
       </div>
 
       <section className="space-y-3 border-t border-orange-100 pt-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-orange-100 bg-white p-4"><div><h5 className="font-bold text-gray-900">Shared store benefits</h5><p className="mt-1 text-xs text-gray-500">Manage the title, subtitle, icon, order, and visibility once. The active benefits are reused across all storefront templates.</p></div><a href="/admin/features" target="_blank" rel="noreferrer" className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600">Manage Features &amp; Badges ↗</a></div>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-orange-100 bg-white p-4"><div><h5 className="font-bold text-gray-900">Store benefits</h5><p className="mt-1 text-xs text-gray-500">Manage the title, subtitle, icon, order, and visibility in Features &amp; Badges. Active benefits are shown across storefront templates; deactivate all items there to hide this section.</p></div><a href="/admin/features" target="_blank" rel="noreferrer" className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-bold text-white hover:bg-orange-600">Manage Features &amp; Badges ↗</a></div>
       </section>
 
       <section className="grid grid-cols-1 gap-4 border-t border-orange-100 pt-5 lg:grid-cols-2">
