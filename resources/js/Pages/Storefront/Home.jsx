@@ -57,6 +57,17 @@ function contentPositionClasses(position, fallback = 'center-left') {
   return `${horizontalClass} ${verticalClass}`;
 }
 
+function heroCopyEdgeSpacing(position, fallback = 'center-left') {
+  const [horizontal] = POSITION_MAP[normalizePosition(position, fallback)];
+  const spacing = {
+    left: 'ml-16 mr-5 sm:ml-20 sm:mr-8',
+    center: 'mx-16 sm:mx-20',
+    right: 'ml-5 mr-16 sm:ml-8 sm:mr-20',
+  };
+
+  return spacing[horizontal];
+}
+
 function HeroDots({ banners, activeIndex, onSelect, controlsId }) {
   if (!banners || banners.length < 2) return null;
 
@@ -616,7 +627,7 @@ export default function HomePage({
                          <div className="absolute inset-0 bg-gradient-to-r from-[#f15a24] to-[#f37c4f] mix-blend-overlay opacity-90"></div>
                        )}
                        {isTemplateTwo && templateTwoHeroOverlayOpacity > 0 && <div className="absolute inset-0" style={{ backgroundColor: hexToRgba(templateTwoHeroOverlayColor, templateTwoHeroOverlayOpacity) }} />}
-                       <div className={`template-two-hero-copy relative z-10 m-5 mb-16 max-w-md p-5 sm:m-8 sm:mb-20 sm:p-7 ${isTemplateOne ? 'text-[#222] drop-shadow-none' : isTemplateTwo ? 'rounded-xl border border-white/15 text-white shadow-lg backdrop-blur-sm' : 'text-white drop-shadow-md hidden'}`} style={isTemplateTwo ? { backgroundColor: hexToRgba(templateTwoHeroTextBackgroundColor, templateTwoHeroTextBackgroundOpacity) } : undefined}>
+                       <div className={`template-two-hero-copy relative z-10 mt-5 mb-16 max-w-md p-5 sm:mt-8 sm:mb-20 sm:p-7 ${heroCopyEdgeSpacing(banner.text_position, templateTwoHeroTextPosition)} ${isTemplateOne ? 'text-[#222] drop-shadow-none' : isTemplateTwo ? 'rounded-xl border border-white/15 text-white shadow-lg backdrop-blur-sm' : 'text-white drop-shadow-md hidden'}`} style={isTemplateTwo ? { backgroundColor: hexToRgba(templateTwoHeroTextBackgroundColor, templateTwoHeroTextBackgroundOpacity) } : undefined}>
                           {(isTemplateOne || isTemplateTwo) && banner.subtitle && <p className="text-xl md:text-2xl mb-3 font-light">{banner.subtitle}</p>}
                           {(isTemplateOne || isTemplateTwo) && banner.title && <h1 className="text-4xl md:text-6xl mb-8">{banner.title}</h1>}
                           {(isTemplateOne || isTemplateTwo) && <Link href={banner.link || '/shop'} className={`inline-flex items-center justify-center px-8 py-3 text-sm font-semibold uppercase text-white transition-colors ${isTemplateOne ? 'rounded-full bg-[#717fe0] hover:bg-[#222]' : 'rounded-lg bg-[#f2541c] hover:bg-[#d6431a]'}`}>Shop Now</Link>}
@@ -638,10 +649,10 @@ export default function HomePage({
               {/* Arrow Controls */}
               {heroCount > 1 && (
                 <>
-                  <button type="button" onClick={() => moveHeroSlide(-1)} aria-label="Previous banner" aria-controls="hero-slider" className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-white shadow flex items-center justify-center rounded-sm text-[#f15a24] opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-20">
+                  <button type="button" onClick={() => moveHeroSlide(-1)} aria-label="Previous banner" title="Previous banner" aria-controls="hero-slider" className="absolute left-4 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white/90 bg-[#f2541c] text-white shadow-[0_6px_18px_rgba(0,0,0,0.3)] transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white md:h-11 md:w-11">
                     <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
                   </button>
-                  <button type="button" onClick={() => moveHeroSlide(1)} aria-label="Next banner" aria-controls="hero-slider" className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 md:w-10 md:h-10 bg-white shadow flex items-center justify-center rounded-sm text-[#f15a24] opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-20">
+                  <button type="button" onClick={() => moveHeroSlide(1)} aria-label="Next banner" title="Next banner" aria-controls="hero-slider" className="absolute right-4 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white/90 bg-[#f2541c] text-white shadow-[0_6px_18px_rgba(0,0,0,0.3)] transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white md:h-11 md:w-11">
                     <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/></svg>
                   </button>
                   
