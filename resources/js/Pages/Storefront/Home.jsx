@@ -595,7 +595,7 @@ export default function HomePage({
               <div id="hero-slider" ref={heroSliderRef} className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto no-scrollbar scroll-smooth">
                  {displayHeroBanners?.length > 0 ? (
                    displayHeroBanners.map((banner, index) => (
-                     <div key={index} className="relative w-full shrink-0 snap-center h-full flex flex-col justify-center">
+                     <div key={index} className={`relative w-full shrink-0 snap-center h-full flex flex-col ${contentPositionClasses(banner.text_position)}`}>
                        {banner.image ? (
                          <img src={resolveHeroImage(banner.image, banner.title)} className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: imageFocusPosition(banner.image_position), objectFit: imageFit(banner.image_orientation) }} alt={banner.title} />
                        ) : (
