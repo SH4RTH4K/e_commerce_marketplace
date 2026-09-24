@@ -601,21 +601,29 @@ export default function HomePage({
               {/* Scrollable Area */}
               <div id="hero-slider" ref={heroSliderRef} className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto no-scrollbar scroll-smooth">
                  {displayHeroBanners?.length > 0 ? (
-                   displayHeroBanners.map((banner, index) => (
+                   displayHeroBanners.map((banner, index) => {
+                     const heroImage = resolveHeroImage(banner.image, banner.title);
+                     const containsHeroImage = banner.image_orientation === 'portrait' || banner.image_orientation === 'square';
+
+                     return (
                      <div key={index} className={`relative w-full shrink-0 snap-center h-full flex flex-col ${contentPositionClasses(banner.text_position, templateTwoHeroTextPosition)}`}>
                        {banner.image ? (
-                         <img src={resolveHeroImage(banner.image, banner.title)} className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: imageFocusPosition(banner.image_position), objectFit: imageFit(banner.image_orientation) }} alt={banner.title} />
+                         <>
+                           {isTemplateTwo && containsHeroImage && <img src={heroImage} className="absolute -inset-6 h-[calc(100%+3rem)] w-[calc(100%+3rem)] scale-110 object-cover opacity-45 blur-2xl" aria-hidden="true" alt="" />}
+                           <img src={heroImage} className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: imageFocusPosition(banner.image_position), objectFit: imageFit(banner.image_orientation) }} alt={banner.title} />
+                         </>
                        ) : (
                          <div className="absolute inset-0 bg-gradient-to-r from-[#f15a24] to-[#f37c4f] mix-blend-overlay opacity-90"></div>
                        )}
                        {isTemplateTwo && templateTwoHeroOverlayOpacity > 0 && <div className="absolute inset-0" style={{ backgroundColor: hexToRgba(templateTwoHeroOverlayColor, templateTwoHeroOverlayOpacity) }} />}
-                       <div className={`relative z-10 m-6 sm:m-12 max-w-lg p-6 sm:p-8 ${isTemplateOne ? 'text-[#222] drop-shadow-none' : isTemplateTwo ? 'text-white drop-shadow-md rounded-xl' : 'text-white drop-shadow-md hidden'}`} style={isTemplateTwo ? { backgroundColor: hexToRgba(templateTwoHeroTextBackgroundColor, templateTwoHeroTextBackgroundOpacity) } : undefined}>
+                       <div className={`template-two-hero-copy relative z-10 m-5 max-w-md p-5 sm:m-8 sm:p-7 ${isTemplateOne ? 'text-[#222] drop-shadow-none' : isTemplateTwo ? 'rounded-xl border border-white/15 text-white shadow-lg backdrop-blur-sm' : 'text-white drop-shadow-md hidden'}`} style={isTemplateTwo ? { backgroundColor: hexToRgba(templateTwoHeroTextBackgroundColor, templateTwoHeroTextBackgroundOpacity) } : undefined}>
                           {(isTemplateOne || isTemplateTwo) && banner.subtitle && <p className="text-xl md:text-2xl mb-3 font-light">{banner.subtitle}</p>}
                           {(isTemplateOne || isTemplateTwo) && banner.title && <h1 className="text-4xl md:text-6xl mb-8">{banner.title}</h1>}
                           {(isTemplateOne || isTemplateTwo) && <Link href={banner.link || '/shop'} className={`inline-flex items-center justify-center px-8 py-3 text-sm font-semibold uppercase text-white transition-colors ${isTemplateOne ? 'rounded-full bg-[#717fe0] hover:bg-[#222]' : 'rounded-lg bg-[#f2541c] hover:bg-[#d6431a]'}`}>Shop Now</Link>}
                        </div>
                      </div>
-                   ))
+                     );
+                   })
                  ) : (
                    <div className="relative w-full h-full flex items-center justify-center p-12 text-center bg-gray-200 text-gray-500 shrink-0">
                      <div>
