@@ -430,6 +430,11 @@ export default function Settings({ settings, templateStatus = {} }) {
     template_1_hero_text_background_color: settings.template_1_hero_text_background_color || '#1f2430',
     template_1_hero_text_background_opacity: settings.template_1_hero_text_background_opacity || '88',
     template_1_hero_text_position: settings.template_1_hero_text_position || 'left',
+    template_2_hero_overlay_color: settings.template_2_hero_overlay_color || '#ffffff',
+    template_2_hero_overlay_opacity: settings.template_2_hero_overlay_opacity ?? '0',
+    template_2_hero_text_background_color: settings.template_2_hero_text_background_color || '#1f2430',
+    template_2_hero_text_background_opacity: settings.template_2_hero_text_background_opacity ?? '35',
+    template_2_hero_text_position: settings.template_2_hero_text_position || 'left',
     template_1_category_title_color: settings.template_1_category_title_color || '#ffffff',
     template_1_category_secondary_color: settings.template_1_category_secondary_color || '#f5f7ff',
     template_1_category_overlay_color: settings.template_1_category_overlay_color || '#1f2430',
@@ -1202,6 +1207,34 @@ export default function Settings({ settings, templateStatus = {} }) {
 
                   {data.storefront_template === 'template-2' && (
                     <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 space-y-4">
+                      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
+                        <div>
+                          <h4 className="text-sm font-bold text-gray-900">Hero Slider Style</h4>
+                          <p className="text-xs text-gray-500 mt-1">Hero images and text are managed from Admin &gt; Banners. These controls set the Template-2 default presentation; each banner's position can still be set individually.</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                          <Field label="Default text position" error={errors.template_2_hero_text_position}>
+                            <select value={data.template_2_hero_text_position} onChange={e => setData('template_2_hero_text_position', e.target.value)} className={inputClass}>
+                              <option value="left">Left</option>
+                              <option value="center">Center</option>
+                              <option value="right">Right</option>
+                            </select>
+                          </Field>
+                          <Field label="Overlay color" error={errors.template_2_hero_overlay_color}>
+                            <input type="color" value={data.template_2_hero_overlay_color} onChange={e => setData('template_2_hero_overlay_color', e.target.value)} className="h-[42px] w-full cursor-pointer rounded-xl border border-gray-200 bg-white p-1" />
+                          </Field>
+                          <Field label={`Image wash / overlay (${data.template_2_hero_overlay_opacity}%)`} error={errors.template_2_hero_overlay_opacity}>
+                            <input type="range" min="0" max="80" value={data.template_2_hero_overlay_opacity} onChange={e => setData('template_2_hero_overlay_opacity', e.target.value)} className="mt-3 w-full accent-orange-500" />
+                          </Field>
+                          <Field label="Text panel background" error={errors.template_2_hero_text_background_color}>
+                            <input type="color" value={data.template_2_hero_text_background_color} onChange={e => setData('template_2_hero_text_background_color', e.target.value)} className="h-[42px] w-full cursor-pointer rounded-xl border border-gray-200 bg-white p-1" />
+                          </Field>
+                          <Field label={`Text background opacity (${data.template_2_hero_text_background_opacity}%)`} error={errors.template_2_hero_text_background_opacity}>
+                            <input type="range" min="0" max="100" value={data.template_2_hero_text_background_opacity} onChange={e => setData('template_2_hero_text_background_opacity', e.target.value)} className="mt-3 w-full accent-orange-500" />
+                          </Field>
+                        </div>
+                        <p className="text-xs text-gray-500">Use 0% overlay to preserve the original image. The text panel can be increased separately for better readability.</p>
+                      </div>
                       <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
                         <div>
                           <h4 className="text-sm font-bold text-gray-900">Template-2 Category Product Layout</h4>

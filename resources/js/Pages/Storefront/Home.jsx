@@ -50,8 +50,8 @@ function textPositionStyle(value, fallback) {
   };
 }
 
-function contentPositionClasses(position) {
-  const [horizontal, vertical] = POSITION_MAP[normalizePosition(position, 'center-left')];
+function contentPositionClasses(position, fallback = 'center-left') {
+  const [horizontal, vertical] = POSITION_MAP[normalizePosition(position, fallback)];
   const horizontalClass = { left: 'items-start text-left', center: 'items-center text-center', right: 'items-end text-right' }[horizontal];
   const verticalClass = { top: 'justify-start', center: 'justify-center', bottom: 'justify-end' }[vertical];
   return `${horizontalClass} ${verticalClass}`;
@@ -114,6 +114,13 @@ export default function HomePage({
   const heroTextBackgroundOpacity = Math.max(0, Math.min(100, Number(app?.settings?.template_1_hero_text_background_opacity ?? 88))) / 100;
   const heroTextPosition = ['left', 'center', 'right'].includes(app?.settings?.template_1_hero_text_position)
     ? app.settings.template_1_hero_text_position
+    : 'left';
+  const templateTwoHeroOverlayColor = app?.settings?.template_2_hero_overlay_color || '#ffffff';
+  const templateTwoHeroOverlayOpacity = Math.max(0, Math.min(80, Number(app?.settings?.template_2_hero_overlay_opacity ?? 0))) / 100;
+  const templateTwoHeroTextBackgroundColor = app?.settings?.template_2_hero_text_background_color || '#1f2430';
+  const templateTwoHeroTextBackgroundOpacity = Math.max(0, Math.min(100, Number(app?.settings?.template_2_hero_text_background_opacity ?? 35))) / 100;
+  const templateTwoHeroTextPosition = ['left', 'center', 'right'].includes(app?.settings?.template_2_hero_text_position)
+    ? app.settings.template_2_hero_text_position
     : 'left';
   const categoryTitleColor = app?.settings?.template_1_category_title_color || '#ffffff';
   const categorySecondaryColor = app?.settings?.template_1_category_secondary_color || '#f5f7ff';
@@ -595,13 +602,14 @@ export default function HomePage({
               <div id="hero-slider" ref={heroSliderRef} className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto no-scrollbar scroll-smooth">
                  {displayHeroBanners?.length > 0 ? (
                    displayHeroBanners.map((banner, index) => (
-                     <div key={index} className={`relative w-full shrink-0 snap-center h-full flex flex-col ${contentPositionClasses(banner.text_position)}`}>
+                     <div key={index} className={`relative w-full shrink-0 snap-center h-full flex flex-col ${contentPositionClasses(banner.text_position, templateTwoHeroTextPosition)}`}>
                        {banner.image ? (
                          <img src={resolveHeroImage(banner.image, banner.title)} className="absolute inset-0 w-full h-full object-cover" style={{ objectPosition: imageFocusPosition(banner.image_position), objectFit: imageFit(banner.image_orientation) }} alt={banner.title} />
                        ) : (
                          <div className="absolute inset-0 bg-gradient-to-r from-[#f15a24] to-[#f37c4f] mix-blend-overlay opacity-90"></div>
                        )}
-                       <div className={`relative z-10 p-6 sm:p-12 max-w-lg ${isTemplateOne ? 'text-[#222] drop-shadow-none' : isTemplateTwo ? 'text-white drop-shadow-md' : 'text-white drop-shadow-md hidden'}`}>
+                       {isTemplateTwo && templateTwoHeroOverlayOpacity > 0 && <div className="absolute inset-0" style={{ backgroundColor: hexToRgba(templateTwoHeroOverlayColor, templateTwoHeroOverlayOpacity) }} />}
+                       <div className={`relative z-10 m-6 sm:m-12 max-w-lg p-6 sm:p-8 ${isTemplateOne ? 'text-[#222] drop-shadow-none' : isTemplateTwo ? 'text-white drop-shadow-md rounded-xl' : 'text-white drop-shadow-md hidden'}`} style={isTemplateTwo ? { backgroundColor: hexToRgba(templateTwoHeroTextBackgroundColor, templateTwoHeroTextBackgroundOpacity) } : undefined}>
                           {(isTemplateOne || isTemplateTwo) && banner.subtitle && <p className="text-xl md:text-2xl mb-3 font-light">{banner.subtitle}</p>}
                           {(isTemplateOne || isTemplateTwo) && banner.title && <h1 className="text-4xl md:text-6xl mb-8">{banner.title}</h1>}
                           {(isTemplateOne || isTemplateTwo) && <Link href={banner.link || '/shop'} className={`inline-flex items-center justify-center px-8 py-3 text-sm font-semibold uppercase text-white transition-colors ${isTemplateOne ? 'rounded-full bg-[#717fe0] hover:bg-[#222]' : 'rounded-lg bg-[#f2541c] hover:bg-[#d6431a]'}`}>Shop Now</Link>}
