@@ -315,7 +315,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     homepage_tab_count: settings.homepage_tab_count || '4', home_categories_title: settings.home_categories_title || '', home_hot_deal_title: settings.home_hot_deal_title || '',
     home_featured_title: settings.home_featured_title || '', home_deal_week_title: settings.home_deal_week_title || '', home_tabs_title: settings.home_tabs_title || '',
     home_brands_label: settings.home_brands_label || '', home_view_more_label: settings.home_view_more_label || '', default_cta_text: settings.default_cta_text || '',
-    product_cta_action: settings.product_cta_action || 'checkout', hero_fallback_badge: settings.hero_fallback_badge || '', hero_fallback_title: settings.hero_fallback_title || '',
+    hero_fallback_badge: settings.hero_fallback_badge || '', hero_fallback_title: settings.hero_fallback_title || '',
     hero_fallback_subtitle: settings.hero_fallback_subtitle || '',
 
     // Storefront UI
@@ -691,7 +691,7 @@ export default function Settings({ settings, templateStatus = {} }) {
                       </a>
                     ))}
                   </div>
-                </div>
+                  </div>
 
                 <button type="submit" disabled={processing} className="px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-xl flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
@@ -935,8 +935,8 @@ export default function Settings({ settings, templateStatus = {} }) {
                   <p className="text-xs text-gray-400">⚠ This sets a global countdown shown on flash sale sections. Leave blank to hide the timer.</p>
                 </div>
 
-                {/* Footer Marketplace Description */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+                {/* Footer description is managed only in Brand & General. */}
+                {false && <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
                   <div className="flex items-center justify-between pb-3 border-b border-gray-50">
                     <h3 className="font-bold text-gray-900"><svg className="w-4 h-4 text-orange-500 shrink-0 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Footer Marketplace Description</h3>
                     <a href="/" target="_blank" rel="noreferrer" className="text-xs text-orange-500 hover:underline">Preview Footer ↗</a>
@@ -951,7 +951,7 @@ export default function Settings({ settings, templateStatus = {} }) {
                       placeholder="Your everyday online marketplace - millions of products, flash deals and vouchers, delivered across the country." 
                     />
                   </Field>
-                </div>
+                </div>}
 
                 <button type="submit" disabled={processing} className="px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-xl flex items-center gap-2">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>

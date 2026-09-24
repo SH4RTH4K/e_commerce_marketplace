@@ -46,7 +46,7 @@ class ProductCtaController extends Controller
                 'product_card_text_color'         => (string) setting('product_card_text_color', '#111827'),
                 'product_card_btn_bg_color'       => (string) setting('product_card_btn_bg_color', '#f15a24'),
                 'product_card_btn_text_color'     => (string) setting('product_card_btn_text_color', '#ffffff'),
-                'product_card_buy_text'           => (string) setting('product_card_buy_text', setting('default_cta_text', 'Order Now')),
+                'product_card_buy_text'           => (string) setting('product_card_buy_text', 'Order Now'),
                 'product_card_options_text'       => (string) setting('product_card_options_text', setting('product_card_buy_text', 'Order Now')),
                 'product_cta_action'              => setting('product_cta_action', 'checkout') === 'cart' ? 'cart' : 'checkout',
             ]
@@ -98,8 +98,7 @@ class ProductCtaController extends Controller
             Setting::put($key, is_bool($value) ? ($value ? '1' : '0') : trim((string) $value));
         }
 
-        // Also sync default_cta_text and product_card_options_text
-        Setting::put('default_cta_text', trim($data['product_card_buy_text']));
+        // Simple and variable product-card buttons use one shared label.
         Setting::put('product_card_options_text', trim($data['product_card_buy_text']));
 
         return back()->with('status', 'Storefront buttons & CTA settings saved successfully.');

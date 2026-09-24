@@ -47,7 +47,6 @@ class SettingController extends Controller
         'legal',
         'courier',
         'fake_order_guard',
-        'storefront_ui',
         'theme',
     ];
 
@@ -196,7 +195,6 @@ class SettingController extends Controller
                 'home_brands_label'     => ['nullable', 'string', 'max:120'],
                 'home_view_more_label'  => ['nullable', 'string', 'max:40'],
                 'default_cta_text'      => ['nullable', 'string', 'max:40'],
-                'product_cta_action'    => ['nullable', 'in:checkout,cart'],
                 'hero_fallback_badge'   => ['nullable', 'string', 'max:40'],
                 'hero_fallback_title'   => ['nullable', 'string', 'max:120'],
                 'hero_fallback_subtitle'=> ['nullable', 'string', 'max:255'],
@@ -208,46 +206,6 @@ class SettingController extends Controller
                 'popup_delay_seconds'  => ['nullable', 'integer', 'min:0', 'max:60'],
                 'popup_image_file'     => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp,gif', 'max:2048'],
                 'popup_remove_image'   => ['nullable', 'boolean'],
-                'footer_text'          => ['nullable', 'string', 'max:500'],
-            ],
-            'storefront_ui' => [
-                // Use storefront_footer_text to avoid clobbering the homepage footer_text setting
-                'storefront_footer_text'     => ['nullable', 'string', 'max:500'],
-                // Color fields must be valid hex color codes to prevent CSS/XSS injection
-                'product_card_bg_color'      => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
-                'product_card_text_color'    => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
-                'product_card_btn_bg_color'  => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
-                'product_card_btn_text_color'=> ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
-                'product_card_buy_text'      => ['nullable', 'string', 'max:60'],
-                'product_card_options_text'  => ['nullable', 'string', 'max:60'],
-                'product_page_add_cart_text' => ['nullable', 'string', 'max:60'],
-                'product_page_add_cart_bg_color'   => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
-                'product_page_add_cart_text_color' => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
-                'product_page_buy_text'      => ['nullable', 'string', 'max:60'],
-                'product_page_buy_bg_color'  => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
-                'product_page_buy_text_color'=> ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
-                'product_cta_action'         => ['nullable', 'in:checkout,cart'],
-                'default_cta_text'           => ['nullable', 'string', 'max:60'],
-
-                // Cash on delivery button
-                'product_page_cod_enabled'   => ['nullable', 'boolean'],
-                'product_page_cod_text'      => ['nullable', 'string', 'max:80'],
-                'product_page_cod_bg_color'  => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
-                'product_page_cod_text_color'=> ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
-
-                // WhatsApp order button
-                'product_page_whatsapp_enabled'    => ['nullable', 'boolean'],
-                'product_page_whatsapp_text'       => ['nullable', 'string', 'max:80'],
-                'product_page_whatsapp_number'     => ['nullable', 'string', 'max:40'],
-                'product_page_whatsapp_bg_color'   => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
-                'product_page_whatsapp_text_color' => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
-
-                // Call for order button
-                'product_page_call_enabled'        => ['nullable', 'boolean'],
-                'product_page_call_text'           => ['nullable', 'string', 'max:80'],
-                'product_page_call_number'         => ['nullable', 'string', 'max:40'],
-                'product_page_call_bg_color'       => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
-                'product_page_call_text_color'     => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
             ],
             'theme' => [
                 'storefront_template' => ['required', 'in:template-1,template-2'],
@@ -401,24 +359,9 @@ class SettingController extends Controller
                 'shop_subtitle', 'delivery_eta_text', 'homepage_tab_count',
                 'home_categories_title', 'home_hot_deal_title', 'home_featured_title',
                 'home_deal_week_title', 'home_tabs_title', 'home_brands_label',
-                'home_view_more_label', 'default_cta_text', 'product_cta_action',
+                'home_view_more_label', 'default_cta_text',
                 'hero_fallback_badge', 'hero_fallback_title', 'hero_fallback_subtitle',
                 'popup_text', 'popup_link', 'popup_btn_label', 'popup_delay_seconds',
-                'footer_text',
-            ],
-            'storefront_ui' => [
-                // NOTE: storefront_ui uses 'storefront_footer_text' to avoid overwriting
-                // the 'footer_text' key that belongs to the homepage section.
-                'storefront_footer_text',
-                'product_card_bg_color', 'product_card_text_color',
-                'product_card_btn_bg_color', 'product_card_btn_text_color',
-                'product_card_buy_text', 'product_card_options_text',
-                'product_page_add_cart_text', 'product_page_add_cart_bg_color', 'product_page_add_cart_text_color',
-                'product_page_buy_text', 'product_page_buy_bg_color', 'product_page_buy_text_color',
-                'product_page_cod_text', 'product_page_cod_bg_color', 'product_page_cod_text_color',
-                'product_page_whatsapp_text', 'product_page_whatsapp_number', 'product_page_whatsapp_bg_color', 'product_page_whatsapp_text_color',
-                'product_page_call_text', 'product_page_call_number', 'product_page_call_bg_color', 'product_page_call_text_color',
-                'product_cta_action', 'default_cta_text',
             ],
             'payments' => ['bkash_number', 'nagad_number', 'rocket_number'],
             'shipping' => [
@@ -486,15 +429,6 @@ class SettingController extends Controller
         if ($section === 'theme') {
             Setting::put('template_1_show_search', $request->boolean('template_1_show_search') ? '1' : '0');
             Setting::put('template_1_category_text_shadow', $request->boolean('template_1_category_text_shadow') ? '1' : '0');
-        }
-
-        if ($section === 'storefront_ui') {
-            Setting::put('product_page_cod_enabled', $request->boolean('product_page_cod_enabled') ? '1' : '0');
-            Setting::put('product_page_whatsapp_enabled', $request->boolean('product_page_whatsapp_enabled') ? '1' : '0');
-            Setting::put('product_page_call_enabled', $request->boolean('product_page_call_enabled') ? '1' : '0');
-            if ($request->filled('product_card_buy_text')) {
-                Setting::put('default_cta_text', (string) $request->input('product_card_buy_text'));
-            }
         }
 
         if ($section === 'mail') {
