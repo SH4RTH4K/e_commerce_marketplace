@@ -375,16 +375,6 @@ export default function HomePage({
   useEffect(() => {
     if (isTemplateOne) return undefined;
 
-    const heroInterval = setInterval(() => {
-      const slider = heroSliderRef.current;
-      if (slider && heroCount > 1 && slider.clientWidth) {
-        const currentIndex = Math.round(slider.scrollLeft / slider.clientWidth);
-        const nextIndex = (currentIndex + 1) % heroCount;
-        slider.scrollTo({ left: nextIndex * slider.clientWidth, behavior: 'smooth' });
-        setActiveHeroIndex(nextIndex);
-      }
-    }, 4000);
-
     const catInterval = setInterval(() => {
       if (catSliderRef.current && featuredCategories?.length > 0) {
         const { scrollLeft, scrollWidth, clientWidth } = catSliderRef.current;
@@ -397,10 +387,9 @@ export default function HomePage({
     }, 3000);
 
     return () => {
-      clearInterval(heroInterval);
       clearInterval(catInterval);
     };
-  }, [heroCount, featuredCategories, isTemplateOne]);
+  }, [featuredCategories, isTemplateOne]);
   
   // Basic coupon styles array
   const couponStyles = [
@@ -629,7 +618,7 @@ export default function HomePage({
             {/* Left Slider Container */}
             <div className="relative rounded-xl overflow-hidden min-h-[250px] sm:min-h-[400px] bg-gray-100 group">
               {/* Scrollable Area */}
-              <div id="hero-slider" ref={heroSliderRef} className="absolute inset-0 flex snap-x snap-mandatory overflow-x-auto no-scrollbar scroll-smooth">
+              <div id="hero-slider" ref={heroSliderRef} className="absolute inset-0 flex snap-x snap-mandatory overflow-hidden scroll-smooth">
                  {displayHeroBanners?.length > 0 ? (
                    displayHeroBanners.map((banner, index) => {
                      const heroImage = resolveHeroImage(banner.image, banner.title);
