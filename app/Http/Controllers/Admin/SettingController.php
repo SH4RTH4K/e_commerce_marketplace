@@ -228,6 +228,17 @@ class SettingController extends Controller
                 'template_2_hero_text_background_color' => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{6}$/'],
                 'template_2_hero_text_background_opacity' => ['nullable', 'numeric', 'min:0', 'max:100'],
                 'template_2_hero_text_position' => ['nullable', 'in:left,center,right'],
+                'template_2_category_title_color' => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+                'template_2_category_secondary_color' => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+                'template_2_category_overlay_color' => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+                'template_2_category_overlay_opacity' => ['nullable', 'numeric', 'min:0', 'max:100'],
+                'template_2_category_hover_overlay_opacity' => ['nullable', 'numeric', 'min:0', 'max:100'],
+                'template_2_category_title_size' => ['nullable', 'in:12px,13px,14px,15px,16px,18px,20px,22px,24px'],
+                'template_2_category_title_weight' => ['nullable', 'in:400,500,600,700,800,900'],
+                'template_2_category_title_style' => ['nullable', 'in:normal,italic'],
+                'template_2_category_title_transform' => ['nullable', 'in:none,capitalize,uppercase,lowercase'],
+                'template_2_category_text_align' => ['nullable', 'in:left,center,right'],
+                'template_2_category_text_shadow' => ['nullable', 'boolean'],
                 'template_1_category_title_color' => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{6}$/'],
                 'template_1_category_secondary_color' => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{6}$/'],
                 'template_1_category_overlay_color' => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -402,6 +413,11 @@ class SettingController extends Controller
                 'template_2_hero_overlay_color', 'template_2_hero_overlay_opacity',
                 'template_2_hero_text_background_color',
                 'template_2_hero_text_background_opacity', 'template_2_hero_text_position',
+                'template_2_category_title_color', 'template_2_category_secondary_color',
+                'template_2_category_overlay_color', 'template_2_category_overlay_opacity',
+                'template_2_category_hover_overlay_opacity', 'template_2_category_title_size',
+                'template_2_category_title_weight', 'template_2_category_title_style',
+                'template_2_category_title_transform', 'template_2_category_text_align',
                 'template_1_category_title_color', 'template_1_category_secondary_color',
                 'template_1_category_overlay_color', 'template_1_category_overlay_opacity',
                 'template_1_category_hover_overlay_opacity', 'template_1_category_title_size',
@@ -437,6 +453,7 @@ class SettingController extends Controller
         if ($section === 'theme') {
             Setting::put('template_1_show_search', $request->boolean('template_1_show_search') ? '1' : '0');
             Setting::put('template_1_category_text_shadow', $request->boolean('template_1_category_text_shadow') ? '1' : '0');
+            Setting::put('template_2_category_text_shadow', $request->boolean('template_2_category_text_shadow') ? '1' : '0');
         }
 
         if ($section === 'mail') {

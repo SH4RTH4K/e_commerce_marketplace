@@ -435,6 +435,17 @@ export default function Settings({ settings, templateStatus = {} }) {
     template_2_hero_text_background_color: settings.template_2_hero_text_background_color || '#1f2430',
     template_2_hero_text_background_opacity: settings.template_2_hero_text_background_opacity ?? '35',
     template_2_hero_text_position: settings.template_2_hero_text_position || 'left',
+    template_2_category_title_color: settings.template_2_category_title_color || '#1f2937',
+    template_2_category_secondary_color: settings.template_2_category_secondary_color || '#f2541c',
+    template_2_category_overlay_color: settings.template_2_category_overlay_color || '#1f2430',
+    template_2_category_overlay_opacity: settings.template_2_category_overlay_opacity ?? '0',
+    template_2_category_hover_overlay_opacity: settings.template_2_category_hover_overlay_opacity ?? '12',
+    template_2_category_title_size: settings.template_2_category_title_size || '14px',
+    template_2_category_title_weight: settings.template_2_category_title_weight || '700',
+    template_2_category_title_style: settings.template_2_category_title_style || 'normal',
+    template_2_category_title_transform: settings.template_2_category_title_transform || 'none',
+    template_2_category_text_align: settings.template_2_category_text_align || 'center',
+    template_2_category_text_shadow: settings.template_2_category_text_shadow === '1',
     template_1_category_title_color: settings.template_1_category_title_color || '#ffffff',
     template_1_category_secondary_color: settings.template_1_category_secondary_color || '#f5f7ff',
     template_1_category_overlay_color: settings.template_1_category_overlay_color || '#1f2430',
@@ -1234,6 +1245,25 @@ export default function Settings({ settings, templateStatus = {} }) {
                           </Field>
                         </div>
                         <p className="text-xs text-gray-500">Use 0% overlay to preserve the original image. The text panel can be increased separately for better readability.</p>
+                      </div>
+                      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
+                        <div>
+                          <h4 className="text-sm font-bold text-gray-900">Category Banner Text Style</h4>
+                          <p className="text-xs text-gray-500 mt-1">Control the category icon/banner tile overlay and category-name text in Template-2.</p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <Field label="Title color"><input type="color" value={data.template_2_category_title_color} onChange={e => setData('template_2_category_title_color', e.target.value)} className="h-[42px] w-full cursor-pointer rounded-xl border border-gray-200 bg-white p-1" /></Field>
+                          <Field label="Subtitle / accent color"><input type="color" value={data.template_2_category_secondary_color} onChange={e => setData('template_2_category_secondary_color', e.target.value)} className="h-[42px] w-full cursor-pointer rounded-xl border border-gray-200 bg-white p-1" /></Field>
+                          <Field label="Tile overlay color"><input type="color" value={data.template_2_category_overlay_color} onChange={e => setData('template_2_category_overlay_color', e.target.value)} className="h-[42px] w-full cursor-pointer rounded-xl border border-gray-200 bg-white p-1" /></Field>
+                          <Field label={`Tile overlay opacity (${data.template_2_category_overlay_opacity}%)`}><input type="range" min="0" max="100" value={data.template_2_category_overlay_opacity} onChange={e => setData('template_2_category_overlay_opacity', e.target.value)} className="mt-3 w-full accent-orange-500" /></Field>
+                          <Field label={`Tile hover opacity (${data.template_2_category_hover_overlay_opacity}%)`}><input type="range" min="0" max="100" value={data.template_2_category_hover_overlay_opacity} onChange={e => setData('template_2_category_hover_overlay_opacity', e.target.value)} className="mt-3 w-full accent-orange-500" /></Field>
+                          <Field label="Title size"><select value={data.template_2_category_title_size} onChange={e => setData('template_2_category_title_size', e.target.value)} className={inputClass}>{['12px', '13px', '14px', '15px', '16px', '18px', '20px', '22px', '24px'].map(size => <option key={size} value={size}>{size}</option>)}</select></Field>
+                          <Field label="Title weight"><select value={data.template_2_category_title_weight} onChange={e => setData('template_2_category_title_weight', e.target.value)} className={inputClass}>{['400', '500', '600', '700', '800', '900'].map(weight => <option key={weight} value={weight}>{weight}</option>)}</select></Field>
+                          <Field label="Text alignment"><select value={data.template_2_category_text_align} onChange={e => setData('template_2_category_text_align', e.target.value)} className={inputClass}><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></Field>
+                          <Field label="Title style"><select value={data.template_2_category_title_style} onChange={e => setData('template_2_category_title_style', e.target.value)} className={inputClass}><option value="normal">Normal</option><option value="italic">Italic</option></select></Field>
+                          <Field label="Title text case"><select value={data.template_2_category_title_transform} onChange={e => setData('template_2_category_title_transform', e.target.value)} className={inputClass}><option value="none">Normal case</option><option value="capitalize">Capitalize</option><option value="uppercase">Uppercase</option><option value="lowercase">Lowercase</option></select></Field>
+                          <div className="flex items-end pb-2"><label className="flex items-center gap-3"><input type="checkbox" checked={data.template_2_category_text_shadow} onChange={e => setData('template_2_category_text_shadow', e.target.checked)} className={checkboxClass} /><span className="text-sm font-medium text-gray-700">Text shadow for contrast</span></label></div>
+                        </div>
                       </div>
                       <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
                         <div>

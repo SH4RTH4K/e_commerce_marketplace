@@ -145,6 +145,16 @@
     box-shadow: 0 4px 12px rgb(129 70 35 / .14);
 }
 .storefront-template-template-2 .group\/item > span { color: var(--template-2-ink); font-size: 14px; }
+.storefront-template-template-2 .template-two-category-tile-overlay {
+    opacity: var(--category-overlay-opacity, 0);
+    transition: opacity .3s ease;
+}
+.storefront-template-template-2 .template-two-category-item:hover .template-two-category-tile-overlay {
+    opacity: var(--category-hover-overlay-opacity, .12);
+}
+.storefront-template-template-2 .template-two-category-item:hover .template-two-category-title {
+    color: var(--category-accent-color, var(--template-2-orange)) !important;
+}
 
 .storefront-template-template-2 .storefront-product-card {
     border: 1px solid var(--template-2-line);

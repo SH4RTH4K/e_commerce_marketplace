@@ -151,6 +151,25 @@ export default function HomePage({
   const categoryTextAlign = ['left', 'center', 'right'].includes(app?.settings?.template_1_category_text_align)
     ? app.settings.template_1_category_text_align
     : 'left';
+  const templateTwoCategoryTitleColor = app?.settings?.template_2_category_title_color || '#1f2937';
+  const templateTwoCategorySecondaryColor = app?.settings?.template_2_category_secondary_color || '#f2541c';
+  const templateTwoCategoryOverlayColor = app?.settings?.template_2_category_overlay_color || '#1f2430';
+  const templateTwoCategoryOverlayOpacity = Math.max(0, Math.min(100, Number(app?.settings?.template_2_category_overlay_opacity ?? 0))) / 100;
+  const templateTwoCategoryHoverOverlayOpacity = Math.max(0, Math.min(100, Number(app?.settings?.template_2_category_hover_overlay_opacity ?? 12))) / 100;
+  const templateTwoCategoryTitleSize = ['12px', '13px', '14px', '15px', '16px', '18px', '20px', '22px', '24px'].includes(app?.settings?.template_2_category_title_size)
+    ? app.settings.template_2_category_title_size
+    : '14px';
+  const templateTwoCategoryTitleWeight = ['400', '500', '600', '700', '800', '900'].includes(String(app?.settings?.template_2_category_title_weight))
+    ? String(app.settings.template_2_category_title_weight)
+    : '700';
+  const templateTwoCategoryTitleStyle = app?.settings?.template_2_category_title_style === 'italic' ? 'italic' : 'normal';
+  const templateTwoCategoryTitleTransform = ['none', 'capitalize', 'uppercase', 'lowercase'].includes(app?.settings?.template_2_category_title_transform)
+    ? app.settings.template_2_category_title_transform
+    : 'none';
+  const templateTwoCategoryTextAlign = ['left', 'center', 'right'].includes(app?.settings?.template_2_category_text_align)
+    ? app.settings.template_2_category_text_align
+    : 'center';
+  const templateTwoCategoryTextShadow = app?.settings?.template_2_category_text_shadow === true;
   const displayHeroBanners = isTemplateOne
     ? (heroBanners || []).map((banner) => ({
         ...banner,
@@ -737,13 +756,14 @@ export default function HomePage({
             {/* Scrollable Container */}
             <div ref={catSliderRef} className="flex overflow-x-auto snap-x snap-mandatory gap-4 sm:gap-6 pb-4 no-scrollbar scroll-smooth">
               {featuredCategories.map((cat) => (
-                <Link key={cat.id} href={`/category/${cat.slug}`} className="group/item flex flex-col items-center text-center shrink-0 w-24 sm:w-32 snap-start">
-                  <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[24px] bg-gradient-to-br from-[#fff7ed] via-white to-[#eef2ff] text-[#717fe0] shadow-sm border border-gray-100 overflow-hidden group-hover/item:shadow-lg group-hover/item:border-[#f15a24]/30 transition-all duration-300 group-hover/item:-translate-y-1 flex items-center justify-center p-3">
+                <Link key={cat.id} href={`/category/${cat.slug}`} className="template-two-category-item group/item flex flex-col items-center shrink-0 w-24 sm:w-32 snap-start" style={{ textAlign: templateTwoCategoryTextAlign }}>
+                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-[24px] bg-gradient-to-br from-[#fff7ed] via-white to-[#eef2ff] text-[#717fe0] shadow-sm border border-gray-100 overflow-hidden group-hover/item:shadow-lg group-hover/item:border-[#f15a24]/30 transition-all duration-300 group-hover/item:-translate-y-1 flex items-center justify-center p-3">
                     {cat.image ? (
                       <img src={imageUrl(cat.image)} alt={cat.name} className="w-full h-full object-contain" />
                     ) : (
                       <CategoryIcon icon={cat.icon} name={cat.name} className="h-12 w-12 sm:h-16 sm:w-16 transition-transform duration-300 group-hover/item:scale-110" />
                     )}
+                    <span aria-hidden="true" className="template-two-category-tile-overlay absolute inset-0 pointer-events-none" style={{ backgroundColor: templateTwoCategoryOverlayColor, '--category-overlay-opacity': templateTwoCategoryOverlayOpacity, '--category-hover-overlay-opacity': templateTwoCategoryHoverOverlayOpacity }} />
                     {/* Legacy image/emoji fallback retained for migration reference.
                     {cat.image ? (
                        <img src={imageUrl(cat.image)} alt={cat.name} className="w-full h-full object-contain" />
@@ -753,7 +773,7 @@ export default function HomePage({
                        </div>
                     )} */}
                   </div>
-                  <span className="mt-3 text-[13px] sm:text-sm font-bold text-gray-800 group-hover/item:text-[#f15a24] transition-colors line-clamp-2 leading-tight">{cat.name}</span>
+                  <span className="template-two-category-title mt-3 line-clamp-2 leading-tight transition-colors" style={{ color: templateTwoCategoryTitleColor, fontSize: templateTwoCategoryTitleSize, fontWeight: templateTwoCategoryTitleWeight, fontStyle: templateTwoCategoryTitleStyle, textTransform: templateTwoCategoryTitleTransform, textShadow: templateTwoCategoryTextShadow ? '0 1px 2px rgba(0, 0, 0, 0.28)' : 'none', '--category-accent-color': templateTwoCategorySecondaryColor }}>{cat.name}</span>
                 </Link>
               ))}
             </div>
