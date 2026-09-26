@@ -103,6 +103,22 @@
 .storefront-template-template-2 .storefront-header-area + div a:hover { color: #fff !important; background: rgb(255 255 255 / .12); }
 .storefront-template-template-2 .storefront-main-area { background: #f8f9fb; }
 
+/* Product detail tabs must not inherit the global CTA button color.  The
+   dedicated colors keep both labels readable on the white product panel. */
+.storefront-template-template-2 .storefront-main-area .storefront-product-detail-tab {
+    color: #526071 !important;
+    user-select: none;
+}
+.storefront-template-template-2 .storefront-main-area .storefront-product-detail-tab:hover,
+.storefront-template-template-2 .storefront-main-area .storefront-product-detail-tab:focus-visible {
+    color: #1e2430 !important;
+}
+.storefront-template-template-2 .storefront-main-area .storefront-product-detail-tab--active,
+.storefront-template-template-2 .storefront-main-area .storefront-product-detail-tab--active:hover,
+.storefront-template-template-2 .storefront-main-area .storefront-product-detail-tab--active:focus-visible {
+    color: var(--template-2-orange) !important;
+}
+
 .storefront-template-template-2 .storefront-hero-section { max-width: 1440px; padding-top: 18px; }
 .storefront-template-template-2 .storefront-hero-section > div > .grid { gap: 14px; }
 .storefront-template-template-2 .storefront-hero-section .rounded-xl { border-radius: 10px; }

@@ -765,14 +765,14 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
             <button 
               type="button" 
               onClick={() => setActiveTab('desc')}
-              className={`py-4 -mb-px border-b-2 font-bold whitespace-nowrap transition-colors cursor-pointer ${activeTab === 'desc' ? 'border-[#f15a24] text-[#f15a24]' : 'border-transparent text-gray-500 hover:text-gray-900'}`}
+              className={`storefront-product-detail-tab py-4 -mb-px border-b-2 font-bold whitespace-nowrap transition-colors cursor-pointer ${activeTab === 'desc' ? 'storefront-product-detail-tab--active border-[#f15a24] text-[#f15a24]' : 'border-transparent text-gray-500 hover:text-gray-900'}`}
             >
               {specRows.length > 0 ? 'Description & Specs' : 'Description'}
             </button>
             <button 
               type="button" 
               onClick={() => setActiveTab('rev')}
-              className={`py-4 -mb-px border-b-2 font-bold whitespace-nowrap transition-colors cursor-pointer ${activeTab === 'rev' ? 'border-[#f15a24] text-[#f15a24]' : 'border-transparent text-gray-500 hover:text-gray-900'}`}
+              className={`storefront-product-detail-tab py-4 -mb-px border-b-2 font-bold whitespace-nowrap transition-colors cursor-pointer ${activeTab === 'rev' ? 'storefront-product-detail-tab--active border-[#f15a24] text-[#f15a24]' : 'border-transparent text-gray-500 hover:text-gray-900'}`}
             >
               Reviews ({reviews?.total || 0})
             </button>
