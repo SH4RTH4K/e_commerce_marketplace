@@ -628,8 +628,8 @@ export default function HomePage({
                      <div key={index} className={`relative w-full shrink-0 snap-center h-full flex flex-col ${contentPositionClasses(banner.text_position, templateTwoHeroTextPosition)}`}>
                        {banner.image ? (
                          <>
-                           {isTemplateTwo && containsHeroImage && <img src={heroImage} className="absolute -inset-6 h-[calc(100%+3rem)] w-[calc(100%+3rem)] scale-110 object-cover opacity-45 blur-2xl" aria-hidden="true" alt="" />}
-                           <img src={heroImage} className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: imageFocusPosition(banner.image_position), objectFit: imageFit(banner.image_orientation) }} alt={banner.title} />
+                           {isTemplateTwo && containsHeroImage && <img src={heroImage} className="template-two-hero-backdrop absolute -inset-6 h-[calc(100%+3rem)] w-[calc(100%+3rem)] scale-110 object-cover opacity-45 blur-2xl" aria-hidden="true" alt="" />}
+                           <img src={heroImage} className="template-two-hero-image absolute inset-0 h-full w-full object-cover" style={{ objectPosition: imageFocusPosition(banner.image_position), objectFit: imageFit(banner.image_orientation) }} alt={banner.title} />
                          </>
                        ) : (
                          <div className="absolute inset-0 bg-gradient-to-r from-[#f15a24] to-[#f37c4f] mix-blend-overlay opacity-90"></div>

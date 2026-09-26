@@ -320,8 +320,39 @@
     .storefront-template-template-2 .storefront-topbar { display: none; }
     .storefront-template-template-2 .storefront-hero-section { padding-top: 10px; padding-inline: 12px; }
     .storefront-template-template-2 .storefront-hero-section .min-h-\[250px\] { min-height: 235px; }
-    .storefront-template-template-2 .storefront-hero-section .template-two-hero-copy { max-width: calc(100% - 5.5rem); padding: 20px; }
-    .storefront-template-template-2 .storefront-hero-section .template-two-hero-copy > h1 { font-size: 27px; }
+    /* On a narrow phone, separate the product image from its copy.  A cover
+       image plus a long title used to crop or conceal the product entirely. */
+    .storefront-template-template-2 .storefront-hero-section .template-two-hero-image {
+        inset: 0 0 46% !important;
+        object-fit: contain !important;
+        object-position: center !important;
+        background: #eef1f5;
+    }
+    .storefront-template-template-2 .storefront-hero-section .template-two-hero-backdrop { display: none; }
+    .storefront-template-template-2 .storefront-hero-section .template-two-hero-copy {
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 10;
+        max-width: none;
+        min-height: 46%;
+        margin: 0 !important;
+        padding: 16px 18px 54px;
+        border-width: 1px 0 0;
+        border-radius: 0;
+        box-shadow: 0 -8px 24px rgb(15 23 42 / .14);
+    }
+    .storefront-template-template-2 .storefront-hero-section .template-two-hero-copy > p { display: none; }
+    .storefront-template-template-2 .storefront-hero-section .template-two-hero-copy > h1 {
+        display: -webkit-box;
+        margin-bottom: 14px;
+        overflow: hidden;
+        font-size: 22px;
+        line-height: 1.16;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+    }
     .storefront-template-template-2 .storefront-product-card > div:last-child { padding: 10px; }
 
     .storefront-template-template-2 .template-2-footer-main { padding: 36px 0; }
