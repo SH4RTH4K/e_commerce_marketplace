@@ -27,6 +27,14 @@ const formatDescriptionHtml = (value) => {
     .join('');
 };
 
+// Rich-text editors commonly store an empty value as <p><br></p> or &nbsp;.
+// Treat that as empty so imported products can correctly fall back to their
+// short description instead of showing a blank product-description section.
+const hasDescriptionContent = (value) => String(value || '')
+  .replace(/<[^>]*>/g, '')
+  .replace(/&nbsp;/gi, '')
+  .trim().length > 0;
+
 export default function ProductPage({ product, related, sizes, colors, weights, variantGroups = [], features, reviews, canReview, auth, seo }) {
   const { app } = usePage().props;
   const settings = app?.settings || {};
@@ -65,6 +73,9 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
 
   const [activeImage, setActiveImage] = useState(product.images?.[0]?.path);
   const [activeTab, setActiveTab] = useState('desc');
+  const productDescription = hasDescriptionContent(product.description)
+    ? product.description
+    : product.short_description;
   
   // Dynamic variant state
   const [selectedVariants, setSelectedVariants] = useState(() => {
@@ -295,7 +306,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
   }, [product.id]);
 
   if (isTemplateOne) {
-    const description = product.description || product.short_description || 'No description available.';
+    const description = productDescription || 'No description available.';
     const descriptionMarkup = formatDescriptionHtml(description);
     return (
       <StorefrontLayout>
@@ -773,7 +784,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
                 <div className={specRows.length > 0 ? "lg:col-span-2 min-w-0 break-words" : "w-full min-w-0 break-words"}>
                   <h3 className="text-xl font-extrabold text-gray-900 mb-6">Product Description</h3>
                   <div className="product-description-content text-gray-700 leading-relaxed max-w-none prose prose-slate [&_p]:mb-4 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:my-4 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:my-3 [&_h4]:text-lg [&_h4]:font-semibold [&_h4]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-3 [&_li]:mb-1.5 [&_blockquote]:border-l-4 [&_blockquote]:border-orange-500 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-gray-600 [&_blockquote]:my-4 [&_a]:text-orange-600 [&_a]:underline [&_hr]:my-6 [&_hr]:border-gray-200">
-                    <div dangerouslySetInnerHTML={{ __html: formatDescriptionHtml(product.description) }} />
+                    <div dangerouslySetInnerHTML={{ __html: formatDescriptionHtml(productDescription) }} />
                   </div>
                 </div>
                 
