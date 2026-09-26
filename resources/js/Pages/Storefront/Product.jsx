@@ -13,18 +13,64 @@ const escapeDescriptionHtml = (value) => String(value)
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#039;');
 
+const descriptionFieldLabels = [
+  'Dial window material type', 'Water resistance depth', 'Band material type',
+  'Movement brand', 'Model Number', 'Dial diameter', 'Case thickness',
+  'Case material', 'Dial display', 'Case shape', 'Band length', 'Band width',
+  'Clasp type', 'Water resistance', 'Master Copy', 'Package includes',
+  'Warranty', 'Feature', 'Pointer', 'Brand', 'Type', 'Model', 'Material',
+];
+
+const descriptionFieldPattern = new RegExp(
+  `(${descriptionFieldLabels
+    .slice()
+    .sort((first, second) => second.length - first.length)
+    .map(label => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|')})(?=\\s*(?::|[A-Z#])|$)`,
+  'gi',
+);
+
+const formatPlainDescription = (text) => text
+  // Imported supplier descriptions often omit separators between fields.
+  .replace(descriptionFieldPattern, (_, label) => `\n${label}`)
+  .replace(/(?<!\s)#(?=[A-Za-z])/g, '\n#')
+  .split(/\r?\n+/)
+  .map(line => line.trim().replace(/:\s*/g, ': '))
+  .filter(Boolean)
+  .map(line => {
+    const field = line.match(/^(.+?):\s*(.*)$/);
+    const isKnownField = field && descriptionFieldLabels.some(label => label.toLowerCase() === field[1].trim().toLowerCase());
+
+    if (isKnownField) {
+      return `<p><strong>${escapeDescriptionHtml(field[1].trim())}:</strong>${field[2] ? ` ${escapeDescriptionHtml(field[2])}` : ''}</p>`;
+    }
+
+    const isStandaloneField = descriptionFieldLabels.some(label => label.toLowerCase() === line.toLowerCase());
+    return `<p>${isStandaloneField ? `<strong>${escapeDescriptionHtml(line)}</strong>` : escapeDescriptionHtml(line)}</p>`;
+  })
+  .join('');
+
+const htmlDescriptionToText = (value) => String(value)
+  .replace(/<br\s*\/?\s*>/gi, '\n')
+  .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
+  .replace(/<\/?p[^>]*>/gi, '')
+  .replace(/<[^>]*>/g, '')
+  .replace(/&nbsp;/gi, ' ')
+  .trim();
+
 const formatDescriptionHtml = (value) => {
   const text = String(value || '').trim();
 
   if (!text) return '<p>No description available.</p>';
-  if (/<\/?[a-z][\s\S]*>/i.test(text)) return text;
 
-  return text
-    .split(/\r?\n\s*\r?\n/)
-    .map(paragraph => paragraph.trim())
-    .filter(Boolean)
-    .map(paragraph => `<p>${escapeDescriptionHtml(paragraph).replace(/\r?\n/g, '<br />')}</p>`)
-    .join('');
+  // Some supplier imports wrap one joined text string in <p> tags. Detect
+  // several known fields and format that text instead of treating it as rich
+  // content. Genuine rich-text descriptions are left unchanged.
+  const plainText = htmlDescriptionToText(text);
+  const fieldCount = [...plainText.matchAll(descriptionFieldPattern)].length;
+  if (/<\/?[a-z][\s\S]*>/i.test(text) && fieldCount < 3) return text;
+
+  return formatPlainDescription(plainText);
 };
 
 // Rich-text editors commonly store an empty value as <p><br></p> or &nbsp;.
