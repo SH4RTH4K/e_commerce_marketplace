@@ -237,7 +237,7 @@ export default function StorefrontLayout({ children, title, description, activeC
           <div className="flex h-16 md:h-20 items-center gap-4 md:gap-6 lg:gap-10" style={{ minHeight: `${Math.max(64, headerLogoHeight + 16)}px` }}>
             
             {/* Mobile Hamburger */}
-            <button onClick={() => setMenuOpen(true)} className="md:hidden p-2 -ml-2 text-gray-800" aria-label="Menu">
+            <button onClick={() => setMenuOpen(true)} className="lg:hidden p-2 -ml-2 text-gray-800" aria-label="Menu">
               <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" d="M4 7h16M4 12h16M4 17h16"/>
               </svg>
