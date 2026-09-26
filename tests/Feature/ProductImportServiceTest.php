@@ -74,6 +74,26 @@ class ProductImportServiceTest extends TestCase
         $this->assertSame('<p><strong>Updated supplier details</strong></p>', $product->fresh()->description);
     }
 
+    public function test_it_formats_joined_supplier_fields_during_import(): void
+    {
+        [$supplier, $source] = $this->supplierAndSource();
+        $category = Category::create(['name' => 'Electronics', 'slug' => 'electronics']);
+        app(CategoryMapper::class)->mapManually($supplier, 'electronics', $category);
+
+        $source->update([
+            'raw_payload' => [
+                'description' => 'Product details of Test WatchBrand: OLEVSModel Number: 9931GMovement brand: QuartzDial diameter: 41mmCase shape: Round',
+            ],
+        ]);
+
+        $product = app(ProductImportService::class)->import($source)->product;
+
+        $this->assertSame(
+            '<p>Product details of Test Watch</p><p><strong>Brand:</strong> OLEVS</p><p><strong>Model Number:</strong> 9931G</p><p><strong>Movement brand:</strong> Quartz</p><p><strong>Dial diameter:</strong> 41mm</p><p><strong>Case shape:</strong> Round</p>',
+            $product->description,
+        );
+    }
+
     /** @return array{DropshipSupplier, DropshipSupplierProduct} */
     private function supplierAndSource(): array
     {
