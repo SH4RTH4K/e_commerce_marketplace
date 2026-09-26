@@ -761,7 +761,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
 
         {/* Tabs section */}
         <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 lg:p-8 shadow-sm mb-8">
-          <div className="border-b border-gray-200 flex gap-6 sm:gap-8 overflow-x-auto custom-scrollbar">
+          <div className="border-b border-gray-200 flex gap-6 sm:gap-8 overflow-x-auto overflow-y-hidden no-scrollbar">
             <button 
               type="button" 
               onClick={() => setActiveTab('desc')}
