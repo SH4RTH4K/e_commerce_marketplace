@@ -20,11 +20,12 @@ const descriptionFieldLabels = [
   'Clasp type', 'Water resistance', 'Master Copy', 'Package includes',
   'Wash & Care', 'Main Material', 'Measurement', 'Warranty', 'Feature',
   'Pointer', 'Quality', 'Stretch', 'Pocket', 'Gender', 'Brand', 'Waist',
-  'Type', 'Model', 'Material', 'Size',
+  'Products details', 'Product details', 'Product Name', 'Size Measurement',
+  'Fabrics', 'Type', 'Model', 'Material', 'Size',
 ];
 
 const descriptionFieldPattern = new RegExp(
-  `(?<=[\\p{L}\\d])(${descriptionFieldLabels
+  `(?<![\\s,])(${descriptionFieldLabels
     .slice()
     .sort((first, second) => second.length - first.length)
     .map(label => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
@@ -37,6 +38,7 @@ const formatPlainDescription = (text) => text
   .replace(descriptionFieldPattern, (_, label) => `\n${label}`)
   .replace(/(?<=[\p{Ll}])(?=[\p{Lu}])/gu, '\n')
   .replace(/(?<=[\p{L}])(?=\d{1,3}%)/gu, '\n')
+  .replace(/(")(?=[A-Z]{1,4}\s*=)/g, '$1\n')
   .replace(/(?<!\s)#(?=[A-Za-z])/g, '\n#')
   .split(/\r?\n+/)
   .map(line => line.trim().replace(/:\s*/g, ': '))

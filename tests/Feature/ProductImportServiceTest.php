@@ -115,6 +115,26 @@ class ProductImportServiceTest extends TestCase
         $this->assertStringContainsString('<p><strong>Size:</strong> 32, Waist: 32, Length: 41</p>', $product->description);
     }
 
+    public function test_it_formats_joined_shirt_details_and_size_measurements_during_import(): void
+    {
+        [$supplier, $source] = $this->supplierAndSource();
+        $category = Category::create(['name' => 'Fashion', 'slug' => 'fashion']);
+        app(CategoryMapper::class)->mapManually($supplier, 'electronics', $category);
+
+        $source->update([
+            'raw_payload' => [
+                'description' => 'Products detailsProduct Name: Cotton Collar ShirtFabrics: cottonSize Measurement: M = length 28", chest 38"L= length 29", chest 40"',
+            ],
+        ]);
+
+        $product = app(ProductImportService::class)->import($source)->product;
+
+        $this->assertStringContainsString('<p><strong>Product Name:</strong> Cotton Collar Shirt</p>', $product->description);
+        $this->assertStringContainsString('<p><strong>Fabrics:</strong> cotton</p>', $product->description);
+        $this->assertStringContainsString('<p><strong>Size Measurement:</strong> M = length 28&quot;, chest 38&quot;</p>', $product->description);
+        $this->assertStringContainsString('<p>L= length 29&quot;, chest 40&quot;</p>', $product->description);
+    }
+
     /** @return array{DropshipSupplier, DropshipSupplierProduct} */
     private function supplierAndSource(): array
     {
