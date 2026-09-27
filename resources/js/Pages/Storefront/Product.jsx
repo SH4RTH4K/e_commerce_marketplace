@@ -18,6 +18,9 @@ const descriptionFieldLabels = [
   'Movement brand', 'Movement', 'Brand Name', 'Model Number', 'Dial diameter', 'Case thickness',
   'Case material', 'Dial display', 'Case shape', 'Band length', 'Band width',
   'Clasp type', 'Water resistance', 'Master Copy', 'Package includes',
+  'Specification', 'Master Chip', 'Screen Display', 'Product Size', 'Body Material',
+  'Strap Material', 'Charging Type', 'Battery Capacity', 'Waterproof Level', 'Functions',
+  'Certification', 'Origin', 'Style', 'Boxes & Cases Material', 'APP',
   'Wash & Care', 'Main Material', 'Measurement', 'Warranty', 'Feature',
   'Pointer', 'Quality', 'Stretch', 'Pocket', 'Gender', 'Brand', 'Waist',
   'Products details', 'Product details', 'Product Name', 'Size Measurement',
@@ -45,27 +48,59 @@ const descriptionBenefitPattern = new RegExp(
   'gi',
 );
 
-const formatPlainDescription = (text) => text
+const isSpecificationLabel = (value) => /^[A-Z][A-Za-z0-9&/(). -]{0,48}$/.test(value);
+
+const compactDescriptionLines = (text) => text
   // Imported supplier descriptions often omit separators between fields.
   .replace(descriptionFieldPattern, (_, label) => `\n${label}`)
-  .replace(/(?<=[\p{Ll}])(?=[\p{Lu}])/gu, '\n')
+  .replace(/(?<=[a-z]{4})(?=[A-Z][a-z]{2,})/g, '\n')
+  .replace(/(?<=[A-Za-z0-9])(?=(?:[A-Z][a-z0-9]*[ \t]+){1,3}[A-Z][a-z0-9]*:)/g, '\n')
   .replace(/(?<=[\p{L}])(?=\d{1,3}%)/gu, '\n')
+  .replace(/:[ \t]*(?=(?:[A-Z][a-z0-9]*[ \t]+){1,3}[A-Z][a-z0-9]*:)/g, ':\n')
   .replace(/(")(?=[A-Z]{1,4}\s*=)/g, '$1\n')
   .replace(descriptionBenefitPattern, (_, phrase) => `\n${phrase}`)
   .replace(/(?<!\s)#(?=[A-Za-z])/g, '\n#')
   .split(/\r?\n+/)
   .map(line => line.trim().replace(/:\s*/g, ': '))
-  .filter(Boolean)
+  .filter(Boolean);
+
+const compactSpecificationFieldCount = (text) => compactDescriptionLines(text)
+  .filter(line => {
+    const [label] = line.split(':', 1);
+    return line.includes(':') && isSpecificationLabel(label.trim());
+  })
+  .length;
+
+const hasSpecificationHeading = (text) => /\bSpecifications?\s*:/i.test(text);
+const hasStructuredHtml = (text) => /<(?:ul|ol|li|h[1-6]|blockquote)\b/i.test(text)
+  || (text.match(/<p\b[^>]*>/gi) || []).length > 1;
+
+const formatPlainDescription = (text) => compactDescriptionLines(text)
   .map(line => {
     const field = line.match(/^(.+?):\s*(.*)$/);
     const isKnownField = field && descriptionFieldLabels.some(label => label.toLowerCase() === field[1].trim().toLowerCase());
+
+    if (field && field[1].trim().toLowerCase() === 'functions') {
+      const functionItems = field[2].trim().split(/(?<=\.)\s*(?=[A-Z])/).filter(Boolean);
+      if (functionItems.length >= 2) {
+        return `<p><strong>Functions:</strong></p><ul>${functionItems.map(item => `<li>${escapeDescriptionHtml(item.trim())}</li>`).join('')}</ul>`;
+      }
+    }
 
     if (isKnownField) {
       return `<p><strong>${escapeDescriptionHtml(field[1].trim())}:</strong>${field[2] ? ` ${escapeDescriptionHtml(field[2])}` : ''}</p>`;
     }
 
     const isStandaloneField = descriptionFieldLabels.some(label => label.toLowerCase() === line.toLowerCase());
-    return `<p>${isStandaloneField ? `<strong>${escapeDescriptionHtml(line)}</strong>` : escapeDescriptionHtml(line)}</p>`;
+    if (isStandaloneField) {
+      return `<p><strong>${escapeDescriptionHtml(line)}</strong></p>`;
+    }
+
+    if (field && isSpecificationLabel(field[1].trim())) {
+      return `<p><strong>${escapeDescriptionHtml(field[1].trim())}:</strong>${field[2] ? ` ${escapeDescriptionHtml(field[2].trim())}` : ''}</p>`;
+    }
+
+    return `<p>${escapeDescriptionHtml(line)}</p>`;
   })
   .join('');
 
@@ -108,7 +143,13 @@ const formatDescriptionHtml = (value) => {
   const plainText = htmlDescriptionToText(text);
   const fieldCount = [...plainText.matchAll(descriptionFieldPattern)].length;
   const benefitCount = [...plainText.matchAll(descriptionBenefitPattern)].length;
-  if (/<\/?[a-z][\s\S]*>/i.test(text) && fieldCount < 3 && benefitCount < 2) return text;
+  const compactFieldCount = compactSpecificationFieldCount(plainText);
+  const hasHtmlMarkup = /<\/?[a-z][\s\S]*>/i.test(text);
+  const structuredHtml = hasHtmlMarkup && hasStructuredHtml(text);
+  const shouldFormatCompactText = (!hasHtmlMarkup && fieldCount >= 3)
+    || benefitCount >= 2
+    || (!structuredHtml && (hasSpecificationHeading(plainText) || compactFieldCount >= 5));
+  if (hasHtmlMarkup && !shouldFormatCompactText) return text;
 
   return formatPlainDescription(plainText);
 };

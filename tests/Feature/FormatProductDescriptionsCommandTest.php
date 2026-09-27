@@ -58,4 +58,36 @@ class FormatProductDescriptionsCommandTest extends TestCase
 
         $this->assertSame('Product details of Test WatchBrand: OLEVSModel Number: 9931GMovement brand: Quartz', $product->fresh()->description);
     }
+
+    public function test_it_preserves_marketing_copy_that_only_contains_a_few_field_like_phrases(): void
+    {
+        $category = Category::create(['name' => 'Fashion', 'slug' => 'fashion']);
+        $description = '<p>Comfortable everyday wear. Fabric: Terry Cotton. Size: M, L, XL. Measurements: see the size guide.</p>';
+        Product::create([
+            'category_id' => $category->id,
+            'name' => 'Marketing Copy',
+            'slug' => 'marketing-copy',
+            'description' => $description,
+        ]);
+
+        $this->artisan('products:format-descriptions --dry-run')
+            ->expectsOutput('Checked 1 product descriptions; 0 would be updated.')
+            ->assertSuccessful();
+    }
+
+    public function test_it_does_not_reformat_an_already_structured_specification_block(): void
+    {
+        $category = Category::create(['name' => 'Smart Watch', 'slug' => 'smart-watch']);
+        $description = '<p><strong>Specification:</strong></p><p><strong>Product Name:</strong> X7 Smart Watch</p><ul><li>Heart rate monitoring.</li><li>Pedometer.</li></ul>';
+        Product::create([
+            'category_id' => $category->id,
+            'name' => 'Structured Specification',
+            'slug' => 'structured-specification',
+            'description' => $description,
+        ]);
+
+        $this->artisan('products:format-descriptions --dry-run')
+            ->expectsOutput('Checked 1 product descriptions; 0 would be updated.')
+            ->assertSuccessful();
+    }
 }

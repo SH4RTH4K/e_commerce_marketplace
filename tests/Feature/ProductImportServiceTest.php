@@ -175,6 +175,46 @@ class ProductImportServiceTest extends TestCase
         );
     }
 
+    public function test_it_formats_compact_supplier_specifications_with_new_labels_during_import(): void
+    {
+        [$supplier, $source] = $this->supplierAndSource();
+        $category = Category::create(['name' => 'Smart Watch', 'slug' => 'smart-watch']);
+        app(CategoryMapper::class)->mapManually($supplier, 'electronics', $category);
+
+        $source->update([
+            'raw_payload' => [
+                'description' => 'Specification:Product Name: X7 Smart WatchMaster Chip: HS6620+FRScreen Display: 1.44 InchProduct Size: 44*38*10.8mmBody Material: Alloy body + IML bottom shellStrap Material: Silicone',
+            ],
+        ]);
+
+        $product = app(ProductImportService::class)->import($source)->product;
+
+        $this->assertSame(
+            '<p><strong>Specification:</strong></p><p><strong>Product Name:</strong> X7 Smart Watch</p><p><strong>Master Chip:</strong> HS6620+FR</p><p><strong>Screen Display:</strong> 1.44 Inch</p><p><strong>Product Size:</strong> 44*38*10.8mm</p><p><strong>Body Material:</strong> Alloy body + IML bottom shell</p><p><strong>Strap Material:</strong> Silicone</p>',
+            $product->description,
+        );
+    }
+
+    public function test_it_renders_multi_sentence_function_specifications_as_a_list(): void
+    {
+        [$supplier, $source] = $this->supplierAndSource();
+        $category = Category::create(['name' => 'Smart Watch', 'slug' => 'smart-watch']);
+        app(CategoryMapper::class)->mapManually($supplier, 'electronics', $category);
+
+        $source->update([
+            'raw_payload' => [
+                'description' => 'Specification:Product Name: X7 Smart WatchMaster Chip: HS6620Functions:Heart rate monitoring.Pedometer, sport mode data collection. Sleep monitoring.',
+            ],
+        ]);
+
+        $product = app(ProductImportService::class)->import($source)->product;
+
+        $this->assertStringContainsString(
+            '<p><strong>Functions:</strong></p><ul><li>Heart rate monitoring.</li><li>Pedometer, sport mode data collection.</li><li>Sleep monitoring.</li></ul>',
+            $product->description,
+        );
+    }
+
     /** @return array{DropshipSupplier, DropshipSupplierProduct} */
     private function supplierAndSource(): array
     {
