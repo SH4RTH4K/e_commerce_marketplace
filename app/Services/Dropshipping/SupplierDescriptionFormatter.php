@@ -42,16 +42,22 @@ final class SupplierDescriptionFormatter
             }
         }
 
+        return $this->formatDescription($description);
+    }
+
+    public function formatDescription(?string $description): ?string
+    {
         if ($description === null) {
             return null;
         }
 
-        $description = trim(html_entity_decode($description, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        $description = trim($description);
         if ($description === '') {
             return null;
         }
 
-        $plainDescription = $this->plainText($description);
+        $decodedDescription = html_entity_decode($description, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $plainDescription = $this->plainText($decodedDescription);
         if ($this->joinedFieldCount($plainDescription) >= 3 || $this->joinedBenefitCount($plainDescription) >= 2) {
             return $this->formatJoinedFields($plainDescription);
         }
@@ -60,7 +66,11 @@ final class SupplierDescriptionFormatter
             return $this->sanitizeHtml($description);
         }
 
-        $paragraphs = preg_split('/\r?\n\s*\r?\n/', $description, -1, PREG_SPLIT_NO_EMPTY) ?: [$description];
+        if (preg_match('/<\/?[a-z][^>]*>/i', $decodedDescription)) {
+            return $this->sanitizeHtml($decodedDescription);
+        }
+
+        $paragraphs = preg_split('/\r?\n\s*\r?\n/', $decodedDescription, -1, PREG_SPLIT_NO_EMPTY) ?: [$decodedDescription];
 
         return implode('', array_map(
             fn (string $paragraph): string => '<p>' . str_replace(
