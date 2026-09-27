@@ -9,7 +9,7 @@ final class SupplierDescriptionFormatter
     /** @var list<string> */
     private const FIELD_LABELS = [
         'Dial window material type', 'Water resistance depth', 'Band material type',
-        'Movement brand', 'Model Number', 'Dial diameter', 'Case thickness',
+        'Movement brand', 'Movement', 'Brand Name', 'Model Number', 'Dial diameter', 'Case thickness',
         'Case material', 'Dial display', 'Case shape', 'Band length', 'Band width',
         'Clasp type', 'Water resistance', 'Master Copy', 'Package includes',
         'Wash & Care', 'Main Material', 'Measurement', 'Warranty', 'Feature',
@@ -157,7 +157,7 @@ final class SupplierDescriptionFormatter
         $labels = self::FIELD_LABELS;
         usort($labels, static fn (string $first, string $second): int => strlen($second) <=> strlen($first));
 
-        return '/(?<![\s,])(' . implode('|', array_map(static fn (string $label): string => preg_quote($label, '/'), $labels)) . ')(?=\s*(?::|[A-Z#])|$)/u';
+        return '/(?<![\s,])(' . implode('|', array_map(static fn (string $label): string => preg_quote($label, '/'), $labels)) . ')(?=\s*(?::|[A-Z#])|$)/iu';
     }
 
     private function benefitPattern(): string

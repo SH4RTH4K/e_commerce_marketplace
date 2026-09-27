@@ -15,7 +15,7 @@ const escapeDescriptionHtml = (value) => String(value)
 
 const descriptionFieldLabels = [
   'Dial window material type', 'Water resistance depth', 'Band material type',
-  'Movement brand', 'Model Number', 'Dial diameter', 'Case thickness',
+  'Movement brand', 'Movement', 'Brand Name', 'Model Number', 'Dial diameter', 'Case thickness',
   'Case material', 'Dial display', 'Case shape', 'Band length', 'Band width',
   'Clasp type', 'Water resistance', 'Master Copy', 'Package includes',
   'Wash & Care', 'Main Material', 'Measurement', 'Warranty', 'Feature',
@@ -37,7 +37,7 @@ const descriptionFieldPattern = new RegExp(
     .sort((first, second) => second.length - first.length)
     .map(label => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('|')})(?=\\s*(?::|[A-Z#])|$)`,
-  'gu',
+  'giu',
 );
 
 const descriptionBenefitPattern = new RegExp(

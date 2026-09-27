@@ -155,6 +155,26 @@ class ProductImportServiceTest extends TestCase
         );
     }
 
+    public function test_it_formats_case_insensitive_watch_specification_labels_during_import(): void
+    {
+        [$supplier, $source] = $this->supplierAndSource();
+        $category = Category::create(['name' => 'Watch', 'slug' => 'watch']);
+        app(CategoryMapper::class)->mapManually($supplier, 'electronics', $category);
+
+        $source->update([
+            'raw_payload' => [
+                'description' => 'Brand Name: OLEVSMovement: QUARTZClasp Type: Push Button Hidden ClaspCase Material: Stainless SteelWater Resistance Depth: 3BarDial Diameter: 32mm',
+            ],
+        ]);
+
+        $product = app(ProductImportService::class)->import($source)->product;
+
+        $this->assertSame(
+            '<p><strong>Brand Name:</strong> OLEVS</p><p><strong>Movement:</strong> QUARTZ</p><p><strong>Clasp Type:</strong> Push Button Hidden Clasp</p><p><strong>Case Material:</strong> Stainless Steel</p><p><strong>Water Resistance Depth:</strong> 3Bar</p><p><strong>Dial Diameter:</strong> 32mm</p>',
+            $product->description,
+        );
+    }
+
     /** @return array{DropshipSupplier, DropshipSupplierProduct} */
     private function supplierAndSource(): array
     {
