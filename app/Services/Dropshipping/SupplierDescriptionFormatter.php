@@ -12,7 +12,9 @@ final class SupplierDescriptionFormatter
         'Movement brand', 'Model Number', 'Dial diameter', 'Case thickness',
         'Case material', 'Dial display', 'Case shape', 'Band length', 'Band width',
         'Clasp type', 'Water resistance', 'Master Copy', 'Package includes',
-        'Warranty', 'Feature', 'Pointer', 'Brand', 'Type', 'Model', 'Material',
+        'Wash & Care', 'Main Material', 'Measurement', 'Warranty', 'Feature',
+        'Pointer', 'Quality', 'Stretch', 'Pocket', 'Gender', 'Brand', 'Waist',
+        'Type', 'Model', 'Material', 'Size',
     ];
 
     public function format(DropshipSupplierProduct $source): ?string
@@ -91,6 +93,8 @@ final class SupplierDescriptionFormatter
             static fn (array $matches): string => "\n" . $matches[1],
             $value,
         ) ?? $value;
+        $text = preg_replace('/(?<=[\p{Ll}])(?=[\p{Lu}])/u', "\n", $text) ?? $text;
+        $text = preg_replace('/(?<=[\pL])(?=\d{1,3}%)/u', "\n", $text) ?? $text;
         $text = preg_replace('/(?<!\s)#(?=[\pL\pN])/u', "\n#", $text) ?? $text;
 
         $lines = preg_split('/\R+/', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [];
@@ -124,6 +128,6 @@ final class SupplierDescriptionFormatter
         $labels = self::FIELD_LABELS;
         usort($labels, static fn (string $first, string $second): int => strlen($second) <=> strlen($first));
 
-        return '/(' . implode('|', array_map(static fn (string $label): string => preg_quote($label, '/'), $labels)) . ')(?=\s*(?::|[A-Z#])|$)/iu';
+        return '/(?<=[\pL\d])(' . implode('|', array_map(static fn (string $label): string => preg_quote($label, '/'), $labels)) . ')(?=\s*(?::|[A-Z#])|$)/u';
     }
 }

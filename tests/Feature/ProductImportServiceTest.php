@@ -94,6 +94,27 @@ class ProductImportServiceTest extends TestCase
         );
     }
 
+    public function test_it_formats_joined_apparel_description_fields_during_import(): void
+    {
+        [$supplier, $source] = $this->supplierAndSource();
+        $category = Category::create(['name' => 'Fashion', 'slug' => 'fashion']);
+        app(CategoryMapper::class)->mapManually($supplier, 'electronics', $category);
+
+        $source->update([
+            'raw_payload' => [
+                'description' => "Gabardine PantMain Material: TwillStretch: StretchableWash & Care: Machine WashWaist: Mid-riseQuality: 98% Cotton 2% SpandexButtery smooth chinosPocket: 2 Side pocketGender: MenMeasurementSize: 32, Waist: 32, Length: 41",
+            ],
+        ]);
+
+        $product = app(ProductImportService::class)->import($source)->product;
+
+        $this->assertStringContainsString('<p><strong>Main Material:</strong> Twill</p>', $product->description);
+        $this->assertStringContainsString('<p><strong>Wash &amp; Care:</strong> Machine Wash</p>', $product->description);
+        $this->assertStringContainsString('<p><strong>Quality:</strong> 98% Cotton 2% Spandex</p>', $product->description);
+        $this->assertStringContainsString('<p>Buttery smooth chinos</p>', $product->description);
+        $this->assertStringContainsString('<p><strong>Size:</strong> 32, Waist: 32, Length: 41</p>', $product->description);
+    }
+
     /** @return array{DropshipSupplier, DropshipSupplierProduct} */
     private function supplierAndSource(): array
     {

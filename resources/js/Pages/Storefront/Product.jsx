@@ -18,21 +18,25 @@ const descriptionFieldLabels = [
   'Movement brand', 'Model Number', 'Dial diameter', 'Case thickness',
   'Case material', 'Dial display', 'Case shape', 'Band length', 'Band width',
   'Clasp type', 'Water resistance', 'Master Copy', 'Package includes',
-  'Warranty', 'Feature', 'Pointer', 'Brand', 'Type', 'Model', 'Material',
+  'Wash & Care', 'Main Material', 'Measurement', 'Warranty', 'Feature',
+  'Pointer', 'Quality', 'Stretch', 'Pocket', 'Gender', 'Brand', 'Waist',
+  'Type', 'Model', 'Material', 'Size',
 ];
 
 const descriptionFieldPattern = new RegExp(
-  `(${descriptionFieldLabels
+  `(?<=[\\p{L}\\d])(${descriptionFieldLabels
     .slice()
     .sort((first, second) => second.length - first.length)
     .map(label => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('|')})(?=\\s*(?::|[A-Z#])|$)`,
-  'gi',
+  'gu',
 );
 
 const formatPlainDescription = (text) => text
   // Imported supplier descriptions often omit separators between fields.
   .replace(descriptionFieldPattern, (_, label) => `\n${label}`)
+  .replace(/(?<=[\p{Ll}])(?=[\p{Lu}])/gu, '\n')
+  .replace(/(?<=[\p{L}])(?=\d{1,3}%)/gu, '\n')
   .replace(/(?<!\s)#(?=[A-Za-z])/g, '\n#')
   .split(/\r?\n+/)
   .map(line => line.trim().replace(/:\s*/g, ': '))
@@ -50,13 +54,33 @@ const formatPlainDescription = (text) => text
   })
   .join('');
 
-const htmlDescriptionToText = (value) => String(value)
-  .replace(/<br\s*\/?\s*>/gi, '\n')
-  .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
-  .replace(/<\/?p[^>]*>/gi, '')
-  .replace(/<[^>]*>/g, '')
-  .replace(/&nbsp;/gi, ' ')
-  .trim();
+const decodeDescriptionEntities = (value) => {
+  let decoded = String(value || '');
+
+  // Older imports can contain one or two rounds of HTML entity encoding.
+  // Decode before escaping for display so apostrophes and ampersands do not
+  // appear as literal entity text on the storefront.
+  for (let pass = 0; pass < 2; pass += 1) {
+    decoded = decoded
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#0*39;|&apos;/gi, "'")
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&amp;/gi, '&');
+  }
+
+  return decoded;
+};
+
+const htmlDescriptionToText = (value) => decodeDescriptionEntities(
+  String(value)
+    .replace(/<br\s*\/?\s*>/gi, '\n')
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
+    .replace(/<\/?p[^>]*>/gi, '')
+    .replace(/<[^>]*>/g, '')
+    .trim(),
+);
 
 const formatDescriptionHtml = (value) => {
   const text = String(value || '').trim();
