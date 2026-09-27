@@ -135,6 +135,26 @@ class ProductImportServiceTest extends TestCase
         $this->assertStringContainsString('<p>L= length 29&quot;, chest 40&quot;</p>', $product->description);
     }
 
+    public function test_it_formats_joined_service_benefits_during_import(): void
+    {
+        [$supplier, $source] = $this->supplierAndSource();
+        $category = Category::create(['name' => 'Jewellery', 'slug' => 'jewellery']);
+        app(CategoryMapper::class)->mapManually($supplier, 'electronics', $category);
+
+        $source->update([
+            'raw_payload' => [
+                'description' => '100% Authentic Satisfied Product100% Money Back Refund Policy10 Days Easy Return & Replace Policy1 Year Service WarrantySafe Online Payment & COD AvailableQuick Priority Support 24/7 DaysFastest Home Delivery For All orders',
+            ],
+        ]);
+
+        $product = app(ProductImportService::class)->import($source)->product;
+
+        $this->assertSame(
+            '<p>100% Authentic Satisfied Product</p><p>100% Money Back Refund Policy</p><p>10 Days Easy Return &amp; Replace Policy</p><p>1 Year Service Warranty</p><p>Safe Online Payment &amp; COD Available</p><p>Quick Priority Support 24/7 Days</p><p>Fastest Home Delivery For All orders</p>',
+            $product->description,
+        );
+    }
+
     /** @return array{DropshipSupplier, DropshipSupplierProduct} */
     private function supplierAndSource(): array
     {

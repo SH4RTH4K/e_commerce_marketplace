@@ -18,6 +18,17 @@ final class SupplierDescriptionFormatter
         'Fabrics', 'Type', 'Model', 'Material', 'Size',
     ];
 
+    /** @var list<string> */
+    private const BENEFIT_PHRASES = [
+        '100% Authentic Satisfied Product',
+        '100% Money Back Refund Policy',
+        '10 Days Easy Return & Replace Policy',
+        '1 Year Service Warranty',
+        'Safe Online Payment & COD Available',
+        'Quick Priority Support 24/7 Days',
+        'Fastest Home Delivery For All orders',
+    ];
+
     public function format(DropshipSupplierProduct $source): ?string
     {
         $payload = is_array($source->raw_payload) ? $source->raw_payload : [];
@@ -41,7 +52,7 @@ final class SupplierDescriptionFormatter
         }
 
         $plainDescription = $this->plainText($description);
-        if ($this->joinedFieldCount($plainDescription) >= 3) {
+        if ($this->joinedFieldCount($plainDescription) >= 3 || $this->joinedBenefitCount($plainDescription) >= 2) {
             return $this->formatJoinedFields($plainDescription);
         }
 
@@ -87,6 +98,11 @@ final class SupplierDescriptionFormatter
         return preg_match_all($this->fieldPattern(), $value) ?: 0;
     }
 
+    private function joinedBenefitCount(string $value): int
+    {
+        return preg_match_all($this->benefitPattern(), $value) ?: 0;
+    }
+
     private function formatJoinedFields(string $value): string
     {
         $text = preg_replace_callback(
@@ -97,6 +113,7 @@ final class SupplierDescriptionFormatter
         $text = preg_replace('/(?<=[\p{Ll}])(?=[\p{Lu}])/u', "\n", $text) ?? $text;
         $text = preg_replace('/(?<=[\pL])(?=\d{1,3}%)/u', "\n", $text) ?? $text;
         $text = preg_replace('/(")(?=[A-Z]{1,4}\s*=)/', "$1\n", $text) ?? $text;
+        $text = preg_replace_callback($this->benefitPattern(), static fn (array $matches): string => "\n" . $matches[1], $text) ?? $text;
         $text = preg_replace('/(?<!\s)#(?=[\pL\pN])/u', "\n#", $text) ?? $text;
 
         $lines = preg_split('/\R+/', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [];
@@ -131,5 +148,13 @@ final class SupplierDescriptionFormatter
         usort($labels, static fn (string $first, string $second): int => strlen($second) <=> strlen($first));
 
         return '/(?<![\s,])(' . implode('|', array_map(static fn (string $label): string => preg_quote($label, '/'), $labels)) . ')(?=\s*(?::|[A-Z#])|$)/u';
+    }
+
+    private function benefitPattern(): string
+    {
+        return '/(' . implode('|', array_map(
+            static fn (string $phrase): string => preg_quote($phrase, '/'),
+            self::BENEFIT_PHRASES,
+        )) . ')/iu';
     }
 }

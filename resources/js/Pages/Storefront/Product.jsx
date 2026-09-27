@@ -24,6 +24,13 @@ const descriptionFieldLabels = [
   'Fabrics', 'Type', 'Model', 'Material', 'Size',
 ];
 
+const descriptionBenefitPhrases = [
+  '100% Authentic Satisfied Product', '100% Money Back Refund Policy',
+  '10 Days Easy Return & Replace Policy', '1 Year Service Warranty',
+  'Safe Online Payment & COD Available', 'Quick Priority Support 24/7 Days',
+  'Fastest Home Delivery For All orders',
+];
+
 const descriptionFieldPattern = new RegExp(
   `(?<![\\s,])(${descriptionFieldLabels
     .slice()
@@ -33,12 +40,18 @@ const descriptionFieldPattern = new RegExp(
   'gu',
 );
 
+const descriptionBenefitPattern = new RegExp(
+  `(${descriptionBenefitPhrases.map(phrase => phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
+  'gi',
+);
+
 const formatPlainDescription = (text) => text
   // Imported supplier descriptions often omit separators between fields.
   .replace(descriptionFieldPattern, (_, label) => `\n${label}`)
   .replace(/(?<=[\p{Ll}])(?=[\p{Lu}])/gu, '\n')
   .replace(/(?<=[\p{L}])(?=\d{1,3}%)/gu, '\n')
   .replace(/(")(?=[A-Z]{1,4}\s*=)/g, '$1\n')
+  .replace(descriptionBenefitPattern, (_, phrase) => `\n${phrase}`)
   .replace(/(?<!\s)#(?=[A-Za-z])/g, '\n#')
   .split(/\r?\n+/)
   .map(line => line.trim().replace(/:\s*/g, ': '))
@@ -94,7 +107,8 @@ const formatDescriptionHtml = (value) => {
   // content. Genuine rich-text descriptions are left unchanged.
   const plainText = htmlDescriptionToText(text);
   const fieldCount = [...plainText.matchAll(descriptionFieldPattern)].length;
-  if (/<\/?[a-z][\s\S]*>/i.test(text) && fieldCount < 3) return text;
+  const benefitCount = [...plainText.matchAll(descriptionBenefitPattern)].length;
+  if (/<\/?[a-z][\s\S]*>/i.test(text) && fieldCount < 3 && benefitCount < 2) return text;
 
   return formatPlainDescription(plainText);
 };
