@@ -198,6 +198,11 @@ class SettingController extends Controller
                 'hero_fallback_badge'   => ['nullable', 'string', 'max:40'],
                 'hero_fallback_title'   => ['nullable', 'string', 'max:120'],
                 'hero_fallback_subtitle'=> ['nullable', 'string', 'max:255'],
+                'homepage_category_sections_enabled' => ['nullable', 'boolean'],
+                'homepage_category_product_order' => ['nullable', 'in:newest,shuffle'],
+                'homepage_flash_sale_enabled' => ['nullable', 'boolean'],
+                'homepage_flash_sale_limit' => ['nullable', 'integer', 'min:1', 'max:48'],
+                'homepage_flash_sale_order' => ['nullable', 'in:manual,newest'],
                 // Popup Notification
                 'popup_enabled'        => ['nullable', 'boolean'],
                 'popup_text'           => ['nullable', 'string', 'max:400'],
@@ -217,7 +222,6 @@ class SettingController extends Controller
                 'template_2_product_per_row' => ['nullable', 'integer', 'min:2', 'max:6'],
                 'template_1_products_per_page' => ['nullable', 'integer', 'min:1', 'max:48'],
                 'template_2_products_per_page' => ['nullable', 'integer', 'min:1', 'max:48'],
-                'template_2_category_product_order' => ['nullable', 'in:newest,shuffle'],
                 'template_1_hero_overlay_color' => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{6}$/'],
                 'template_1_hero_overlay_opacity' => ['nullable', 'numeric', 'min:0', 'max:80'],
                 'template_1_hero_text_background_color' => ['nullable', 'string', 'max:20', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -378,6 +382,8 @@ class SettingController extends Controller
                 'home_view_more_label', 'default_cta_text',
                 'hero_fallback_badge', 'hero_fallback_title', 'hero_fallback_subtitle',
                 'popup_text', 'popup_link', 'popup_btn_label', 'popup_delay_seconds',
+                'homepage_category_sections_enabled', 'homepage_category_product_order',
+                'homepage_flash_sale_limit', 'homepage_flash_sale_order',
             ],
             'payments' => ['bkash_number', 'nagad_number', 'rocket_number'],
             'shipping' => [
@@ -406,7 +412,7 @@ class SettingController extends Controller
             'theme' => [
                 'storefront_template', 'template_1_navbar_menu', 'template_1_site_name_style', 'template_1_category_per_row',
                 'template_1_product_per_row', 'template_2_product_per_row',
-                'template_1_products_per_page', 'template_2_products_per_page', 'template_2_category_product_order',
+                'template_1_products_per_page', 'template_2_products_per_page',
                 'template_1_hero_overlay_color', 'template_1_hero_overlay_opacity',
                 'template_1_hero_text_background_color',
                 'template_1_hero_text_background_opacity', 'template_1_hero_text_position',
@@ -466,6 +472,7 @@ class SettingController extends Controller
 
         if ($section === 'homepage') {
             Setting::put('show_brands_marquee', $request->boolean('show_brands_marquee') ? '1' : '0');
+            Setting::put('homepage_flash_sale_enabled', $request->boolean('homepage_flash_sale_enabled') ? '1' : '0');
             Setting::put('popup_enabled', $request->boolean('popup_enabled') ? '1' : '0');
             foreach (['deal_ends_at'] as $dtKey) {
                 if ($request->filled($dtKey)) {

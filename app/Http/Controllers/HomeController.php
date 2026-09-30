@@ -9,6 +9,8 @@ use App\Models\Coupon;
 use App\Models\Feature;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Throwable;
 
 class HomeController extends Controller
 {
@@ -17,6 +19,10 @@ class HomeController extends Controller
         $isTemplateOne = setting('storefront_template', 'template-2') === 'template-1';
         $isTemplateTwo = setting('storefront_template', 'template-2') === 'template-2';
         $overviewAllLimit = min(48, max(1, (int) setting('template_1_overview_all_count', '16')));
+        $flashSaleEnabled = setting('homepage_flash_sale_enabled', '1') === '1';
+        $flashSaleActive = $this->flashSaleTimerActive();
+        $flashSaleLimit = min(48, max(1, (int) setting('homepage_flash_sale_limit', '10')));
+        $flashSaleOrder = setting('homepage_flash_sale_order', 'manual');
         $overviewLimits = [
             'featured' => max($overviewAllLimit, min(48, max(1, (int) setting('template_1_overview_featured_count', '12')))),
             'best' => max($overviewAllLimit, min(48, max(1, (int) setting('template_1_overview_best_count', '12')))),
@@ -71,6 +77,9 @@ class HomeController extends Controller
         $overviewOrder = fn ($query) => $shuffleOverview
             ? $query->inRandomOrder()
             : $query->orderByDesc('created_at')->orderByDesc('id');
+        $flashOrder = fn ($query) => $flashSaleOrder === 'newest'
+            ? $query->orderByDesc('created_at')->orderByDesc('id')
+            : $query->orderBy('flash_sale_position')->orderBy('id');
 
         $setStorefrontSku = static function (Product $product): void {
             $supplierProduct = $product->supplierLinks->first()?->supplierProduct;
@@ -83,10 +92,12 @@ class HomeController extends Controller
         $trending = $isTemplateOne ? Product::query()->tap($withImages)->where('is_featured', true)->tap($overviewOrder)->take($overviewLimits['featured'])->get()->each($setStorefrontSku) : collect();
         $bestSellers = $isTemplateOne ? Product::query()->tap($withImages)->where('is_best_seller', true)->tap($overviewOrder)->take($overviewLimits['best'])->get()->each($setStorefrontSku) : collect();
         $newArrivals = $isTemplateOne ? Product::query()->tap($withImages)->where('is_new_arrival', true)->tap($overviewOrder)->take($overviewLimits['new'])->get()->each($setStorefrontSku) : collect();
-        $templateTwoCategoryOrder = setting('template_2_category_product_order', 'newest') === 'shuffle'
+        $showHomepageCategorySections = setting('homepage_category_sections_enabled', '1') === '1';
+        $homepageCategoryOrder = setting('homepage_category_product_order', setting('template_2_category_product_order', 'newest'));
+        $templateTwoCategoryOrder = $homepageCategoryOrder === 'shuffle'
             ? fn ($query) => $query->inRandomOrder()
             : fn ($query) => $query->latest('id');
-        $templateTwoCategorySections = $isTemplateTwo
+        $templateTwoCategorySections = $isTemplateTwo && $showHomepageCategorySections
             ? $categories
                 ->filter(fn (Category $category) => $category->products_count > 0)
                 ->take(12)
@@ -104,6 +115,7 @@ class HomeController extends Controller
                         'name' => $category->name,
                         'slug' => $category->slug,
                         'products' => $products,
+                        'has_more' => $category->products_count > $products->count(),
                     ];
                 })
                 ->filter(fn (array $section) => $section['products']->isNotEmpty())
@@ -121,8 +133,19 @@ class HomeController extends Controller
             ->take($overviewAllLimit)
             ->count();
 
+        $flashProducts = $flashSaleEnabled && $flashSaleActive
+            ? Product::query()
+                ->tap($withImages)
+                ->where('is_flash_sale', true)
+                ->tap($flashOrder)
+                ->take($flashSaleLimit)
+                ->get()
+                ->each($setStorefrontSku)
+            : collect();
+
         return Inertia::render('Storefront/Home', [
             'heroBanners'     => $bannerPayload('hero'),
+            'heroSideBanners' => $bannerPayload('hero_side'),
             'middleBanners'   => $bannerPayload('middle'),
             'features'        => Feature::where('is_active', true)->orderBy('position')->get(),
             'featuredCategories' => $categories,
@@ -133,7 +156,7 @@ class HomeController extends Controller
                 ->filter(fn (Coupon $c) => $c->isCurrentlyActive())
                 ->values()
                 ->take(4),
-            'flashProducts'   => Product::query()->tap($withImages)->where('is_flash_sale', true)->orderBy('flash_sale_position')->orderBy('id')->get()->each($setStorefrontSku),
+            'flashProducts'   => $flashProducts,
             'trending'        => $trending,
             'bestSellers'     => $bestSellers,
             'newArrivals'     => $newArrivals,
@@ -146,6 +169,7 @@ class HomeController extends Controller
                 'new' => Product::published()->where('is_new_arrival', true)->count() > $newArrivals->take($overviewDisplayLimits['new'])->count(),
                 'best' => Product::published()->where('is_best_seller', true)->count() > $bestSellers->take($overviewDisplayLimits['best'])->count(),
             ],
+            'flashSaleHasMore' => $flashSaleEnabled && $flashSaleActive && Product::published()->where('is_flash_sale', true)->count() > $flashProducts->count(),
         ]);
     }
 
@@ -200,6 +224,93 @@ class HomeController extends Controller
         ]);
     }
 
+    public function loadMoreCategoryProducts(Request $request)
+    {
+        $data = $request->validate([
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'exclude' => ['nullable', 'array', 'max:1000'],
+            'exclude.*' => ['integer', 'distinct', 'min:1'],
+        ]);
+
+        $category = Category::where('is_active', true)
+            ->where('show_in_menu', true)
+            ->findOrFail($data['category_id']);
+
+        $limit = 10;
+        $products = Product::published()
+            ->with('images', 'category', 'supplierLinks.supplierProduct')
+            ->withExists('variants')
+            ->withExists([
+                'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
+            ])
+            ->where('category_id', $category->getKey())
+            ->whereNotIn('id', $data['exclude'] ?? [])
+            ->when(
+                setting('homepage_category_product_order', setting('template_2_category_product_order', 'newest')) === 'shuffle',
+                fn ($productQuery) => $productQuery->inRandomOrder(),
+                fn ($productQuery) => $productQuery->latest('id'),
+            )
+            ->limit($limit + 1)
+            ->get()
+            ->each(static function (Product $product): void {
+                $supplierProduct = $product->supplierLinks->first()?->supplierProduct;
+                $product->sku = $supplierProduct?->product_code
+                    ?: $product->sku
+                    ?: $supplierProduct?->supplier_product_id;
+                $product->unsetRelation('supplierLinks');
+            });
+
+        $hasMore = $products->count() > $limit;
+
+        return response()->json([
+            'products' => $products->take($limit)->values(),
+            'has_more' => $hasMore,
+        ]);
+    }
+
+    public function loadMoreFlashProducts(Request $request)
+    {
+        $data = $request->validate([
+            'exclude' => ['nullable', 'array', 'max:1000'],
+            'exclude.*' => ['integer', 'distinct', 'min:1'],
+        ]);
+
+        if (setting('homepage_flash_sale_enabled', '1') !== '1' || ! $this->flashSaleTimerActive()) {
+            return response()->json(['products' => [], 'has_more' => false]);
+        }
+
+        $limit = min(48, max(1, (int) setting('homepage_flash_sale_limit', '10')));
+        $products = Product::published()
+            ->with('images', 'category', 'supplierLinks.supplierProduct')
+            ->withExists('variants')
+            ->withExists([
+                'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
+            ])
+            ->where('is_flash_sale', true)
+            ->whereNotIn('id', $data['exclude'] ?? [])
+            ->when(
+                setting('homepage_flash_sale_order', 'manual') === 'newest',
+                fn ($productQuery) => $productQuery->orderByDesc('created_at')->orderByDesc('id'),
+                fn ($productQuery) => $productQuery->orderBy('flash_sale_position')->orderBy('id'),
+            )
+            ->limit($limit + 1)
+            ->get()
+            ->each(static function (Product $product): void {
+                $supplierProduct = $product->supplierLinks->first()?->supplierProduct;
+                $product->sku = $supplierProduct?->product_code
+                    ?: $product->sku
+                    ?: $supplierProduct?->supplier_product_id;
+                $product->unsetRelation('supplierLinks');
+            });
+
+        $hasMore = $products->count() > $limit;
+
+        return response()->json([
+            'products' => $products->take($limit)->values(),
+            'has_more' => $hasMore,
+        ]);
+    }
+
     private function overviewBatchSize(string $tab): int
     {
         $isTemplateOne = setting('storefront_template', 'template-2') === 'template-1';
@@ -207,5 +318,20 @@ class HomeController extends Controller
         $default = $tab === 'all' ? 16 : 12;
 
         return $key ? max(1, min(48, (int) setting($key, (string) $default))) : $default;
+    }
+
+    private function flashSaleTimerActive(): bool
+    {
+        $endsAt = trim((string) setting('flash_sale_ends_at', ''));
+
+        if ($endsAt === '') {
+            return true;
+        }
+
+        try {
+            return Carbon::parse($endsAt)->isFuture();
+        } catch (Throwable) {
+            return true;
+        }
     }
 }

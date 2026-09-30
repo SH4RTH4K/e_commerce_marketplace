@@ -2270,6 +2270,23 @@ body:has(.template-1-storefront) {
 
   .template-1-filter-row {
     margin-bottom: 32px;
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    gap: 24px;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .template-1-filter-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .template-1-filter-row a,
+  .template-1-filter-row button {
+    flex: 0 0 auto;
+    white-space: nowrap;
   }
 
   .template-1-shop-sort {
@@ -2350,6 +2367,13 @@ body:has(.template-1-storefront) {
 
   .template-1-about-copy {
     padding-right: 0;
+  }
+}
+
+@media (max-width: 559px) {
+  .template-1-product-grid,
+  .template-1-related-grid {
+    grid-template-columns: 1fr;
   }
 }
 

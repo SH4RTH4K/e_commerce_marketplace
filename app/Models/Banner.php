@@ -9,8 +9,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Banner extends Model
 {
     public const PLACEMENTS = [
-        'hero' => 'Hero — homepage slider slides (add multiple; ordered by position)',
-        'middle' => 'Middle Banner — replacing coupons section on homepage',
+        'hero' => 'Hero - homepage slider slides (add multiple; ordered by position)',
+        'hero_side' => 'Hero Side Promo - right-side promo block beside homepage slider',
+        'middle' => 'Middle Banner - replacing coupons section on homepage',
     ];
 
     public const STYLES = [
@@ -43,7 +44,7 @@ class Banner extends Model
 
     public function placementLabel(): string
     {
-        return explode(' — ', self::PLACEMENTS[$this->placement] ?? $this->placement)[0];
+        return explode(' - ', self::PLACEMENTS[$this->placement] ?? $this->placement)[0];
     }
 
     public function styleLabel(): string

@@ -317,6 +317,11 @@ export default function Settings({ settings, templateStatus = {} }) {
     home_brands_label: settings.home_brands_label || '', home_view_more_label: settings.home_view_more_label || '', default_cta_text: settings.default_cta_text || '',
     hero_fallback_badge: settings.hero_fallback_badge || '', hero_fallback_title: settings.hero_fallback_title || '',
     hero_fallback_subtitle: settings.hero_fallback_subtitle || '',
+    homepage_category_sections_enabled: settings.homepage_category_sections_enabled !== '0' && settings.homepage_category_sections_enabled !== false,
+    homepage_category_product_order: settings.homepage_category_product_order || settings.template_2_category_product_order || 'newest',
+    homepage_flash_sale_enabled: settings.homepage_flash_sale_enabled !== '0' && settings.homepage_flash_sale_enabled !== false,
+    homepage_flash_sale_limit: settings.homepage_flash_sale_limit || '10',
+    homepage_flash_sale_order: settings.homepage_flash_sale_order || 'manual',
 
     // Storefront UI
     product_card_bg_color: settings.product_card_bg_color || '#FFFFFF',
@@ -424,7 +429,6 @@ export default function Settings({ settings, templateStatus = {} }) {
     template_2_product_per_row: settings.template_2_product_per_row || '5',
     template_1_products_per_page: settings.template_1_products_per_page || '12',
     template_2_products_per_page: settings.template_2_products_per_page || '12',
-    template_2_category_product_order: settings.template_2_category_product_order || 'newest',
     template_1_hero_overlay_color: settings.template_1_hero_overlay_color || '#ffffff',
     template_1_hero_overlay_opacity: settings.template_1_hero_overlay_opacity ?? '0',
     template_1_hero_text_background_color: settings.template_1_hero_text_background_color || '#1f2430',
@@ -936,6 +940,26 @@ export default function Settings({ settings, templateStatus = {} }) {
                   </div>
                 </div>
 
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-gray-50">
+                    <h3 className="font-bold text-gray-900"><svg className="w-4 h-4 text-orange-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h7"/></svg> Category Product Sections</h3>
+                    <a href="/" target="_blank" rel="noreferrer" className="text-xs text-orange-500 hover:underline">Preview Homepage â†—</a>
+                  </div>
+                  <p className="text-xs text-gray-400">Global homepage control for category-based product rails such as Other's. Manage each section's products from Admin â†’ Products by assigning products to categories.</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <label className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                      <input type="checkbox" checked={data.homepage_category_sections_enabled} onChange={e => setData('homepage_category_sections_enabled', e.target.checked)} className={checkboxClass} />
+                      <span className="text-sm font-medium text-gray-700">Show category product sections on homepage</span>
+                    </label>
+                    <Field label="Product order" error={errors.homepage_category_product_order}>
+                      <select value={data.homepage_category_product_order} onChange={e => setData('homepage_category_product_order', e.target.value)} className={inputClass}>
+                        <option value="newest">Keep newest first</option>
+                        <option value="shuffle">Shuffle on each refresh</option>
+                      </select>
+                    </Field>
+                  </div>
+                </div>
+
                 {/* Flash Sale Countdown */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
                   <div className="flex items-center justify-between pb-3 border-b border-gray-50">
@@ -945,10 +969,26 @@ export default function Settings({ settings, templateStatus = {} }) {
                       <a href="/" target="_blank" rel="noreferrer" className="text-xs text-gray-400 hover:underline">Preview ↗</a>
                     </div>
                   </div>
-                  <Field label="Deal Ends At (countdown timer)" error={errors.deal_ends_at}>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <label className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                      <input type="checkbox" checked={data.homepage_flash_sale_enabled} onChange={e => setData('homepage_flash_sale_enabled', e.target.checked)} className={checkboxClass} />
+                      <span className="text-sm font-medium text-gray-700">Show Flash Sale section on homepage</span>
+                    </label>
+                    <Field label="Homepage product limit" error={errors.homepage_flash_sale_limit}>
+                      <input type="number" min="1" max="48" value={data.homepage_flash_sale_limit} onChange={e => setData('homepage_flash_sale_limit', e.target.value)} className={inputClass} />
+                    </Field>
+                    <Field label="Product order" error={errors.homepage_flash_sale_order}>
+                      <select value={data.homepage_flash_sale_order} onChange={e => setData('homepage_flash_sale_order', e.target.value)} className={inputClass}>
+                        <option value="manual">Manual order from Flash Sale manager</option>
+                        <option value="newest">Newest flash products first</option>
+                      </select>
+                    </Field>
+                  </div>
+                  <p className="text-xs text-gray-400">Timer and product membership are managed from Flash Sale. These settings control how the section appears on both templates.</p>
+                  {false && <Field label="Deal Ends At (countdown timer)" error={errors.deal_ends_at}>
                     <input type="datetime-local" value={data.deal_ends_at} onChange={e => setData('deal_ends_at', e.target.value)} className={inputClass} />
-                  </Field>
-                  <p className="text-xs text-gray-400">⚠ This sets a global countdown shown on flash sale sections. Leave blank to hide the timer.</p>
+                  </Field>}
+                  {false && <p className="text-xs text-gray-400">⚠ This sets a global countdown shown on flash sale sections. Leave blank to hide the timer.</p>}
                 </div>
 
                 {/* Footer description is managed only in Brand & General. */}
@@ -1267,21 +1307,15 @@ export default function Settings({ settings, templateStatus = {} }) {
                       </div>
                       <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-4">
                         <div>
-                          <h4 className="text-sm font-bold text-gray-900">Template-2 Category Product Layout</h4>
-                          <p className="text-xs text-gray-500 mt-1">Control the category product grid, shop pagination, and category-section order on each homepage reload.</p>
+                          <h4 className="text-sm font-bold text-gray-900">Template-2 Product Listing Layout</h4>
+                          <p className="text-xs text-gray-500 mt-1">Control Template-2 product grid density and shop pagination. Homepage category sections are managed globally from Homepage Config.</p>
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <Field label="Products Per Row" error={errors.template_2_product_per_row}>
                             <input type="number" min="2" max="6" value={data.template_2_product_per_row} onChange={e => setData('template_2_product_per_row', e.target.value)} className={inputClass} />
                           </Field>
                           <Field label="Products Per Page" error={errors.template_2_products_per_page}>
                             <input type="number" min="1" max="48" value={data.template_2_products_per_page} onChange={e => setData('template_2_products_per_page', e.target.value)} className={inputClass} />
-                          </Field>
-                          <Field label="Refresh order" error={errors.template_2_category_product_order}>
-                            <select value={data.template_2_category_product_order} onChange={e => setData('template_2_category_product_order', e.target.value)} className={inputClass}>
-                              <option value="newest">Keep newest first</option>
-                              <option value="shuffle">Shuffle on each refresh</option>
-                            </select>
                           </Field>
                         </div>
                       </div>

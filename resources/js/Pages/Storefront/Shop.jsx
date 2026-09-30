@@ -110,11 +110,11 @@ export default function ShopPage({
   );
 
   const productGridClasses = {
-    2: 'grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2',
-    3: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3',
-    4: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4',
-    5: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5',
-    6: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6',
+    2: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2',
+    3: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3',
+    4: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4',
+    5: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5',
+    6: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6',
   };
   const configuredProductPerRow = Number(app?.settings?.[isTemplateOne ? 'template_1_product_per_row' : 'template_2_product_per_row'] || 5);
   const productGridClass = productGridClasses[configuredProductPerRow] || productGridClasses[5];

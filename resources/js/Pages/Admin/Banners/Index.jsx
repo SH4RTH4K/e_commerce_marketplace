@@ -27,6 +27,7 @@ export default function BannersIndex({ banners, placements }) {
 
   const placementLabel = (key) => {
     if (key === 'hero') return 'Hero Slider';
+    if (key === 'hero_side') return 'Hero Side Promo';
     if (key === 'middle') return 'Middle Banner';
     return placements?.[key] || key;
   };

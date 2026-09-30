@@ -563,16 +563,16 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
       
       <main className="storefront-product-page max-w-[1440px] mx-auto w-full px-4 sm:px-5 py-6 overflow-x-hidden">
         {/* Breadcrumb */}
-        <nav className="text-sm text-gray-500 mb-5 flex flex-wrap items-center gap-2">
-          <Link href="/" className="hover:text-[#f15a24] transition-colors">Home</Link>
+        <nav className="text-sm text-gray-500 mb-5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 break-words">
+          <Link href="/" className="shrink-0 hover:text-[#f15a24] transition-colors">Home</Link>
           <span className="text-gray-300">/</span>
           {product.category && (
             <>
-              <Link href={`/category/${product.category.slug}`} className="hover:text-[#f15a24] transition-colors">{product.category.name}</Link>
+              <Link href={`/category/${product.category.slug}`} className="min-w-0 max-w-full break-words hover:text-[#f15a24] transition-colors">{product.category.name}</Link>
               <span className="text-gray-300">/</span>
             </>
           )}
-          <span className="text-gray-900 font-medium truncate max-w-[200px] sm:max-w-md">{product.name}</span>
+          <span className="storefront-product-breadcrumb-name basis-full min-w-0 max-w-full text-gray-900 font-medium break-words whitespace-normal sm:basis-auto sm:max-w-md">{product.name}</span>
         </nav>
 
         {/* Product Details Grid */}
@@ -1103,7 +1103,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
                 View more <span aria-hidden="true">&rarr;</span>
               </Link>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
               {related.map(rel => (
                 <ProductCard key={rel.id} product={rel} />
               ))}

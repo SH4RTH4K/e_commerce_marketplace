@@ -8,7 +8,9 @@ use App\Models\Feature;
 use App\Models\Order;
 use App\Models\ProductReview;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Inertia\Middleware;
+use Throwable;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -160,6 +162,12 @@ class HandleInertiaRequests extends Middleware
                     'template_1_overview_featured_count' => (int) setting('template_1_overview_featured_count', '12'),
                     'template_1_overview_new_count' => (int) setting('template_1_overview_new_count', '12'),
                     'template_1_overview_best_count' => (int) setting('template_1_overview_best_count', '12'),
+                    'homepage_category_sections_enabled' => setting('homepage_category_sections_enabled', '1') === '1',
+                    'homepage_category_product_order' => setting('homepage_category_product_order', setting('template_2_category_product_order', 'newest')),
+                    'homepage_flash_sale_enabled' => setting('homepage_flash_sale_enabled', '1') === '1',
+                    'homepage_flash_sale_limit' => (int) setting('homepage_flash_sale_limit', '10'),
+                    'homepage_flash_sale_order' => setting('homepage_flash_sale_order', 'manual'),
+                    'flash_sale_ends_at' => setting('flash_sale_ends_at', ''),
                     'theme_typography_template_1' => $this->typographySettings('template-1'),
                     'theme_typography_template_2' => $this->typographySettings('template-2'),
                     'template_2_footer_config' => setting('template_2_footer_config', ''),
@@ -250,7 +258,11 @@ class HandleInertiaRequests extends Middleware
                 ->get(['id', 'name', 'slug', 'parent_id', 'icon', 'image'])
                 ->values()
                 ->toArray(),
-            'hasFlashSale' => fn () => $isAdmin ? false : \App\Models\Product::published()->where('is_flash_sale', true)->exists(),
+            'hasFlashSale' => fn () => $isAdmin
+                ? false
+                : setting('homepage_flash_sale_enabled', '1') === '1'
+                    && $this->flashSaleTimerActive()
+                    && \App\Models\Product::published()->where('is_flash_sale', true)->exists(),
             'promoText' => fn () => $isAdmin ? '' : setting('header_promo_text', ''),
             'promoLink' => fn () => $isAdmin ? '' : setting('header_promo_link', ''),
             'popup' => fn () => $isAdmin ? ['enabled' => false] : [
@@ -272,5 +284,20 @@ class HandleInertiaRequests extends Middleware
         $saved = json_decode((string) $raw, true);
 
         return array_replace_recursive(self::TYPOGRAPHY_DEFAULTS[$template], is_array($saved) ? $saved : []);
+    }
+
+    private function flashSaleTimerActive(): bool
+    {
+        $endsAt = trim((string) setting('flash_sale_ends_at', ''));
+
+        if ($endsAt === '') {
+            return true;
+        }
+
+        try {
+            return Carbon::parse($endsAt)->isFuture();
+        } catch (Throwable) {
+            return true;
+        }
     }
 }

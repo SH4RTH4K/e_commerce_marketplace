@@ -33,7 +33,7 @@ class MediaController extends Controller
             'inactive', 'unpublished' => 'unpublished',
             default => 'all',
         };
-        $bannerUsageFilter = in_array($bannerUsageFilter, ['all', 'hero', 'middle'], true)
+        $bannerUsageFilter = in_array($bannerUsageFilter, ['all', 'hero', 'hero_side', 'middle'], true)
             ? $bannerUsageFilter
             : 'all';
         $stockOperator = in_array($stockOperator, ['any', 'in_stock', 'out_of_stock', 'gt', 'gte', 'eq', 'lte', 'lt'], true)
@@ -275,7 +275,11 @@ class MediaController extends Controller
             }
         });
 
-        $type = $data['placement'] === 'hero' ? 'hero slider' : 'middle banner';
+        $type = match ($data['placement']) {
+            'hero' => 'hero slider',
+            'hero_side' => 'hero side promo',
+            default => 'middle banner',
+        };
 
         if ($createdCount === 0) {
             return back()->withErrors([

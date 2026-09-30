@@ -7,37 +7,54 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Setting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Throwable;
 
 class FlashSaleController extends Controller
 {
     public function index(Request $request)
     {
-        $flashProducts = Product::with('images', 'category')
+        $search = trim((string) $request->input('q', ''));
+
+        $flashProducts = Product::with('images', 'category', 'supplierLinks.supplierProduct.supplier')
             ->where('is_flash_sale', true)
             ->orderBy('flash_sale_position')
             ->orderBy('id')
             ->get();
 
-        $available = Product::with('images', 'category')
+        $available = Product::with('images', 'category', 'supplierLinks.supplierProduct.supplier')
             ->published()
             ->where('is_flash_sale', false)
-            ->when($request->filled('q'), function ($q) use ($request) {
-                $term = trim((string) $request->input('q'));
-                $q->where(function ($inner) use ($term) {
-                    $inner->where('name', 'like', "%{$term}%")
-                        ->orWhere('sku', 'like', "%{$term}%")
-                        ->orWhere('brand', 'like', "%{$term}%");
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('name', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%")
+                        ->orWhere('brand', 'like', "%{$search}%")
+                        ->orWhereHas('supplierLinks.supplierProduct', function ($supplierProduct) use ($search) {
+                            $supplierProduct->where('name', 'like', "%{$search}%")
+                                ->orWhere('product_code', 'like', "%{$search}%")
+                                ->orWhere('supplier_product_id', 'like', "%{$search}%")
+                                ->orWhere('supplier_category_key', 'like', "%{$search}%")
+                                ->orWhere('brand', 'like', "%{$search}%")
+                                ->orWhereHas('supplier', function ($supplier) use ($search) {
+                                    $supplier->where('name', 'like', "%{$search}%")
+                                        ->orWhere('key', 'like', "%{$search}%");
+                                });
+                        });
                 });
             })
             ->latest()
             ->paginate(12)
             ->withQueryString();
 
+        $endsAt = setting('flash_sale_ends_at');
+
         return Inertia::render('Admin/FlashSale/Index', [
             'flashProducts' => $flashProducts,
             'available'     => $available,
             'q'             => $request->input('q'),
-            'endsAt'        => setting('flash_sale_ends_at'),
+            'endsAt'        => $endsAt,
+            'timerExpired'  => $this->timerExpired($endsAt),
             'homepageLimit' => 5,
         ]);
     }
@@ -45,7 +62,7 @@ class FlashSaleController extends Controller
     public function updateEndsAt(Request $request)
     {
         $data = $request->validate([
-            'flash_sale_ends_at' => ['nullable', 'date'],
+            'flash_sale_ends_at' => ['nullable', 'date', 'after:now'],
         ]);
 
         $raw = (string) ($data['flash_sale_ends_at'] ?? '');
@@ -133,5 +150,20 @@ class FlashSaleController extends Controller
         }
 
         return back()->with('status', 'Flash sale order updated.');
+    }
+
+    private function timerExpired(?string $endsAt): bool
+    {
+        $value = trim((string) $endsAt);
+
+        if ($value === '') {
+            return false;
+        }
+
+        try {
+            return Carbon::parse($value)->isPast();
+        } catch (Throwable) {
+            return false;
+        }
     }
 }

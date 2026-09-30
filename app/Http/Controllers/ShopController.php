@@ -7,6 +7,8 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Throwable;
 
 class ShopController extends Controller
 {
@@ -40,11 +42,15 @@ class ShopController extends Controller
 
         // Flash Sale page: only flash products, ordered by admin flash-sale order
         $isFlashPage = $request->boolean('flash');
+        $flashSaleActive = $this->flashSaleTimerActive();
         if ($isFlashPage) {
             $query->where('is_flash_sale', true);
+            if (! $flashSaleActive) {
+                $query->whereRaw('1 = 0');
+            }
         } elseif ($request->boolean('on_sale')) {
-            $query->where(function ($q) {
-                $q->where('is_flash_sale', true)
+            $query->where(function ($q) use ($flashSaleActive) {
+                $q->when($flashSaleActive, fn ($flashQuery) => $flashQuery->where('is_flash_sale', true))
                     ->orWhere(function ($q2) {
                         $q2->whereNotNull('sale_price')
                             ->whereColumn('sale_price', '<', 'regular_price');
@@ -198,5 +204,20 @@ class ShopController extends Controller
                 'robots' => $term || $request->query->count() > 0 ? 'noindex,follow' : 'index,follow',
             ],
         ]);
+    }
+
+    private function flashSaleTimerActive(): bool
+    {
+        $endsAt = trim((string) setting('flash_sale_ends_at', ''));
+
+        if ($endsAt === '') {
+            return true;
+        }
+
+        try {
+            return Carbon::parse($endsAt)->isFuture();
+        } catch (Throwable) {
+            return true;
+        }
     }
 }

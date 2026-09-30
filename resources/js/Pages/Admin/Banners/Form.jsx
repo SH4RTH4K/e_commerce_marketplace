@@ -137,7 +137,7 @@ export default function BannerForm({ banner, placements, styles, products = [] }
                 <input type="number" min="0" value={data.position} onChange={e => setData('position', e.target.value)} className={inputClass} />
               </Field>
             </div>
-            {['hero', 'middle'].includes(data.placement) && (
+            {['hero', 'hero_side', 'middle'].includes(data.placement) && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
                 <Field label="Text & Button Position" error={errors.text_position}>
                   <select value={data.text_position} onChange={e => setData('text_position', e.target.value)} className={inputClass}>
@@ -156,7 +156,7 @@ export default function BannerForm({ banner, placements, styles, products = [] }
                     <option value="square">Square — show full image</option>
                   </select>
                 </Field>
-                <p className="sm:col-span-3 text-xs text-indigo-700">Landscape fills the banner and uses Image Focus Area for cropping. Portrait and Square show the complete image without cutting it off. These settings apply to both Hero Slider slides and Middle Banners.</p>
+                <p className="sm:col-span-3 text-xs text-indigo-700">Landscape fills the banner and uses Image Focus Area for cropping. Portrait and Square show the complete image without cutting it off. These settings apply to Hero Slider, Hero Side Promo, and Middle Banners.</p>
                 <div className="sm:col-span-3 overflow-hidden rounded-xl border border-indigo-200 bg-slate-100">
                   <div className="flex items-center justify-between border-b border-indigo-100 bg-white px-3 py-2">
                     <p className="text-xs font-bold uppercase tracking-wide text-indigo-800">Live placement preview</p>

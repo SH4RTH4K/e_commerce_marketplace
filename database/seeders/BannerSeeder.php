@@ -9,8 +9,8 @@ class BannerSeeder extends Seeder
 {
     public function run(): void
     {
-        // Homepage uses placement "hero" only (slider). Remove unused legacy placements.
-        Banner::whereIn('placement', ['hero_side', 'promo', 'deals'])->delete();
+        // Homepage uses managed banner placements. Remove only retired legacy placements.
+        Banner::whereIn('placement', ['promo', 'deals'])->delete();
 
         $banners = [
             [

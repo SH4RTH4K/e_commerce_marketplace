@@ -76,7 +76,7 @@ export default function ProductCard({ product }) {
     backgroundColor: inStock ? btnBg : '#b7bfed',
     color: btnTextColor,
   };
-  const buttonClassName = 'storefront-product-button w-full rounded-xl text-[11px] sm:text-[13px] font-bold py-2.5 sm:py-3 transition-all hover:brightness-95 active:scale-[0.99] flex items-center justify-center gap-1.5 shadow-sm text-center';
+  const buttonClassName = 'storefront-product-button w-full min-w-0 rounded-xl text-[11px] sm:text-[13px] font-bold py-2.5 sm:py-3 transition-all hover:brightness-95 active:scale-[0.99] flex items-center justify-center gap-1.5 shadow-sm text-center';
   const previewCart = (e) => {
     e.preventDefault();
     window.dispatchEvent(new Event('open-cart-drawer'));
@@ -84,7 +84,7 @@ export default function ProductCard({ product }) {
 
   return (
     <article 
-      className={`product-card storefront-product-card relative flex flex-col h-full min-w-0 transition-all group ${isTemplateOne ? 'template-1-product-card' : 'rounded-[20px] border border-gray-100 shadow-sm p-2 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]'}`}
+      className={`product-card storefront-product-card relative flex flex-col h-full min-w-0 max-w-full overflow-hidden transition-all group ${isTemplateOne ? 'template-1-product-card' : 'rounded-[20px] border border-gray-100 shadow-sm p-2 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]'}`}
       style={{ backgroundColor: cardBg }}
     >
       <div className="relative shrink-0 aspect-square">
@@ -141,7 +141,7 @@ export default function ProductCard({ product }) {
           {product.category?.name || 'Category'}
         </span>
         
-        <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex min-w-0 items-start justify-between gap-3 mb-4">
           <div className="min-w-0 flex-1">
             <Link
               href={`/product/${product.url_key || product.slug || product.id}`}
@@ -176,7 +176,7 @@ export default function ProductCard({ product }) {
               <svg className="w-4 h-4 sm:w-[18px] sm:h-[18px] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
               </svg>
-              <span>{inStock ? buyText : 'Out of Stock'}</span>
+              <span className="min-w-0 truncate">{inStock ? buyText : 'Out of Stock'}</span>
             </Link>
           ) : (
             <button 
@@ -199,7 +199,7 @@ export default function ProductCard({ product }) {
               <svg className="w-4 h-4 sm:w-[18px] sm:h-[18px] shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
               </svg>
-              <span>{inStock ? buyText : 'Out of Stock'}</span>
+              <span className="min-w-0 truncate">{inStock ? buyText : 'Out of Stock'}</span>
             </button>
           )}
         </div>
