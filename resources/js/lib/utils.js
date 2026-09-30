@@ -8,13 +8,29 @@ export function classNames(...classes) {
 
 export function imageUrl(path, seed = 'SHARTHAK') {
   if (path) {
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return 'https://wsrv.nl/?url=' + encodeURIComponent(path) + '&w=1200&q=75&output=webp';
+    const value = String(path).trim();
+
+    if (value.startsWith('//')) {
+      return 'https:' + value;
     }
-    if (path.startsWith('/uploads/') || path.startsWith('uploads/')) {
-      return path.startsWith('/') ? path : '/' + path;
+
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return value.replace(/^http:\/\//i, 'https://');
     }
-    return path.startsWith('/') ? '/storage' + path : '/storage/' + path;
+
+    if (value.startsWith('/uploads/') || value.startsWith('uploads/')) {
+      return value.startsWith('/') ? value : '/' + value;
+    }
+
+    if (value.startsWith('/storage/') || value.startsWith('storage/')) {
+      return value.startsWith('/') ? value : '/' + value;
+    }
+
+    if (value.startsWith('/public/storage/') || value.startsWith('public/storage/')) {
+      return '/' + value.replace(/^\/?public\//, '');
+    }
+
+    return value.startsWith('/') ? '/storage' + value : '/storage/' + value;
   }
   
   const label = (seed || 'No image').substring(0, 28);

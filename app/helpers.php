@@ -367,13 +367,30 @@ if (! function_exists('image_url')) {
     function image_url(?string $path, string $seed = 'SHARTHAK'): string
     {
         if ($path) {
-            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-                return 'https://wsrv.nl/?url=' . rawurlencode($path) . '&w=1200&q=75&output=webp';
+            $path = trim($path);
+
+            if (str_starts_with($path, '//')) {
+                return 'https:' . $path;
             }
+
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                return preg_replace('/^http:\/\//i', 'https://', $path);
+            }
+
             // Direct public uploads (e.g. uploads/products/abc.jpg)
             if (str_starts_with($path, '/uploads/') || str_starts_with($path, 'uploads/')) {
                 return asset(ltrim($path, '/'));
             }
+
+            // Existing records may already contain a public storage path.
+            if (str_starts_with($path, '/storage/') || str_starts_with($path, 'storage/')) {
+                return asset(ltrim($path, '/'));
+            }
+
+            if (str_starts_with($path, '/public/storage/') || str_starts_with($path, 'public/storage/')) {
+                return asset(preg_replace('#^/?public/#', '', $path));
+            }
+
             return asset('storage/' . ltrim($path, '/'));
         }
 
