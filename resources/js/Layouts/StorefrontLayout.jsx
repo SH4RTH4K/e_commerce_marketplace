@@ -538,6 +538,13 @@ export default function StorefrontLayout({ children, title, description, activeC
       {isTemplateOne ? (
         <footer className="storefront-footer-area template-1-footer">
           <div className="template-1-container">
+            <div className="template-1-footer-newsletter">
+              <h4>Newsletter</h4>
+              <form onSubmit={e => e.preventDefault()} className="template-1-newsletter">
+                <input type="email" placeholder="email@example.com" />
+                <button type="submit">Subscribe</button>
+              </form>
+            </div>
             <div className="template-1-footer-grid">
               <div>
                 <h4>Categories</h4>
@@ -587,13 +594,6 @@ export default function StorefrontLayout({ children, title, description, activeC
                   )}
                 </div>
               </div>
-              <div>
-                <h4>Newsletter</h4>
-                <form onSubmit={e => e.preventDefault()} className="template-1-newsletter">
-                  <input type="email" placeholder="email@example.com" />
-                  <button type="submit">Subscribe</button>
-                </form>
-              </div>
             </div>
             <div className="template-1-footer-bottom flex flex-wrap items-center justify-between gap-3">
               {showCopyright && (copyrightUrl ? (
@@ -629,6 +629,28 @@ export default function StorefrontLayout({ children, title, description, activeC
           </div>
         </div>}
 
+        {templateTwoFooter.show_stats !== false && <div className="template-2-footer-stats">
+          <div className="template-2-footer-shell">
+            <h3>{templateTwoFooter.stats_title}</h3>
+            <div>
+              {templateTwoFooter.stats.map((stat, index) => <p key={`${stat.title}-${index}`}><strong>{stat.title}</strong><span>{stat.text}</span></p>)}
+            </div>
+          </div>
+        </div>}
+
+        {templateTwoFooter.show_newsletter !== false && <div className="template-2-footer-newsletter">
+          <div className="template-2-footer-shell template-2-footer-newsletter-grid">
+            <div><h3>{templateTwoFooter.newsletter_title}</h3><p>{templateTwoFooter.newsletter_text}</p></div>
+            <form onSubmit={event => event.preventDefault()}><label className="sr-only" htmlFor="template-2-newsletter">Email address</label><input id="template-2-newsletter" type="email" placeholder={templateTwoFooter.newsletter_placeholder} /><button type="submit">{templateTwoFooter.newsletter_button}</button></form>
+            <div className="template-2-footer-socials">
+              {chatSettings.facebook_url?.trim() && <a href={chatSettings.facebook_url.trim()} target="_blank" rel="noreferrer" aria-label="Facebook">f</a>}
+              {chatSettings.instagram_url?.trim() && <a href={chatSettings.instagram_url.trim()} target="_blank" rel="noreferrer" aria-label="Instagram">◎</a>}
+              {chatSettings.twitter_url?.trim() && <a href={chatSettings.twitter_url.trim()} target="_blank" rel="noreferrer" aria-label="X">𝕏</a>}
+              {chatSettings.youtube_url?.trim() && <a href={chatSettings.youtube_url.trim()} target="_blank" rel="noreferrer" aria-label="YouTube">▶</a>}
+            </div>
+          </div>
+        </div>}
+
         <div className="template-2-footer-main">
           <div className="template-2-footer-shell template-2-footer-columns">
             <div className="template-2-footer-about">
@@ -658,28 +680,6 @@ export default function StorefrontLayout({ children, title, description, activeC
             </div>
           </div>
         </div>
-
-        {templateTwoFooter.show_stats !== false && <div className="template-2-footer-stats">
-          <div className="template-2-footer-shell">
-            <h3>{templateTwoFooter.stats_title}</h3>
-            <div>
-              {templateTwoFooter.stats.map((stat, index) => <p key={`${stat.title}-${index}`}><strong>{stat.title}</strong><span>{stat.text}</span></p>)}
-            </div>
-          </div>
-        </div>}
-
-        {templateTwoFooter.show_newsletter !== false && <div className="template-2-footer-newsletter">
-          <div className="template-2-footer-shell template-2-footer-newsletter-grid">
-            <div><h3>{templateTwoFooter.newsletter_title}</h3><p>{templateTwoFooter.newsletter_text}</p></div>
-            <form onSubmit={event => event.preventDefault()}><label className="sr-only" htmlFor="template-2-newsletter">Email address</label><input id="template-2-newsletter" type="email" placeholder={templateTwoFooter.newsletter_placeholder} /><button type="submit">{templateTwoFooter.newsletter_button}</button></form>
-            <div className="template-2-footer-socials">
-              {chatSettings.facebook_url?.trim() && <a href={chatSettings.facebook_url.trim()} target="_blank" rel="noreferrer" aria-label="Facebook">f</a>}
-              {chatSettings.instagram_url?.trim() && <a href={chatSettings.instagram_url.trim()} target="_blank" rel="noreferrer" aria-label="Instagram">◎</a>}
-              {chatSettings.twitter_url?.trim() && <a href={chatSettings.twitter_url.trim()} target="_blank" rel="noreferrer" aria-label="X">𝕏</a>}
-              {chatSettings.youtube_url?.trim() && <a href={chatSettings.youtube_url.trim()} target="_blank" rel="noreferrer" aria-label="YouTube">▶</a>}
-            </div>
-          </div>
-        </div>}
 
         <div className="template-2-footer-bottom">
           <div className="template-2-footer-shell">
