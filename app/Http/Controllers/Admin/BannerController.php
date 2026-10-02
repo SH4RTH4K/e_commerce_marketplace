@@ -7,20 +7,102 @@ use Inertia\Inertia;
 
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
+use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Support\PublicUploader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class BannerController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $banners = Banner::orderBy('placement')->orderBy('position')->orderBy('id')->get();
+        $search = trim((string) $request->input('q', ''));
+        $category = $request->input('category');
+        $productStatus = $request->input('status', $request->input('product_status', 'all'));
+        $imageType = $request->input('image_type', $request->input('filter', 'all'));
+        $bannerUsageFilter = $request->input('banner_usage', $request->input('placement', 'all'));
+        $stockOperator = $request->input('stock_operator', 'any');
+        $stockValue = $request->input('stock_value');
+        $perPage = (int) $request->input('per_page', 24);
+
+        $category = is_numeric($category) ? (int) $category : null;
+        $productStatus = match ($productStatus) {
+            'active', 'published' => 'published',
+            'inactive', 'unpublished' => 'unpublished',
+            default => 'all',
+        };
+        $imageType = in_array($imageType, ['all', 'primary'], true) ? $imageType : 'all';
+        $bannerUsageFilter = in_array($bannerUsageFilter, array_keys(Banner::PLACEMENTS), true) ? $bannerUsageFilter : 'all';
+        $stockOperator = in_array($stockOperator, ['any', 'in_stock', 'out_of_stock', 'gt', 'gte', 'eq', 'lte', 'lt'], true)
+            ? $stockOperator
+            : 'any';
+        $stockValue = is_numeric($stockValue) ? max(0, min(1000000, (int) $stockValue)) : null;
+        $perPage = in_array($perPage, [24, 48, 100], true) ? $perPage : 24;
+
+        $query = Banner::with('product.category')
+            ->when($search !== '', function ($q) use ($search) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('title', 'like', "%{$search}%")
+                        ->orWhere('subtitle', 'like', "%{$search}%")
+                        ->orWhere('badge', 'like', "%{$search}%")
+                        ->orWhere('button_text', 'like', "%{$search}%")
+                        ->orWhere('link_url', 'like', "%{$search}%")
+                        ->orWhere('image', 'like', "%{$search}%")
+                        ->orWhereIn('image', ProductImage::query()
+                            ->select('path')
+                            ->where('alt', 'like', "%{$search}%"))
+                        ->orWhereHas('product', function ($product) use ($search) {
+                            $product->where('name', 'like', "%{$search}%")
+                                ->orWhere('sku', 'like', "%{$search}%")
+                                ->orWhere('brand', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->when($category, fn ($q) => $q->whereHas('product', fn ($product) => $product->where('category_id', $category)))
+            ->when($productStatus === 'published', fn ($q) => $q->whereHas('product', fn ($product) => $product->where('is_published', true)))
+            ->when($productStatus === 'unpublished', fn ($q) => $q->whereHas('product', fn ($product) => $product->where('is_published', false)))
+            ->when($imageType === 'primary', fn ($q) => $q->whereIn('image', ProductImage::query()
+                ->select('path')
+                ->where('is_primary', true)))
+            ->when($bannerUsageFilter !== 'all', fn ($q) => $q->where('placement', $bannerUsageFilter))
+            ->when($stockOperator === 'in_stock', function ($q) {
+                $q->whereHas('product', fn ($product) => $product->where(function ($stockQuery) {
+                    $stockQuery->where('stock_quantity', '>', 0)
+                        ->orWhereHas('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0));
+                }));
+            })
+            ->when($stockOperator === 'out_of_stock', function ($q) {
+                $q->whereHas('product', fn ($product) => $product
+                    ->where('stock_quantity', '<=', 0)
+                    ->whereDoesntHave('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0)));
+            })
+            ->when($stockValue !== null && in_array($stockOperator, ['gt', 'gte', 'eq', 'lte', 'lt'], true), function ($q) use ($stockOperator, $stockValue) {
+                $operator = ['gt' => '>', 'gte' => '>=', 'eq' => '=', 'lte' => '<=', 'lt' => '<'][$stockOperator];
+                $q->whereHas('product', fn ($product) => $product->where('stock_quantity', $operator, $stockValue));
+            })
+            ->orderBy('placement')
+            ->orderBy('position')
+            ->orderBy('id');
+
+        $banners = $query->paginate($perPage)->withQueryString();
 
         return Inertia::render('Admin/Banners/Index', [
             'banners'    => $banners,
             'placements' => Banner::PLACEMENTS,
+            'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'filters'    => [
+                'q'              => $search,
+                'category'       => $category,
+                'product_status' => $productStatus,
+                'image_type'     => $imageType,
+                'banner_usage'   => $bannerUsageFilter,
+                'stock_operator' => $stockOperator,
+                'stock_value'    => $stockValue,
+                'per_page'       => $perPage,
+            ],
+            'total'      => Banner::count(),
         ]);
     }
 

@@ -9,21 +9,27 @@ const positionOptions = [
   ['bottom-left', 'Bottom - Left'], ['bottom-center', 'Bottom - Center'], ['bottom-right', 'Bottom - Right'],
 ];
 
-export default function BannersIndex({ banners, placements }) {
+export default function BannersIndex({ banners, placements, categories = [], filters = {}, total = 0 }) {
   const [selected, setSelected] = useState([]);
   const [textPosition, setTextPosition] = useState('center-left');
   const [imagePosition, setImagePosition] = useState('center-center');
   const [imageOrientation, setImageOrientation] = useState('landscape');
-  const [search, setSearch] = useState('');
-  const [placementFilter, setPlacementFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [appliedSearch, setAppliedSearch] = useState('');
-  const [appliedPlacement, setAppliedPlacement] = useState('all');
-  const [appliedStatus, setAppliedStatus] = useState('all');
+  const [search, setSearch] = useState(filters.q || '');
+  const [categoryFilter, setCategoryFilter] = useState(filters.category || '');
+  const [productStatus, setProductStatus] = useState(filters.product_status || 'all');
+  const [imageType, setImageType] = useState(filters.image_type || 'all');
+  const [bannerUsage, setBannerUsage] = useState(filters.banner_usage || 'all');
+  const [stockOperator, setStockOperator] = useState(filters.stock_operator || 'any');
+  const [stockValue, setStockValue] = useState(filters.stock_value ?? '');
+  const [rowsPerPage, setRowsPerPage] = useState(String(filters.per_page || 24));
   const handleToggle = (id) => router.patch(`/admin/banners/${id}/toggle`);
   const handleDelete = (banner) => {
     window.showConfirm(`Delete "${banner.title || 'this banner'}" permanently?`, () => { router.delete(`/admin/banners/${banner.id}`); });
   };
+  const bannerRows = Array.isArray(banners) ? banners : (banners?.data || []);
+  const shownCount = bannerRows.length;
+  const filteredCount = Number(banners?.total ?? shownCount);
+  const grandTotal = Number(total || filteredCount);
 
   const placementLabel = (key) => {
     if (key === 'hero') return 'Hero Slider';
@@ -31,44 +37,46 @@ export default function BannersIndex({ banners, placements }) {
     if (key === 'middle') return 'Middle Banner';
     return placements?.[key] || key;
   };
-  const normalizedSearch = appliedSearch.trim().toLowerCase();
-  const filteredBanners = (banners || []).filter(banner => {
-    const matchesSearch = !normalizedSearch || [
-      banner.title,
-      banner.subtitle,
-      banner.badge,
-      banner.button_text,
-      banner.link_url,
-      placementLabel(banner.placement),
-    ].some(value => String(value || '').toLowerCase().includes(normalizedSearch));
-    const matchesPlacement = appliedPlacement === 'all' || banner.placement === appliedPlacement;
-    const matchesStatus = appliedStatus === 'all'
-      || (appliedStatus === 'active' && banner.is_active)
-      || (appliedStatus === 'hidden' && !banner.is_active);
-
-    return matchesSearch && matchesPlacement && matchesStatus;
-  });
-  const filteredIds = filteredBanners.map(banner => banner.id);
+  const filteredIds = bannerRows.map(banner => banner.id);
   const allFilteredSelected = filteredIds.length > 0 && filteredIds.every(id => selected.includes(id));
   const toggleSelected = (id) => setSelected(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
   const selectAll = () => setSelected(current => [...new Set([...current, ...filteredIds])]);
   const clearFilteredSelection = () => setSelected(current => current.filter(id => !filteredIds.includes(id)));
   const clearSelected = () => setSelected([]);
+  const cleanPayload = (payload) => Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== '' && value !== null && value !== undefined));
+  const numericStockOperators = ['gt', 'gte', 'eq', 'lte', 'lt'];
+  const filterPayload = () => ({
+    q: search,
+    category: categoryFilter,
+    product_status: productStatus,
+    image_type: imageType,
+    banner_usage: bannerUsage,
+    stock_operator: stockOperator,
+    stock_value: numericStockOperators.includes(stockOperator) ? stockValue : '',
+    per_page: rowsPerPage,
+  });
   const applyFilters = (event) => {
     event.preventDefault();
-    setAppliedSearch(search);
-    setAppliedPlacement(placementFilter);
-    setAppliedStatus(statusFilter);
-    clearSelected();
+    router.get('/admin/banners', cleanPayload(filterPayload()), {
+      preserveState: true,
+      preserveScroll: true,
+      onSuccess: () => clearSelected(),
+    });
   };
   const resetFilters = () => {
     setSearch('');
-    setPlacementFilter('all');
-    setStatusFilter('all');
-    setAppliedSearch('');
-    setAppliedPlacement('all');
-    setAppliedStatus('all');
-    clearSelected();
+    setCategoryFilter('');
+    setProductStatus('all');
+    setImageType('all');
+    setBannerUsage('all');
+    setStockOperator('any');
+    setStockValue('');
+    setRowsPerPage('24');
+    router.get('/admin/banners', {}, {
+      preserveState: true,
+      preserveScroll: true,
+      onSuccess: () => clearSelected(),
+    });
   };
   const updateSelectedStatus = (bulkAction) => {
     if (selected.length === 0) return;
@@ -109,40 +117,73 @@ export default function BannersIndex({ banners, placements }) {
           <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
             <form onSubmit={applyFilters} className="flex flex-wrap items-end gap-3">
               <label className="min-w-[220px] flex-1">
-                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Search banners</span>
-                <div className="relative">
-                  <svg className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                    <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
-                  </svg>
-                  <input
-                    type="search"
-                    value={search}
-                    onChange={event => setSearch(event.target.value)}
-                    placeholder="Title, subtitle, button, or link"
-                    className="w-full rounded-xl border border-gray-200 py-2.5 pl-10 pr-3.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange-300"
-                  />
-                </div>
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Search media or products</span>
+                <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Name, SKU, or image alt text"
+                  className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange-300" />
               </label>
-              <label className="min-w-[180px]">
-                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Placement</span>
-                <select value={placementFilter} onChange={event => setPlacementFilter(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-orange-300">
-                  <option value="all">All placements</option>
-                  {Object.keys(placements || {}).map(key => <option key={key} value={key}>{placementLabel(key)}</option>)}
+              <label className="min-w-[150px]">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Category</span>
+                <select value={categoryFilter} onChange={event => setCategoryFilter(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-orange-300">
+                  <option value="">All categories</option>
+                  {categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}
+                </select>
+              </label>
+              <label className="min-w-[150px]">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Status</span>
+                <select value={productStatus} onChange={event => setProductStatus(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-orange-300">
+                  <option value="all">All statuses</option>
+                  <option value="published">Published</option>
+                  <option value="unpublished">Unpublished</option>
+                </select>
+              </label>
+              <label className="min-w-[135px]">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Image type</span>
+                <select value={imageType} onChange={event => setImageType(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-orange-300">
+                  <option value="all">All images</option>
+                  <option value="primary">Primary only</option>
+                </select>
+              </label>
+              <label className="min-w-[175px]">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Banner usage</span>
+                <select value={bannerUsage} onChange={event => setBannerUsage(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-orange-300">
+                  <option value="all">All banner usage</option>
+                  <option value="hero">In Hero Slider</option>
+                  <option value="hero_side">In Hero Side Promo</option>
+                  <option value="middle">In Middle Banner</option>
                 </select>
               </label>
               <label className="min-w-[160px]">
-                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Visibility</span>
-                <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-orange-300">
-                  <option value="all">All visibility</option>
-                  <option value="active">Active</option>
-                  <option value="hidden">Hidden</option>
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Stock comparison</span>
+                <select value={stockOperator} onChange={event => setStockOperator(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-orange-300">
+                  <option value="any">Any stock</option>
+                  <option value="in_stock">In stock</option>
+                  <option value="out_of_stock">Out of stock</option>
+                  <option value="gt">Greater than</option>
+                  <option value="gte">Greater than or equal</option>
+                  <option value="eq">Equal to</option>
+                  <option value="lte">Less than or equal</option>
+                  <option value="lt">Less than</option>
+                </select>
+              </label>
+              <label className="w-[130px]">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Stock value</span>
+                <input type="number" min="0" value={stockValue} onChange={event => setStockValue(event.target.value)} disabled={!numericStockOperators.includes(stockOperator)} placeholder="e.g. 10"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange-300" />
+              </label>
+              <label className="w-[120px]">
+                <span className="mb-1.5 block text-xs font-semibold text-gray-600">Rows per page</span>
+                <select value={rowsPerPage} onChange={event => setRowsPerPage(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-orange-300">
+                  <option value="24">24</option>
+                  <option value="48">48</option>
+                  <option value="100">100</option>
                 </select>
               </label>
               <button type="submit" className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-600">Apply filters</button>
-              <button type="button" onClick={resetFilters} className="rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-200">Clear filters</button>
+              <button type="button" onClick={resetFilters} className="rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-200">Clear</button>
             </form>
             <p className="mt-3 text-xs text-gray-400">
-              Showing <span className="font-semibold text-gray-600">{filteredBanners.length}</span> of {(banners || []).length} banners
+              Showing <span className="font-semibold text-gray-600">{shownCount}</span> of <span className="font-semibold text-gray-600">{filteredCount}</span> filtered banners
+              {grandTotal !== filteredCount && <> from {grandTotal} total</>}
             </p>
           </div>
 
@@ -170,7 +211,7 @@ export default function BannersIndex({ banners, placements }) {
                 <button onClick={clearSelected} className="px-2 text-sm text-gray-500 hover:text-gray-800">Clear</button>
               </div>
             ) : (
-              <button onClick={selectAll} disabled={filteredBanners.length === 0} className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">Select all shown</button>
+              <button onClick={selectAll} disabled={bannerRows.length === 0} className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">Select all shown</button>
             )}
             <a href="/admin/banners/create" className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -192,9 +233,9 @@ export default function BannersIndex({ banners, placements }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {filteredBanners.length === 0 ? (
-                    <tr><td colSpan="7" className="px-5 py-12 text-center text-gray-400">{(banners || []).length === 0 ? 'No banners found.' : 'No banners match these filters.'}</td></tr>
-                  ) : filteredBanners.map(banner => (
+                  {bannerRows.length === 0 ? (
+                    <tr><td colSpan="7" className="px-5 py-12 text-center text-gray-400">{grandTotal === 0 ? 'No banners found.' : 'No banners match these filters.'}</td></tr>
+                  ) : bannerRows.map(banner => (
                     <tr key={banner.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-5 py-3.5">
                         <input type="checkbox" checked={selected.includes(banner.id)} onChange={() => toggleSelected(banner.id)} className="h-4 w-4 rounded accent-orange-500" aria-label={`Select ${banner.title || 'banner'}`} />
@@ -234,6 +275,23 @@ export default function BannersIndex({ banners, placements }) {
                 </tbody>
               </table>
             </div>
+            {banners?.links && banners.links.length > 3 && (
+              <div className="flex flex-wrap items-center justify-center gap-1.5 border-t border-gray-50 p-4">
+                {banners.links.map((link, i) => (
+                  link.url ? (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => router.get(link.url, {}, { preserveState: true, preserveScroll: true, onSuccess: () => clearSelected() })}
+                      className={`h-9 min-w-9 rounded-xl px-3 text-sm font-medium transition-colors ${link.active ? 'bg-orange-500 text-white' : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
+                      dangerouslySetInnerHTML={{ __html: link.label }}
+                    />
+                  ) : (
+                    <span key={i} className="flex h-9 min-w-9 items-center justify-center px-3 text-sm text-gray-300" dangerouslySetInnerHTML={{ __html: link.label }} />
+                  )
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </AdminLayout>
