@@ -3,14 +3,53 @@ import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { imageUrl } from '@/lib/utils';
 
-export default function FlashSaleIndex({ flashProducts = [], available, q, endsAt, timerExpired = false, errors = {} }) {
+export default function FlashSaleIndex({ flashProducts = [], available, categories = [], q, filters = {}, endsAt, timerExpired = false, errors = {} }) {
   const [search, setSearch] = useState(q || '');
+  const [categoryFilter, setCategoryFilter] = useState(filters.category || '');
+  const [productStatus, setProductStatus] = useState(filters.product_status || 'all');
+  const [imageType, setImageType] = useState(filters.image_type || 'all');
+  const [bannerUsage, setBannerUsage] = useState(filters.banner_usage || 'all');
+  const [stockOperator, setStockOperator] = useState(filters.stock_operator || 'any');
+  const [stockValue, setStockValue] = useState(filters.stock_value ?? '');
+  const [rowsPerPage, setRowsPerPage] = useState(String(filters.per_page || 24));
   const [endTime, setEndTime] = useState(endsAt ? endsAt.replace(' ', 'T').slice(0, 16) : '');
   const [selectedFlash, setSelectedFlash] = useState([]);
   const [selectedAvailable, setSelectedAvailable] = useState([]);
   const minEndTime = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
-  const handleSearch = () => router.get('/admin/flash-sale', { q: search }, { preserveState: true });
+  const numericStockOperators = ['gt', 'gte', 'eq', 'lte', 'lt'];
+  const filterPayload = () => ({
+    q: search,
+    category: categoryFilter,
+    product_status: productStatus,
+    image_type: imageType,
+    banner_usage: bannerUsage,
+    stock_operator: stockOperator,
+    stock_value: numericStockOperators.includes(stockOperator) ? stockValue : '',
+    per_page: rowsPerPage,
+  });
+
+  const cleanPayload = (payload) => Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== '' && value !== null && value !== undefined));
+  const handleSearch = () => router.get('/admin/flash-sale', cleanPayload(filterPayload()), {
+    preserveState: true,
+    preserveScroll: true,
+    onSuccess: () => setSelectedAvailable([]),
+  });
+  const clearFilters = () => {
+    setSearch('');
+    setCategoryFilter('');
+    setProductStatus('all');
+    setImageType('all');
+    setBannerUsage('all');
+    setStockOperator('any');
+    setStockValue('');
+    setRowsPerPage('24');
+    router.get('/admin/flash-sale', {}, {
+      preserveState: true,
+      preserveScroll: true,
+      onSuccess: () => setSelectedAvailable([]),
+    });
+  };
   const handleAdd = (productId) => router.post(`/admin/flash-sale/${productId}`, {}, { preserveScroll: true });
   const handleRemove = (productId) => router.delete(`/admin/flash-sale/${productId}`, { preserveScroll: true });
   const handleSaveEndTime = () => router.put('/admin/flash-sale/ends-at', { flash_sale_ends_at: endTime }, { preserveScroll: true });
@@ -133,15 +172,78 @@ export default function FlashSaleIndex({ flashProducts = [], available, q, endsA
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="font-semibold text-gray-900">Add Products</h3>
-                  <p className="mt-1 text-xs text-gray-400">Search by local product details or supplier product details.</p>
+                  <p className="mt-1 text-xs text-gray-400">Filter by local product details, supplier product details, media, stock, and banner usage.</p>
                 </div>
                 <button type="button" disabled={selectedAvailable.length === 0} onClick={() => bulk(selectedAvailable, 'add', setSelectedAvailable)}
                   className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Add Selected</button>
               </div>
-              <form onSubmit={e => { e.preventDefault(); handleSearch(); }} className="mt-3 flex gap-3">
-                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search product, SKU, brand, supplier, product code..."
-                  className="flex-1 rounded-xl border border-gray-200 px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                <button type="submit" className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600">Search</button>
+              <form onSubmit={e => { e.preventDefault(); handleSearch(); }} className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+                <div className="flex flex-wrap items-end gap-3">
+                  <label className="min-w-[250px] flex-1">
+                    <span className="mb-1.5 block text-xs font-semibold text-gray-600">Search media or products</span>
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Name, SKU, supplier, product code, or image alt text"
+                      className="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                  </label>
+                  <label className="min-w-[150px]">
+                    <span className="mb-1.5 block text-xs font-semibold text-gray-600">Category</span>
+                    <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
+                      <option value="">All categories</option>
+                      {categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="min-w-[150px]">
+                    <span className="mb-1.5 block text-xs font-semibold text-gray-600">Status</span>
+                    <select value={productStatus} onChange={e => setProductStatus(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
+                      <option value="all">All statuses</option>
+                      <option value="published">Published</option>
+                      <option value="unpublished">Unpublished</option>
+                    </select>
+                  </label>
+                  <label className="min-w-[135px]">
+                    <span className="mb-1.5 block text-xs font-semibold text-gray-600">Image type</span>
+                    <select value={imageType} onChange={e => setImageType(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
+                      <option value="all">All images</option>
+                      <option value="primary">Primary only</option>
+                    </select>
+                  </label>
+                  <label className="min-w-[175px]">
+                    <span className="mb-1.5 block text-xs font-semibold text-gray-600">Banner usage</span>
+                    <select value={bannerUsage} onChange={e => setBannerUsage(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
+                      <option value="all">All banner usage</option>
+                      <option value="hero">In Hero Slider</option>
+                      <option value="hero_side">In Hero Side Promo</option>
+                      <option value="middle">In Middle Banner</option>
+                    </select>
+                  </label>
+                  <label className="min-w-[160px]">
+                    <span className="mb-1.5 block text-xs font-semibold text-gray-600">Stock comparison</span>
+                    <select value={stockOperator} onChange={e => setStockOperator(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
+                      <option value="any">Any stock</option>
+                      <option value="in_stock">In stock</option>
+                      <option value="out_of_stock">Out of stock</option>
+                      <option value="gt">Greater than</option>
+                      <option value="gte">Greater than or equal</option>
+                      <option value="eq">Equal to</option>
+                      <option value="lte">Less than or equal</option>
+                      <option value="lt">Less than</option>
+                    </select>
+                  </label>
+                  <label className="w-[130px]">
+                    <span className="mb-1.5 block text-xs font-semibold text-gray-600">Stock value</span>
+                    <input type="number" min="0" value={stockValue} onChange={e => setStockValue(e.target.value)} disabled={!numericStockOperators.includes(stockOperator)} placeholder="e.g. 10"
+                      className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                  </label>
+                  <label className="w-[120px]">
+                    <span className="mb-1.5 block text-xs font-semibold text-gray-600">Rows per page</span>
+                    <select value={rowsPerPage} onChange={e => setRowsPerPage(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
+                      <option value="24">24</option>
+                      <option value="48">48</option>
+                      <option value="100">100</option>
+                    </select>
+                  </label>
+                  <button type="submit" className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-600">Apply filters</button>
+                  <button type="button" onClick={clearFilters} className="rounded-xl bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-200">Clear</button>
+                </div>
               </form>
             </div>
             <div className="divide-y divide-gray-50">

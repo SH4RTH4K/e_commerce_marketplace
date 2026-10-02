@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use Inertia\Inertia;
 use App\Http\Controllers\Controller;
+use App\Models\Banner;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\Setting;
 use Illuminate\Http\Request;
@@ -15,6 +17,29 @@ class FlashSaleController extends Controller
     public function index(Request $request)
     {
         $search = trim((string) $request->input('q', ''));
+        $category = $request->input('category');
+        $productStatus = $request->input('product_status', $request->input('status', 'all'));
+        $imageType = $request->input('image_type', 'all');
+        $bannerUsageFilter = $request->input('banner_usage', 'all');
+        $stockOperator = $request->input('stock_operator', 'any');
+        $stockValue = $request->input('stock_value');
+        $perPage = (int) $request->input('per_page', 24);
+
+        $category = is_numeric($category) ? (int) $category : null;
+        $productStatus = match ($productStatus) {
+            'active', 'published' => 'published',
+            'inactive', 'unpublished' => 'unpublished',
+            default => 'all',
+        };
+        $imageType = in_array($imageType, ['all', 'primary'], true) ? $imageType : 'all';
+        $bannerUsageFilter = in_array($bannerUsageFilter, ['all', 'hero', 'hero_side', 'middle'], true)
+            ? $bannerUsageFilter
+            : 'all';
+        $stockOperator = in_array($stockOperator, ['any', 'in_stock', 'out_of_stock', 'gt', 'gte', 'eq', 'lte', 'lt'], true)
+            ? $stockOperator
+            : 'any';
+        $stockValue = is_numeric($stockValue) ? max(0, min(1000000, (int) $stockValue)) : null;
+        $perPage = in_array($perPage, [24, 48, 100], true) ? $perPage : 24;
 
         $flashProducts = Product::with('images', 'category', 'supplierLinks.supplierProduct.supplier')
             ->where('is_flash_sale', true)
@@ -23,13 +48,37 @@ class FlashSaleController extends Controller
             ->get();
 
         $available = Product::with('images', 'category', 'supplierLinks.supplierProduct.supplier')
-            ->published()
             ->where('is_flash_sale', false)
+            ->when($productStatus === 'published', fn ($q) => $q->where('is_published', true))
+            ->when($productStatus === 'unpublished', fn ($q) => $q->where('is_published', false))
+            ->when($category, fn ($q) => $q->where('category_id', $category))
+            ->when($imageType === 'primary', fn ($q) => $q->whereHas('images', fn ($image) => $image->where('is_primary', true)))
+            ->when($bannerUsageFilter !== 'all', function ($q) use ($bannerUsageFilter) {
+                $q->whereHas('images', fn ($image) => $image->whereIn('path', Banner::query()
+                    ->select('image')
+                    ->where('placement', $bannerUsageFilter)
+                    ->whereNotNull('image')));
+            })
+            ->when($stockOperator === 'in_stock', function ($q) {
+                $q->where(function ($stockQuery) {
+                    $stockQuery->where('stock_quantity', '>', 0)
+                        ->orWhereHas('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0));
+                });
+            })
+            ->when($stockOperator === 'out_of_stock', function ($q) {
+                $q->where('stock_quantity', '<=', 0)
+                    ->whereDoesntHave('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0));
+            })
+            ->when($stockValue !== null && in_array($stockOperator, ['gt', 'gte', 'eq', 'lte', 'lt'], true), function ($q) use ($stockOperator, $stockValue) {
+                $operator = ['gt' => '>', 'gte' => '>=', 'eq' => '=', 'lte' => '<=', 'lt' => '<'][$stockOperator];
+                $q->where('stock_quantity', $operator, $stockValue);
+            })
             ->when($search !== '', function ($q) use ($search) {
                 $q->where(function ($inner) use ($search) {
                     $inner->where('name', 'like', "%{$search}%")
                         ->orWhere('sku', 'like', "%{$search}%")
                         ->orWhere('brand', 'like', "%{$search}%")
+                        ->orWhereHas('images', fn ($image) => $image->where('alt', 'like', "%{$search}%"))
                         ->orWhereHas('supplierLinks.supplierProduct', function ($supplierProduct) use ($search) {
                             $supplierProduct->where('name', 'like', "%{$search}%")
                                 ->orWhere('product_code', 'like', "%{$search}%")
@@ -44,7 +93,7 @@ class FlashSaleController extends Controller
                 });
             })
             ->latest()
-            ->paginate(12)
+            ->paginate($perPage)
             ->withQueryString();
 
         $endsAt = setting('flash_sale_ends_at');
@@ -52,7 +101,17 @@ class FlashSaleController extends Controller
         return Inertia::render('Admin/FlashSale/Index', [
             'flashProducts' => $flashProducts,
             'available'     => $available,
+            'categories'    => Category::orderBy('name')->get(['id', 'name']),
             'q'             => $request->input('q'),
+            'filters'       => [
+                'category'        => $category,
+                'product_status'  => $productStatus,
+                'image_type'      => $imageType,
+                'banner_usage'    => $bannerUsageFilter,
+                'stock_operator'  => $stockOperator,
+                'stock_value'     => $stockValue,
+                'per_page'        => $perPage,
+            ],
             'endsAt'        => $endsAt,
             'timerExpired'  => $this->timerExpired($endsAt),
             'homepageLimit' => 5,
