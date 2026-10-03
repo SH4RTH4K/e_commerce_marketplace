@@ -193,6 +193,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                  Route::patch('imported/{product}/publish', [\App\Http\Controllers\Admin\DropshippingController::class, 'publishImportedProduct'])->name('imported.publish');
                  Route::post('imported/bulk-publish', [\App\Http\Controllers\Admin\DropshippingController::class, 'bulkPublishImportedProducts'])->name('imported.bulk-publish');
                  Route::post('imported/bulk-prices', [\App\Http\Controllers\Admin\DropshippingController::class, 'bulkUpdateImportedProductPrices'])->name('imported.bulk-prices');
+                 Route::post('imported/bulk-prices/restore', [\App\Http\Controllers\Admin\DropshippingController::class, 'restoreImportedProductPrices'])->name('imported.bulk-prices.restore');
                  Route::post('imported/bulk-unpublish', [\App\Http\Controllers\Admin\DropshippingController::class, 'bulkUnpublishImportedProducts'])->name('imported.bulk-unpublish');
                  Route::post('imported/bulk-sync', [\App\Http\Controllers\Admin\DropshippingController::class, 'bulkSyncImportedProducts'])->name('imported.bulk-sync');
                  Route::post('imported/bulk-sync-filtered', [\App\Http\Controllers\Admin\DropshippingController::class, 'bulkSyncFilteredImportedProducts'])->name('imported.bulk-sync-filtered');

@@ -231,6 +231,7 @@ class DropshippingController extends Controller
         $stockValue = $request->input('stock_value');
         $profitOperator = $request->string('profit_operator')->toString();
         $profitValue = $request->input('profit_value');
+        $priceAdjustmentFilter = $request->string('price_adjustment')->toString();
         $requestedPerPage = $request->input('per_page', 100);
         $perPage = is_numeric($requestedPerPage) && in_array((int) $requestedPerPage, [25, 50, 100], true)
             ? (int) $requestedPerPage
@@ -245,6 +246,17 @@ class DropshippingController extends Controller
             }))
             ->when($statusFilter === 'published', fn ($query) => $query->where('is_published', true))
             ->when($statusFilter === 'draft', fn ($query) => $query->where('is_published', false))
+            ->when($priceAdjustmentFilter === 'custom', fn ($query) => $query->whereHas('supplierLinks', fn ($linkQuery) => $linkQuery->whereNotNull('price_override')))
+            ->when($priceAdjustmentFilter === 'fixed', fn ($query) => $query->whereHas('supplierLinks', fn ($linkQuery) => $linkQuery->where('price_override->discount_mode', 'fixed')))
+            ->when($priceAdjustmentFilter === 'percent', fn ($query) => $query->whereHas('supplierLinks', fn ($linkQuery) => $linkQuery->where('price_override->discount_mode', 'percent')))
+            ->when($priceAdjustmentFilter === 'regular', fn ($query) => $query->whereHas('supplierLinks', fn ($linkQuery) => $linkQuery
+                ->whereNotNull('price_override')
+                ->where('price_override->regular_mode', '!=', 'none')))
+            ->when($priceAdjustmentFilter === 'untracked_discount', fn ($query) => $query
+                ->whereNotNull('sale_price')
+                ->whereColumn('sale_price', '<', 'regular_price')
+                ->whereDoesntHave('supplierLinks', fn ($linkQuery) => $linkQuery->whereNotNull('price_override')))
+            ->when($priceAdjustmentFilter === 'none', fn ($query) => $query->whereDoesntHave('supplierLinks', fn ($linkQuery) => $linkQuery->whereNotNull('price_override')))
             ->when(in_array($stockOperator, ['gt', 'lt', 'eq'], true) && is_numeric($stockValue), function ($query) use ($stockOperator, $stockValue) {
                 $operator = ['gt' => '>', 'lt' => '<', 'eq' => '='][$stockOperator];
                 $query->where('stock_quantity', $operator, (float) $stockValue);
@@ -309,6 +321,7 @@ class DropshippingController extends Controller
                     'sale_price' => $product->sale_price,
                     'stock_quantity' => $product->stock_quantity,
                     'pricing' => $pricing,
+                    'price_override' => $supplierLink?->price_override,
                     'cost_price' => $supplierProduct?->cost_price,
                     'max_price' => $supplierProduct?->max_price,
                     'supplier_cost' => $supplierCost,
@@ -400,6 +413,7 @@ class DropshippingController extends Controller
             'stock_value' => is_numeric($stockValue) ? (string) $stockValue : '',
             'profit_operator' => in_array($profitOperator, ['gt', 'lt', 'eq'], true) ? $profitOperator : '',
             'profit_value' => is_numeric($profitValue) ? (string) $profitValue : '',
+            'price_adjustment_filter' => in_array($priceAdjustmentFilter, ['custom', 'fixed', 'percent', 'regular', 'untracked_discount', 'none'], true) ? $priceAdjustmentFilter : '',
             'order_by' => $orderBy,
             'categories' => DropshipSupplierProduct::query()
                 ->whereNotNull('supplier_category_key')
@@ -889,6 +903,12 @@ class DropshippingController extends Controller
             'prices' => ['required', 'array'],
             'prices.*.regular_price' => ['nullable', 'numeric', 'min:0'],
             'prices.*.sale_price' => ['nullable', 'numeric', 'min:0'],
+            'adjustment' => ['required', 'array'],
+            'adjustment.source' => ['required', 'in:current,selling,discounted,minimum,maximum'],
+            'adjustment.regular_mode' => ['required', 'in:none,plus_fixed,minus_fixed,plus_percent,minus_percent'],
+            'adjustment.regular_value' => ['nullable', 'numeric', 'min:0'],
+            'adjustment.discount_mode' => ['required', 'in:keep,none,fixed,percent'],
+            'adjustment.discount_value' => ['nullable', 'numeric', 'min:0'],
         ]);
 
         $products = Product::query()
@@ -903,6 +923,9 @@ class DropshippingController extends Controller
                 continue;
             }
 
+            $previousRegular = $product->regular_price;
+            $previousSale = $product->sale_price;
+
             if (array_key_exists('regular_price', $price)) {
                 $product->regular_price = $price['regular_price'];
             }
@@ -911,10 +934,62 @@ class DropshippingController extends Controller
             }
 
             $product->save();
+
+            $link = $product->supplierLinks()
+                ->where('product_created_by_integration', true)
+                ->first();
+            if ($link) {
+                $link->price_override = [
+                    ...$data['adjustment'],
+                    'previous_regular_price' => $previousRegular,
+                    'previous_sale_price' => $previousSale,
+                    'result_regular_price' => $product->regular_price,
+                    'result_sale_price' => $product->sale_price,
+                    'applied_at' => now()->toIso8601String(),
+                ];
+                $link->save();
+            }
             ++$updated;
         }
 
         return back()->with('status', "{$updated} imported product price(s) updated.");
+    }
+
+    public function restoreImportedProductPrices(Request $request)
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:100'],
+            'ids.*' => ['integer', 'distinct', 'exists:products,id'],
+        ]);
+
+        $products = Product::query()
+            ->whereIn('id', $data['ids'])
+            ->whereHas('supplierLinks', fn ($query) => $query
+                ->where('product_created_by_integration', true)
+                ->whereNotNull('price_override'))
+            ->get();
+
+        $restored = 0;
+        foreach ($products as $product) {
+            $link = $product->supplierLinks()
+                ->where('product_created_by_integration', true)
+                ->whereNotNull('price_override')
+                ->first();
+            $override = $link?->price_override;
+            if (! $link || ! is_array($override)) {
+                continue;
+            }
+
+            $product->regular_price = $override['previous_regular_price'] ?? $product->regular_price;
+            $product->sale_price = $override['previous_sale_price'] ?? null;
+            $product->save();
+
+            $link->price_override = null;
+            $link->save();
+            ++$restored;
+        }
+
+        return back()->with('status', "{$restored} custom product price(s) restored.");
     }
 
     public function bulkUnpublishImportedProducts(Request $request)

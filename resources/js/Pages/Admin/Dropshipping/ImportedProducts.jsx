@@ -182,7 +182,7 @@ function money(value) {
   return number.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
-export default function ImportedProducts({ products = [], categories = [], sync_runs = [], failed_sync_runs = [], sync_suppliers = [], search_filter = '', category_filter = '', status_filter = '', stock_operator = '', stock_value = '', profit_operator = '', profit_value = '', order_by = 'newest', pagination = {} }) {
+export default function ImportedProducts({ products = [], categories = [], sync_runs = [], failed_sync_runs = [], sync_suppliers = [], search_filter = '', category_filter = '', status_filter = '', stock_operator = '', stock_value = '', profit_operator = '', profit_value = '', price_adjustment_filter = '', order_by = 'newest', pagination = {} }) {
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState(search_filter);
   const [category, setCategory] = useState(category_filter);
@@ -191,6 +191,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
   const [stockValue, setStockValue] = useState(stock_value);
   const [profitOperator, setProfitOperator] = useState(profit_operator);
   const [profitValue, setProfitValue] = useState(profit_value);
+  const [priceAdjustment, setPriceAdjustment] = useState(price_adjustment_filter);
   const [orderBy, setOrderBy] = useState(order_by);
   const [pageSize, setPageSize] = useState(String(pagination.per_page || 100));
   const [prices, setPrices] = useState({});
@@ -205,6 +206,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
   const firstResult = totalProducts === 0 ? 0 : ((currentPage - 1) * perPage) + 1;
   const lastResult = Math.min(currentPage * perPage, totalProducts);
   const hasActiveSync = sync_runs.length > 0;
+  const selectedOverrideCount = selected.filter(id => products.find(product => product.id === id)?.price_override).length;
 
   useEffect(() => {
     if (!hasActiveSync) return undefined;
@@ -314,6 +316,29 @@ export default function ImportedProducts({ products = [], categories = [], sync_
     return { reg: regular, sale };
   };
 
+  const adjustmentLabel = product => {
+    const override = product.price_override;
+    if (!override) return '';
+    const sourceLabels = { current: 'current price', selling: 'selling price', discounted: 'discounted price', minimum: 'minimum price', maximum: 'maximum price' };
+    const regularLabels = { plus_fixed: 'regular +', minus_fixed: 'regular -', plus_percent: 'regular +', minus_percent: 'regular -' };
+    const parts = [`From ${sourceLabels[override.source] || override.source}`];
+    if (override.regular_mode && override.regular_mode !== 'none') {
+      const suffix = override.regular_mode.includes('percent') ? '%' : '';
+      parts.push(`${regularLabels[override.regular_mode]}${money(override.regular_value)}${suffix}`);
+    }
+    if (override.discount_mode === 'fixed') parts.push(`fixed discount ${money(override.discount_value)}`);
+    if (override.discount_mode === 'percent') parts.push(`${money(override.discount_value)}% discount`);
+    if (override.discount_mode === 'none') parts.push('no discount');
+    return parts.join(' · ');
+  };
+
+  const effectiveDiscount = product => {
+    const regular = Number(product.regular_price);
+    const sale = Number(product.sale_price);
+    if (!Number.isFinite(regular) || !Number.isFinite(sale) || regular <= 0 || sale >= regular) return null;
+    return { amount: regular - sale, percent: ((regular - sale) / regular) * 100 };
+  };
+
   const handleTypeChange = (id, type) => {
     const product = products.find(item => item.id === id);
     if (!product) return;
@@ -345,10 +370,36 @@ export default function ImportedProducts({ products = [], categories = [], sync_
     });
     setPrices(nextPrices);
     if (Object.keys(selectedPrices).length === 0) return;
-    router.post('/admin/dropshipping/imported/bulk-prices', { ids: selected, prices: selectedPrices }, {
+    router.post('/admin/dropshipping/imported/bulk-prices', {
+      ids: selected,
+      prices: selectedPrices,
+      adjustment: {
+        source: !type || type === 'custom' ? 'current' : type,
+        regular_mode: batchPricing.regular_mode,
+        regular_value: batchPricing.regular_value === '' ? null : batchPricing.regular_value,
+        discount_mode: batchPricing.discount_mode,
+        discount_value: batchPricing.discount_value === '' ? null : batchPricing.discount_value,
+      },
+    }, {
       preserveScroll: true,
       onSuccess: () => router.reload({ only: ['products'], preserveScroll: true }),
     });
+  };
+
+  const restorePriceOverrides = ids => {
+    if (ids.length === 0) return;
+    const runRestore = () => router.post('/admin/dropshipping/imported/bulk-prices/restore', { ids }, {
+      preserveScroll: true,
+      onSuccess: () => {
+        setSelected([]);
+        router.reload({ only: ['products'], preserveScroll: true });
+      },
+    });
+    if (window.showConfirm) {
+      window.showConfirm(`Restore the previous price for ${ids.length} product(s)?`, runRestore);
+      return;
+    }
+    if (window.confirm(`Restore the previous price for ${ids.length} product(s)?`)) runRestore();
   };
 
   const updateBatchPricing = (field, value) => {
@@ -368,6 +419,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
       params.append('profit_operator', profitOperator);
       params.append('profit_value', profitValue);
     }
+    if (priceAdjustment) params.append('price_adjustment', priceAdjustment);
     params.append('order_by', orderBy);
     params.append('per_page', pageSize);
     return params.toString() ? `?${params.toString()}` : '';
@@ -378,7 +430,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
   const publishOne = id => router.patch(`/admin/dropshipping/imported/${id}/publish`, { ...flags, ...(prices[id] || {}) }, { preserveScroll: true });
   const unpublishOne = id => router.post('/admin/dropshipping/imported/bulk-unpublish', { ids: [id] }, { preserveScroll: true });
   const filterList = () => { setSelected([]); router.get(`/admin/dropshipping/imported${filterParams()}`, {}, { preserveScroll: true, preserveState: true }); };
-  const clearFilter = () => { setSearch(''); setCategory(''); setStatus(''); setStockOperator(''); setStockValue(''); setProfitOperator(''); setProfitValue(''); setOrderBy('newest'); setPageSize('100'); setSelected([]); router.get('/admin/dropshipping/imported?per_page=100', {}, { preserveScroll: true, preserveState: true }); };
+  const clearFilter = () => { setSearch(''); setCategory(''); setStatus(''); setStockOperator(''); setStockValue(''); setProfitOperator(''); setProfitValue(''); setPriceAdjustment(''); setOrderBy('newest'); setPageSize('100'); setSelected([]); router.get('/admin/dropshipping/imported?per_page=100', {}, { preserveScroll: true, preserveState: true }); };
   const goToPage = page => { setSelected([]); router.get(`/admin/dropshipping/imported?page=${page}${filterParams().replace('?', '&')}`, {}, { preserveScroll: true, preserveState: true }); };
 
   return <DropshippingSubpage title="Imported Products" description="Review integration-created local products before publishing them to the storefront.">
@@ -405,6 +457,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
         <label className="w-36 text-sm font-semibold text-gray-600">Stock value<input type="number" min="0" step="any" value={stockValue} onChange={event => setStockValue(event.target.value)} placeholder="e.g. 10" className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" /></label>
         <label className="w-40 text-sm font-semibold text-gray-600">Profit comparison<select value={profitOperator} onChange={event => setProfitOperator(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="">Any profit</option><option value="gt">Greater than</option><option value="lt">Less than</option><option value="eq">Equal to</option></select></label>
         <label className="w-36 text-sm font-semibold text-gray-600">Profit value<input type="number" step="any" value={profitValue} onChange={event => setProfitValue(event.target.value)} placeholder="e.g. 100" className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" /></label>
+        <label className="w-52 text-sm font-semibold text-gray-600">Price adjustment<select value={priceAdjustment} onChange={event => setPriceAdjustment(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="">Any pricing</option><option value="custom">Any custom adjustment</option><option value="fixed">Fixed discount</option><option value="percent">Percentage discount</option><option value="regular">Regular-price adjustment</option><option value="untracked_discount">Untracked sale discount</option><option value="none">No custom adjustment</option></select></label>
         <label className="w-44 text-sm font-semibold text-gray-600">Order by<select value={orderBy} onChange={event => setOrderBy(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="name_asc">Name: A to Z</option><option value="name_desc">Name: Z to A</option><option value="price_asc">Price: Low to High</option><option value="price_desc">Price: High to Low</option><option value="profit_desc">Profit: High to Low</option><option value="profit_asc">Profit: Low to High</option><option value="stock_asc">Stock: Low to High</option><option value="stock_desc">Stock: High to Low</option></select></label>
         <label className="w-28 text-sm font-semibold text-gray-600">Rows per page<select value={pageSize} onChange={event => setPageSize(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="25">25</option><option value="50">50</option><option value="100">100</option></select></label>
         <button type="button" onClick={filterList} className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-600">Apply filters</button>
@@ -415,7 +468,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
       <div className="flex flex-col gap-4 border-b border-gray-100 px-5 py-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div><h2 className="font-bold text-gray-900">Local imported products</h2><p className="mt-1 text-xs text-gray-500">Supplier variants are automatically created and linked after import or catalog resync.</p></div>
-          <div className="flex flex-wrap items-center gap-3"><span className="text-xs text-gray-400">Showing {products.length} of {pagination.total || products.length}</span><button type="button" disabled={selected.length === 0} onClick={publishSelected} className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400">Publish selected</button><button type="button" disabled={selected.length === 0} onClick={syncSelected} className="rounded-lg bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-200 disabled:bg-gray-200 disabled:text-gray-400">Sync selected</button></div>
+          <div className="flex flex-wrap items-center gap-3"><span className="text-xs text-gray-400">Showing {products.length} of {pagination.total || products.length}</span><button type="button" disabled={selected.length === 0} onClick={publishSelected} className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400">Publish selected</button><button type="button" disabled={selected.length === 0} onClick={syncSelected} className="rounded-lg bg-blue-100 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-200 disabled:bg-gray-200 disabled:text-gray-400">Sync selected</button><button type="button" disabled={selectedOverrideCount === 0} onClick={() => restorePriceOverrides(selected)} className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-100 disabled:bg-gray-100 disabled:text-gray-400">Restore custom prices{selectedOverrideCount > 0 ? ` (${selectedOverrideCount})` : ''}</button></div>
         </div>
         <div className="flex flex-wrap gap-4 border-t border-gray-100 pt-3 text-xs text-gray-700">
           <label className="flex items-center gap-2"><input type="checkbox" checked={flags.is_featured} onChange={() => setFlag('is_featured')} /> Featured / Trending</label>
@@ -436,32 +489,38 @@ export default function ImportedProducts({ products = [], categories = [], sync_
           <button type="button" onClick={() => applyBatchPrice(batchType || 'custom')} disabled={selected.length === 0} className="rounded-lg bg-orange-500 px-4 py-2 text-xs font-semibold text-white hover:bg-orange-600 disabled:bg-gray-200 disabled:text-gray-400">Apply price changes</button>
         </div>
       </div>
-      <div className="overflow-x-auto pb-2">
-        <table className="min-w-[1420px] w-full text-sm">
-          <thead><tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-400"><th className="px-4 py-3 text-left"><input type="checkbox" aria-label="Select all products" checked={products.length > 0 && selected.length === products.length} onChange={toggleAll} /></th><th className="px-4 py-3 text-left">SL</th><th className="px-3 py-3 text-left">Image</th><th className="min-w-[250px] px-4 py-3 text-left">Product</th><th className="px-4 py-3 text-left">SKU</th><th className="px-4 py-3 text-left">Category</th><th className="px-4 py-3 text-left">Supplier</th><th className="px-4 py-3 text-left">Variants</th><th className="min-w-[190px] px-4 py-3 text-left">Storefront Price</th><th className="min-w-[110px] px-4 py-3 text-left">Profit</th><th className="px-4 py-3 text-left">Stock</th><th className="px-4 py-3 text-left">Status</th><th className="sticky right-0 z-20 bg-gray-50 px-4 py-3 text-right shadow-[-8px_0_16px_rgba(15,23,42,0.06)]">Action</th></tr></thead>
+      <div className="w-full pb-2">
+        <table className="w-full table-fixed text-sm">
+          <thead><tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-400"><th className="w-10 px-2 py-3 text-left"><input type="checkbox" aria-label="Select all products" checked={products.length > 0 && selected.length === products.length} onChange={toggleAll} /></th><th className="hidden w-12 px-2 py-3 text-left min-[2100px]:table-cell">SL</th><th className="hidden w-20 px-2 py-3 text-left sm:table-cell">Image</th><th className="w-[28%] px-3 py-3 text-left">Product</th><th className="hidden w-20 px-2 py-3 text-left xl:table-cell">SKU</th><th className="hidden w-28 px-2 py-3 text-left min-[2100px]:table-cell">Category</th><th className="hidden w-28 px-2 py-3 text-left min-[2100px]:table-cell">Supplier</th><th className="hidden w-20 px-2 py-3 text-left min-[2100px]:table-cell">Variants</th><th className="w-[22%] px-3 py-3 text-left">Storefront Price</th><th className="hidden w-24 px-2 py-3 text-left lg:table-cell">Profit</th><th className="hidden w-14 px-2 py-3 text-left xl:table-cell">Stock</th><th className="hidden w-20 px-2 py-3 text-left xl:table-cell">Status</th><th className="w-36 px-3 py-3 text-right">Action</th></tr></thead>
           <tbody className="divide-y divide-gray-50">
             {products.length === 0 ? <tr><td colSpan="13" className="px-5 py-12 text-center text-sm text-gray-400">No imported products match the current filters.</td></tr> : products.map((product, index) => {
               const pData = getPriceData(product.id);
+              const discount = effectiveDiscount(product);
+              const overrideLabel = adjustmentLabel(product);
               return <tr key={product.id} className="transition-colors hover:bg-orange-50/20">
-                <td className="px-4 py-4"><input type="checkbox" aria-label={`Select ${product.name}`} checked={selected.includes(product.id)} onChange={() => toggle(product.id)} /></td>
-                <td className="px-4 py-4 text-xs font-medium text-gray-500">{((pagination.current_page || 1) - 1) * (pagination.per_page || 100) + index + 1}</td>
-                <td className="px-3 py-4"><ImagePreview product={product} /></td>
-                <td className="px-4 py-4"><a href={`/admin/products/${product.id}/edit`} className="block max-w-[260px] font-semibold leading-snug text-gray-900 hover:text-orange-600 hover:underline">{product.name}</a></td>
-                <td className="px-4 py-4 text-xs font-mono text-gray-600">{product.product_code || product.sku || '—'}</td>
-                <td className="px-4 py-4 text-xs capitalize text-gray-600">{product.category ? product.category.replace(/-/g, ' ') : '-'}</td>
-                <td className="px-4 py-4 text-xs text-gray-600">{product.supplier || '?'}</td>
-                <td className="px-4 py-4 text-xs"><a href="/admin/dropshipping/variations" className={product.supplier_variants === product.mapped_variants ? 'text-green-700' : 'text-amber-700'}>{product.mapped_variants}/{product.supplier_variants} mapped</a></td>
-                <td className="px-4 py-4 text-xs text-gray-600">{product.is_published ? <div className="space-y-1"><p>Regular: {pData.regular_price ?? '-'}</p><p>Sale: {pData.sale_price ?? '-'}</p></div> : <div className="flex flex-col gap-1.5"><select value={pData.type} onChange={event => handleTypeChange(product.id, event.target.value)} className={`w-full rounded border px-1.5 py-0.5 text-[10px] font-semibold ${pData.type === 'custom' ? 'border-gray-200 text-gray-500' : 'border-orange-300 bg-orange-50 text-orange-800'}`}><option value="custom">Custom Price</option><option value="selling">Selling Price</option><option value="discounted">Discounted Price</option><option value="minimum">Minimum Price</option><option value="maximum">Maximum Price</option></select><div className="flex gap-2"><label className="flex flex-col gap-0.5"><span className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">Reg</span><input type="number" step="0.01" className="w-20 rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-900" value={pData.regular_price} onChange={event => updatePrice(product.id, 'regular_price', event.target.value)} /></label><label className="flex flex-col gap-0.5"><span className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">Sale</span><input type="number" step="0.01" className="w-20 rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-900" value={pData.sale_price} onChange={event => updatePrice(product.id, 'sale_price', event.target.value)} /></label></div></div>}</td>
-                <td className="px-4 py-4 text-xs">
+                <td className="px-2 py-4"><input type="checkbox" aria-label={`Select ${product.name}`} checked={selected.includes(product.id)} onChange={() => toggle(product.id)} /></td>
+                <td className="hidden px-2 py-4 text-xs font-medium text-gray-500 min-[2100px]:table-cell">{((pagination.current_page || 1) - 1) * (pagination.per_page || 100) + index + 1}</td>
+                <td className="hidden px-2 py-4 sm:table-cell"><ImagePreview product={product} /></td>
+                <td className="px-3 py-4 align-top"><a href={`/admin/products/${product.id}/edit`} className="block font-semibold leading-snug text-gray-900 hover:text-orange-600 hover:underline">{product.name}</a><div className="mt-1 space-y-0.5 text-[10px] leading-4 text-gray-400"><p>SKU: {product.product_code || product.sku || '-'}</p><p className="capitalize">{product.category ? product.category.replace(/-/g, ' ') : 'No category'} · {product.supplier || 'Unknown supplier'}</p><p>{product.mapped_variants}/{product.supplier_variants} variants mapped · Stock {product.stock_quantity} · {product.is_published ? 'Published' : 'Draft'}</p></div></td>
+                <td className="hidden px-2 py-4 text-xs font-mono text-gray-600 xl:table-cell">{product.product_code || product.sku || '—'}</td>
+                <td className="hidden px-2 py-4 text-xs capitalize text-gray-600 min-[2100px]:table-cell">{product.category ? product.category.replace(/-/g, ' ') : '-'}</td>
+                <td className="hidden px-2 py-4 text-xs text-gray-600 min-[2100px]:table-cell">{product.supplier || '?'}</td>
+                <td className="hidden px-2 py-4 text-xs min-[2100px]:table-cell"><a href="/admin/dropshipping/variations" className={product.supplier_variants === product.mapped_variants ? 'text-green-700' : 'text-amber-700'}>{product.mapped_variants}/{product.supplier_variants} mapped</a></td>
+                <td className="px-3 py-4 align-top text-xs text-gray-600">
+                  {product.is_published ? <div className="space-y-1"><p>Regular: {pData.regular_price ?? '-'}</p><p>Sale: {pData.sale_price ?? '-'}</p></div> : <div className="flex flex-col gap-1.5"><select value={pData.type} onChange={event => handleTypeChange(product.id, event.target.value)} className={`w-full rounded border px-1.5 py-0.5 text-[10px] font-semibold ${pData.type === 'custom' ? 'border-gray-200 text-gray-500' : 'border-orange-300 bg-orange-50 text-orange-800'}`}><option value="custom">Custom Price</option><option value="selling">Selling Price</option><option value="discounted">Discounted Price</option><option value="minimum">Minimum Price</option><option value="maximum">Maximum Price</option></select><div className="flex gap-2"><label className="flex flex-col gap-0.5"><span className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">Reg</span><input type="number" step="0.01" className="w-20 rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-900" value={pData.regular_price} onChange={event => updatePrice(product.id, 'regular_price', event.target.value)} /></label><label className="flex flex-col gap-0.5"><span className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">Sale</span><input type="number" step="0.01" className="w-20 rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-900" value={pData.sale_price} onChange={event => updatePrice(product.id, 'sale_price', event.target.value)} /></label></div></div>}
+                  {overrideLabel && <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] leading-4 text-amber-800"><span className="font-bold uppercase">Custom rule</span><br />{overrideLabel}<button type="button" onClick={() => restorePriceOverrides([product.id])} className="ml-2 font-bold text-amber-900 underline">Restore</button></div>}
+                  {!overrideLabel && discount && <p className="mt-1 text-[10px] font-semibold text-blue-700">Discount: {money(discount.amount)} ({money(discount.percent)}%)</p>}
+                </td>
+                <td className="hidden px-2 py-4 text-xs lg:table-cell">
                   <div className="space-y-1">
                     <p className={`font-semibold ${Number(product.standard_profit) >= 0 ? 'text-green-700' : 'text-red-600'}`}>{money(product.standard_profit)}</p>
                     <p className="text-gray-400">Cost: {money(product.supplier_cost)}</p>
                     {product.standard_profit_percent !== null && product.standard_profit_percent !== undefined && <p className="text-gray-400">{money(product.standard_profit_percent)}%</p>}
                   </div>
                 </td>
-                <td className="px-4 py-4 text-xs text-gray-600">{product.stock_quantity}</td>
-                <td className="px-4 py-4"><span className={`text-xs font-semibold ${product.is_published ? 'text-green-700' : 'text-amber-700'}`}>{product.is_published ? 'Published' : 'Draft'}</span></td>
-                <td className="sticky right-0 z-10 bg-white/95 px-4 py-4 text-right shadow-[-8px_0_16px_rgba(15,23,42,0.06)]"><div className="flex items-center justify-end gap-2">{product.is_published ? <button onClick={() => unpublishOne(product.id)} className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200">Unpublish</button> : <button onClick={() => publishOne(product.id)} className="rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-green-700">Publish</button>}<button onClick={() => syncOne(product.id)} className="rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-100">Sync</button></div></td>
+                <td className="hidden px-2 py-4 text-xs text-gray-600 xl:table-cell">{product.stock_quantity}</td>
+                <td className="hidden px-2 py-4 xl:table-cell"><span className={`text-xs font-semibold ${product.is_published ? 'text-green-700' : 'text-amber-700'}`}>{product.is_published ? 'Published' : 'Draft'}</span></td>
+                <td className="px-3 py-4 text-right align-top"><div className="flex flex-col items-end gap-2">{product.is_published ? <button onClick={() => unpublishOne(product.id)} className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200">Unpublish</button> : <button onClick={() => publishOne(product.id)} className="rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-green-700">Publish</button>}<button onClick={() => syncOne(product.id)} className="rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-100">Sync</button></div></td>
               </tr>;
             })}
           </tbody>

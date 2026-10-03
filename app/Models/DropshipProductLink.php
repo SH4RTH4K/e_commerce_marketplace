@@ -15,6 +15,7 @@ class DropshipProductLink extends Model
             'product_created_by_integration' => 'boolean',
             'field_sync_rules' => 'array',
             'pricing_snapshot' => 'array',
+            'price_override' => 'array',
             'last_data_synced_at' => 'datetime',
             'last_price_synced_at' => 'datetime',
             'last_stock_synced_at' => 'datetime',
