@@ -38,6 +38,27 @@ const asNumber = (value) => {
   return Number.isFinite(number) ? number : 0;
 };
 
+function normalizeBdMobileNumber(value) {
+  const digits = String(value || '').replace(/\D+/g, '');
+
+  return digits.length === 13 && digits.startsWith('88') ? digits.slice(2) : digits;
+}
+
+function bdMobileNumberError(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/[^0-9+\-\s()]/.test(raw)) {
+    return 'Use digits only. Spaces, dashes, parentheses, and +880 are allowed.';
+  }
+
+  const normalized = normalizeBdMobileNumber(raw);
+  if (!/^01[3-9]\d{8}$/.test(normalized)) {
+    return 'Enter a valid Bangladesh mobile number: 01XXXXXXXXX (11 digits).';
+  }
+
+  return '';
+}
+
 function courierRowsFromResult(result) {
   return Object.entries(result?.data || {})
     .filter(([key, value]) => key !== 'summary' && value && typeof value === 'object' && value.total_parcel !== undefined)
@@ -378,9 +399,20 @@ function PhoneChecker({ enabled, databaseReady, onStored }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult]   = useState(null);
   const [error, setError]     = useState('');
+  const phoneValidationError = bdMobileNumberError(phone);
+  const canCheck = !loading && customerName.trim() && phone.trim() && !phoneValidationError && enabled && databaseReady;
 
   const check = async (mode = 'saved') => {
     if (!customerName.trim() || !phone.trim()) return;
+    const normalizedPhone = normalizeBdMobileNumber(phone);
+    const validationError = bdMobileNumberError(phone);
+    if (validationError) {
+      setResult(null);
+      setError(validationError);
+      return;
+    }
+
+    setPhone(normalizedPhone);
     setLoading(true); setResult(null); setError('');
 
     try {
@@ -388,7 +420,7 @@ function PhoneChecker({ enabled, databaseReady, onStored }) {
       const res  = await fetch('/admin/fake-order-guard/check-phone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
-        body: JSON.stringify({ phone, customer_name: customerName.trim(), mode }),
+        body: JSON.stringify({ phone: normalizedPhone, customer_name: customerName.trim(), mode }),
       });
       const json = await res.json();
       if (!res.ok || json.error) { setError(json.error || 'Failed to check phone.'); }
@@ -425,13 +457,20 @@ function PhoneChecker({ enabled, databaseReady, onStored }) {
             onChange={e => setPhone(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && check('live')}
             placeholder="01712345678"
-            className="w-full h-10 pl-9 pr-4 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none font-mono"
+            inputMode="tel"
+            autoComplete="tel"
+            maxLength={20}
+            aria-invalid={Boolean(phoneValidationError)}
+            className={`w-full h-10 pl-9 pr-4 rounded-xl border text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none font-mono ${phoneValidationError ? 'border-red-300 bg-red-50/40' : 'border-gray-200'}`}
           />
+          <p className={`mt-1 text-[11px] ${phoneValidationError ? 'text-red-600' : 'text-gray-400'}`}>
+            {phoneValidationError || 'Mobile format: 01XXXXXXXXX, 11 digits. +880 is also accepted.'}
+          </p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => check('saved')}
-            disabled={loading || !customerName.trim() || !phone.trim() || !enabled || !databaseReady}
+            disabled={!canCheck}
             className="h-10 px-4 bg-white border border-gray-200 hover:border-indigo-300 disabled:opacity-50 text-indigo-700 font-semibold rounded-xl text-sm flex items-center gap-2 whitespace-nowrap transition-colors"
           >
             {loading ? <Icons.Loader className="w-4 h-4 animate-spin" /> : <Icons.Search className="w-4 h-4" />}
@@ -439,7 +478,7 @@ function PhoneChecker({ enabled, databaseReady, onStored }) {
           </button>
           <button
             onClick={() => check('live')}
-            disabled={loading || !customerName.trim() || !phone.trim() || !enabled || !databaseReady}
+            disabled={!canCheck}
             className="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm flex items-center gap-2 whitespace-nowrap transition-colors"
           >
             {loading ? <Icons.Loader className="w-4 h-4 animate-spin" /> : <Icons.Check className="w-4 h-4" />}
