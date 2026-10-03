@@ -207,6 +207,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
   const lastResult = Math.min(currentPage * perPage, totalProducts);
   const hasActiveSync = sync_runs.length > 0;
   const selectedOverrideCount = selected.filter(id => products.find(product => product.id === id)?.price_override).length;
+  const hasBatchPriceChange = batchType !== '' || batchPricing.regular_mode !== 'none' || batchPricing.discount_mode !== 'keep';
 
   useEffect(() => {
     if (!hasActiveSync) return undefined;
@@ -332,6 +333,8 @@ export default function ImportedProducts({ products = [], categories = [], sync_
     return parts.join(' · ');
   };
 
+  const adjustmentCount = product => product.price_override ? (product.price_override.history?.length || 0) + 1 : 0;
+
   const effectiveDiscount = product => {
     const regular = Number(product.regular_price);
     const sale = Number(product.sale_price);
@@ -358,7 +361,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
 
   const applyBatchPrice = (type = batchType) => {
     setBatchType(type === 'custom' ? '' : type);
-    if (!type || selected.length === 0) return;
+    if (!type || selected.length === 0 || !hasBatchPriceChange) return;
     const nextPrices = { ...prices };
     const selectedPrices = {};
     selected.forEach(id => {
@@ -486,7 +489,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
             <label className="font-semibold text-gray-600">Discount price<select value={batchPricing.discount_mode} onChange={event => updateBatchPricing('discount_mode', event.target.value)} disabled={selected.length === 0} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 disabled:opacity-50"><option value="keep">Keep formula sale</option><option value="none">No discount</option><option value="fixed">Fixed off</option><option value="percent">% off</option></select></label>
             <label className="font-semibold text-gray-600">Value<input type="number" min="0" step="0.01" value={batchPricing.discount_value} onChange={event => updateBatchPricing('discount_value', event.target.value)} disabled={selected.length === 0 || !['fixed', 'percent'].includes(batchPricing.discount_mode)} placeholder="0" className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 disabled:opacity-50" /></label>
           </div>
-          <button type="button" onClick={() => applyBatchPrice(batchType || 'custom')} disabled={selected.length === 0} className="rounded-lg bg-orange-500 px-4 py-2 text-xs font-semibold text-white hover:bg-orange-600 disabled:bg-gray-200 disabled:text-gray-400">Apply price changes</button>
+          <button type="button" onClick={() => applyBatchPrice(batchType || 'custom')} disabled={selected.length === 0 || !hasBatchPriceChange} title={!hasBatchPriceChange ? 'Choose a price source or adjustment first' : undefined} className="rounded-lg bg-orange-500 px-4 py-2 text-xs font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400">Apply price changes</button>
         </div>
       </div>
       <div className="w-full pb-2">
@@ -497,6 +500,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
               const pData = getPriceData(product.id);
               const discount = effectiveDiscount(product);
               const overrideLabel = adjustmentLabel(product);
+              const overrideCount = adjustmentCount(product);
               return <tr key={product.id} className="transition-colors hover:bg-orange-50/20">
                 <td className="px-2 py-4"><input type="checkbox" aria-label={`Select ${product.name}`} checked={selected.includes(product.id)} onChange={() => toggle(product.id)} /></td>
                 <td className="hidden px-2 py-4 text-xs font-medium text-gray-500 min-[2100px]:table-cell">{((pagination.current_page || 1) - 1) * (pagination.per_page || 100) + index + 1}</td>
@@ -508,7 +512,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
                 <td className="hidden px-2 py-4 text-xs min-[2100px]:table-cell"><a href="/admin/dropshipping/variations" className={product.supplier_variants === product.mapped_variants ? 'text-green-700' : 'text-amber-700'}>{product.mapped_variants}/{product.supplier_variants} mapped</a></td>
                 <td className="px-3 py-4 align-top text-xs text-gray-600">
                   {product.is_published ? <div className="space-y-1"><p>Regular: {pData.regular_price ?? '-'}</p><p>Sale: {pData.sale_price ?? '-'}</p></div> : <div className="flex flex-col gap-1.5"><select value={pData.type} onChange={event => handleTypeChange(product.id, event.target.value)} className={`w-full rounded border px-1.5 py-0.5 text-[10px] font-semibold ${pData.type === 'custom' ? 'border-gray-200 text-gray-500' : 'border-orange-300 bg-orange-50 text-orange-800'}`}><option value="custom">Custom Price</option><option value="selling">Selling Price</option><option value="discounted">Discounted Price</option><option value="minimum">Minimum Price</option><option value="maximum">Maximum Price</option></select><div className="flex gap-2"><label className="flex flex-col gap-0.5"><span className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">Reg</span><input type="number" step="0.01" className="w-20 rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-900" value={pData.regular_price} onChange={event => updatePrice(product.id, 'regular_price', event.target.value)} /></label><label className="flex flex-col gap-0.5"><span className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">Sale</span><input type="number" step="0.01" className="w-20 rounded border border-gray-200 px-1.5 py-0.5 text-xs text-gray-900" value={pData.sale_price} onChange={event => updatePrice(product.id, 'sale_price', event.target.value)} /></label></div></div>}
-                  {overrideLabel && <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] leading-4 text-amber-800"><span className="font-bold uppercase">Custom rule</span><br />{overrideLabel}<button type="button" onClick={() => restorePriceOverrides([product.id])} className="ml-2 font-bold text-amber-900 underline">Restore</button></div>}
+                  {overrideLabel && <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[10px] leading-4 text-amber-800"><span className="font-bold uppercase">Custom rule{overrideCount > 1 ? ` · ${overrideCount} changes` : ''}</span><br />{overrideLabel}<button type="button" onClick={() => restorePriceOverrides([product.id])} className="ml-2 font-bold text-amber-900 underline">{overrideCount > 1 ? 'Undo last' : 'Restore original'}</button></div>}
                   {!overrideLabel && discount && <p className="mt-1 text-[10px] font-semibold text-blue-700">Discount: {money(discount.amount)} ({money(discount.percent)}%)</p>}
                 </td>
                 <td className="hidden px-2 py-4 text-xs lg:table-cell">

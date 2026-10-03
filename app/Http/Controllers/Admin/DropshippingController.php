@@ -911,6 +911,14 @@ class DropshippingController extends Controller
             'adjustment.discount_value' => ['nullable', 'numeric', 'min:0'],
         ]);
 
+        $adjustment = $data['adjustment'];
+        $isNoOp = $adjustment['source'] === 'current'
+            && $adjustment['regular_mode'] === 'none'
+            && $adjustment['discount_mode'] === 'keep';
+        if ($isNoOp) {
+            return back()->with('status', 'No price change was selected. Existing prices were kept.');
+        }
+
         $products = Product::query()
             ->whereIn('id', $data['ids'])
             ->whereHas('supplierLinks', fn ($query) => $query->where('product_created_by_integration', true))
@@ -939,6 +947,12 @@ class DropshippingController extends Controller
                 ->where('product_created_by_integration', true)
                 ->first();
             if ($link) {
+                $currentOverride = $link->price_override;
+                $history = is_array($currentOverride) ? ($currentOverride['history'] ?? []) : [];
+                if (is_array($currentOverride)) {
+                    unset($currentOverride['history']);
+                    $history[] = $currentOverride;
+                }
                 $link->price_override = [
                     ...$data['adjustment'],
                     'previous_regular_price' => $previousRegular,
@@ -946,6 +960,7 @@ class DropshippingController extends Controller
                     'result_regular_price' => $product->regular_price,
                     'result_sale_price' => $product->sale_price,
                     'applied_at' => now()->toIso8601String(),
+                    'history' => $history,
                 ];
                 $link->save();
             }
@@ -984,7 +999,14 @@ class DropshippingController extends Controller
             $product->sale_price = $override['previous_sale_price'] ?? null;
             $product->save();
 
-            $link->price_override = null;
+            $history = is_array($override['history'] ?? null) ? $override['history'] : [];
+            $previousOverride = array_pop($history);
+            if (is_array($previousOverride)) {
+                $previousOverride['history'] = $history;
+                $link->price_override = $previousOverride;
+            } else {
+                $link->price_override = null;
+            }
             $link->save();
             ++$restored;
         }
