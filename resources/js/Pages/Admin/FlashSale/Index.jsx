@@ -16,6 +16,11 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
   const [selectedFlash, setSelectedFlash] = useState([]);
   const [selectedAvailable, setSelectedAvailable] = useState([]);
   const minEndTime = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const flashIds = flashProducts.map(product => product.id);
+  const availableRows = available?.data || [];
+  const availableIds = availableRows.map(product => product.id);
+  const allFlashSelected = flashIds.length > 0 && flashIds.every(id => selectedFlash.includes(id));
+  const allAvailableSelected = availableIds.length > 0 && availableIds.every(id => selectedAvailable.includes(id));
 
   const numericStockOperators = ['gt', 'gte', 'eq', 'lte', 'lt'];
   const filterPayload = () => ({
@@ -83,12 +88,32 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
     setSelected(selected.includes(id) ? selected.filter(item => item !== id) : [...selected, id]);
   };
 
+  const toggleAllFlash = () => {
+    setSelectedFlash(allFlashSelected ? [] : flashIds);
+  };
+
+  const toggleAllAvailable = () => {
+    setSelectedAvailable(allAvailableSelected ? [] : availableIds);
+  };
+
   const bulk = (ids, action, setSelected) => {
     if (ids.length === 0) return;
     router.post('/admin/flash-sale/bulk', { ids, bulk_action: action }, {
       preserveScroll: true,
       onSuccess: () => setSelected([]),
     });
+  };
+
+  const removeSelectedFlash = () => {
+    if (selectedFlash.length === 0) return;
+    const runRemove = () => bulk(selectedFlash, 'remove', setSelectedFlash);
+    if (window.showConfirm) {
+      window.showConfirm(`Remove ${selectedFlash.length} selected product(s) from Flash Sale?`, runRemove);
+      return;
+    }
+    if (window.confirm(`Remove ${selectedFlash.length} selected product(s) from Flash Sale?`)) {
+      runRemove();
+    }
   };
 
   const moveFlashProduct = (productId, direction) => {
@@ -143,27 +168,47 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
                 <h3 className="font-semibold text-gray-900">Flash Sale Products ({flashProducts.length})</h3>
                 <p className="mt-1 text-xs text-gray-400">Use arrows for manual order. Homepage can use this order.</p>
               </div>
-              <button type="button" disabled={selectedFlash.length === 0} onClick={() => bulk(selectedFlash, 'remove', setSelectedFlash)}
-                className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-50">Remove Selected</button>
+              <div className="flex flex-wrap items-center gap-2">
+                {selectedFlash.length > 0 && <span className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-700">{selectedFlash.length} selected</span>}
+                <button type="button" disabled={selectedFlash.length === 0} onClick={removeSelectedFlash}
+                  className="rounded-xl bg-red-600 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-50 disabled:text-red-300">Remove selected</button>
+                {selectedFlash.length > 0 && <button type="button" onClick={() => setSelectedFlash([])} className="px-2 text-sm text-gray-500 hover:text-gray-800">Clear</button>}
+              </div>
             </div>
-            <div className="divide-y divide-gray-50">
+            <div className="overflow-x-auto">
+              <div className="min-w-[1080px]">
+                <div className="grid grid-cols-[48px_58px_96px_minmax(280px,1fr)_120px_160px_220px] items-center bg-gray-50/70 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <div><input type="checkbox" checked={allFlashSelected} onChange={toggleAllFlash} disabled={flashProducts.length === 0} className="h-4 w-4 rounded accent-orange-500 disabled:opacity-40" aria-label="Select all flash sale products" /></div>
+                  <div>SL</div>
+                  <div>Image</div>
+                  <div>Product</div>
+                  <div>SKU</div>
+                  <div>Category</div>
+                  <div className="text-right">Action</div>
+                </div>
+                <div className="divide-y divide-gray-50">
               {flashProducts.length === 0 ? (
                 <div className="px-5 py-12 text-center text-gray-400">No products in flash sale yet.</div>
               ) : flashProducts.map((product, index) => (
-                <div key={product.id} className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-gray-50/50">
-                  <input type="checkbox" checked={selectedFlash.includes(product.id)} onChange={() => toggleSelected(product.id, selectedFlash, setSelectedFlash)} className="h-4 w-4 rounded accent-orange-500" />
+                <div key={product.id} className={`grid grid-cols-[48px_58px_96px_minmax(280px,1fr)_120px_160px_220px] items-center px-5 py-3.5 transition-colors hover:bg-gray-50/50 ${selectedFlash.includes(product.id) ? 'bg-orange-50/40' : ''}`}>
+                  <div><input type="checkbox" checked={selectedFlash.includes(product.id)} onChange={() => toggleSelected(product.id, selectedFlash, setSelectedFlash)} className="h-4 w-4 rounded accent-orange-500" aria-label={`Select ${product.name}`} /></div>
+                  <div className="text-sm text-gray-500">{index + 1}</div>
                   <img src={primaryImage(product)} alt="" className="h-11 w-11 shrink-0 rounded-xl border border-gray-100 object-cover" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-gray-800">{product.name}</p>
                     <p className="text-xs text-gray-400">{product.category?.name || 'No category'} · ৳{Number(product.regular_price).toLocaleString()}{product.sale_price ? ` → ৳${Number(product.sale_price).toLocaleString()}` : ''}</p>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="text-sm text-gray-600">{product.sku || supplierCode(product) || '-'}</div>
+                  <div className="text-sm text-gray-600">{product.category?.name || 'No category'}</div>
+                  <div className="flex items-center justify-end gap-1">
                     <button type="button" disabled={index === 0} onClick={() => moveFlashProduct(product.id, -1)} className="grid h-8 w-8 place-items-center rounded-lg border border-gray-200 text-gray-500 disabled:opacity-30">↑</button>
                     <button type="button" disabled={index === flashProducts.length - 1} onClick={() => moveFlashProduct(product.id, 1)} className="grid h-8 w-8 place-items-center rounded-lg border border-gray-200 text-gray-500 disabled:opacity-30">↓</button>
                     <button type="button" onClick={() => handleRemove(product.id)} className="ml-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-100">Remove</button>
                   </div>
                 </div>
               ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -174,8 +219,12 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
                   <h3 className="font-semibold text-gray-900">Add Products</h3>
                   <p className="mt-1 text-xs text-gray-400">Filter by local product details, supplier product details, media, stock, and banner usage.</p>
                 </div>
-                <button type="button" disabled={selectedAvailable.length === 0} onClick={() => bulk(selectedAvailable, 'add', setSelectedAvailable)}
-                  className="rounded-xl bg-orange-500 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Add Selected</button>
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedAvailable.length > 0 && <span className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-700">{selectedAvailable.length} selected</span>}
+                  <button type="button" disabled={selectedAvailable.length === 0} onClick={() => bulk(selectedAvailable, 'add', setSelectedAvailable)}
+                    className="rounded-xl bg-orange-500 px-3.5 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-orange-100 disabled:text-orange-300">Add selected</button>
+                  {selectedAvailable.length > 0 && <button type="button" onClick={() => setSelectedAvailable([])} className="px-2 text-sm text-gray-500 hover:text-gray-800">Clear</button>}
+                </div>
               </div>
               <form onSubmit={e => { e.preventDefault(); handleSearch(); }} className="mt-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-end gap-3">
@@ -246,21 +295,39 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
                 </div>
               </form>
             </div>
-            <div className="divide-y divide-gray-50">
-              {(available?.data || []).length === 0 ? (
+            <div className="overflow-x-auto">
+              <div className="min-w-[1080px]">
+                <div className="grid grid-cols-[48px_58px_96px_minmax(280px,1fr)_120px_160px_220px] items-center bg-gray-50/70 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  <div><input type="checkbox" checked={allAvailableSelected} onChange={toggleAllAvailable} disabled={availableRows.length === 0} className="h-4 w-4 rounded accent-orange-500 disabled:opacity-40" aria-label="Select all available products" /></div>
+                  <div>SL</div>
+                  <div>Image</div>
+                  <div>Product</div>
+                  <div>SKU</div>
+                  <div>Category</div>
+                  <div className="text-right">Action</div>
+                </div>
+                <div className="divide-y divide-gray-50">
+              {availableRows.length === 0 ? (
                 <div className="px-5 py-8 text-center text-sm text-gray-400">No available products found.</div>
-              ) : (available?.data || []).map(product => (
-                <div key={product.id} className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-gray-50/50">
-                  <input type="checkbox" checked={selectedAvailable.includes(product.id)} onChange={() => toggleSelected(product.id, selectedAvailable, setSelectedAvailable)} className="h-4 w-4 rounded accent-orange-500" />
+              ) : availableRows.map((product, index) => (
+                <div key={product.id} className={`grid grid-cols-[48px_58px_96px_minmax(280px,1fr)_120px_160px_220px] items-center px-5 py-3.5 transition-colors hover:bg-gray-50/50 ${selectedAvailable.includes(product.id) ? 'bg-orange-50/40' : ''}`}>
+                  <div><input type="checkbox" checked={selectedAvailable.includes(product.id)} onChange={() => toggleSelected(product.id, selectedAvailable, setSelectedAvailable)} className="h-4 w-4 rounded accent-orange-500" aria-label={`Select ${product.name}`} /></div>
+                  <div className="text-sm text-gray-500">{index + 1}</div>
                   <img src={primaryImage(product)} alt="" className="h-10 w-10 shrink-0 rounded-xl border border-gray-100 object-cover" />
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0">
                     <p className="truncate font-semibold text-gray-800">{product.name}</p>
                     <p className="text-xs text-gray-400">৳{Number(product.regular_price).toLocaleString()}</p>
                     {productMeta(product) && <p className="mt-0.5 truncate text-xs text-gray-400">{productMeta(product)}</p>}
                   </div>
-                  <button type="button" onClick={() => handleAdd(product.id)} className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-600 transition-colors hover:bg-orange-100">+ Add</button>
+                  <div className="truncate text-sm text-gray-600">{product.sku || supplierCode(product) || '-'}</div>
+                  <div className="truncate text-sm text-gray-600">{product.category?.name || '-'}</div>
+                  <div className="flex justify-end">
+                    <button type="button" onClick={() => handleAdd(product.id)} className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-600 transition-colors hover:bg-orange-100">+ Add</button>
+                  </div>
                 </div>
               ))}
+                </div>
+              </div>
             </div>
             {available?.links && available.links.length > 3 && (
               <div className="flex flex-wrap items-center justify-center gap-1.5 border-t border-gray-50 p-4">

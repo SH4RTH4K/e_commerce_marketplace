@@ -229,6 +229,8 @@ class DropshippingController extends Controller
         $search = trim($request->string('q')->toString());
         $stockOperator = $request->string('stock_operator')->toString();
         $stockValue = $request->input('stock_value');
+        $profitOperator = $request->string('profit_operator')->toString();
+        $profitValue = $request->input('profit_value');
         $requestedPerPage = $request->input('per_page', 100);
         $perPage = is_numeric($requestedPerPage) && in_array((int) $requestedPerPage, [25, 50, 100], true)
             ? (int) $requestedPerPage
@@ -246,6 +248,12 @@ class DropshippingController extends Controller
             ->when(in_array($stockOperator, ['gt', 'lt', 'eq'], true) && is_numeric($stockValue), function ($query) use ($stockOperator, $stockValue) {
                 $operator = ['gt' => '>', 'lt' => '<', 'eq' => '='][$stockOperator];
                 $query->where('stock_quantity', $operator, (float) $stockValue);
+            })
+            ->when(in_array($profitOperator, ['gt', 'lt', 'eq'], true) && is_numeric($profitValue), function ($query) use ($profitOperator, $profitValue) {
+                $operator = ['gt' => '>', 'lt' => '<', 'eq' => '='][$profitOperator];
+                $query->whereHas('supplierLinks.supplierProduct', function ($supplierProductQuery) use ($operator, $profitValue) {
+                    $supplierProductQuery->whereRaw('(COALESCE(products.sale_price, products.regular_price, 0) - COALESCE(dropship_supplier_products.cost_price, 0)) ' . $operator . ' ?', [(float) $profitValue]);
+                });
             });
 
         match ($orderBy) {
@@ -254,6 +262,8 @@ class DropshippingController extends Controller
             'name_desc' => $productQuery->orderByDesc('name')->orderByDesc('id'),
             'price_asc' => $productQuery->orderBy('regular_price')->orderBy('id'),
             'price_desc' => $productQuery->orderByDesc('regular_price')->orderByDesc('id'),
+            'profit_asc' => $productQuery->orderByRaw('(COALESCE(products.sale_price, products.regular_price, 0) - COALESCE((select dsp.cost_price from dropship_product_links dpl inner join dropship_supplier_products dsp on dsp.id = dpl.supplier_product_row_id where dpl.product_id = products.id and dpl.product_created_by_integration = 1 and dpl.sync_status = ? order by dpl.id asc limit 1), 0)) asc', ['active'])->orderBy('id'),
+            'profit_desc' => $productQuery->orderByRaw('(COALESCE(products.sale_price, products.regular_price, 0) - COALESCE((select dsp.cost_price from dropship_product_links dpl inner join dropship_supplier_products dsp on dsp.id = dpl.supplier_product_row_id where dpl.product_id = products.id and dpl.product_created_by_integration = 1 and dpl.sync_status = ? order by dpl.id asc limit 1), 0)) desc', ['active'])->orderByDesc('id'),
             'stock_asc' => $productQuery->orderBy('stock_quantity')->orderBy('id'),
             'stock_desc' => $productQuery->orderByDesc('stock_quantity')->orderByDesc('id'),
             default => $productQuery->latest('id'),
@@ -274,6 +284,18 @@ class DropshippingController extends Controller
         $productRows = $products->getCollection()
             ->map(function (Product $product): array {
                 $primaryImage = $product->images->first();
+                $supplierLink = $product->supplierLinks->first();
+                $supplierProduct = $supplierLink?->supplierProduct;
+                $pricing = $supplierLink?->pricing_snapshot;
+                $supplierCost = is_array($pricing) ? ($pricing['costPrice'] ?? null) : null;
+                $supplierCost ??= $supplierProduct?->cost_price;
+                $sellingPrice = $product->sale_price ?? $product->regular_price;
+                $profit = is_numeric($sellingPrice) && is_numeric($supplierCost)
+                    ? round((float) $sellingPrice - (float) $supplierCost, 2)
+                    : null;
+                $profitPercent = $profit !== null && is_numeric($supplierCost) && (float) $supplierCost > 0
+                    ? round(($profit / (float) $supplierCost) * 100, 2)
+                    : null;
 
                 return [
                     'id' => $product->id,
@@ -286,13 +308,18 @@ class DropshippingController extends Controller
                     'regular_price' => $product->regular_price,
                     'sale_price' => $product->sale_price,
                     'stock_quantity' => $product->stock_quantity,
-                    'pricing' => $product->supplierLinks->first()?->pricing_snapshot,
-                    'category' => $product->supplierLinks->first()?->supplierProduct?->supplier_category_key,
-                    'supplier' => $product->supplierLinks->first()?->supplierProduct?->supplier?->name,
-                    'product_code' => $product->supplierLinks->first()?->supplierProduct?->product_code
-                        ?: $product->supplierLinks->first()?->supplierProduct?->supplier_product_id,
-                    'supplier_variants' => $product->supplierLinks->first()?->supplierProduct?->variants->count() ?? 0,
-                    'mapped_variants' => $product->supplierLinks->first()?->supplierProduct?->variants->filter(fn ($variant) => $variant->variantLink !== null)->count() ?? 0,
+                    'pricing' => $pricing,
+                    'cost_price' => $supplierProduct?->cost_price,
+                    'max_price' => $supplierProduct?->max_price,
+                    'supplier_cost' => $supplierCost,
+                    'standard_profit' => $profit,
+                    'standard_profit_percent' => $profitPercent,
+                    'category' => $supplierProduct?->supplier_category_key,
+                    'supplier' => $supplierProduct?->supplier?->name,
+                    'product_code' => $supplierProduct?->product_code
+                        ?: $supplierProduct?->supplier_product_id,
+                    'supplier_variants' => $supplierProduct?->variants->count() ?? 0,
+                    'mapped_variants' => $supplierProduct?->variants->filter(fn ($variant) => $variant->variantLink !== null)->count() ?? 0,
                 ];
             })
             ->values();
@@ -371,6 +398,8 @@ class DropshippingController extends Controller
             'status_filter' => $statusFilter,
             'stock_operator' => in_array($stockOperator, ['gt', 'lt', 'eq'], true) ? $stockOperator : '',
             'stock_value' => is_numeric($stockValue) ? (string) $stockValue : '',
+            'profit_operator' => in_array($profitOperator, ['gt', 'lt', 'eq'], true) ? $profitOperator : '',
+            'profit_value' => is_numeric($profitValue) ? (string) $profitValue : '',
             'order_by' => $orderBy,
             'categories' => DropshipSupplierProduct::query()
                 ->whereNotNull('supplier_category_key')
@@ -852,6 +881,42 @@ class DropshippingController extends Controller
         return back()->with('status', "{$published} imported product(s) published.");
     }
 
+    public function bulkUpdateImportedProductPrices(Request $request)
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:100'],
+            'ids.*' => ['integer', 'distinct', 'exists:products,id'],
+            'prices' => ['required', 'array'],
+            'prices.*.regular_price' => ['nullable', 'numeric', 'min:0'],
+            'prices.*.sale_price' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $products = Product::query()
+            ->whereIn('id', $data['ids'])
+            ->whereHas('supplierLinks', fn ($query) => $query->where('product_created_by_integration', true))
+            ->get();
+
+        $updated = 0;
+        foreach ($products as $product) {
+            $price = $data['prices'][$product->id] ?? null;
+            if (! is_array($price)) {
+                continue;
+            }
+
+            if (array_key_exists('regular_price', $price)) {
+                $product->regular_price = $price['regular_price'];
+            }
+            if (array_key_exists('sale_price', $price)) {
+                $product->sale_price = $price['sale_price'];
+            }
+
+            $product->save();
+            ++$updated;
+        }
+
+        return back()->with('status', "{$updated} imported product price(s) updated.");
+    }
+
     public function bulkUnpublishImportedProducts(Request $request)
     {
         $data = $request->validate([
@@ -894,6 +959,8 @@ class DropshippingController extends Controller
             'status' => ['nullable', 'in:published,draft'],
             'stock_operator' => ['nullable', 'in:gt,lt,eq'],
             'stock_value' => ['nullable', 'numeric'],
+            'profit_operator' => ['nullable', 'in:gt,lt,eq'],
+            'profit_value' => ['nullable', 'numeric'],
             'supplier_id' => ['nullable', 'integer', 'exists:dropship_suppliers,id'],
         ]);
 
@@ -902,6 +969,8 @@ class DropshippingController extends Controller
         $status = $data['status'] ?? '';
         $stockOperator = $data['stock_operator'] ?? '';
         $stockValue = $data['stock_value'] ?? null;
+        $profitOperator = $data['profit_operator'] ?? '';
+        $profitValue = $data['profit_value'] ?? null;
         $supplierId = $data['supplier_id'] ?? null;
 
         $productIds = Product::query()
@@ -920,6 +989,12 @@ class DropshippingController extends Controller
             ->when($stockOperator !== '' && is_numeric($stockValue), function ($query) use ($stockOperator, $stockValue) {
                 $operator = ['gt' => '>', 'lt' => '<', 'eq' => '='][$stockOperator];
                 $query->where('stock_quantity', $operator, (float) $stockValue);
+            })
+            ->when($profitOperator !== '' && is_numeric($profitValue), function ($query) use ($profitOperator, $profitValue) {
+                $operator = ['gt' => '>', 'lt' => '<', 'eq' => '='][$profitOperator];
+                $query->whereHas('supplierLinks.supplierProduct', function ($supplierProductQuery) use ($operator, $profitValue) {
+                    $supplierProductQuery->whereRaw('(COALESCE(products.sale_price, products.regular_price, 0) - COALESCE(dropship_supplier_products.cost_price, 0)) ' . $operator . ' ?', [(float) $profitValue]);
+                });
             })
             ->pluck('id');
 
@@ -1472,7 +1547,7 @@ class DropshippingController extends Controller
     private function dropshippingProductOrder(string $orderBy): string
     {
         return in_array($orderBy, [
-            'newest', 'oldest', 'name_asc', 'name_desc', 'price_asc', 'price_desc', 'stock_asc', 'stock_desc',
+            'newest', 'oldest', 'name_asc', 'name_desc', 'price_asc', 'price_desc', 'profit_asc', 'profit_desc', 'stock_asc', 'stock_desc',
         ], true) ? $orderBy : 'newest';
     }
 }

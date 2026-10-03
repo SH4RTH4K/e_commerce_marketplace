@@ -379,7 +379,7 @@ function PhoneChecker({ enabled, databaseReady, onStored }) {
   const [result, setResult]   = useState(null);
   const [error, setError]     = useState('');
 
-  const check = async () => {
+  const check = async (mode = 'saved') => {
     if (!customerName.trim() || !phone.trim()) return;
     setLoading(true); setResult(null); setError('');
 
@@ -388,7 +388,7 @@ function PhoneChecker({ enabled, databaseReady, onStored }) {
       const res  = await fetch('/admin/fake-order-guard/check-phone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest' },
-        body: JSON.stringify({ phone, customer_name: customerName.trim() }),
+        body: JSON.stringify({ phone, customer_name: customerName.trim(), mode }),
       });
       const json = await res.json();
       if (!res.ok || json.error) { setError(json.error || 'Failed to check phone.'); }
@@ -411,7 +411,7 @@ function PhoneChecker({ enabled, databaseReady, onStored }) {
             type="text"
             value={customerName}
             onChange={e => setCustomerName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && check()}
+            onKeyDown={e => e.key === 'Enter' && check('live')}
             placeholder="Customer name"
             maxLength={120}
             className="w-full h-10 px-4 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none"
@@ -423,19 +423,29 @@ function PhoneChecker({ enabled, databaseReady, onStored }) {
             type="text"
             value={phone}
             onChange={e => setPhone(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && check()}
+            onKeyDown={e => e.key === 'Enter' && check('live')}
             placeholder="01712345678"
             className="w-full h-10 pl-9 pr-4 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none font-mono"
           />
         </div>
-        <button
-          onClick={check}
-          disabled={loading || !customerName.trim() || !phone.trim() || !enabled || !databaseReady}
-          className="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm flex items-center gap-2 whitespace-nowrap transition-colors"
-        >
-          {loading ? <Icons.Loader className="w-4 h-4 animate-spin" /> : <Icons.Search className="w-4 h-4" />}
-          {loading ? 'Loading…' : 'View saved result'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => check('saved')}
+            disabled={loading || !customerName.trim() || !phone.trim() || !enabled || !databaseReady}
+            className="h-10 px-4 bg-white border border-gray-200 hover:border-indigo-300 disabled:opacity-50 text-indigo-700 font-semibold rounded-xl text-sm flex items-center gap-2 whitespace-nowrap transition-colors"
+          >
+            {loading ? <Icons.Loader className="w-4 h-4 animate-spin" /> : <Icons.Search className="w-4 h-4" />}
+            {loading ? 'Loading…' : 'View saved result'}
+          </button>
+          <button
+            onClick={() => check('live')}
+            disabled={loading || !customerName.trim() || !phone.trim() || !enabled || !databaseReady}
+            className="h-10 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm flex items-center gap-2 whitespace-nowrap transition-colors"
+          >
+            {loading ? <Icons.Loader className="w-4 h-4 animate-spin" /> : <Icons.Check className="w-4 h-4" />}
+            {loading ? 'Checking…' : 'Check number'}
+          </button>
+        </div>
       </div>
       {!databaseReady && (
         <p className="mt-2 text-xs text-red-600">History storage is not installed. Run the pending Laravel migration first.</p>
@@ -874,7 +884,7 @@ export default function FakeOrderGuardIndex({ section = 'overview', settings, st
               <span className="w-7 h-7 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center"><Icons.Search className="w-4 h-4" /></span>
               Saved Checkout Check
             </h3>
-            <p className="text-xs text-gray-500 mb-4">View a saved BD Courier result. New phone lookups run only when a customer places an order.</p>
+            <p className="text-xs text-gray-500 mb-4">Enter the customer's name and phone to view a saved result or check the number with BD Courier now.</p>
             <PhoneChecker
               enabled={masterEnabled && bdEnabled}
               databaseReady={Boolean(databaseStatus?.ready)}

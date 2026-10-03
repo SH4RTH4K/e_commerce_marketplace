@@ -55,8 +55,6 @@ class FakeOrderGuardTest extends TestCase
             'payment_method'   => 'cod',
         ]);
 
-        $response->dump();
-
         $response->assertSessionHasErrors(['customer_phone']);
     }
 

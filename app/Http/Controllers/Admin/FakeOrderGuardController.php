@@ -66,9 +66,11 @@ class FakeOrderGuardController extends Controller
         $request->validate([
             'phone' => ['required', 'string', 'max:20'],
             'customer_name' => ['required', 'string', 'max:120'],
+            'mode' => ['nullable', 'in:saved,live'],
         ]);
 
         $phone = BdCourierCheck::normalizePhone($request->input('phone'));
+
         if (! preg_match('/^01[3-9]\d{8}$/', $phone)) {
             return response()->json(['error' => 'Enter a valid Bangladesh phone number (01XXXXXXXXX).'], 422);
         }
@@ -82,9 +84,50 @@ class FakeOrderGuardController extends Controller
         }
 
         $history = BdCourierCheck::query()->where('phone', $phone)->first();
+        $mode = $request->input('mode');
+        if ($mode === null) {
+            $mode = $history && is_array($history->response) ? 'saved' : 'live';
+        }
+
+        if ($mode === 'live') {
+            $apiKey = (string) setting('fog_bdcourier_api_key', '');
+            if (trim($apiKey) === '') {
+                return response()->json([
+                    'error' => 'Save and verify a BD Courier API key before running a live phone check.',
+                ], 422);
+            }
+
+            $service = new BdCourierService($apiKey);
+            $status = $service->checkWithStatus($phone);
+            if (! ($status['connected'] ?? false) || ! is_array($status['result'] ?? null)) {
+                return response()->json([
+                    'error' => $status['message'] ?? 'BD Courier could not complete the live phone check right now.',
+                ], ($status['status'] ?? 'client_error') === 'network_error' ? 503 : 422);
+            }
+
+            $record = BdCourierCheck::record(
+                $phone,
+                $status['result'],
+                'manual',
+                customerName: $request->string('customer_name')->toString()
+            );
+
+            $stored = $record ?? BdCourierCheck::query()->where('phone', $phone)->first();
+            if (! $stored || ! is_array($stored->response)) {
+                return response()->json([
+                    'error' => 'The live BD Courier check ran, but the saved result could not be loaded.',
+                ], 500);
+            }
+
+            $result = $stored->response;
+            $result['_history'] = $this->historyPayload($stored);
+
+            return response()->json($result);
+        }
+
         if (! $history || ! is_array($history->response)) {
             return response()->json([
-                'error' => 'No saved result exists for this phone. BD Courier checks run only when a customer places an order.',
+                'error' => 'No saved result exists for this phone. Use “Check now” to run a live BD Courier lookup.',
             ], 404);
         }
 
