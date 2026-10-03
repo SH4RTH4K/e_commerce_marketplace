@@ -11,6 +11,7 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
   const [bannerUsage, setBannerUsage] = useState(filters.banner_usage || 'all');
   const [stockOperator, setStockOperator] = useState(filters.stock_operator || 'any');
   const [stockValue, setStockValue] = useState(filters.stock_value ?? '');
+  const [priceAdjustment, setPriceAdjustment] = useState(filters.price_adjustment || '');
   const [rowsPerPage, setRowsPerPage] = useState(String(filters.per_page || 24));
   const [endTime, setEndTime] = useState(endsAt ? endsAt.replace(' ', 'T').slice(0, 16) : '');
   const [selectedFlash, setSelectedFlash] = useState([]);
@@ -31,6 +32,7 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
     banner_usage: bannerUsage,
     stock_operator: stockOperator,
     stock_value: numericStockOperators.includes(stockOperator) ? stockValue : '',
+    price_adjustment: priceAdjustment,
     per_page: rowsPerPage,
   });
 
@@ -48,6 +50,7 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
     setBannerUsage('all');
     setStockOperator('any');
     setStockValue('');
+    setPriceAdjustment('');
     setRowsPerPage('24');
     router.get('/admin/flash-sale', {}, {
       preserveState: true,
@@ -281,6 +284,18 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
                     <span className="mb-1.5 block text-xs font-semibold text-gray-600">Stock value</span>
                     <input type="number" min="0" value={stockValue} onChange={e => setStockValue(e.target.value)} disabled={!numericStockOperators.includes(stockOperator)} placeholder="e.g. 10"
                       className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange-300" />
+                  </label>
+                  <label className="min-w-[190px]">
+                    <span className="mb-1.5 block text-xs font-semibold text-gray-600">Price adjustment</span>
+                    <select value={priceAdjustment} onChange={e => setPriceAdjustment(e.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none">
+                      <option value="">Any pricing</option>
+                      <option value="custom">Any custom adjustment</option>
+                      <option value="fixed">Fixed discount</option>
+                      <option value="percent">Percentage discount</option>
+                      <option value="regular">Regular-price adjustment</option>
+                      <option value="untracked_discount">Untracked sale discount</option>
+                      <option value="none">No custom adjustment</option>
+                    </select>
                   </label>
                   <label className="w-[120px]">
                     <span className="mb-1.5 block text-xs font-semibold text-gray-600">Rows per page</span>

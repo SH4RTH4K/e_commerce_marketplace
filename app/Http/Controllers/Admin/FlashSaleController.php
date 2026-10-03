@@ -23,6 +23,7 @@ class FlashSaleController extends Controller
         $bannerUsageFilter = $request->input('banner_usage', 'all');
         $stockOperator = $request->input('stock_operator', 'any');
         $stockValue = $request->input('stock_value');
+        $priceAdjustmentFilter = $request->input('price_adjustment', '');
         $perPage = (int) $request->input('per_page', 24);
 
         $category = is_numeric($category) ? (int) $category : null;
@@ -39,6 +40,9 @@ class FlashSaleController extends Controller
             ? $stockOperator
             : 'any';
         $stockValue = is_numeric($stockValue) ? max(0, min(1000000, (int) $stockValue)) : null;
+        $priceAdjustmentFilter = in_array($priceAdjustmentFilter, ['custom', 'fixed', 'percent', 'regular', 'untracked_discount', 'none'], true)
+            ? $priceAdjustmentFilter
+            : '';
         $perPage = in_array($perPage, [24, 48, 100], true) ? $perPage : 24;
 
         $flashProducts = Product::with('images', 'category', 'supplierLinks.supplierProduct.supplier')
@@ -53,6 +57,17 @@ class FlashSaleController extends Controller
             ->when($productStatus === 'unpublished', fn ($q) => $q->where('is_published', false))
             ->when($category, fn ($q) => $q->where('category_id', $category))
             ->when($imageType === 'primary', fn ($q) => $q->whereHas('images', fn ($image) => $image->where('is_primary', true)))
+            ->when($priceAdjustmentFilter === 'custom', fn ($q) => $q->whereHas('supplierLinks', fn ($linkQuery) => $linkQuery->whereNotNull('price_override')))
+            ->when($priceAdjustmentFilter === 'fixed', fn ($q) => $q->whereHas('supplierLinks', fn ($linkQuery) => $linkQuery->where('price_override->discount_mode', 'fixed')))
+            ->when($priceAdjustmentFilter === 'percent', fn ($q) => $q->whereHas('supplierLinks', fn ($linkQuery) => $linkQuery->where('price_override->discount_mode', 'percent')))
+            ->when($priceAdjustmentFilter === 'regular', fn ($q) => $q->whereHas('supplierLinks', fn ($linkQuery) => $linkQuery
+                ->whereNotNull('price_override')
+                ->where('price_override->regular_mode', '!=', 'none')))
+            ->when($priceAdjustmentFilter === 'untracked_discount', fn ($q) => $q
+                ->whereNotNull('sale_price')
+                ->whereColumn('sale_price', '<', 'regular_price')
+                ->whereDoesntHave('supplierLinks', fn ($linkQuery) => $linkQuery->whereNotNull('price_override')))
+            ->when($priceAdjustmentFilter === 'none', fn ($q) => $q->whereDoesntHave('supplierLinks', fn ($linkQuery) => $linkQuery->whereNotNull('price_override')))
             ->when($bannerUsageFilter !== 'all', function ($q) use ($bannerUsageFilter) {
                 $q->whereHas('images', fn ($image) => $image->whereIn('path', Banner::query()
                     ->select('image')
@@ -110,6 +125,7 @@ class FlashSaleController extends Controller
                 'banner_usage'    => $bannerUsageFilter,
                 'stock_operator'  => $stockOperator,
                 'stock_value'     => $stockValue,
+                'price_adjustment' => $priceAdjustmentFilter,
                 'per_page'        => $perPage,
             ],
             'endsAt'        => $endsAt,
