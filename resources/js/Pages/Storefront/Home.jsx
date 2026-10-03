@@ -533,7 +533,7 @@ export default function HomePage({
         <div className={gridClass}>
           {flashProductList.map(product => (
             <div key={product.id} className="flash-sale-product-card relative">
-              <ProductCard product={product} />
+              <ProductCard product={product} highlightDiscount />
               <div className="pointer-events-none absolute inset-x-3 bottom-3 rounded-full bg-gray-100/95 p-1 shadow-sm">
                 <div className="h-1.5 rounded-full bg-gray-200">
                   <div className="h-full rounded-full bg-[#f2541c]" style={{ width: `${Math.max(5, Math.min(100, Number(product.flash_sale_progress || 50)))}%` }} />

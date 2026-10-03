@@ -3,7 +3,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 import { money, imageUrl } from '@/lib/utils';
 import PulseHeart from './PulseHeart';
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, highlightDiscount = true }) {
   const { app, cartItems = [] } = usePage().props;
   const isTemplateOne = app?.settings?.storefront_template === 'template-1';
   const [imageError, setImageError] = useState(false);
@@ -54,11 +54,11 @@ export default function ProductCard({ product }) {
     window.dispatchEvent(new Event('wishlist-updated'));
   };
   
-  // Calculate discount percentage manually if not passed
-  let discount = 0;
-  if (product.sale_price && product.regular_price > product.sale_price) {
-    discount = Math.round(((product.regular_price - product.sale_price) / product.regular_price) * 100);
-  }
+  const regularPrice = Number(product.regular_price) || 0;
+  const salePrice = Number(product.sale_price) || 0;
+  const hasDiscount = salePrice > 0 && regularPrice > salePrice;
+  const discountAmount = hasDiscount ? regularPrice - salePrice : 0;
+  const discount = hasDiscount ? Math.round((discountAmount / regularPrice) * 100) : 0;
 
   const primaryImage = product.images?.find(img => img.is_primary)?.path || product.images?.[0]?.path;
   const imageSrc = imageUrl(primaryImage, product.name);
@@ -90,8 +90,8 @@ export default function ProductCard({ product }) {
       <div className="relative shrink-0 aspect-square">
         <Link href={`/product/${product.url_key || product.slug || product.id}`} className="block w-full h-full overflow-hidden bg-gray-50 rounded-[14px]">
           {discount > 0 && (
-            <span className="absolute left-2.5 top-2.5 z-10 bg-[#00D06C] text-white text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md">
-              -{discount}%
+            <span className={`absolute left-2.5 top-2.5 z-10 text-white font-bold rounded-md shadow-sm ${highlightDiscount ? 'bg-[#f2541c] px-2.5 py-1 text-[10px] sm:text-[11px]' : 'bg-[#00D06C] px-2 py-0.5 text-[10px] sm:text-[11px]'}`}>
+              {highlightDiscount ? `${money(discountAmount)} OFF` : `-${discount}%`}
             </span>
           )}
           {!discount && product.is_free_shipping && (
@@ -160,6 +160,11 @@ export default function ProductCard({ product }) {
             {product.sale_price && product.regular_price > product.sale_price && (
               <span className="storefront-product-compare-price whitespace-nowrap text-[10px] sm:text-[11px] text-gray-400 line-through mt-1">
                 {money(product.regular_price)}
+              </span>
+            )}
+            {highlightDiscount && discount > 0 && (
+              <span className="mt-1 rounded-full bg-orange-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold text-[#f2541c] ring-1 ring-orange-100">
+                Save {money(discountAmount)} ({discount}%)
               </span>
             )}
           </div>

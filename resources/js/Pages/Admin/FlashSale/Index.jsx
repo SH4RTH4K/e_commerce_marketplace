@@ -87,6 +87,19 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
     ].filter(Boolean).join(' | ');
   };
 
+  const money = (value) => `৳${Number(value || 0).toLocaleString()}`;
+  const productDiscount = (product) => {
+    const regular = Number(product.regular_price) || 0;
+    const sale = Number(product.sale_price) || 0;
+    if (sale <= 0 || regular <= sale) return null;
+
+    const amount = regular - sale;
+    return {
+      amount,
+      percent: Math.round((amount / regular) * 100),
+    };
+  };
+
   const toggleSelected = (id, selected, setSelected) => {
     setSelected(selected.includes(id) ? selected.filter(item => item !== id) : [...selected, id]);
   };
@@ -192,14 +205,23 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
                 <div className="divide-y divide-gray-50">
               {flashProducts.length === 0 ? (
                 <div className="px-5 py-12 text-center text-gray-400">No products in flash sale yet.</div>
-              ) : flashProducts.map((product, index) => (
+              ) : flashProducts.map((product, index) => {
+                const discount = productDiscount(product);
+                return (
                 <div key={product.id} className={`grid grid-cols-[48px_58px_96px_minmax(280px,1fr)_120px_160px_220px] items-center px-5 py-3.5 transition-colors hover:bg-gray-50/50 ${selectedFlash.includes(product.id) ? 'bg-orange-50/40' : ''}`}>
                   <div><input type="checkbox" checked={selectedFlash.includes(product.id)} onChange={() => toggleSelected(product.id, selectedFlash, setSelectedFlash)} className="h-4 w-4 rounded accent-orange-500" aria-label={`Select ${product.name}`} /></div>
                   <div className="text-sm text-gray-500">{index + 1}</div>
                   <img src={primaryImage(product)} alt="" className="h-11 w-11 shrink-0 rounded-xl border border-gray-100 object-cover" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-gray-800">{product.name}</p>
-                    <p className="text-xs text-gray-400">{product.category?.name || 'No category'} · ৳{Number(product.regular_price).toLocaleString()}{product.sale_price ? ` → ৳${Number(product.sale_price).toLocaleString()}` : ''}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
+                      <span>{product.category?.name || 'No category'} · {money(product.regular_price)}{product.sale_price ? ` → ${money(product.sale_price)}` : ''}</span>
+                      {discount && (
+                        <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-extrabold text-orange-600 ring-1 ring-orange-100">
+                          Save {money(discount.amount)} ({discount.percent}% off)
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="text-sm text-gray-600">{product.sku || supplierCode(product) || '-'}</div>
                   <div className="text-sm text-gray-600">{product.category?.name || 'No category'}</div>
@@ -209,7 +231,8 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
                     <button type="button" onClick={() => handleRemove(product.id)} className="ml-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-100">Remove</button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
                 </div>
               </div>
             </div>
@@ -324,14 +347,23 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
                 <div className="divide-y divide-gray-50">
               {availableRows.length === 0 ? (
                 <div className="px-5 py-8 text-center text-sm text-gray-400">No available products found.</div>
-              ) : availableRows.map((product, index) => (
+              ) : availableRows.map((product, index) => {
+                const discount = productDiscount(product);
+                return (
                 <div key={product.id} className={`grid grid-cols-[48px_58px_96px_minmax(280px,1fr)_120px_160px_220px] items-center px-5 py-3.5 transition-colors hover:bg-gray-50/50 ${selectedAvailable.includes(product.id) ? 'bg-orange-50/40' : ''}`}>
                   <div><input type="checkbox" checked={selectedAvailable.includes(product.id)} onChange={() => toggleSelected(product.id, selectedAvailable, setSelectedAvailable)} className="h-4 w-4 rounded accent-orange-500" aria-label={`Select ${product.name}`} /></div>
                   <div className="text-sm text-gray-500">{index + 1}</div>
                   <img src={primaryImage(product)} alt="" className="h-10 w-10 shrink-0 rounded-xl border border-gray-100 object-cover" />
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-gray-800">{product.name}</p>
-                    <p className="text-xs text-gray-400">৳{Number(product.regular_price).toLocaleString()}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-gray-400">
+                      <span>{money(product.regular_price)}{product.sale_price ? ` → ${money(product.sale_price)}` : ''}</span>
+                      {discount && (
+                        <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-extrabold text-orange-600 ring-1 ring-orange-100">
+                          Save {money(discount.amount)} ({discount.percent}% off)
+                        </span>
+                      )}
+                    </div>
                     {productMeta(product) && <p className="mt-0.5 truncate text-xs text-gray-400">{productMeta(product)}</p>}
                   </div>
                   <div className="truncate text-sm text-gray-600">{product.sku || supplierCode(product) || '-'}</div>
@@ -340,7 +372,8 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
                     <button type="button" onClick={() => handleAdd(product.id)} className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-600 transition-colors hover:bg-orange-100">+ Add</button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
                 </div>
               </div>
             </div>
