@@ -88,9 +88,16 @@ export default function CodOrderModal({ open, onClose, product, qty = 1, variant
   const isDeliveryNoteEnabled = s.checkout_delivery_note_enabled !== false && s.checkout_delivery_note_enabled !== '0';
   const deliveryNoteLabel     = s.checkout_delivery_note_label || 'ডেলিভারি সংক্রান্ত বিশেষ নোট (ঐচ্ছিক)';
 
+  const regularProductPrice = parseFloat(product?.regular_price || 0);
+  const saleProductPrice    = parseFloat(product?.sale_price || 0);
+  const hasProductDiscount  = saleProductPrice > 0 && regularProductPrice > saleProductPrice;
+  const productDiscountAmount = hasProductDiscount ? regularProductPrice - saleProductPrice : 0;
+  const productDiscountPercent = hasProductDiscount ? Math.round((productDiscountAmount / regularProductPrice) * 100) : 0;
   const basePrice      = parseFloat(product?.sale_price || product?.regular_price || 0);
   const price          = (unitPrice !== null && unitPrice !== undefined) ? parseFloat(unitPrice) : basePrice;
+  const compareUnitPrice = hasProductDiscount ? price + productDiscountAmount : null;
   const subtotal       = price * quantity;
+  const productSavings = productDiscountAmount * quantity;
   const isFreeShipping = Boolean(product?.is_free_shipping);
   const shipping       = isFreeShipping ? 0 : (zone === 'inside_dhaka' ? (s.ship_inside || 60) : (s.ship_outside || 120));
   const discount       = couponApplied?.discount || 0;
@@ -301,6 +308,14 @@ export default function CodOrderModal({ open, onClose, product, qty = 1, variant
                   <p className="text-sm font-bold text-gray-900 line-clamp-1">{product?.name}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs font-extrabold text-green-700">{money(price, sym)}</span>
+                    {compareUnitPrice !== null && (
+                      <span className="text-[11px] font-semibold text-gray-400 line-through">{money(compareUnitPrice, sym)}</span>
+                    )}
+                    {hasProductDiscount && (
+                      <span className="rounded-full bg-orange-50 px-1.5 py-0.5 text-[10px] font-extrabold text-[#f2541c] ring-1 ring-orange-100">
+                        Save {money(productDiscountAmount, sym)} ({productDiscountPercent}%)
+                      </span>
+                    )}
                     {variant && <span className="text-[11px] text-gray-500 bg-gray-200/70 px-1.5 py-0.5 rounded-md truncate max-w-[120px]">{variant}</span>}
                   </div>
                 </div>
@@ -490,6 +505,12 @@ export default function CodOrderModal({ open, onClose, product, qty = 1, variant
                     <span className="flex items-center gap-1.5"><I d={ICON.box} className="w-3.5 h-3.5" /> পণ্যমূল্য × {quantity}</span>
                     <span className="font-bold text-gray-900">{money(subtotal, sym)}</span>
                   </div>
+                  {productSavings > 0 && (
+                    <div className="flex justify-between text-sm text-[#f2541c]">
+                      <span className="flex items-center gap-1.5"><I d={ICON.tag} className="w-3.5 h-3.5" /> Product savings</span>
+                      <span className="font-bold">Save {money(productSavings, sym)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-sm text-gray-600 items-center">
                     <span className="flex items-center gap-1.5"><I d={ICON.truck} className="w-3.5 h-3.5" /> শিপিং চার্জ</span>
                     {isFreeShipping ? (

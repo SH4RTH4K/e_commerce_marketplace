@@ -362,7 +362,8 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
       price: Math.max(0, basePrice + delta),
       comparePrice: onSale ? Math.max(0, regularPrice + delta) : null,
       onSale,
-      discountPercent: onSale ? Math.round(((regularPrice - basePrice) / regularPrice) * 100) : 0
+      discountPercent: onSale ? Math.round(((regularPrice - basePrice) / regularPrice) * 100) : 0,
+      discountAmount: onSale ? Math.max(0, regularPrice - basePrice) : 0
     };
   }, [product, selectedVariants, variantGroups, colors, sizes, weights]);
 
@@ -410,14 +411,15 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
       variant || null
     );
 
-    router.post('/cart/add', {
+    router.post('/cart/buy-now', {
       product_id: product.id,
       variant: variant || null,
       qty
     }, { preserveScroll: true });
   };
 
-  const inStock = product.stock_quantity > 0;
+  const hasVariantStock = (product.variants || []).some(variant => Number(variant.stock) > 0);
+  const inStock = Number(product.stock_quantity) > 0 || hasVariantStock;
   const mainImageUrl = imageUrl(activeImage, product.name);
   const rating = Math.max(0, Math.min(5, Math.round(parseFloat(product.rating) || 0)));
 
@@ -465,6 +467,11 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
                 {money(priceData.price)}
                 {priceData.comparePrice !== null && <del>{money(priceData.comparePrice)}</del>}
               </span>
+              {priceData.onSale && (
+                <span className="mt-2 inline-flex w-fit rounded-full bg-orange-50 px-3 py-1 text-xs font-extrabold text-[#f2541c] ring-1 ring-orange-100">
+                  Save {money(priceData.discountAmount)} ({priceData.discountPercent}%)
+                </span>
+              )}
               <p className="mt-2 text-sm text-gray-500">SKU: <span className="font-mono font-semibold text-gray-700">{product.sku || '—'}</span></p>
               <div className="template-1-product-rating" aria-label={`${rating} out of 5 stars`}>{'★'.repeat(rating)}<span>{'★'.repeat(5 - rating)}</span> <small>({product.reviews_count || 0})</small></div>
               <div className="template-1-product-description" dangerouslySetInnerHTML={{ __html: descriptionMarkup }} />
@@ -610,7 +617,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
             <div className="flex-1 relative rounded-2xl border border-gray-100 bg-white aspect-square flex items-center justify-center p-6 overflow-hidden group">
               {priceData.onSale && (
                 <span className="absolute top-4 left-4 z-10 bg-[#f15a24] text-white text-xs font-black px-2.5 py-1 rounded-md shadow-sm shadow-[#f15a24]/30">
-                  -{priceData.discountPercent}% OFF
+                  {money(priceData.discountAmount)} OFF
                 </span>
               )}
               {mainImageUrl && !imageError ? (
@@ -669,6 +676,11 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
               <span className="text-3xl font-bold text-[#f15a24]">{money(priceData.price)}</span>
               {priceData.comparePrice !== null && (
                 <span className="text-base text-gray-400 font-medium line-through decoration-gray-300">{money(priceData.comparePrice)}</span>
+              )}
+              {priceData.onSale && (
+                <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-extrabold text-[#f15a24] ring-1 ring-orange-100">
+                  Save {money(priceData.discountAmount)} ({priceData.discountPercent}%)
+                </span>
               )}
             </div>
             
