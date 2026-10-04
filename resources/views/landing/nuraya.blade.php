@@ -9,26 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com" data-cfasync="false"></script>
-  <script data-cfasync="false">
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            ink:    "#0f0c29",
-            violet: "#7c3aed",
-            vmid:   "#6d28d9",
-            vdeep:  "#4c1d95",
-            vsoft:  "#ede9fe",
-            rose:   "#f43f5e",
-            gold:   "#f59e0b",
-            muted:  "#64748b",
-          },
-          fontFamily: { sans: ["Hind Siliguri", "Manrope", "sans-serif"] },
-        },
-      },
-    };
-  </script>
+  @vite('resources/css/landing.css')
   <link rel="stylesheet" href="{{ asset('landing/nuraya/css/style.css') }}?v=v4" />
 
   {{-- Inline SVG icon helpers (reusable via <use>) --}}

@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+
+@source '../views/landing/**/*.blade.php';
+
+@theme {
+  --font-sans: 'Hind Siliguri', 'Plus Jakarta Sans', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Hind Siliguri', 'Fredoka', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+
+  --color-accent-orange: #ff6b00;
+  --color-accent-amber: #f59e0b;
+  --color-accent-green: #10b981;
+  --color-accent-emerald: #059669;
+
+  --color-ink: #0c1e36;
+  --color-sky: #0284c7;
+  --color-sky-deep: #0369a1;
+  --color-sky-soft: #e0f2fe;
+  --color-blue: #2563eb;
+  --color-emerald: #10b981;
+  --color-amber: #f59e0b;
+  --color-coral: #ea580c;
+  --color-rose: #f43f5e;
+  --color-line: #dbeafe;
+  --color-muted: #475569;
+
+  --color-violet: #7c3aed;
+  --color-vmid: #6d28d9;
+  --color-vdeep: #4c1d95;
+  --color-vsoft: #ede9fe;
+  --color-gold: #f59e0b;
+}

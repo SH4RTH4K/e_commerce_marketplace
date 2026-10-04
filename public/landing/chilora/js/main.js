@@ -4,7 +4,7 @@
 (function () {
   const cfg = Object.assign(
     {
-      phone: "01600-000000",
+      phone: "+8801700-000000",
       offerEndHours: 18,
       regularPrice: 1650,
       offerPrice: 1200,

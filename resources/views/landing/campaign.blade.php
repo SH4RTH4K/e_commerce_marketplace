@@ -9,36 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com" data-cfasync="false"></script>
-  <script data-cfasync="false">
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50:  '#eff6ff',
-              100: '#dbeafe',
-              500: '#3b82f6',
-              600: '#2563eb',
-              700: '#1d4ed8',
-              800: '#1e40af',
-              900: '#1e3a8a',
-            },
-            accent: {
-              orange: '#ff6b00',
-              amber:  '#f59e0b',
-              green:  '#10b981',
-              emerald:'#059669',
-            }
-          },
-          fontFamily: {
-            sans: ['Hind Siliguri', 'Plus Jakarta Sans', 'sans-serif'],
-            display: ['Hind Siliguri', 'sans-serif'],
-          }
-        }
-      }
-    };
-  </script>
+  @vite('resources/css/landing.css')
   <style>
     body {
       font-family: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
@@ -128,8 +99,8 @@
 
   @php
     $show = fn($sec) => $page->sectionVisible($sec);
-    $phone = $c['phone'] ?? setting('contact_phone', '01923443872');
-    $whatsapp = $c['whatsapp'] ?? setting('whatsapp_number', '8801923443872');
+    $phone = $c['phone'] ?? '+8801700-000000';
+    $whatsapp = $c['whatsapp'] ?? '8801700000000';
     $regularPrice = (float) ($c['regular_price'] ?? 1650);
     $offerPrice = (float) ($c['offer_price'] ?? 699);
     $packages = $c['package_options'] ?? [
@@ -213,7 +184,7 @@
         @elseif(!empty($c['hero_image']))
           <img src="{{ $page->mediaUrl($c['hero_image']) }}" alt="{{ $c['hero_headline'] ?? 'Campaign Image' }}" class="w-full h-auto object-cover max-h-[520px]" />
         @else
-          <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=1000&q=80" alt="Hero Banner" class="w-full h-auto object-cover max-h-[520px]" />
+          <img src="{{ asset('landing/campaign/preview.png') }}" alt="Hero Banner" class="w-full h-auto object-cover max-h-[520px]" />
         @endif
       </div>
 

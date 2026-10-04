@@ -360,20 +360,33 @@ class LandingPageController extends Controller
                 foreach ($rows as $i => $row) {
                     $title = trim((string) ($row['title'] ?? ''));
                     $body = trim((string) ($row['body'] ?? ''));
-                    $image = $existing[$i]['image'] ?? ($row['image'] ?? '');
+                    $existingImage = (string) ($existing[$i]['image'] ?? '');
+                    $rowHasImage = array_key_exists('image', $row);
+                    $image = $rowHasImage ? trim((string) ($row['image'] ?? '')) : $existingImage;
+                    $removeImage = $request->boolean("features.$i.remove_image")
+                        || filter_var($row['remove_image'] ?? false, FILTER_VALIDATE_BOOLEAN);
                     if ($title === '' && $body === '' && empty($image)) {
                         continue;
+                    }
+                    if ($removeImage || ($rowHasImage && $image === '' && $existingImage !== '')) {
+                        $this->deleteUpload($existingImage);
+                        $image = '';
                     }
                     if ($request->hasFile("features.$i.image_file")) {
                         $path = PublicUploader::storeFromRequest($request, "features.$i.image_file", 'landing/'.$page->id, 'jpg');
                         if ($path) {
+                            $this->deleteUpload($existingImage);
                             $image = $path;
                         }
-                    } elseif (! empty($row['image'])) {
+                    } elseif (! empty($row['image_url'])) {
+                        $this->deleteUpload($existingImage);
+                        $image = trim((string) $row['image_url']);
+                    } elseif ($rowHasImage && $image !== '') {
                         $val = trim((string) $row['image']);
                         if (str_starts_with($val, 'data:image/')) {
                             $decoded = PublicUploader::decodeBase64Payload($val, "feature_{$i}.jpg", "features.{$i}.image");
                             if ($decoded) {
+                                $this->deleteUpload($existingImage);
                                 $image = PublicUploader::storeBytes($decoded[0], 'landing/'.$page->id, $decoded[1] ?: 'jpg', "features.{$i}.image");
                             }
                         } else {
@@ -397,20 +410,33 @@ class LandingPageController extends Controller
                     $nameVal = trim((string) ($row['name'] ?? ''));
                     $textVal = trim((string) ($row['text'] ?? ''));
                     $rating = (int) ($row['rating'] ?? 5);
-                    $image = $existing[$i]['image'] ?? ($row['image'] ?? '');
+                    $existingImage = (string) ($existing[$i]['image'] ?? '');
+                    $rowHasImage = array_key_exists('image', $row);
+                    $image = $rowHasImage ? trim((string) ($row['image'] ?? '')) : $existingImage;
+                    $removeImage = $request->boolean("testimonials.$i.remove_image")
+                        || filter_var($row['remove_image'] ?? false, FILTER_VALIDATE_BOOLEAN);
                     if ($nameVal === '' && $textVal === '') {
                         continue;
+                    }
+                    if ($removeImage || ($rowHasImage && $image === '' && $existingImage !== '')) {
+                        $this->deleteUpload($existingImage);
+                        $image = '';
                     }
                     if ($request->hasFile("testimonials.$i.image_file")) {
                         $path = PublicUploader::storeFromRequest($request, "testimonials.$i.image_file", 'landing/'.$page->id, 'jpg');
                         if ($path) {
+                            $this->deleteUpload($existingImage);
                             $image = $path;
                         }
-                    } elseif (! empty($row['image'])) {
+                    } elseif (! empty($row['image_url'])) {
+                        $this->deleteUpload($existingImage);
+                        $image = trim((string) $row['image_url']);
+                    } elseif ($rowHasImage && $image !== '') {
                         $val = trim((string) $row['image']);
                         if (str_starts_with($val, 'data:image/')) {
                             $decoded = PublicUploader::decodeBase64Payload($val, "testi_{$i}.jpg", "testimonials.{$i}.image");
                             if ($decoded) {
+                                $this->deleteUpload($existingImage);
                                 $image = PublicUploader::storeBytes($decoded[0], 'landing/'.$page->id, $decoded[1] ?: 'jpg', "testimonials.{$i}.image");
                             }
                         } else {
@@ -473,17 +499,29 @@ class LandingPageController extends Controller
                     if ($nameVal === '' && $price === '') {
                         continue;
                     }
-                    $image = $existing[$i]['image'] ?? ($row['image'] ?? '');
+                    $existingImage = (string) ($existing[$i]['image'] ?? '');
+                    $rowHasImage = array_key_exists('image', $row);
+                    $image = $rowHasImage ? trim((string) ($row['image'] ?? '')) : $existingImage;
+                    $removeImage = $request->boolean("catalog.$i.remove_image")
+                        || filter_var($row['remove_image'] ?? false, FILTER_VALIDATE_BOOLEAN);
                     if ($request->hasFile("catalog.$i.image_file")) {
                         $path = PublicUploader::storeFromRequest($request, "catalog.$i.image_file", 'landing/'.$page->id, 'jpg');
                         if ($path) {
+                            $this->deleteUpload($existingImage);
                             $image = $path;
                         }
-                    } elseif (! empty($row['image'])) {
+                    } elseif ($removeImage || ($rowHasImage && $image === '' && $existingImage !== '')) {
+                        $this->deleteUpload($existingImage);
+                        $image = '';
+                    } elseif (! empty($row['image_url'])) {
+                        $this->deleteUpload($existingImage);
+                        $image = trim((string) $row['image_url']);
+                    } elseif ($rowHasImage && $image !== '') {
                         $val = trim((string) $row['image']);
                         if (str_starts_with($val, 'data:image/')) {
                             $decoded = PublicUploader::decodeBase64Payload($val, "catalog_{$i}.jpg", "catalog.{$i}.image");
                             if ($decoded) {
+                                $this->deleteUpload($existingImage);
                                 $image = PublicUploader::storeBytes($decoded[0], 'landing/'.$page->id, $decoded[1] ?: 'jpg', "catalog.{$i}.image");
                             }
                         } else {

@@ -11,7 +11,7 @@ const __dirname = dirname(__filename);
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/js/app.jsx'],
+            input: ['resources/js/app.jsx', 'resources/css/landing.css'],
             refresh: true,
         }),
         react(),

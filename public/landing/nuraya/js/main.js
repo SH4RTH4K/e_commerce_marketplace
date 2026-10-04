@@ -2,7 +2,7 @@
 (function () {
   const cfg = Object.assign(
     {
-      phone: "01700-000000",
+      phone: "+8801700-000000",
       offerEndHours: 23,
       priceMin: 550,
       priceMax: 630,

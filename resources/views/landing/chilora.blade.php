@@ -9,33 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Hind+Siliguri:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com" data-cfasync="false"></script>
-  <script data-cfasync="false">
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            ink:        "#0c1e36",
-            sky:        "#0284c7",
-            "sky-deep": "#0369a1",
-            "sky-soft": "#e0f2fe",
-            blue:       "#2563eb",
-            emerald:    "#10b981",
-            amber:      "#f59e0b",
-            coral:      "#ea580c",
-            rose:       "#f43f5e",
-            line:       "#dbeafe",
-            muted:      "#475569",
-          },
-          maxWidth: { "7xl": "80rem" },
-          fontFamily: {
-            sans: ["Plus Jakarta Sans", "Hind Siliguri", "sans-serif"],
-            display: ["Fredoka", "Hind Siliguri", "sans-serif"],
-          },
-        },
-      },
-    };
-  </script>
+  @vite('resources/css/landing.css')
   <link rel="stylesheet" href="{{ asset('landing/chilora/css/style.css') }}?v=v4" />
 
   {{-- SVG Icons Library --}}

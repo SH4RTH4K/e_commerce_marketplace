@@ -4,7 +4,7 @@
 (function () {
   const cfg = window.CHILORA || {};
   if (cfg.hideChrome) return;
-  const phone = cfg.phone || "01600-000000";
+  const phone = cfg.phone || "+8801700-000000";
   const brand = cfg.brand || "Chilora";
   const warranty = cfg.warranty || "৬ মাসের ওয়ারেন্টি";
   const promoLeft = cfg.promo_left || "ক্যাশ অন ডেলিভারি সারা দেশে";

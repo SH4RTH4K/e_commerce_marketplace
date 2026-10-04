@@ -1,4 +1,13 @@
 {
+  "resources/css/landing.css": {
+    "file": "assets/landing-Cl214YF-.css",
+    "name": "landing",
+    "names": [
+      "landing.css"
+    ],
+    "src": "resources/css/landing.css",
+    "isEntry": true
+  },
   "resources/js/app.jsx": {
     "file": "assets/app-mRkQ7-S7.js",
     "name": "app",

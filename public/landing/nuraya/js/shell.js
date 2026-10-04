@@ -2,7 +2,7 @@
 (function () {
   const cfg = window.NURAYA || {};
   if (cfg.hideChrome) return;
-  const phone = cfg.phone || "01700-000000";
+  const phone = cfg.phone || "+8801700-000000";
   const tel   = String(phone).replace(/-/g, "");
   const brand = cfg.brand || "Nuraya";
   const promo = cfg.promo_text || "১০০% সুতি অরবিন্দ ভয়েলের সালাত হিজাব — সারা দেশে ক্যাশ অন ডেলিভারি";
