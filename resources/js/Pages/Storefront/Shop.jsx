@@ -1,7 +1,70 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import ProductCard from '@/Components/Storefront/ProductCard';
+
+function categoryChildren(category) {
+  if (!category?.children) return [];
+
+  return Array.isArray(category.children) ? category.children : Object.values(category.children);
+}
+
+function categoryHasActive(category, activeCategory) {
+  return Boolean(activeCategory?.id) && (
+    category?.id === activeCategory.id || categoryChildren(category).some(child => categoryHasActive(child, activeCategory))
+  );
+}
+
+function TemplateOneCategoryLinks({ categories = [], activeCategory, level = 0 }) {
+  return categories.map(category => {
+    const children = categoryChildren(category);
+
+    return (
+      <Fragment key={category.id}>
+        <Link
+          href={`/category/${category.slug}`}
+          className={activeCategory?.id === category.id ? 'is-active' : ''}
+          style={level > 0 ? { paddingLeft: `${14 + level * 14}px` } : undefined}
+        >
+          <span>{category.name}</span>
+          <span>{category.products_count}</span>
+        </Link>
+        {children.length > 0 && <TemplateOneCategoryLinks categories={children} activeCategory={activeCategory} level={level + 1} />}
+      </Fragment>
+    );
+  });
+}
+
+function TemplateTwoCategoryLinks({ categories = [], activeCategory, level = 0 }) {
+  return categories.map(category => {
+    const children = categoryChildren(category);
+    const exactActive = activeCategory?.id === category.id;
+    const branchActive = categoryHasActive(category, activeCategory);
+    const linkClass = exactActive
+      ? 'text-[#f15a24] font-bold'
+      : branchActive
+        ? 'text-gray-900 font-semibold'
+        : 'text-gray-600 hover:text-[#f15a24]';
+
+    return (
+      <Fragment key={category.id}>
+        <li>
+          <Link
+            href={`/category/${category.slug}`}
+            className={`flex items-center justify-between group ${linkClass}`}
+            style={level > 0 ? { paddingLeft: `${level * 14}px` } : undefined}
+          >
+            <span className="truncate">{category.name}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${exactActive ? 'bg-[#f15a24]/10 text-[#f15a24]' : 'bg-gray-100 text-gray-500 group-hover:bg-[#f15a24]/10 group-hover:text-[#f15a24]'}`}>
+              {category.products_count}
+            </span>
+          </Link>
+        </li>
+        {children.length > 0 && <TemplateTwoCategoryLinks categories={children} activeCategory={activeCategory} level={level + 1} />}
+      </Fragment>
+    );
+  });
+}
 
 export default function ShopPage({ 
   products, 
@@ -235,12 +298,7 @@ export default function ShopPage({
                     <span>All Products</span>
                     <span>{allProductsCount || categories.reduce((acc, cat) => acc + cat.products_count, 0)}</span>
                   </Link>
-                  {categories.map(cat => (
-                    <Link key={cat.id} href={`/category/${cat.slug}`} className={activeCategory?.id === cat.id ? 'is-active' : ''}>
-                      <span>{cat.name}</span>
-                      <span>{cat.products_count}</span>
-                    </Link>
-                  ))}
+                  <TemplateOneCategoryLinks categories={categories} activeCategory={activeCategory} />
                 </div>
               </div>
 
@@ -384,16 +442,7 @@ export default function ShopPage({
                       </span>
                     </Link>
                   </li>
-                  {categories.map((cat) => (
-                    <li key={cat.id}>
-                      <Link href={`/category/${cat.slug}`} className={`flex items-center justify-between group ${activeCategory?.id === cat.id ? 'text-[#f15a24] font-bold' : 'text-gray-600 hover:text-[#f15a24]'}`}>
-                        <span className="truncate">{cat.name}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${activeCategory?.id === cat.id ? 'bg-[#f15a24]/10 text-[#f15a24]' : 'bg-gray-100 text-gray-500 group-hover:bg-[#f15a24]/10 group-hover:text-[#f15a24]'}`}>
-                          {cat.products_count}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
+                  <TemplateTwoCategoryLinks categories={categories} activeCategory={activeCategory} />
                 </ul>
               </div>
 

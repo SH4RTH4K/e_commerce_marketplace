@@ -181,17 +181,10 @@ class ShopController extends Controller
             ])
             ->values();
 
-        $categories = Category::where('is_active', true)
-            ->where('show_in_menu', true)
-            ->orderBy('menu_order')
-            ->orderBy('name')
-            ->get()
-            ->each(fn (Category $item) => $item->setAttribute('products_count', $item->publishedProductsInTreeCount()));
-
         return Inertia::render('Storefront/Shop', [
             'products'         => $products,
             'activeCategory'   => $category,
-            'filterCategories' => $categories,
+            'filterCategories' => Category::storefrontFilterTree(),
             'allProductsCount' => Product::published()->count(),
             'brands'           => $brands,
             'variantFilters'   => $variantFilters,

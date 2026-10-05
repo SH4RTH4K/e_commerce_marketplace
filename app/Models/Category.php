@@ -63,21 +63,39 @@ class Category extends Model
         return static::buildMenuBranch($categories, null);
     }
 
-    private static function buildMenuBranch(Collection $categories, ?int $parentId): array
+    public static function storefrontFilterTree(): array
+    {
+        $categories = static::query()
+            ->where('is_active', true)
+            ->where('show_in_menu', true)
+            ->orderBy('menu_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug', 'parent_id', 'icon', 'image']);
+
+        return static::buildMenuBranch($categories, null, true);
+    }
+
+    private static function buildMenuBranch(Collection $categories, ?int $parentId, bool $withProductCounts = false): array
     {
         return $categories
             ->filter(fn (Category $category) => (int) ($category->parent_id ?? 0) === (int) ($parentId ?? 0))
             ->values()
-            ->map(function (Category $category) use ($categories): array {
-                return [
+            ->map(function (Category $category) use ($categories, $withProductCounts): array {
+                $payload = [
                     'id' => $category->id,
                     'name' => $category->name,
                     'slug' => $category->slug,
                     'parent_id' => $category->parent_id,
                     'icon' => $category->icon,
                     'image' => $category->image,
-                    'children' => static::buildMenuBranch($categories, (int) $category->id),
+                    'children' => static::buildMenuBranch($categories, (int) $category->id, $withProductCounts),
                 ];
+
+                if ($withProductCounts) {
+                    $payload['products_count'] = $category->publishedProductsInTreeCount();
+                }
+
+                return $payload;
             })
             ->all();
     }
