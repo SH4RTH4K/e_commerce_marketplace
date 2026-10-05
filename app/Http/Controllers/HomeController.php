@@ -38,10 +38,10 @@ class HomeController extends Controller
 
         $categories = Category::where('is_active', true)
             ->where('show_in_menu', true)
-            ->withCount(['products' => fn ($q) => $q->published()])
             ->orderBy('menu_order')
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->each(fn (Category $category) => $category->setAttribute('products_count', $category->publishedProductsInTreeCount()));
 
         $banners = fn (string $placement) => Banner::active()
             ->placement($placement)
@@ -104,7 +104,7 @@ class HomeController extends Controller
                 ->map(function (Category $category) use ($withImages, $setStorefrontSku, $templateTwoCategoryOrder): array {
                     $products = Product::query()
                         ->tap($withImages)
-                        ->where('category_id', $category->getKey())
+                        ->whereIn('category_id', $category->selfAndDescendantIds())
                         ->tap($templateTwoCategoryOrder)
                         ->take(10)
                         ->get()
@@ -243,7 +243,7 @@ class HomeController extends Controller
             ->withExists([
                 'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
             ])
-            ->where('category_id', $category->getKey())
+            ->whereIn('category_id', $category->selfAndDescendantIds())
             ->whereNotIn('id', $data['exclude'] ?? [])
             ->when(
                 setting('homepage_category_product_order', setting('template_2_category_product_order', 'newest')) === 'shuffle',

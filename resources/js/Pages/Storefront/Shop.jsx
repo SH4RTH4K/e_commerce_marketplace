@@ -175,7 +175,7 @@ export default function ShopPage({
 
   if (isTemplateOne) {
     return (
-      <StorefrontLayout title={title} app={app} categories={categories}>
+      <StorefrontLayout title={title} app={app} categories={categories} activeCategory={activeCategory}>
         <Head title={seo?.title || title} />
 
         <main className="storefront-shop-page template-1-shop template-1-container min-w-0">
@@ -342,7 +342,7 @@ export default function ShopPage({
   }
 
   return (
-    <StorefrontLayout>
+    <StorefrontLayout activeCategory={activeCategory}>
       <Head title={seo?.title || title} />
       
       <main className="storefront-shop-page max-w-[1440px] mx-auto px-4 sm:px-5 py-5 sm:py-6">

@@ -49,7 +49,7 @@ class CategoryController extends Controller
     {
         return Inertia::render('Admin/Categories/Form', [
             'category' => new Category(['is_active' => true]),
-            'parents'  => Category::whereNull('parent_id')->orderBy('menu_order')->orderBy('name')->get(['id', 'name']),
+            'parents'  => $this->parentOptions(),
         ]);
     }
 
@@ -71,7 +71,7 @@ class CategoryController extends Controller
     {
         return Inertia::render('Admin/Categories/Form', [
             'category' => $category,
-            'parents'  => Category::whereNull('parent_id')->where('id', '!=', $category->id)->orderBy('menu_order')->orderBy('name')->get(['id', 'name']),
+            'parents'  => $this->parentOptions($category),
         ]);
     }
 
@@ -196,6 +196,36 @@ class CategoryController extends Controller
         }
 
         return $data;
+    }
+
+    private function parentOptions(?Category $exclude = null)
+    {
+        $excludedIds = $exclude
+            ? $exclude->selfAndDescendantIds()
+            : [];
+
+        $categories = Category::query()
+            ->whereNotIn('id', $excludedIds)
+            ->orderBy('menu_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'parent_id']);
+
+        $byId = $categories->keyBy('id');
+        $labelFor = function (Category $category) use (&$labelFor, $byId): string {
+            $parent = $category->parent_id ? $byId->get($category->parent_id) : null;
+
+            return $parent
+                ? $labelFor($parent) . ' / ' . $category->name
+                : $category->name;
+        };
+
+        return $categories
+            ->map(fn (Category $category) => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'label' => $labelFor($category),
+            ])
+            ->values();
     }
 
     private function uniqueSlug(string $value, ?int $ignoreId = null): string

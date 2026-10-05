@@ -62,15 +62,11 @@ class CanonicalRedirect
     private function defaultHostPreference(Request $request): string
     {
         $host = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
-        if (! $this->canCanonicalizeHost($host)) {
-            $host = strtolower($request->getHost());
+        if ($this->canCanonicalizeHost($host)) {
+            return str_starts_with($host, 'www.') ? 'www' : 'non_www';
         }
 
-        if (! $this->canCanonicalizeHost($host)) {
-            return 'none';
-        }
-
-        return str_starts_with($host, 'www.') ? 'www' : 'non_www';
+        return $this->canCanonicalizeHost(strtolower($request->getHost())) ? 'non_www' : 'none';
     }
 
     private function canCanonicalizeHost(string $host): bool

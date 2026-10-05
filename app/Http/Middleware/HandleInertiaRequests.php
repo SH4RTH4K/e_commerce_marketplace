@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\ContactMessage;
 use App\Models\Banner;
+use App\Models\Category;
 use App\Models\Feature;
 use App\Models\Order;
 use App\Models\ProductReview;
@@ -257,15 +258,7 @@ class HandleInertiaRequests extends Middleware
                 ->get(['id', 'title', 'subtitle', 'icon'])
                 ->values()
                 ->toArray(),
-            'categories' => fn () => $isAdmin ? [] : \App\Models\Category::whereNull('parent_id')
-                ->with(['children' => fn($q) => $q->where('is_active', true)->where('show_in_menu', true)->select('id', 'name', 'slug', 'parent_id', 'icon', 'image')->orderBy('menu_order')->orderBy('name')])
-                ->where('is_active', true)
-                ->where('show_in_menu', true)
-                ->orderBy('menu_order')
-                ->orderBy('name')
-                ->get(['id', 'name', 'slug', 'parent_id', 'icon', 'image'])
-                ->values()
-                ->toArray(),
+            'categories' => fn () => $isAdmin ? [] : Category::storefrontMenuTree(),
             'hasFlashSale' => fn () => $isAdmin
                 ? false
                 : setting('homepage_flash_sale_enabled', '1') === '1'

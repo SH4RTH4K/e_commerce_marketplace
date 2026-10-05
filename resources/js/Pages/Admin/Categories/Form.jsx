@@ -89,7 +89,7 @@ export default function CategoryForm({ category, parents = [] }) {
                 <select value={data.parent_id} onChange={e => setData('parent_id', e.target.value)} className={inputClass}>
                   <option value="">None (Top-Level)</option>
                   {parents.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
+                    <option key={p.id} value={p.id}>{p.label || p.name}</option>
                   ))}
                 </select>
               </Field>

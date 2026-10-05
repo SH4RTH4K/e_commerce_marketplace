@@ -14,6 +14,8 @@ class ShopController extends Controller
 {
     public function index(Request $request, ?Category $category = null)
     {
+        $categoryIds = $category?->selfAndDescendantIds();
+
         $query = Product::published()
             ->with('images', 'category', 'supplierLinks.supplierProduct')
             ->withExists('variants')
@@ -21,8 +23,8 @@ class ShopController extends Controller
                 'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
             ]);
 
-        if ($category) {
-            $query->where('category_id', $category->id);
+        if ($categoryIds) {
+            $query->whereIn('category_id', $categoryIds);
         }
 
         if ($term = trim((string) $request->input('q'))) {
@@ -148,7 +150,7 @@ class ShopController extends Controller
         $priceCeiling = max(5000, (int) (ceil(max($priceCeiling, 5000) / 50) * 50));
 
         $brands = Product::published()
-            ->when($category, fn ($q) => $q->where('category_id', $category->id))
+            ->when($categoryIds, fn ($q) => $q->whereIn('category_id', $categoryIds))
             ->whereNotNull('brand')
             ->where('brand', '!=', '')
             ->orderBy('brand')
@@ -157,9 +159,9 @@ class ShopController extends Controller
 
         $variantFilters = ProductVariant::query()
             ->selectRaw('type, value, COUNT(DISTINCT product_id) as products_count')
-            ->whereHas('product', function ($productQuery) use ($category) {
+            ->whereHas('product', function ($productQuery) use ($categoryIds) {
                 $productQuery->published()
-                    ->when($category, fn ($q) => $q->where('category_id', $category->id));
+                    ->when($categoryIds, fn ($q) => $q->whereIn('category_id', $categoryIds));
             })
             ->whereNotNull('type')
             ->where('type', '!=', '')
@@ -181,10 +183,10 @@ class ShopController extends Controller
 
         $categories = Category::where('is_active', true)
             ->where('show_in_menu', true)
-            ->withCount(['products' => fn ($q) => $q->published()])
             ->orderBy('menu_order')
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->each(fn (Category $item) => $item->setAttribute('products_count', $item->publishedProductsInTreeCount()));
 
         return Inertia::render('Storefront/Shop', [
             'products'         => $products,

@@ -2,6 +2,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
 import { Head } from '@inertiajs/react';
 import CartDrawer from '@/Components/Storefront/CartDrawer';
+import CategoryIcon from '@/Components/Storefront/CategoryIcon';
 import VisitorPopupModal from '@/Components/Storefront/VisitorPopupModal';
 import ParticleText from '@/Components/Storefront/ParticleText';
 import TrueFocus from '@/Components/Storefront/TrueFocus';
@@ -56,6 +57,63 @@ function readTemplateTwoFooter(raw) {
   };
 }
 
+function categoryChildren(category) {
+  if (!category?.children) return [];
+
+  return Array.isArray(category.children) ? category.children : Object.values(category.children);
+}
+
+function categoryHasActive(category, activeId) {
+  return Boolean(activeId) && (
+    category?.id === activeId || categoryChildren(category).some(child => categoryHasActive(child, activeId))
+  );
+}
+
+function CategoryDropdownItems({ categories = [], level = 0 }) {
+  return categories.map(category => {
+    const children = categoryChildren(category);
+
+    return (
+      <div key={category.id}>
+        <a
+          href={`/category/${category.slug}`}
+          className="block py-2.5 pr-4 text-[13px] font-semibold text-gray-700 hover:text-[#f15a24] hover:bg-orange-50 transition-colors"
+          style={{ paddingLeft: `${16 + level * 14}px` }}
+        >
+          {category.name}
+        </a>
+        {children.length > 0 && <CategoryDropdownItems categories={children} level={level + 1} />}
+      </div>
+    );
+  });
+}
+
+function MobileCategoryLinks({ categories = [], level = 0 }) {
+  return categories.map(category => {
+    const children = categoryChildren(category);
+
+    return (
+      <div key={category.id}>
+        <a
+          href={`/category/${category.slug}`}
+          className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-[#f15a24] hover:bg-orange-50 transition-colors rounded-lg mx-2"
+          style={{ paddingLeft: `${16 + level * 16}px` }}
+        >
+          <span className="w-9 h-9 shrink-0 rounded-xl overflow-hidden bg-gray-100 ring-1 ring-gray-200 flex items-center justify-center">
+            {category.image ? (
+              <img src={imageUrl(category.image)} alt={category.name} className="w-full h-full object-cover" />
+            ) : (
+              <CategoryIcon icon={category.icon} name={category.name} className="h-5 w-5 text-orange-500" />
+            )}
+          </span>
+          <span>{category.name}</span>
+        </a>
+        {children.length > 0 && <MobileCategoryLinks categories={children} level={level + 1} />}
+      </div>
+    );
+  });
+}
+
 export default function StorefrontLayout({ children, title, description, activeCategory = null }) {
   const { props } = usePage();
   const { auth, app, flash, cartCount = 0, categories = [], storefrontFeatures = [], hasFlashSale = false, promoText = '', promoLink = '', popup } = props;
@@ -64,6 +122,7 @@ export default function StorefrontLayout({ children, title, description, activeC
   const categoryList = Array.isArray(rawCategories)
     ? rawCategories
     : (typeof rawCategories === 'object' && rawCategories !== null ? Object.values(rawCategories) : []);
+  const activeCategoryId = activeCategory?.id || null;
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState('');
@@ -336,7 +395,7 @@ export default function StorefrontLayout({ children, title, description, activeC
               <nav className="template-1-main-menu hidden lg:flex">
                 <a href="/" className={typeof window !== 'undefined' && window.location.pathname === '/' ? 'is-active' : ''}>Home</a>
                 {categoryList.map(cat => (
-                  <a key={cat.id} href={`/category/${cat.slug}`} className={activeCategory?.id === cat.id ? 'is-active' : ''}>{cat.name}</a>
+                  <a key={cat.id} href={`/category/${cat.slug}`} className={categoryHasActive(cat, activeCategoryId) ? 'is-active' : ''}>{cat.name}</a>
                 ))}
               </nav>
             )}
@@ -441,29 +500,29 @@ export default function StorefrontLayout({ children, title, description, activeC
             row when there is not enough horizontal room.
           */}
           <div className={`mx-auto grid w-full max-w-7xl grid-cols-6 items-stretch gap-x-2 px-4 sm:px-6 lg:px-8 xl:grid-cols-8 2xl:grid-cols-10 text-[13px] font-semibold ${isTemplateOne ? 'text-[#222]' : 'text-white'}`}>
-            {categoryList.map(cat => (
+            {categoryList.map(cat => {
+              const children = categoryChildren(cat);
+              const isActive = categoryHasActive(cat, activeCategoryId);
+
+              return (
               <div key={cat.id} className="relative group flex min-w-0 items-center">
                 <a href={`/category/${cat.slug}`}
-                  className={`flex w-full items-center justify-center gap-1.5 px-1 py-3 text-center leading-tight hover:text-[#f15a24] transition-colors ${activeCategory?.id === cat.id ? 'text-[#f15a24]' : ''}`}>
+                  className={`flex w-full items-center justify-center gap-1.5 px-1 py-3 text-center leading-tight hover:text-[#f15a24] transition-colors ${isActive ? 'text-[#f15a24]' : ''}`}>
                   <span>{cat.name}</span>
-                  {cat.children && cat.children.length > 0 && (
+                  {children.length > 0 && (
                     <svg className="h-3.5 w-3.5 shrink-0 opacity-70" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
                   )}
                 </a>
                 
-                {cat.children && cat.children.length > 0 && (
+                {children.length > 0 && (
                   <div className="absolute left-0 top-[100%] hidden group-hover:block z-[999] min-w-[220px] pt-1">
                     <div className="bg-white rounded-xl shadow-xl border border-gray-100 py-2 flex flex-col relative before:absolute before:-top-4 before:left-0 before:w-full before:h-4 before:bg-transparent">
-                      {(Array.isArray(cat.children) ? cat.children : Object.values(cat.children)).map(child => (
-                        <a key={child.id} href={`/category/${child.slug}`} className="px-4 py-2.5 text-[13px] font-semibold text-gray-700 hover:text-[#f15a24] hover:bg-orange-50 transition-colors">
-                          {child.name}
-                        </a>
-                      ))}
+                      <CategoryDropdownItems categories={children} />
                     </div>
                   </div>
                 )}
               </div>
-            ))}
+            );})}
 
             {hasFlashSale && (
               <a href="/shop?flash=1" className="flex items-center gap-1.5 text-white whitespace-nowrap shrink-0 hover:text-[#f15a24] transition-colors py-3">
@@ -515,7 +574,8 @@ export default function StorefrontLayout({ children, title, description, activeC
                 <>
                   <div className="px-4 py-4 mt-2 text-xs font-bold text-gray-400 uppercase tracking-wider border-t border-gray-100">Categories</div>
                   {categoryList.map(cat => (
-                    <a key={cat.id} href={`/category/${cat.slug}`}
+                    <div key={cat.id}>
+                    <a href={`/category/${cat.slug}`}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-[#f15a24] hover:bg-orange-50 transition-colors rounded-lg mx-2">
                       <span className="w-9 h-9 shrink-0 rounded-xl overflow-hidden bg-gray-100 ring-1 ring-gray-200 flex items-center justify-center">
                         {cat.image ? (
@@ -528,6 +588,8 @@ export default function StorefrontLayout({ children, title, description, activeC
                       </span>
                       <span>{cat.name}</span>
                     </a>
+                    {categoryChildren(cat).length > 0 && <MobileCategoryLinks categories={categoryChildren(cat)} level={1} />}
+                    </div>
                   ))}
                 </>
               )}

@@ -35,11 +35,7 @@ class CanonicalRedirectTest extends TestCase
         Setting::put('seo_https_redirect_enabled', '0');
         Setting::put('seo_canonical_host', '');
 
-        $this->withServerVariables([
-            'HTTPS' => 'on',
-            'HTTP_HOST' => 'www.example.com',
-            'SERVER_NAME' => 'www.example.com',
-        ])->get('/shop')
+        $this->get('https://www.example.com/shop')
             ->assertStatus(301)
             ->assertRedirect('https://example.com/shop');
     }
