@@ -303,6 +303,8 @@ class SettingController extends Controller
                 'default_meta_title'       => ['nullable', 'string', 'max:180'],
                 'default_meta_description' => ['nullable', 'string', 'max:400'],
                 'default_meta_keywords'    => ['nullable', 'string', 'max:400'],
+                'seo_h1_heading'           => ['nullable', 'string', 'max:180'],
+                'seo_fallback_h1_enabled'  => ['nullable', 'boolean'],
             ],
             'tracking' => [
                 'tracking_gtm_id'        => ['nullable', 'string', 'max:20', 'regex:/^(|GTM-[A-Z0-9]+)$/i'],
@@ -397,7 +399,7 @@ class SettingController extends Controller
                 'mail_mailer', 'mail_host', 'mail_port', 'mail_username',
                 'mail_encryption', 'mail_from_address', 'mail_from_name',
             ],
-            'seo' => ['default_meta_title', 'default_meta_description', 'default_meta_keywords'],
+            'seo' => ['default_meta_title', 'default_meta_description', 'default_meta_keywords', 'seo_h1_heading'],
             'tracking' => ['tracking_gtm_id', 'tracking_ga4_id', 'tracking_meta_pixel_id'],
             'legal' => ['about_content', 'terms_content', 'privacy_content', 'refund_content', 'shipping_content', 'shipping_page_enabled'],
             'courier' => [
@@ -468,6 +470,10 @@ class SettingController extends Controller
             if ($request->filled('mail_password')) {
                 Setting::put('mail_password', (string) $request->input('mail_password'));
             }
+        }
+
+        if ($section === 'seo') {
+            Setting::put('seo_fallback_h1_enabled', $request->boolean('seo_fallback_h1_enabled') ? '1' : '0');
         }
 
         if ($section === 'homepage') {

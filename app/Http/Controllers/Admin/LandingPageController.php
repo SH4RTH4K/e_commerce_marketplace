@@ -91,6 +91,7 @@ class LandingPageController extends Controller
         $view = match ($design) {
             'campaign' => 'landing.campaign',
             'nuraya'   => 'landing.nuraya',
+            'product'  => 'landing.product',
             default    => 'landing.chilora',
         };
 

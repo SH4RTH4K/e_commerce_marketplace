@@ -14,6 +14,11 @@
         $pageMetaKeywords = trim((string) (($pageSeo['keywords'] ?? '') ?: $defaultMetaKeywords));
         $pageCanonical = $pageSeo['canonical'] ?? url()->current();
         $pageMetaImage = $pageSeo['image'] ?? null;
+        $fallbackH1Enabled = ! request()->is('admin*') && (string) setting('seo_fallback_h1_enabled', '1') === '1';
+        $fallbackH1 = trim((string) setting('seo_h1_heading', ''))
+            ?: trim((string) ($pageSeo['h1'] ?? ''))
+            ?: $pageMetaTitle
+            ?: site_name();
     @endphp
     <title data-inertia="">{{ $pageMetaTitle }}</title>
     <meta name="site-name" content="{{ site_name() }}" />
@@ -53,6 +58,9 @@
 </head>
 <body class="antialiased">
     @include('partials.tracking-body')
+    @if($fallbackH1Enabled && $fallbackH1 !== '')
+        <h1 data-seo-fallback-h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">{{ $fallbackH1 }}</h1>
+    @endif
     @inertia
 </body>
 </html>

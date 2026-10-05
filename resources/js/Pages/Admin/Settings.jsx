@@ -376,6 +376,8 @@ export default function Settings({ settings, templateStatus = {} }) {
     
     // SEO
     default_meta_title: settings.default_meta_title || '', default_meta_description: settings.default_meta_description || '', default_meta_keywords: settings.default_meta_keywords || '',
+    seo_h1_heading: settings.seo_h1_heading || '',
+    seo_fallback_h1_enabled: settings.seo_fallback_h1_enabled !== '0',
     
     // Tracking
     tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '',
@@ -1539,6 +1541,16 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <textarea value={data.default_meta_keywords} onChange={e => setData('default_meta_keywords', e.target.value)} rows={2} className={inputClass} placeholder="store, shop, etc..." />
                     <p className="mt-1.5 text-xs text-gray-500">Optional. Use comma-separated terms; do not repeat the same phrase.</p>
                   </Field>
+                  <div className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4 space-y-4">
+                    <label className="flex cursor-pointer items-center gap-3">
+                      <input type="checkbox" checked={data.seo_fallback_h1_enabled} onChange={e => setData('seo_fallback_h1_enabled', e.target.checked)} className={checkboxClass} />
+                      <span className="text-sm font-semibold text-gray-800">Add hidden fallback H1 to storefront HTML</span>
+                    </label>
+                    <Field label="Fallback H1 Heading" error={errors.seo_h1_heading}>
+                      <input value={data.seo_h1_heading} onChange={e => setData('seo_h1_heading', e.target.value)} className={inputClass} placeholder="Leave blank to use the meta title or site name" />
+                      <p className="mt-1.5 text-xs text-gray-500">This fixes H1 checks for crawlers that read the initial HTML before the storefront JavaScript renders.</p>
+                    </Field>
+                  </div>
                 </div>
                 <button type="submit" disabled={processing} className="px-6 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-xl">Save SEO Settings</button>
               </form>

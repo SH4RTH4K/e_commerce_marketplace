@@ -22,6 +22,11 @@ class LandingPageDesigns
             'description' => 'Single-product modest wear sales page — hero, offer, benefits, reviews, order.',
             'preview'     => 'landing/nuraya/preview.png',
         ],
+        'product' => [
+            'label'       => 'Product Focus',
+            'description' => 'Product-detail style landing page with gallery, price, proof, benefits, description, reviews, and COD checkout.',
+            'preview'     => 'landing/product/preview.png',
+        ],
     ];
 
     public static function isVisible(string $design): bool
@@ -58,6 +63,7 @@ class LandingPageDesigns
         return match ($design) {
             'campaign' => self::campaignSections(),
             'nuraya'   => self::nurayaSections(),
+            'product'  => self::productSections(),
             default    => self::chiloraSections(),
         };
     }
@@ -79,6 +85,7 @@ class LandingPageDesigns
         $base = match ($design) {
             'campaign' => self::campaignDefaults(),
             'nuraya'   => self::nurayaDefaults(),
+            'product'  => self::productDefaults(),
             default    => self::chiloraDefaults(),
         };
         $base['_sections'] = self::defaultSectionVisibility($design);
@@ -496,6 +503,111 @@ class LandingPageDesigns
             'product_label' => 'Nuraya Soft Veil সালাত হিজাব',
             'product_thumb' => 'landing/nuraya/img/thumb.jpg',
             'footer_blurb'  => 'পবিত্রতা, আরাম ও কোমল কাপড়ের সমন্বয়ে — একটি পারফেক্ট সালাত হিজাব।',
+        ];
+    }
+
+    private static function productSections(): array
+    {
+        return [
+            'setup' => [
+                'label'  => 'Page setup',
+                'toggle' => false,
+                'fields' => [
+                    ['name' => 'title', 'type' => 'page_title', 'label' => 'Title'],
+                    ['name' => 'slug', 'type' => 'page_slug', 'label' => 'URL slug'],
+                    ['name' => 'product_id', 'type' => 'page_product', 'label' => 'Linked product'],
+                    ['name' => 'is_active', 'type' => 'page_active', 'label' => 'Page visible'],
+                    ['name' => 'meta_title', 'type' => 'text', 'label' => 'Meta title'],
+                    ['name' => 'meta_description', 'type' => 'textarea', 'label' => 'Meta description'],
+                ],
+            ],
+            'hero' => [
+                'label'  => '1. Product hero / price',
+                'toggle' => true,
+                'fields' => [
+                    ['name' => 'hero_badge', 'type' => 'text', 'label' => 'Badge'],
+                    ['name' => 'hero_headline', 'type' => 'textarea', 'label' => 'Headline (blank = product name)'],
+                    ['name' => 'hero_subtitle', 'type' => 'textarea', 'label' => 'Supporting text'],
+                    ['name' => 'hero_image', 'type' => 'image', 'label' => 'Hero image (blank = product image)'],
+                    ['name' => 'regular_price', 'type' => 'number', 'label' => 'Regular price override'],
+                    ['name' => 'offer_price', 'type' => 'number', 'label' => 'Offer price override'],
+                    ['name' => 'cta_text', 'type' => 'text', 'label' => 'CTA button text'],
+                    ['name' => 'phone', 'type' => 'text', 'label' => 'Phone'],
+                    ['name' => 'whatsapp', 'type' => 'text', 'label' => 'WhatsApp (intl)'],
+                ],
+            ],
+            'benefits' => [
+                'label'  => '2. Highlights / benefits',
+                'toggle' => true,
+                'fields' => [
+                    ['name' => 'benefits_heading', 'type' => 'text', 'label' => 'Heading'],
+                    ['name' => 'benefits', 'type' => 'benefits_icon_list', 'label' => 'Benefit cards'],
+                ],
+            ],
+            'details' => [
+                'label'  => '3. Product details',
+                'toggle' => true,
+                'fields' => [
+                    ['name' => 'details_heading', 'type' => 'text', 'label' => 'Heading'],
+                    ['name' => 'details_text', 'type' => 'textarea', 'label' => 'Details text (blank = product description)'],
+                ],
+            ],
+            'reviews' => [
+                'label'  => '4. Reviews',
+                'toggle' => true,
+                'fields' => [
+                    ['name' => 'reviews_heading', 'type' => 'text', 'label' => 'Heading'],
+                    ['name' => 'testimonials', 'type' => 'testimonials_list', 'label' => 'Testimonials'],
+                ],
+            ],
+            'order' => [
+                'label'  => '5. COD order form',
+                'toggle' => true,
+                'fields' => [
+                    ['name' => 'order_heading', 'type' => 'text', 'label' => 'Heading'],
+                    ['name' => 'order_subtext', 'type' => 'textarea', 'label' => 'Subtext'],
+                    ['name' => 'shipping_inside', 'type' => 'number', 'label' => 'Inside Dhaka shipping'],
+                    ['name' => 'shipping_outside', 'type' => 'number', 'label' => 'Outside Dhaka shipping'],
+                    ['name' => 'order_btn_text', 'type' => 'text', 'label' => 'Order button text'],
+                    ['name' => 'guarantee_text', 'type' => 'text', 'label' => 'Guarantee text'],
+                    ['name' => 'footer_text', 'type' => 'textarea', 'label' => 'Footer text'],
+                ],
+            ],
+        ];
+    }
+
+    public static function productDefaults(): array
+    {
+        return [
+            'meta_title'       => 'Product landing page',
+            'meta_description' => 'Order this product with cash on delivery.',
+            'hero_badge'       => 'Limited time offer',
+            'hero_headline'    => '',
+            'hero_subtitle'    => 'Fast delivery, cash on delivery, and easy ordering from one product page.',
+            'hero_image'       => '',
+            'cta_text'         => 'Order Now',
+            'phone'            => '+8801700-000000',
+            'whatsapp'         => '8801700000000',
+            'benefits_heading' => 'Why customers choose this product',
+            'benefits'         => [
+                ['icon' => 'truck', 'title' => 'Fast delivery', 'body' => 'Home delivery available across Bangladesh.'],
+                ['icon' => 'shield', 'title' => 'Cash on delivery', 'body' => 'Pay after receiving the product.'],
+                ['icon' => 'star', 'title' => 'Trusted quality', 'body' => 'Selected for everyday practical use.'],
+            ],
+            'details_heading' => 'Product details',
+            'details_text'    => '',
+            'reviews_heading' => 'Customer reviews',
+            'testimonials'    => [
+                ['name' => 'Verified Customer', 'text' => 'Product quality and delivery were good.', 'image' => '', 'rating' => 5],
+                ['name' => 'Happy Buyer', 'text' => 'Easy ordering and useful product.', 'image' => '', 'rating' => 5],
+            ],
+            'order_heading'    => 'Confirm your order',
+            'order_subtext'    => 'Fill in your delivery information. We will call to confirm your order.',
+            'shipping_inside'  => 70,
+            'shipping_outside' => 130,
+            'order_btn_text'   => 'Confirm Order',
+            'guarantee_text'   => 'Cash on delivery available',
+            'footer_text'      => 'All rights reserved.',
         ];
     }
 }

@@ -34,6 +34,7 @@ class LandingPageController extends Controller
         $view = match ($page->design) {
             'campaign' => 'landing.campaign',
             'nuraya'   => 'landing.nuraya',
+            'product'  => 'landing.product',
             default    => 'landing.chilora',
         };
 
@@ -106,7 +107,9 @@ class LandingPageController extends Controller
             : null;
 
         $qty = 1;
-        $unitPrice = (float) ($c['offer_price'] ?? ($product->sale_price ?: $product->regular_price));
+        $productPrice = (float) ($product->sale_price ?: $product->regular_price);
+        $configuredOffer = isset($c['offer_price']) ? (float) $c['offer_price'] : 0.0;
+        $unitPrice = $configuredOffer > 0 ? $configuredOffer : $productPrice;
         $lineTotal = $unitPrice;
         $orderItemName = $product->name;
 
