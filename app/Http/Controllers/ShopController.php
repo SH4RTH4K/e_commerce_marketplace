@@ -191,7 +191,7 @@ class ShopController extends Controller
         return Inertia::render('Storefront/Shop', [
             'products'         => $products,
             'activeCategory'   => $category,
-            'categories'       => $categories,
+            'filterCategories' => $categories,
             'allProductsCount' => Product::published()->count(),
             'brands'           => $brands,
             'variantFilters'   => $variantFilters,

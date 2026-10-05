@@ -64,7 +64,12 @@ class StorefrontCategoryTreeTest extends TestCase
                 ->where('activeCategory.id', $parent->id)
                 ->where('products.total', 3)
                 ->has('products.data', 3)
-                ->where('categories.0.products_count', 3)
+                ->where('filterCategories.0.products_count', 3)
+                ->has('categories', 2)
+                ->where('categories.0.slug', 'gadgets-electronics')
+                ->where('categories.0.children.0.slug', 'audio')
+                ->where('categories.0.children.0.children.0.slug', 'airpod')
+                ->where('categories.1.slug', 'home')
                 ->where('products.data.0.id', $subChildProduct->id)
                 ->where('products.data.1.id', $childProduct->id)
                 ->where('products.data.2.id', $parentProduct->id));

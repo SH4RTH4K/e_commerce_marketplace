@@ -6,7 +6,7 @@ import ProductCard from '@/Components/Storefront/ProductCard';
 export default function ShopPage({ 
   products, 
   activeCategory, 
-  categories, 
+  filterCategories = [],
   allProductsCount, 
   brands, 
   variantFilters = [],
@@ -21,6 +21,7 @@ export default function ShopPage({
   const [loadedProducts, setLoadedProducts] = useState(products);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const isTemplateOne = app?.settings?.storefront_template === 'template-1';
+  const categories = filterCategories || [];
 
   const maxPrice = Math.max(1000, parseInt(priceCeiling || 100000));
   
@@ -175,7 +176,7 @@ export default function ShopPage({
 
   if (isTemplateOne) {
     return (
-      <StorefrontLayout title={title} app={app} categories={categories} activeCategory={activeCategory}>
+      <StorefrontLayout title={title} app={app} activeCategory={activeCategory}>
         <Head title={seo?.title || title} />
 
         <main className="storefront-shop-page template-1-shop template-1-container min-w-0">
