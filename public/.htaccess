@@ -75,6 +75,13 @@
 
     DirectoryIndex index.php
 
+    # Canonical SEO redirects: use HTTPS and non-www for public domains.
+    RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:\d+)?$ [NC]
+    RewriteCond %{HTTPS} !=on [OR]
+    RewriteCond %{HTTP_HOST} ^www\. [NC]
+    RewriteCond %{HTTP_HOST} ^(?:www\.)?(.+)$ [NC]
+    RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301,NE]
+
     # After flatten: old bookmark/asset URLs under /public/... → real routes.
     RewriteRule ^public/(.*)$ /$1 [L,R=301]
     RewriteRule ^public$ / [L,R=301]

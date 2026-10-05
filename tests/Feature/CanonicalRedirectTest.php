@@ -30,6 +30,20 @@ class CanonicalRedirectTest extends TestCase
             ->assertRedirect('http://www.example.com/shop');
     }
 
+    public function test_blank_canonical_host_defaults_to_non_www_for_public_hosts(): void
+    {
+        Setting::put('seo_https_redirect_enabled', '0');
+        Setting::put('seo_canonical_host', '');
+
+        $this->withServerVariables([
+            'HTTPS' => 'on',
+            'HTTP_HOST' => 'www.example.com',
+            'SERVER_NAME' => 'www.example.com',
+        ])->get('/shop')
+            ->assertStatus(301)
+            ->assertRedirect('https://example.com/shop');
+    }
+
     public function test_redirects_can_be_disabled(): void
     {
         Setting::put('seo_https_redirect_enabled', '0');

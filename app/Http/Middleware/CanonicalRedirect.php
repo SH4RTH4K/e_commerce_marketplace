@@ -34,7 +34,11 @@ class CanonicalRedirect
 
     private function targetHost(Request $request): ?string
     {
-        $preference = setting('seo_canonical_host', $this->defaultHostPreference());
+        $configuredPreference = trim((string) setting('seo_canonical_host', ''));
+        $preference = $configuredPreference !== ''
+            ? $configuredPreference
+            : $this->defaultHostPreference($request);
+
         if (! in_array($preference, ['www', 'non_www'], true)) {
             return null;
         }
@@ -55,9 +59,13 @@ class CanonicalRedirect
         return null;
     }
 
-    private function defaultHostPreference(): string
+    private function defaultHostPreference(Request $request): string
     {
         $host = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+        if (! $this->canCanonicalizeHost($host)) {
+            $host = strtolower($request->getHost());
+        }
+
         if (! $this->canCanonicalizeHost($host)) {
             return 'none';
         }
