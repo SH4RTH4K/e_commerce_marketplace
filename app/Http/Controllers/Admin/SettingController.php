@@ -52,8 +52,14 @@ class SettingController extends Controller
 
     public function edit()
     {
+        $settings = Setting::pluck('value', 'key')->all();
+        $settings += [
+            'seo_https_redirect_enabled' => app()->environment('production') ? '1' : '0',
+            'seo_canonical_host' => $this->defaultCanonicalHost(),
+        ];
+
         return Inertia::render('Admin/Settings', [
-            'settings' => Setting::pluck('value', 'key'),
+            'settings' => $settings,
             'templateStatus' => [
                 'template_1_assets' => is_file(public_path('templates/template-1/images/slide-01.jpg'))
                     && is_file(public_path('templates/template-1/images/banner-01.jpg')),
@@ -305,6 +311,8 @@ class SettingController extends Controller
                 'default_meta_keywords'    => ['nullable', 'string', 'max:400'],
                 'seo_h1_heading'           => ['nullable', 'string', 'max:180'],
                 'seo_fallback_h1_enabled'  => ['nullable', 'boolean'],
+                'seo_https_redirect_enabled' => ['nullable', 'boolean'],
+                'seo_canonical_host'        => ['nullable', 'in:none,non_www,www'],
             ],
             'tracking' => [
                 'tracking_gtm_id'        => ['nullable', 'string', 'max:20', 'regex:/^(|GTM-[A-Z0-9]+)$/i'],
@@ -399,7 +407,7 @@ class SettingController extends Controller
                 'mail_mailer', 'mail_host', 'mail_port', 'mail_username',
                 'mail_encryption', 'mail_from_address', 'mail_from_name',
             ],
-            'seo' => ['default_meta_title', 'default_meta_description', 'default_meta_keywords', 'seo_h1_heading'],
+            'seo' => ['default_meta_title', 'default_meta_description', 'default_meta_keywords', 'seo_h1_heading', 'seo_canonical_host'],
             'tracking' => ['tracking_gtm_id', 'tracking_ga4_id', 'tracking_meta_pixel_id'],
             'legal' => ['about_content', 'terms_content', 'privacy_content', 'refund_content', 'shipping_content', 'shipping_page_enabled'],
             'courier' => [
@@ -474,6 +482,7 @@ class SettingController extends Controller
 
         if ($section === 'seo') {
             Setting::put('seo_fallback_h1_enabled', $request->boolean('seo_fallback_h1_enabled') ? '1' : '0');
+            Setting::put('seo_https_redirect_enabled', $request->boolean('seo_https_redirect_enabled') ? '1' : '0');
         }
 
         if ($section === 'homepage') {
@@ -597,6 +606,16 @@ Setting::put('show_cards_in_footer', $request->boolean('show_cards_in_footer') ?
             'theme'             => 'Template selection',
             default             => 'Settings',
         };
+    }
+
+    private function defaultCanonicalHost(): string
+    {
+        $host = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+        if ($host === '' || $host === 'localhost' || ! str_contains($host, '.') || filter_var($host, FILTER_VALIDATE_IP)) {
+            return 'none';
+        }
+
+        return str_starts_with($host, 'www.') ? 'www' : 'non_www';
     }
 
     private function handleImage(Request $request, string $fileField, string $settingKey, string $removeField): void

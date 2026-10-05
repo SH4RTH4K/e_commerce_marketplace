@@ -110,6 +110,8 @@ class HandleInertiaRequests extends Middleware
                     'default_meta_keywords' => setting('default_meta_keywords', ''),
                     'seo_h1_heading' => setting('seo_h1_heading', ''),
                     'seo_fallback_h1_enabled' => setting('seo_fallback_h1_enabled', '1') === '1',
+                    'seo_https_redirect_enabled' => setting('seo_https_redirect_enabled', app()->environment('production') ? '1' : '0') === '1',
+                    'seo_canonical_host' => setting('seo_canonical_host', ''),
                     'storefront_template' => setting('storefront_template', 'template-2'),
                     'template_1_navbar_menu' => setting('template_1_navbar_menu', 'coza'),
                     'template_1_site_name_style' => setting('template_1_site_name_style', 'default'),

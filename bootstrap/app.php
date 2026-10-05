@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: $trustedProxies);
 
         $middleware->web(append: [
+            \App\Http\Middleware\CanonicalRedirect::class,
             \App\Http\Middleware\SecurityHeaders::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \App\Http\Middleware\EnsureActiveCustomer::class,

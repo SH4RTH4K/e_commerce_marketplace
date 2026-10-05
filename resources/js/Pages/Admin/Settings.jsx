@@ -378,6 +378,8 @@ export default function Settings({ settings, templateStatus = {} }) {
     default_meta_title: settings.default_meta_title || '', default_meta_description: settings.default_meta_description || '', default_meta_keywords: settings.default_meta_keywords || '',
     seo_h1_heading: settings.seo_h1_heading || '',
     seo_fallback_h1_enabled: settings.seo_fallback_h1_enabled !== '0',
+    seo_https_redirect_enabled: settings.seo_https_redirect_enabled === '1' || settings.seo_https_redirect_enabled === true,
+    seo_canonical_host: settings.seo_canonical_host || 'non_www',
     
     // Tracking
     tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '',
@@ -1549,6 +1551,20 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <Field label="Fallback H1 Heading" error={errors.seo_h1_heading}>
                       <input value={data.seo_h1_heading} onChange={e => setData('seo_h1_heading', e.target.value)} className={inputClass} placeholder="Leave blank to use the meta title or site name" />
                       <p className="mt-1.5 text-xs text-gray-500">This fixes H1 checks for crawlers that read the initial HTML before the storefront JavaScript renders.</p>
+                    </Field>
+                  </div>
+                  <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 space-y-4">
+                    <label className="flex cursor-pointer items-center gap-3">
+                      <input type="checkbox" checked={data.seo_https_redirect_enabled} onChange={e => setData('seo_https_redirect_enabled', e.target.checked)} className={checkboxClass} />
+                      <span className="text-sm font-semibold text-gray-800">Redirect HTTP traffic to HTTPS</span>
+                    </label>
+                    <Field label="Preferred Domain Version" error={errors.seo_canonical_host}>
+                      <select value={data.seo_canonical_host} onChange={e => setData('seo_canonical_host', e.target.value)} className={inputClass}>
+                        <option value="non_www">Use non-www domain</option>
+                        <option value="www">Use www domain</option>
+                        <option value="none">Do not redirect www/non-www</option>
+                      </select>
+                      <p className="mt-1.5 text-xs text-gray-500">Choose one canonical domain so search engines do not index duplicate www and non-www URLs.</p>
                     </Field>
                   </div>
                 </div>
