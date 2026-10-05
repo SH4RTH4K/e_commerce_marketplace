@@ -380,6 +380,8 @@ export default function Settings({ settings, templateStatus = {} }) {
     seo_keyword_consistency_enabled: settings.seo_keyword_consistency_enabled !== '0',
     seo_h1_heading: settings.seo_h1_heading || '',
     seo_fallback_h1_enabled: settings.seo_fallback_h1_enabled !== '0',
+    seo_llms_txt_enabled: settings.seo_llms_txt_enabled !== '0',
+    seo_llms_txt_notes: settings.seo_llms_txt_notes || '',
     seo_https_redirect_enabled: settings.seo_https_redirect_enabled === '1' || settings.seo_https_redirect_enabled === true,
     seo_canonical_host: settings.seo_canonical_host || 'non_www',
     
@@ -1563,6 +1565,19 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <Field label="Fallback H1 Heading" error={errors.seo_h1_heading}>
                       <input value={data.seo_h1_heading} onChange={e => setData('seo_h1_heading', e.target.value)} className={inputClass} placeholder="Leave blank to use the meta title or site name" />
                       <p className="mt-1.5 text-xs text-gray-500">This fixes H1 checks for crawlers that read the initial HTML before the storefront JavaScript renders.</p>
+                    </Field>
+                  </div>
+                  <div className="rounded-2xl border border-purple-100 bg-purple-50/50 p-4 space-y-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <label className="flex cursor-pointer items-center gap-3">
+                        <input type="checkbox" checked={data.seo_llms_txt_enabled} onChange={e => setData('seo_llms_txt_enabled', e.target.checked)} className={checkboxClass} />
+                        <span className="text-sm font-semibold text-gray-800">Enable llms.txt for AI crawlers</span>
+                      </label>
+                      <a href="/llms.txt" target="_blank" rel="noreferrer" className="text-xs font-semibold text-purple-700 hover:underline">View llms.txt</a>
+                    </div>
+                    <Field label="llms.txt Notes" error={errors.seo_llms_txt_notes}>
+                      <textarea value={data.seo_llms_txt_notes} onChange={e => setData('seo_llms_txt_notes', e.target.value)} rows={3} className={inputClass} placeholder="Short guidance for AI search crawlers about your store, products, or policies." />
+                      <p className="mt-1.5 text-xs text-gray-500">Shown in /llms.txt along with canonical links, sitemap, categories, and featured products.</p>
                     </Field>
                   </div>
                   <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4 space-y-4">

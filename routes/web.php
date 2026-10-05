@@ -110,6 +110,7 @@ Route::get('/page/{slug}', [PageController::class, 'show'])->name('page');
 // SEO
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
+Route::get('/llms.txt', [SitemapController::class, 'llms'])->name('llms');
 
 /*
 |--------------------------------------------------------------------------

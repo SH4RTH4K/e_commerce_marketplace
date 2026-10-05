@@ -313,6 +313,8 @@ class SettingController extends Controller
                 'seo_keyword_consistency_enabled' => ['nullable', 'boolean'],
                 'seo_h1_heading'           => ['nullable', 'string', 'max:180'],
                 'seo_fallback_h1_enabled'  => ['nullable', 'boolean'],
+                'seo_llms_txt_enabled'     => ['nullable', 'boolean'],
+                'seo_llms_txt_notes'       => ['nullable', 'string', 'max:2000'],
                 'seo_https_redirect_enabled' => ['nullable', 'boolean'],
                 'seo_canonical_host'        => ['nullable', 'in:none,non_www,www'],
             ],
@@ -409,7 +411,10 @@ class SettingController extends Controller
                 'mail_mailer', 'mail_host', 'mail_port', 'mail_username',
                 'mail_encryption', 'mail_from_address', 'mail_from_name',
             ],
-            'seo' => ['default_meta_title', 'default_meta_description', 'default_meta_keywords', 'seo_target_keywords', 'seo_h1_heading', 'seo_canonical_host'],
+            'seo' => [
+                'default_meta_title', 'default_meta_description', 'default_meta_keywords',
+                'seo_target_keywords', 'seo_h1_heading', 'seo_llms_txt_notes', 'seo_canonical_host',
+            ],
             'tracking' => ['tracking_gtm_id', 'tracking_ga4_id', 'tracking_meta_pixel_id'],
             'legal' => ['about_content', 'terms_content', 'privacy_content', 'refund_content', 'shipping_content', 'shipping_page_enabled'],
             'courier' => [
@@ -485,6 +490,7 @@ class SettingController extends Controller
         if ($section === 'seo') {
             Setting::put('seo_keyword_consistency_enabled', $request->boolean('seo_keyword_consistency_enabled') ? '1' : '0');
             Setting::put('seo_fallback_h1_enabled', $request->boolean('seo_fallback_h1_enabled') ? '1' : '0');
+            Setting::put('seo_llms_txt_enabled', $request->boolean('seo_llms_txt_enabled') ? '1' : '0');
             Setting::put('seo_https_redirect_enabled', $request->boolean('seo_https_redirect_enabled') ? '1' : '0');
         }
 
