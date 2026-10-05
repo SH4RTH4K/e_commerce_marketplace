@@ -198,15 +198,21 @@ class ApplicationUpdateController extends Controller
 
     public function resetToRemote(Request $request, ApplicationUpdateService $updates)
     {
-        $request->validate(['confirmation' => ['required', 'in:RESET TO GITHUB']]);
+        $data = $request->validate(['confirmation' => ['required', 'in:RESET TO GITHUB,RESET TO GITHUB AND DISCARD LOCAL CHANGES']]);
 
         try {
             $settings = $updates->settings();
             abort_unless($settings->enabled, 422, 'Enable the Git repository integration first.');
-            $result = $updates->resetToRemote($settings);
+            $discardLocalChanges = $data['confirmation'] === 'RESET TO GITHUB AND DISCARD LOCAL CHANGES';
+            $result = $updates->resetToRemote($settings, $discardLocalChanges);
             $this->rememberStatus($settings, $result);
 
-            return back()->with('status', 'The server branch now matches GitHub. Previous server-only commits were preserved on '.$result['recovery_branch'].'.');
+            $message = 'The server branch now matches GitHub. Previous server-only commits were preserved on '.$result['recovery_branch'].'.';
+            if ($discardLocalChanges) {
+                $message .= ' Tracked server edits were discarded; untracked files were kept.';
+            }
+
+            return back()->with('status', $message);
         } catch (\Throwable $exception) {
             return back()->with('error', 'Branch recovery failed: '.$exception->getMessage());
         }

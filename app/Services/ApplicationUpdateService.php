@@ -143,7 +143,7 @@ class ApplicationUpdateService
             : 'Local Changes Detected';
 
         $message = match ($status) {
-            'Diverged Branch' => 'The server branch has commits that are not on GitHub. Resolve the branch history manually before deploying.',
+            'Diverged Branch' => 'The server branch has commits that are not on GitHub. Review the server-only commits before recovering the branch history.',
             'Update Available' => $behindCount.' update(s) are available for review.',
             'Local Changes Detected' => 'Deployment is blocked because tracked server changes exist. Review them before continuing.',
             default => 'The server is synchronized with the configured GitHub branch.',
@@ -197,14 +197,20 @@ class ApplicationUpdateService
         }
     }
 
-    public function resetToRemote(ApplicationUpdateSetting $settings): array
+    public function resetToRemote(ApplicationUpdateSetting $settings, bool $discardLocalChanges = false): array
     {
         $handle = $this->lock();
 
         try {
             $status = $this->fetch($settings);
-            if ($status['status'] !== 'Diverged Branch') {
-                throw new \RuntimeException('The server branch is not in a clean diverged state. Review tracked server changes before recovering its history.');
+            $hasServerOnlyCommits = $status['local_commits'] !== [];
+            $isCleanDivergence = $status['status'] === 'Diverged Branch';
+            $discardableDivergence = $discardLocalChanges
+                && $hasServerOnlyCommits
+                && $status['status'] === 'Local Changes Detected';
+
+            if (! $hasServerOnlyCommits || (! $isCleanDivergence && ! $discardableDivergence)) {
+                throw new \RuntimeException('No recoverable server-only branch history was found. Review tracked server changes before trying again.');
             }
 
             $recoveryBranch = 'deployment-recovery/'.now()->format('YmdHis').'-'.Str::lower(Str::random(6));
@@ -308,8 +314,8 @@ class ApplicationUpdateService
             $this->assertRepository();
             $current = trim($this->git(['rev-parse', 'HEAD'])['output']);
             $expectedCurrent = $deployment->deployed_commit ?: $deployment->target_commit;
-            if ($current !== $expectedCurrent) {
-                throw new \RuntimeException('The deployed source has changed since this deployment. Check the current Git status before rolling back.');
+            if ($this->git(['merge-base', '--is-ancestor', $expectedCurrent, $current], false)['code'] !== 0) {
+                throw new \RuntimeException('This deployment is not part of the current source history. Check the current Git status before rolling back.');
             }
 
             $trackedChanges = trim($this->git(['status', '--porcelain'])['output']);

@@ -111,7 +111,7 @@ class ApplicationUpdateTest extends TestCase
 
         $updates = \Mockery::mock(ApplicationUpdateService::class);
         $updates->shouldReceive('settings')->once()->andReturn($settings);
-        $updates->shouldReceive('resetToRemote')->once()->with($settings)->andReturn([
+        $updates->shouldReceive('resetToRemote')->once()->with($settings, false)->andReturn([
             'status' => 'Up to date',
             'remote' => str_repeat('a', 40),
             'recovery_branch' => 'deployment-recovery/test',
