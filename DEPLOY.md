@@ -183,7 +183,11 @@ repository credentials are encrypted in the database and are never displayed aft
 
 The deployment workflow preserves untracked uploads and runtime files. It blocks when tracked
 server changes or diverged branch history are detected. The explicit discard option resets only
-tracked files, and source rollback does not reverse database migrations.
+tracked files. Source rollback moves the server branch to the previous recorded commit without
+creating a server-only commit and does not reverse database migrations. For a legacy diverged
+branch, review its server-only commits in the admin screen and use the explicit recovery action;
+it preserves the old branch tip on a local `deployment-recovery/*` branch before synchronizing
+the configured branch to GitHub.
 
 When Git integration is enabled and saved from the admin page, an uploaded cPanel installation
 without a `.git` directory is initialized automatically. The remote branch is fetched and

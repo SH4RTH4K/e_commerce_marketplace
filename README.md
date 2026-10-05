@@ -244,7 +244,7 @@ After the application is installed as a Git checkout, administrators with `setti
 4. Deploy only a fast-forward update after the checks pass.
 5. Review the recorded deployment history and use source rollback only when necessary.
 
-The workflow never pushes to GitHub. Private credentials are encrypted in the database, deployment operations are serialized with a lock, untracked uploads are preserved, and destructive tracked-file resets require an explicit confirmation.
+The workflow never pushes to GitHub. Private credentials are encrypted in the database, deployment operations are serialized with a lock, and untracked uploads are preserved. Rollbacks move the server branch to the recorded previous commit instead of creating a server-only commit. If legacy server-only commits cause a divergence, administrators can review them and explicitly synchronize to GitHub; the old branch tip is first preserved on a local `deployment-recovery/*` branch.
 
 ## Security before launch
 

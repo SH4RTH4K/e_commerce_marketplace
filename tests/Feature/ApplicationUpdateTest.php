@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ApplicationUpdateSetting;
 use App\Models\User;
+use App\Services\ApplicationUpdateService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -92,5 +93,51 @@ class ApplicationUpdateTest extends TestCase
         $response->assertRedirect('/admin/system/git-repository');
         $response->assertSessionHasErrors('secret');
         $this->assertDatabaseMissing('application_update_settings', ['repository_url' => 'https://github.com/company/private-repository.git']);
+    }
+
+    #[Test]
+    public function an_admin_can_recover_a_diverged_branch_after_explicit_confirmation(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $settings = ApplicationUpdateSetting::create([
+            'enabled' => true,
+            'provider' => 'github',
+            'repository_type' => 'public',
+            'repository_url' => 'https://github.com/SH4RTH4K/e_commerce_marketplace.git',
+            'branch' => 'main',
+            'remote_name' => 'origin',
+            'authentication' => 'none',
+        ]);
+
+        $updates = \Mockery::mock(ApplicationUpdateService::class);
+        $updates->shouldReceive('settings')->once()->andReturn($settings);
+        $updates->shouldReceive('resetToRemote')->once()->with($settings)->andReturn([
+            'status' => 'Up to date',
+            'remote' => str_repeat('a', 40),
+            'recovery_branch' => 'deployment-recovery/test',
+        ]);
+        $this->instance(ApplicationUpdateService::class, $updates);
+
+        $response = $this->actingAs($admin)
+            ->from('/admin/system/git-repository')
+            ->post('/admin/system/git-repository/reset-to-remote', ['confirmation' => 'RESET TO GITHUB']);
+
+        $response->assertRedirect('/admin/system/git-repository');
+        $response->assertSessionHas('status', 'The server branch now matches GitHub. Previous server-only commits were preserved on deployment-recovery/test.');
+        $this->assertDatabaseHas('application_update_settings', [
+            'id' => $settings->id,
+            'last_status' => 'Up to date',
+        ]);
+    }
+
+    #[Test]
+    public function branch_recovery_requires_the_exact_confirmation_phrase(): void
+    {
+        $response = $this->actingAs(User::factory()->create(['role' => 'admin']))
+            ->from('/admin/system/git-repository')
+            ->post('/admin/system/git-repository/reset-to-remote', ['confirmation' => 'yes']);
+
+        $response->assertRedirect('/admin/system/git-repository');
+        $response->assertSessionHasErrors('confirmation');
     }
 }

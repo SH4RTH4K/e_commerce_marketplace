@@ -87,6 +87,7 @@ class ApplicationUpdateService
             'local' => null,
             'remote' => null,
             'commits' => [],
+            'local_commits' => [],
             'changed_files' => [],
             'local_changes' => [],
             'untracked_files' => [],
@@ -127,21 +128,8 @@ class ApplicationUpdateService
         $target = trim($branch['output']);
         $ahead = trim($this->git(['rev-list', '--count', $settings->remote_name.'/'.$settings->branch.'..HEAD'])['output']) !== '0';
         $behindCount = (int) trim($this->git(['rev-list', '--count', 'HEAD..'.$settings->remote_name.'/'.$settings->branch])['output']);
-        $commits = $this->git(['log', '--format=%H%x1f%h%x1f%an%x1f%aI%x1f%s', 'HEAD..'.$settings->remote_name.'/'.$settings->branch, '-n', '50']);
-        $rows = [];
-
-        foreach (array_filter(preg_split('/\R/', trim($commits['output']))) as $line) {
-            $parts = explode("\x1f", $line, 5);
-            if (count($parts) === 5) {
-                $rows[] = [
-                    'hash' => $parts[0],
-                    'short' => $parts[1],
-                    'author' => $parts[2],
-                    'date' => $parts[3],
-                    'subject' => $parts[4],
-                ];
-            }
-        }
+        $rows = $this->commitList('HEAD..'.$settings->remote_name.'/'.$settings->branch);
+        $localRows = $this->commitList($settings->remote_name.'/'.$settings->branch.'..HEAD');
 
         $worktreeLines = array_values(array_filter(preg_split('/\R/', trim($this->git(['status', '--porcelain'])['output']))));
         $trackedChanges = array_values(array_filter($worktreeLines, static fn (string $line): bool => ! str_starts_with($line, '??') && ! str_starts_with($line, '!!')));
@@ -168,6 +156,7 @@ class ApplicationUpdateService
             'local' => $local,
             'remote' => $target,
             'commits' => $rows,
+            'local_commits' => $localRows,
             'changed_files' => array_values(array_filter(preg_split('/\R/', trim($this->git(['diff', '--name-status', 'HEAD', $settings->remote_name.'/'.$settings->branch])['output'])))),
             'local_changes' => $trackedChanges,
             'untracked_files' => array_values(array_filter($worktreeLines, static fn (string $line): bool => str_starts_with($line, '??'))),
@@ -203,6 +192,29 @@ class ApplicationUpdateService
             }
 
             return $this->status($settings);
+        } finally {
+            $this->unlock($handle);
+        }
+    }
+
+    public function resetToRemote(ApplicationUpdateSetting $settings): array
+    {
+        $handle = $this->lock();
+
+        try {
+            $status = $this->fetch($settings);
+            if ($status['status'] !== 'Diverged Branch') {
+                throw new \RuntimeException('The server branch is not in a clean diverged state. Review tracked server changes before recovering its history.');
+            }
+
+            $recoveryBranch = 'deployment-recovery/'.now()->format('YmdHis').'-'.Str::lower(Str::random(6));
+            $this->gitOrFail(['branch', $recoveryBranch, 'HEAD'], 'Unable to preserve the server-only branch history before recovery.');
+            $this->gitOrFail(['reset', '--hard', $settings->remote_name.'/'.$settings->branch], 'The server branch could not be synchronized with GitHub. Its previous history is preserved on '.$recoveryBranch.'.');
+
+            $result = $this->status($settings);
+            $result['recovery_branch'] = $recoveryBranch;
+
+            return $result;
         } finally {
             $this->unlock($handle);
         }
@@ -295,8 +307,17 @@ class ApplicationUpdateService
         try {
             $this->assertRepository();
             $current = trim($this->git(['rev-parse', 'HEAD'])['output']);
-            $this->gitOrFail(['-c', 'user.name=e_commerce_marketplace', '-c', 'user.email=deploy@localhost', 'revert', '--no-edit', '--no-commit', $deployment->previous_commit.'..'.$current], 'Source rollback failed. Resolve the source history manually.');
-            $this->gitOrFail(['-c', 'user.name=e_commerce_marketplace', '-c', 'user.email=deploy@localhost', 'commit', '-m', 'Rollback application deployment #'.$deployment->id], 'Rollback commit failed.');
+            $expectedCurrent = $deployment->deployed_commit ?: $deployment->target_commit;
+            if ($current !== $expectedCurrent) {
+                throw new \RuntimeException('The deployed source has changed since this deployment. Check the current Git status before rolling back.');
+            }
+
+            $trackedChanges = trim($this->git(['status', '--porcelain'])['output']);
+            if (array_filter(preg_split('/\R/', $trackedChanges), static fn (string $line): bool => $line !== '' && ! str_starts_with($line, '??'))) {
+                throw new \RuntimeException('Tracked server changes must be reviewed before source rollback.');
+            }
+
+            $this->gitOrFail(['reset', '--hard', $deployment->previous_commit], 'Source rollback failed. The branch could not be returned to its previous commit.');
 
             return ApplicationDeployment::create([
                 'repository_url' => $settings->repository_url,
@@ -316,6 +337,27 @@ class ApplicationUpdateService
         } finally {
             $this->unlock($handle);
         }
+    }
+
+    private function commitList(string $range): array
+    {
+        $commits = $this->git(['log', '--format=%H%x1f%h%x1f%an%x1f%aI%x1f%s', $range, '-n', '50']);
+        $rows = [];
+
+        foreach (array_filter(preg_split('/\R/', trim($commits['output']))) as $line) {
+            $parts = explode("\x1f", $line, 5);
+            if (count($parts) === 5) {
+                $rows[] = [
+                    'hash' => $parts[0],
+                    'short' => $parts[1],
+                    'author' => $parts[2],
+                    'date' => $parts[3],
+                    'subject' => $parts[4],
+                ];
+            }
+        }
+
+        return $rows;
     }
 
     public function deploymentCommitSubjects(iterable $deployments): array

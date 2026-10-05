@@ -373,6 +373,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('system/git-repository/pull', [ApplicationUpdateController::class, 'pull'])->name('git-repository.pull');
             Route::post('system/git-repository/deploy', [ApplicationUpdateController::class, 'deploy'])->name('git-repository.deploy');
             Route::post('system/git-repository/discard-and-deploy', [ApplicationUpdateController::class, 'discardAndDeploy'])->name('git-repository.discard-and-deploy');
+            Route::post('system/git-repository/reset-to-remote', [ApplicationUpdateController::class, 'resetToRemote'])->name('git-repository.reset-to-remote');
             Route::post('system/git-repository/rollback/{deployment}', [ApplicationUpdateController::class, 'rollback'])->name('git-repository.rollback');
         });
     });

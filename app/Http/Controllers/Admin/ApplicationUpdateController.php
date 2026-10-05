@@ -196,6 +196,22 @@ class ApplicationUpdateController extends Controller
         }
     }
 
+    public function resetToRemote(Request $request, ApplicationUpdateService $updates)
+    {
+        $request->validate(['confirmation' => ['required', 'in:RESET TO GITHUB']]);
+
+        try {
+            $settings = $updates->settings();
+            abort_unless($settings->enabled, 422, 'Enable the Git repository integration first.');
+            $result = $updates->resetToRemote($settings);
+            $this->rememberStatus($settings, $result);
+
+            return back()->with('status', 'The server branch now matches GitHub. Previous server-only commits were preserved on '.$result['recovery_branch'].'.');
+        } catch (\Throwable $exception) {
+            return back()->with('error', 'Branch recovery failed: '.$exception->getMessage());
+        }
+    }
+
     public function rollback(ApplicationDeployment $deployment, ApplicationUpdateService $updates)
     {
         try {
