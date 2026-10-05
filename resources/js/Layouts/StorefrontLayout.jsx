@@ -115,10 +115,32 @@ export default function StorefrontLayout({ children, title, description, activeC
     chatSettings.pay_rocket_enabled && { label: templateTwoFooter.payment_labels.rocket, tone: 'rocket' },
   ].filter(Boolean);
   const pageSeo = props.seo || {};
+  const keywordList = String(chatSettings.seo_target_keywords || pageSeo.keywords || chatSettings.default_meta_keywords || '')
+    .split(/[\r\n,;|]+/)
+    .map(keyword => keyword.trim())
+    .filter(Boolean)
+    .filter((keyword, index, list) => list.findIndex(item => item.toLowerCase() === keyword.toLowerCase()) === index)
+    .slice(0, 12);
+  const hasKeyword = (text, keyword) => String(text || '').toLowerCase().replace(/\s+/g, ' ').includes(String(keyword || '').toLowerCase().replace(/\s+/g, ' '));
+  const appendKeywords = (text, maxLength = 0, separator = ' | ') => {
+    if (chatSettings.seo_keyword_consistency_enabled === false || keywordList.length === 0) return text || '';
+    return keywordList.reduce((value, keyword) => {
+      if (hasKeyword(value, keyword)) return value;
+      const next = value ? `${value}${separator}${keyword}` : keyword;
+      return maxLength > 0 && next.length > maxLength ? value : next;
+    }, text || '');
+  };
+  const descriptionWithKeywords = (text) => {
+    if (chatSettings.seo_keyword_consistency_enabled === false || keywordList.length === 0) return text;
+    const missing = keywordList.filter(keyword => !hasKeyword(text, keyword));
+    if (missing.length === 0) return text;
+    const next = `${text || app?.name || 'Store'} Shop ${missing.join(', ')} at ${app?.name || 'our store'}.`.trim();
+    return next.length <= 400 ? next : appendKeywords(text, 400, ', ');
+  };
   const defaultSeoTitle = chatSettings.default_meta_title?.trim() || app?.name || 'Store';
-  const seoTitle = pageSeo.title?.trim() || defaultSeoTitle;
-  const seoDescription = pageSeo.description?.trim() || chatSettings.default_meta_description?.trim();
-  const seoKeywords = pageSeo.keywords?.trim() || chatSettings.default_meta_keywords?.trim();
+  const seoTitle = appendKeywords(pageSeo.title?.trim() || defaultSeoTitle, 180);
+  const seoDescription = descriptionWithKeywords(pageSeo.description?.trim() || chatSettings.default_meta_description?.trim());
+  const seoKeywords = appendKeywords(pageSeo.keywords?.trim() || chatSettings.default_meta_keywords?.trim(), 500, ', ');
   const seoImage = pageSeo.image
     ? (/^https?:\/\//i.test(pageSeo.image) ? pageSeo.image : imageUrl(pageSeo.image))
     : null;

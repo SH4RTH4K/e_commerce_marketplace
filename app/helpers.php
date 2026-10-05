@@ -212,6 +212,70 @@ if (! function_exists('site_name')) {
     }
 }
 
+if (! function_exists('seo_keyword_list')) {
+    /** Split comma/newline separated SEO phrases into a clean unique list. */
+    function seo_keyword_list(?string $raw = null): array
+    {
+        $raw = (string) ($raw ?? setting('seo_target_keywords', setting('default_meta_keywords', '')));
+
+        return collect(preg_split('/[\r\n,;|]+/', $raw) ?: [])
+            ->map(fn ($keyword) => trim((string) $keyword))
+            ->filter()
+            ->unique(fn ($keyword) => mb_strtolower($keyword))
+            ->values()
+            ->take(12)
+            ->all();
+    }
+}
+
+if (! function_exists('seo_missing_keywords')) {
+    /** Keywords from the target list that are not already present in the text. */
+    function seo_missing_keywords(?string $text, array $keywords): array
+    {
+        $normalized = preg_replace('/\s+/', ' ', mb_strtolower(strip_tags((string) $text)));
+
+        return array_values(array_filter($keywords, function ($keyword) use ($normalized) {
+            $needle = preg_replace('/\s+/', ' ', mb_strtolower((string) $keyword));
+
+            return $needle !== '' && ! str_contains($normalized, $needle);
+        }));
+    }
+}
+
+if (! function_exists('seo_append_missing_keywords')) {
+    /** Append missing SEO phrases while respecting an optional max length. */
+    function seo_append_missing_keywords(?string $text, array $keywords, int $maxLength = 0, string $separator = ' | '): string
+    {
+        $value = trim((string) $text);
+        foreach (seo_missing_keywords($value, $keywords) as $keyword) {
+            $next = $value === '' ? $keyword : $value . $separator . $keyword;
+            if ($maxLength > 0 && mb_strlen($next) > $maxLength) {
+                continue;
+            }
+            $value = $next;
+        }
+
+        return $value;
+    }
+}
+
+if (! function_exists('seo_description_with_keywords')) {
+    /** Add target phrases to a meta description in a readable sentence. */
+    function seo_description_with_keywords(?string $description, array $keywords, int $maxLength = 400): string
+    {
+        $value = trim(strip_tags((string) $description));
+        $missing = seo_missing_keywords($value, $keywords);
+        if ($missing === []) {
+            return $value;
+        }
+
+        $addition = 'Shop ' . implode(', ', $missing) . ' at ' . site_name() . '.';
+        $next = trim($value . ($value !== '' ? ' ' : '') . $addition);
+
+        return mb_strlen($next) <= $maxLength ? $next : seo_append_missing_keywords($value, $keywords, $maxLength, ', ');
+    }
+}
+
 if (! function_exists('branding_asset_url')) {
     /** Resolve a branding path (uploads/… or legacy storage) to a public URL. */
     function branding_asset_url(string $path): string

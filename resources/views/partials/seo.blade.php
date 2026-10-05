@@ -7,6 +7,13 @@
     $keywords     = $metaKeywords ?? setting('default_meta_keywords');
     $canonicalUrl = $canonical ?? url()->current();
     $image        = $ogImage ?? null;
+    $keywordConsistencyEnabled = (string) setting('seo_keyword_consistency_enabled', '1') === '1';
+    $seoKeywordPhrases = $keywordConsistencyEnabled ? seo_keyword_list(trim((string) setting('seo_target_keywords', '')) ?: $keywords) : [];
+    if ($seoKeywordPhrases !== []) {
+        $pageTitle = seo_append_missing_keywords($pageTitle, $seoKeywordPhrases, 180);
+        $desc = seo_description_with_keywords($desc ?: $siteName, $seoKeywordPhrases, 400);
+        $keywords = seo_append_missing_keywords($keywords, $seoKeywordPhrases, 500, ', ');
+    }
     $descShort    = \Illuminate\Support\Str::limit(strip_tags((string) $desc), 155); // 155 = Google recommended max
     $descLong     = \Illuminate\Support\Str::limit(strip_tags((string) $desc), 300);
 @endphp

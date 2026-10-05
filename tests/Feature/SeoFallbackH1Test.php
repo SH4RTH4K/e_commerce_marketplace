@@ -42,6 +42,25 @@ class SeoFallbackH1Test extends TestCase
         $this->assertSame(0, $xpath->query('//h1[@data-seo-fallback-h1]')->length);
     }
 
+    public function test_target_keywords_are_distributed_across_initial_seo_tags(): void
+    {
+        Setting::put('default_meta_title', 'Taqi Life');
+        Setting::put('default_meta_description', 'Premium online shopping.');
+        Setting::put('default_meta_keywords', 'lifestyle');
+        Setting::put('seo_target_keywords', 'womens fashion, kids zone, gadgets electronics');
+        Setting::put('seo_keyword_consistency_enabled', '1');
+        Setting::put('seo_fallback_h1_enabled', '1');
+
+        $xpath = $this->htmlFor('/');
+
+        foreach (['womens fashion', 'kids zone', 'gadgets electronics'] as $keyword) {
+            $this->assertStringContainsString($keyword, mb_strtolower($xpath->evaluate('string(//title)')));
+            $this->assertStringContainsString($keyword, mb_strtolower($xpath->evaluate('string(//meta[@name="description"]/@content)')));
+            $this->assertStringContainsString($keyword, mb_strtolower($xpath->evaluate('string(//meta[@name="keywords"]/@content)')));
+            $this->assertStringContainsString($keyword, mb_strtolower($xpath->evaluate('string(//h1[@data-seo-fallback-h1])')));
+        }
+    }
+
     private function htmlFor(string $uri): DOMXPath
     {
         $response = $this->get($uri)->assertOk();

@@ -376,6 +376,8 @@ export default function Settings({ settings, templateStatus = {} }) {
     
     // SEO
     default_meta_title: settings.default_meta_title || '', default_meta_description: settings.default_meta_description || '', default_meta_keywords: settings.default_meta_keywords || '',
+    seo_target_keywords: settings.seo_target_keywords || '',
+    seo_keyword_consistency_enabled: settings.seo_keyword_consistency_enabled !== '0',
     seo_h1_heading: settings.seo_h1_heading || '',
     seo_fallback_h1_enabled: settings.seo_fallback_h1_enabled !== '0',
     seo_https_redirect_enabled: settings.seo_https_redirect_enabled === '1' || settings.seo_https_redirect_enabled === true,
@@ -1543,6 +1545,16 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <textarea value={data.default_meta_keywords} onChange={e => setData('default_meta_keywords', e.target.value)} rows={2} className={inputClass} placeholder="store, shop, etc..." />
                     <p className="mt-1.5 text-xs text-gray-500">Optional. Use comma-separated terms; do not repeat the same phrase.</p>
                   </Field>
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 space-y-4">
+                    <label className="flex cursor-pointer items-center gap-3">
+                      <input type="checkbox" checked={data.seo_keyword_consistency_enabled} onChange={e => setData('seo_keyword_consistency_enabled', e.target.checked)} className={checkboxClass} />
+                      <span className="text-sm font-semibold text-gray-800">Use target keywords consistently in SEO tags</span>
+                    </label>
+                    <Field label="Target Keywords / Phrases" error={errors.seo_target_keywords}>
+                      <textarea value={data.seo_target_keywords} onChange={e => setData('seo_target_keywords', e.target.value)} rows={3} className={inputClass} placeholder="lifestyle, womens fashion, kids zone, gadgets electronics, mens fashion" />
+                      <p className="mt-1.5 text-xs text-gray-500">Comma-separated phrases are added to the default title, meta description, meta keywords, and fallback H1 when they are missing.</p>
+                    </Field>
+                  </div>
                   <div className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4 space-y-4">
                     <label className="flex cursor-pointer items-center gap-3">
                       <input type="checkbox" checked={data.seo_fallback_h1_enabled} onChange={e => setData('seo_fallback_h1_enabled', e.target.checked)} className={checkboxClass} />

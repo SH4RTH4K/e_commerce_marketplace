@@ -14,15 +14,41 @@
         $pageMetaKeywords = trim((string) (($pageSeo['keywords'] ?? '') ?: $defaultMetaKeywords));
         $pageCanonical = $pageSeo['canonical'] ?? url()->current();
         $pageMetaImage = $pageSeo['image'] ?? null;
+        $pageComponent = $page['component'] ?? '';
+        $pageProps = $page['props'] ?? [];
+        $keywordConsistencyEnabled = ! request()->is('admin*') && (string) setting('seo_keyword_consistency_enabled', '1') === '1';
+        $seoKeywordPhrases = seo_keyword_list(trim((string) setting('seo_target_keywords', '')) ?: $pageMetaKeywords);
+        if ($keywordConsistencyEnabled && $seoKeywordPhrases === [] && $pageComponent === 'Storefront/Home') {
+            $homeKeywordNames = [];
+            foreach (($pageProps['featuredCategories'] ?? []) as $category) {
+                if (is_array($category) && ! empty($category['name'])) {
+                    $homeKeywordNames[] = $category['name'];
+                }
+            }
+            foreach (($pageProps['templateTwoCategorySections'] ?? []) as $section) {
+                if (is_array($section) && ! empty($section['name'])) {
+                    $homeKeywordNames[] = $section['name'];
+                }
+            }
+            $seoKeywordPhrases = seo_keyword_list(implode(', ', array_slice(array_unique($homeKeywordNames), 0, 8)));
+        }
+        if ($keywordConsistencyEnabled && $seoKeywordPhrases !== []) {
+            $pageMetaTitle = seo_append_missing_keywords($pageMetaTitle, $seoKeywordPhrases, 180);
+            $pageMetaDescription = seo_description_with_keywords($pageMetaDescription ?: site_name(), $seoKeywordPhrases, 400);
+            $pageMetaKeywords = seo_append_missing_keywords($pageMetaKeywords, $seoKeywordPhrases, 500, ', ');
+        }
         $fallbackH1Enabled = ! request()->is('admin*') && (string) setting('seo_fallback_h1_enabled', '1') === '1';
         $fallbackH1 = trim((string) setting('seo_h1_heading', ''))
             ?: trim((string) ($pageSeo['h1'] ?? ''))
             ?: $pageMetaTitle
             ?: site_name();
+        if ($keywordConsistencyEnabled && $seoKeywordPhrases !== []) {
+            $fallbackH1 = seo_append_missing_keywords($fallbackH1, $seoKeywordPhrases, 180);
+        }
     @endphp
     <title data-inertia="">{{ $pageMetaTitle }}</title>
     <meta name="site-name" content="{{ site_name() }}" />
-    <meta name="seo-default-title" content="{{ $defaultMetaTitle }}" />
+    <meta name="seo-default-title" content="{{ $pageMetaTitle }}" />
     {{-- Social crawlers read this HTML without running the storefront JavaScript. --}}
     @if($pageMetaDescription)<meta data-inertia="description" name="description" content="{{ $pageMetaDescription }}" />@endif
     @if($pageMetaKeywords)<meta data-inertia="keywords" name="keywords" content="{{ $pageMetaKeywords }}" />@endif
