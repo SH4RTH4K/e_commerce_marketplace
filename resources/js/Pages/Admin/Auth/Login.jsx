@@ -60,7 +60,7 @@ export default function AdminLogin({ app }) {
                   onChange={e => setData('password', e.target.value)}
                   autoComplete="current-password"
                   className="w-full h-11 px-4 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:border-orange-400 focus:bg-white/15 transition text-sm"
-                  placeholder="••••••••"
+                  placeholder="Password"
                   required
                 />
                 {errors.password && <p className="text-red-300 text-xs mt-1">{errors.password}</p>}
@@ -77,7 +77,7 @@ export default function AdminLogin({ app }) {
                 disabled={processing}
                 className="w-full h-11 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors text-sm"
               >
-                {processing ? 'Signing in…' : 'Sign In'}
+                {processing ? 'Signing in...' : 'Sign In'}
               </button>
             </form>
           </div>

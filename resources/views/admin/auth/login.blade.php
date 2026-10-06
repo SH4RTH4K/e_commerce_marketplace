@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Login — {{ site_name() }}</title>
+  <title>Admin Login - {{ site_name() }}</title>
   <meta name="robots" content="noindex, nofollow" />
   <link rel="icon" href="{{ favicon_url() }}" />
   <script src="https://cdn.tailwindcss.com"></script>
@@ -63,8 +63,8 @@
       </form>
     </div>
 
-    <p class="text-center text-xs text-gray-400 mt-6">© {{ date('Y') }} {{ site_name() }}. Admin Panel.</p>
-    <p class="text-center mt-2"><a href="{{ route('home') }}" class="text-sm text-gray-500 hover:text-primary">← Back to store</a></p>
+    <p class="text-center text-xs text-gray-400 mt-6">&copy; {{ date('Y') }} {{ site_name() }}. Admin Panel.</p>
+    <p class="text-center mt-2"><a href="{{ route('home') }}" class="text-sm text-gray-500 hover:text-primary">&larr; Back to store</a></p>
   </div>
 </body>
 </html>
