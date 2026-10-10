@@ -50,6 +50,17 @@ class OtpController extends Controller
         if (! $user->hasVerifiedEmail()) {
             $user->forceFill(['email_verified_at' => now()])->save();
         }
+
+        if ($user->isCustomer() && customer_approval_required() && ! $user->isActive()) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'email' => 'Your account is waiting for admin approval.',
+            ]);
+        }
+
         Auth::login($user, true);
 
         return redirect()->route('account')->with('status', 'Your email has been verified.');

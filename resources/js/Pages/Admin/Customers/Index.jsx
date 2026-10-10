@@ -2,7 +2,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 
-export default function CustomersIndex({ customers, term }) {
+export default function CustomersIndex({ customers, term, approvalRequired = false }) {
   const [search, setSearch] = useState(term || '');
   const { data = [], links = [] } = customers || {};
 
@@ -59,8 +59,12 @@ export default function CustomersIndex({ customers, term }) {
                       </td>
                       <td className="px-5 py-3.5">
                         {customer.account_id ? (
-                          <button onClick={() => toggleCustomer(customer)} className={`px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${customer.is_active ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
-                            {customer.is_active ? 'Active' : 'Inactive'}
+                          <button
+                            onClick={() => toggleCustomer(customer)}
+                            title={customer.is_active ? 'Deactivate customer account' : 'Activate customer account'}
+                            className={`px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${customer.is_active ? 'bg-green-100 text-green-700 hover:bg-green-200' : approvalRequired ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                          >
+                            {!customer.is_active && approvalRequired ? 'Waiting for approval · Approve' : customer.is_active ? 'Active' : 'Inactive'}
                           </button>
                         ) : (
                           <span className="text-xs text-gray-400">Guest order</span>

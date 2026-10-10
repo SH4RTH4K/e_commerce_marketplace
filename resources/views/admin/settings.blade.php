@@ -352,6 +352,10 @@
         <input type="checkbox" name="otp_enabled" value="1" class="accent-brand-600 mt-0.5 shrink-0" @checked(($settings['otp_enabled'] ?? '1') === '1')>
         <span>Require email OTP verification when customers register / sign in</span>
       </label>
+      <label class="flex items-start gap-2 text-sm">
+        <input type="checkbox" name="customer_approval_required" value="1" class="accent-brand-600 mt-0.5 shrink-0" @checked(($settings['customer_approval_required'] ?? '0') === '1')>
+        <span>Require admin approval before a new customer can log in</span>
+      </label>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label class="lbl">Mailer</label>

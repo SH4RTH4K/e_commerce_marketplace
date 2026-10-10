@@ -111,6 +111,7 @@ class DatabaseSeeder extends Seeder
             'tracking_ga4_id'          => '',
             'tracking_meta_pixel_id'   => '',
             'otp_enabled'              => '1',
+            'customer_approval_required' => '0',
             'show_brands_marquee'      => '1',
             'brands_marquee'           => 'Volt, Pixel, Nimbus, Aero, Quanta, Core',
             'header_promo_text'        => "\u{1F4F1} Save more on the SHARTHAK app",

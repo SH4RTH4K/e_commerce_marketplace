@@ -32,6 +32,7 @@ class RegisterController extends Controller
             'phone'    => $data['phone'] ?? null,
             'password' => $data['password'],   // hashed by the model cast
             'role'     => 'customer',
+            'is_active' => ! customer_approval_required(),
         ]);
 
         if (otp_enabled()) {

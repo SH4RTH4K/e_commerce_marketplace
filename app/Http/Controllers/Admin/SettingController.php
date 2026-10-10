@@ -295,15 +295,16 @@ class SettingController extends Controller
                 'checkout_delivery_note_label'   => ['nullable', 'string', 'max:120'],
             ],
             'mail' => [
-                'otp_enabled'       => ['nullable', 'boolean'],
-                'mail_mailer'       => ['required', 'in:log,smtp'],
-                'mail_host'         => ['nullable', 'string', 'max:120'],
-                'mail_port'         => ['nullable', 'numeric'],
-                'mail_username'     => ['nullable', 'string', 'max:180'],
-                'mail_password'     => ['nullable', 'string', 'max:180'],
-                'mail_encryption'   => ['nullable', 'in:tls,ssl,none'],
-                'mail_from_address' => ['nullable', 'email', 'max:120'],
-                'mail_from_name'    => ['nullable', 'string', 'max:120'],
+                'otp_enabled'               => ['nullable', 'boolean'],
+                'customer_approval_required' => ['nullable', 'boolean'],
+                'mail_mailer'               => ['required', 'in:log,smtp'],
+                'mail_host'                 => ['nullable', 'string', 'max:120'],
+                'mail_port'                 => ['nullable', 'numeric'],
+                'mail_username'             => ['nullable', 'string', 'max:180'],
+                'mail_password'             => ['nullable', 'string', 'max:180'],
+                'mail_encryption'           => ['nullable', 'in:tls,ssl,none'],
+                'mail_from_address'         => ['nullable', 'email', 'max:120'],
+                'mail_from_name'            => ['nullable', 'string', 'max:120'],
             ],
             'seo' => [
                 'default_meta_title'       => ['nullable', 'string', 'max:180'],
@@ -481,6 +482,7 @@ class SettingController extends Controller
 
         if ($section === 'mail') {
             Setting::put('otp_enabled', $request->boolean('otp_enabled') ? '1' : '0');
+            Setting::put('customer_approval_required', $request->boolean('customer_approval_required') ? '1' : '0');
             // mail_password is purposefully excluded from $keys above so leaving it blank in the form does not overwrite an existing password
             if ($request->filled('mail_password')) {
                 Setting::put('mail_password', (string) $request->input('mail_password'));

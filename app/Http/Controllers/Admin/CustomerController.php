@@ -57,7 +57,11 @@ class CustomerController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return Inertia::render('Admin/Customers/Index', compact('customers', 'term'));
+        return Inertia::render('Admin/Customers/Index', [
+            'customers' => $customers,
+            'term' => $term,
+            'approvalRequired' => customer_approval_required(),
+        ]);
     }
 
     public function show(string $phone)

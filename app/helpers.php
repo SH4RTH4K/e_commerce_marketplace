@@ -137,6 +137,14 @@ if (! function_exists('otp_enabled')) {
     }
 }
 
+if (! function_exists('customer_approval_required')) {
+    /** Whether new customer accounts must be manually approved by an admin. */
+    function customer_approval_required(): bool
+    {
+        return (string) setting('customer_approval_required', '0') === '1';
+    }
+}
+
 if (! function_exists('send_order_email')) {
     /**
      * Send a transactional order email to the customer.
