@@ -180,6 +180,15 @@ Once the server is a Git checkout, administrators with `settings.manage` permiss
 `/admin/system/git-repository` to test the connection, review incoming commits, and deploy a
 fast-forward update. Configure the repository URL to match the server's Git remote. Private
 repository credentials are encrypted in the database and are never displayed after saving.
+If cPanel Terminal can run Git but the admin screen cannot, add this to `.env` and clear the
+configuration cache:
+
+```dotenv
+APPLICATION_UPDATE_GIT_BINARY=/usr/bin/git
+```
+
+If `/usr/bin/git` is not correct, run `command -v git` in cPanel Terminal and use the returned
+path.
 
 The deployment workflow preserves untracked uploads and runtime files. It blocks when tracked
 server changes or diverged branch history are detected. The explicit discard option resets only

@@ -14,6 +14,8 @@ class ApplicationUpdateService
 {
     private const LOCK_FILE = 'application-update.lock';
 
+    private ?string $gitBinary = null;
+
     public function settings(): ApplicationUpdateSetting
     {
         return ApplicationUpdateSetting::query()->first() ?? ApplicationUpdateSetting::create([
@@ -451,7 +453,7 @@ class ApplicationUpdateService
         }
 
         try {
-            $process = new Process(array_merge(['git'], $arguments), base_path(), $environment, null, 60);
+            $process = new Process(array_merge([$this->gitBinary()], $arguments), base_path(), $environment, null, 60);
             $process->run();
             $result = [
                 'code' => $process->getExitCode() ?? 1,
@@ -473,9 +475,44 @@ class ApplicationUpdateService
 
     private function gitOrFail(array $arguments, string $message): void
     {
-        if ($this->git($arguments, false)['code'] !== 0) {
-            throw new \RuntimeException($message);
+        $result = $this->git($arguments, false);
+
+        if ($result['code'] !== 0) {
+            $details = $this->safeError($result['error'] ?: $result['output']);
+
+            throw new \RuntimeException($details ? $message.' '.$details : $message);
         }
+    }
+
+    private function gitBinary(): string
+    {
+        if ($this->gitBinary !== null) {
+            return $this->gitBinary;
+        }
+
+        $configured = trim((string) config('application-update.git_binary', ''));
+        $candidates = $configured !== ''
+            ? [$configured]
+            : (array) config('application-update.git_binary_candidates', []);
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            $candidates = array_merge($configured !== '' ? [$configured] : [], ['git']);
+        }
+
+        foreach (array_unique(array_filter(array_map('trim', $candidates))) as $candidate) {
+            try {
+                $process = new Process([$candidate, '--version'], base_path(), null, null, 10);
+                $process->run();
+
+                if ($process->getExitCode() === 0) {
+                    return $this->gitBinary = $candidate;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        throw new \RuntimeException('Git is not available to the PHP process. On cPanel, set APPLICATION_UPDATE_GIT_BINARY=/usr/bin/git in .env, then run php artisan optimize:clear. If /usr/bin/git is missing, ask the host for the output of command -v git and use that path.');
     }
 
     private function artisan(string ...$arguments): void
