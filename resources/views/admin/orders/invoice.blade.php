@@ -1193,6 +1193,24 @@
             closeWhatsAppChoice();
         }
 
+        function downloadInvoicePdf(button, mode, blob, fileName) {
+            const downloadUrl = URL.createObjectURL(blob);
+            const download = document.createElement('a');
+            download.href = downloadUrl;
+            download.download = fileName;
+            document.body.appendChild(download);
+            download.click();
+            download.remove();
+
+            setTimeout(function () {
+                URL.revokeObjectURL(downloadUrl);
+            }, 1000);
+
+            const fallbackMessage = invoiceMessage(button, mode, false) + '\n\nThe PDF has been downloaded. Please attach it to this chat before sending.';
+            window.open('https://wa.me/?text=' + encodeURIComponent(fallbackMessage), '_blank', 'noopener');
+            closeWhatsAppChoice();
+        }
+
         async function sendInvoicePdf(button) {
             const mode = button.dataset.waInvoice === 'mono' ? 'mono' : 'color';
             const separator = button.dataset.waPdfUrl.includes('?') ? '&' : '?';
@@ -1215,26 +1233,22 @@
                     && (!navigator.canShare || navigator.canShare({ files: [file] }));
 
                 if (canShareFile) {
-                    await navigator.share({
-                        title: 'Invoice #' + button.dataset.waOrder,
-                        text: invoiceMessage(button, mode, false),
-                        files: [file],
-                    });
-                    closeWhatsAppChoice();
-                    return;
+                    try {
+                        await navigator.share({
+                            title: 'Invoice #' + button.dataset.waOrder,
+                            text: invoiceMessage(button, mode, false),
+                            files: [file],
+                        });
+                        closeWhatsAppChoice();
+                        return;
+                    } catch (shareError) {
+                        if (shareError?.name === 'AbortError') {
+                            return;
+                        }
+                    }
                 }
 
-                const download = document.createElement('a');
-                download.href = URL.createObjectURL(blob);
-                download.download = fileName;
-                document.body.appendChild(download);
-                download.click();
-                download.remove();
-                URL.revokeObjectURL(download.href);
-
-                const fallbackMessage = invoiceMessage(button, mode, false) + '\n\nThe PDF has been downloaded. Please attach it to this chat before sending.';
-                window.open('https://wa.me/?text=' + encodeURIComponent(fallbackMessage), '_blank', 'noopener');
-                closeWhatsAppChoice();
+                downloadInvoicePdf(button, mode, blob, fileName);
             } catch (error) {
                 if (error?.name !== 'AbortError') {
                     window.alert('Could not prepare the invoice PDF. Please try again or send the invoice link.');
