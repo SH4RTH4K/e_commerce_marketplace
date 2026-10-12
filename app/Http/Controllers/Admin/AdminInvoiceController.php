@@ -33,24 +33,30 @@ class AdminInvoiceController extends Controller
         $store = $this->getStoreDetails();
         $printMode = $request->query('mode') === 'mono' ? 'mono' : 'color';
 
-        $options = new Options();
-        $options->setIsRemoteEnabled(true);
-        $options->setDefaultFont('DejaVu Sans');
-
         try {
-            $html = view('admin.orders.invoice', [
-                'orders'    => collect([$order]),
-                'store'     => $store,
-                'isBulk'    => false,
-                'isPdf'     => true,
-                'printMode' => $printMode,
-            ])->render();
+            $options = new Options();
+            $options->setIsRemoteEnabled(true);
+            $options->setDefaultFont('DejaVu Sans');
 
-            $output = $this->renderPdf($html, $options);
+            try {
+                $html = view('admin.orders.invoice', [
+                    'orders'    => collect([$order]),
+                    'store'     => $store,
+                    'isBulk'    => false,
+                    'isPdf'     => true,
+                    'printMode' => $printMode,
+                ])->render();
+
+                $output = $this->renderPdf($html, $options);
+            } catch (Throwable $exception) {
+                report($exception);
+
+                $output = $this->renderPdf($this->fallbackInvoicePdfHtml($order, $store), $options);
+            }
         } catch (Throwable $exception) {
             report($exception);
 
-            $output = $this->renderPdf($this->fallbackInvoicePdfHtml($order, $store), $options);
+            $output = $this->nativeInvoicePdf($order, $store);
         }
 
         return response($output, 200, [
@@ -274,5 +280,153 @@ class AdminInvoiceController extends Controller
     <div class="footer">' . e($store['footer_text'] ?: 'Computer-generated invoice.') . '</div>
 </body>
 </html>';
+    }
+
+    private function nativeInvoicePdf(Order $order, array $store): string
+    {
+        $lines = [
+            $store['name'],
+            $store['tagline'],
+            $store['address'] . ' | ' . $store['phone'] . ' | ' . $store['email'],
+            '',
+            'INVOICE #' . $order->order_number,
+            'Date: ' . ($order->created_at ? $order->created_at->format('d M Y, h:i A') : ''),
+            '',
+            'Billed and shipped to:',
+            $order->customer_name,
+            'Phone: ' . $order->customer_phone,
+            trim($order->shipping_address . ($order->city ? ', ' . $order->city : '')),
+            '',
+            'Payment: ' . $order->paymentMethodLabel(),
+            'Status: ' . strtoupper($order->payment_status) . ' / ' . strtoupper($order->status),
+            '',
+            'SL | Image | Item and description | Price | Qty | Total',
+            str_repeat('-', 92),
+        ];
+
+        foreach ($order->items as $index => $item) {
+            $quantity = $item->quantity ?? $item->qty ?? 1;
+            $lineTotal = (float) $item->line_total > 0
+                ? (float) $item->line_total
+                : (float) $item->unit_price * (int) $quantity;
+            $productName = $item->product_name ?: ($item->product?->name ?? 'Product');
+            $variant = $item->variant ? ' (' . $item->variant . ')' : '';
+
+            $lines[] = sprintf(
+                '%02d | Image | %s%s | BDT %s | %s | BDT %s',
+                $index + 1,
+                $productName,
+                $variant,
+                number_format((float) $item->unit_price, 2),
+                $quantity,
+                number_format($lineTotal, 2)
+            );
+        }
+
+        $subtotal = (float) ($order->subtotal ?: ($order->total - ($order->shipping_charge ?? 0)));
+        $discount = (float) ($order->discount_amount ?: ($order->discount ?? 0));
+
+        $lines = array_merge($lines, [
+            '',
+            'Subtotal: BDT ' . number_format($subtotal, 2),
+            'Delivery: BDT ' . number_format((float) ($order->shipping_charge ?? 0), 2),
+        ]);
+
+        if ($discount > 0) {
+            $lines[] = 'Discount: -BDT ' . number_format($discount, 2);
+        }
+
+        if (($order->tax ?? 0) > 0) {
+            $lines[] = 'Tax: BDT ' . number_format((float) $order->tax, 2);
+        }
+
+        $lines[] = 'Total due: BDT ' . number_format((float) $order->total, 2);
+        $lines[] = '';
+        $lines[] = $store['footer_text'] ?: 'Computer-generated invoice.';
+
+        return $this->buildTextPdf($lines);
+    }
+
+    private function buildTextPdf(array $lines): string
+    {
+        $wrappedLines = [];
+        foreach ($lines as $line) {
+            $cleanLine = $this->pdfAscii($line);
+            $parts = explode("\n", wordwrap($cleanLine, 96, "\n", true));
+            array_push($wrappedLines, ...($parts ?: ['']));
+        }
+
+        $pages = array_chunk($wrappedLines, 48);
+        if (empty($pages)) {
+            $pages = [[]];
+        }
+
+        $objects = [
+            1 => '<< /Type /Catalog /Pages 2 0 R >>',
+            2 => '',
+        ];
+        $kids = [];
+
+        foreach ($pages as $pageLines) {
+            $pageObject = count($objects) + 1;
+            $contentObject = $pageObject + 1;
+            $kids[] = $pageObject . ' 0 R';
+
+            $stream = $this->textPdfStream($pageLines);
+            $objects[$pageObject] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> /Contents ' . $contentObject . ' 0 R >>';
+            $objects[$contentObject] = '<< /Length ' . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream";
+        }
+
+        $objects[2] = '<< /Type /Pages /Kids [' . implode(' ', $kids) . '] /Count ' . count($kids) . ' >>';
+
+        $pdf = "%PDF-1.4\n";
+        $offsets = [0];
+        $objectCount = count($objects);
+
+        for ($i = 1; $i <= $objectCount; $i++) {
+            $offsets[$i] = strlen($pdf);
+            $pdf .= $i . " 0 obj\n" . $objects[$i] . "\nendobj\n";
+        }
+
+        $xrefOffset = strlen($pdf);
+        $pdf .= "xref\n0 " . ($objectCount + 1) . "\n";
+        $pdf .= "0000000000 65535 f \n";
+
+        for ($i = 1; $i <= $objectCount; $i++) {
+            $pdf .= sprintf("%010d 00000 n \n", $offsets[$i]);
+        }
+
+        $pdf .= "trailer\n<< /Size " . ($objectCount + 1) . " /Root 1 0 R >>\n";
+        $pdf .= "startxref\n" . $xrefOffset . "\n%%EOF";
+
+        return $pdf;
+    }
+
+    private function textPdfStream(array $lines): string
+    {
+        $stream = "BT\n/F1 10 Tf\n14 TL\n50 800 Td\n";
+
+        foreach ($lines as $line) {
+            $stream .= '(' . $this->escapePdfText($line) . ") Tj\nT*\n";
+        }
+
+        return $stream . "ET";
+    }
+
+    private function pdfAscii(mixed $value): string
+    {
+        $text = trim(preg_replace('/\s+/', ' ', (string) $value));
+        $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
+
+        if ($converted !== false) {
+            $text = $converted;
+        }
+
+        return preg_replace('/[^\x20-\x7E]/', '', $text) ?: '';
+    }
+
+    private function escapePdfText(string $text): string
+    {
+        return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $text);
     }
 }
