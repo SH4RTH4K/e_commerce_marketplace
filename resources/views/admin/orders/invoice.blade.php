@@ -474,13 +474,29 @@
         }
 
         .item-thumb {
-            display: block;
+            display: grid;
+            place-items: center;
             width: 46px;
             height: 46px;
             border: 1px solid var(--line-soft);
             border-radius: 8px;
             background: #fff;
             object-fit: contain;
+            overflow: hidden;
+            color: var(--muted);
+            font-size: 8px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        img.item-thumb {
+            display: block;
+        }
+
+        .item-thumb-placeholder {
+            background: var(--accent-soft);
         }
 
         .item-title {
@@ -1014,9 +1030,13 @@
                                         @php
                                             $productName = $item->product_name ?: ($item->product?->name ?? 'Product');
                                             $productImage = $item->image ?: $item->product?->primaryImage()?->path;
-                                            $productImageUrl = image_url($productImage, $productName);
+                                            $productImageUrl = !($isPdf ?? false) ? image_url($productImage, $productName) : null;
                                         @endphp
-                                        <img class="item-thumb" src="{{ $productImageUrl }}" alt="{{ $productName }}">
+                                        @if($productImageUrl)
+                                            <img class="item-thumb" src="{{ $productImageUrl }}" alt="{{ $productName }}">
+                                        @else
+                                            <div class="item-thumb item-thumb-placeholder" aria-label="Product image">Image</div>
+                                        @endif
                                     </td>
                                     <td>
                                         @php
