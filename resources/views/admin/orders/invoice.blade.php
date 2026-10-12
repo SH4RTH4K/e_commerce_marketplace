@@ -1129,11 +1129,15 @@
     <div id="wa-choice-modal" class="wa-choice-modal no-print" hidden role="dialog" aria-modal="true" aria-labelledby="wa-choice-title">
         <div class="wa-choice-card">
             <div class="wa-choice-title" id="wa-choice-title">Send invoice on WhatsApp</div>
-            <div class="wa-choice-copy">Choose whether to share the actual PDF or send a secure invoice link. PDF sharing works directly on supported mobile devices.</div>
+            <div class="wa-choice-copy">Send an invoice image for the easiest WhatsApp sharing, or use PDF/link when needed.</div>
             <div class="wa-choice-actions">
-                <button type="button" class="wa-choice-action primary" data-wa-choice="pdf">
+                <button type="button" class="wa-choice-action primary" data-wa-choice="image">
+                    <span aria-hidden="true">IMG</span>
+                    <span><strong>Send invoice image</strong><span>Attach a PNG invoice image</span></span>
+                </button>
+                <button type="button" class="wa-choice-action" data-wa-choice="pdf">
                     <span aria-hidden="true">📎</span>
-                    <span><strong>Send PDF to WhatsApp</strong><span>Attach the selected invoice PDF</span></span>
+                    <span><strong>Send invoice PDF</strong><span>Attach the selected invoice PDF</span></span>
                 </button>
                 <button type="button" class="wa-choice-action" data-wa-choice="link">
                     <span aria-hidden="true">🔗</span>
@@ -1193,7 +1197,7 @@
             closeWhatsAppChoice();
         }
 
-        function downloadInvoicePdf(button, mode, blob, fileName) {
+        function downloadInvoiceAttachment(button, mode, blob, fileName, label) {
             const downloadUrl = URL.createObjectURL(blob);
             const download = document.createElement('a');
             download.href = downloadUrl;
@@ -1206,9 +1210,264 @@
                 URL.revokeObjectURL(downloadUrl);
             }, 1000);
 
-            const fallbackMessage = invoiceMessage(button, mode, false) + '\n\nThe PDF has been downloaded. Please attach it to this chat before sending.';
+            const fallbackMessage = invoiceMessage(button, mode, false) + '\n\nThe ' + label + ' has been downloaded. Please attach it to this chat before sending.';
             window.open('https://wa.me/?text=' + encodeURIComponent(fallbackMessage), '_blank', 'noopener');
             closeWhatsAppChoice();
+        }
+
+        function downloadInvoicePdf(button, mode, blob, fileName) {
+            downloadInvoiceAttachment(button, mode, blob, fileName, 'PDF');
+        }
+
+        function invoiceLinesFromElement(element) {
+            return String(element?.innerText || '')
+                .split('\n')
+                .map(function (line) { return line.trim(); })
+                .filter(Boolean);
+        }
+
+        function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
+            const words = String(text || '').split(/\s+/);
+            let line = '';
+            let currentY = y;
+
+            words.forEach(function (word) {
+                const testLine = line ? line + ' ' + word : word;
+                if (ctx.measureText(testLine).width > maxWidth && line) {
+                    ctx.fillText(line, x, currentY);
+                    line = word;
+                    currentY += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            });
+
+            if (line) ctx.fillText(line, x, currentY);
+
+            return currentY + lineHeight;
+        }
+
+        function loadImageForCanvas(src) {
+            return new Promise(function (resolve) {
+                if (!src) {
+                    resolve(null);
+                    return;
+                }
+
+                const image = new Image();
+                image.crossOrigin = 'anonymous';
+                image.onload = function () { resolve(image); };
+                image.onerror = function () { resolve(null); };
+                image.src = src;
+            });
+        }
+
+        async function buildInvoiceImageBlob(mode) {
+            const sheet = document.querySelector('.invoice-sheet');
+            if (!sheet) throw new Error('Invoice sheet not found');
+
+            const tableRows = Array.from(sheet.querySelectorAll('.items-table tbody tr'));
+            const productImage = await loadImageForCanvas(sheet.querySelector('.item-thumb')?.getAttribute('src'));
+            const logoImage = await loadImageForCanvas(sheet.querySelector('.brand-logo')?.getAttribute('src'));
+            const canvas = document.createElement('canvas');
+            const scale = 2;
+            const width = 1200;
+            const height = Math.max(1500, 1180 + (tableRows.length * 130));
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = width * scale;
+            canvas.height = height * scale;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.scale(scale, scale);
+
+            ctx.fillStyle = '#f4fbf8';
+            ctx.fillRect(0, 0, width, height);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(44, 40, width - 88, height - 80);
+            ctx.fillStyle = mode === 'mono' ? '#111827' : '#0f8b72';
+            ctx.fillRect(44, 40, width - 88, 7);
+            if (mode !== 'mono') {
+                ctx.fillStyle = '#d7a22a';
+                ctx.fillRect(width - 480, 40, 436, 7);
+            }
+
+            let y = 115;
+            const left = 112;
+            if (logoImage) {
+                try {
+                    ctx.drawImage(logoImage, left, y - 10, 58, 58);
+                } catch (error) {}
+            }
+
+            ctx.fillStyle = '#152238';
+            ctx.font = '700 30px Arial, sans-serif';
+            ctx.fillText(sheet.querySelector('.brand-title')?.innerText?.trim() || 'TAQI LIFE', left + (logoImage ? 78 : 0), y + 16);
+            ctx.font = '700 13px Arial, sans-serif';
+            ctx.fillStyle = '#0f8b72';
+            ctx.fillText(sheet.querySelector('.brand-kicker')?.innerText?.trim() || '', left + (logoImage ? 78 : 0), y + 42);
+            ctx.font = '400 14px Arial, sans-serif';
+            ctx.fillStyle = '#64748b';
+            drawWrappedText(ctx, sheet.querySelector('.brand-sub')?.innerText?.trim() || '', left, y + 86, 620, 22);
+
+            ctx.fillStyle = mode === 'mono' ? '#f3f4f6' : '#e7f6f1';
+            ctx.fillRect(width - 330, 108, 230, 150);
+            ctx.fillStyle = '#0f172a';
+            ctx.font = '700 13px Arial, sans-serif';
+            ctx.fillText('OFFICIAL DOCUMENT', width - 275, 150);
+            ctx.font = '800 34px Arial, sans-serif';
+            ctx.fillText('INVOICE', width - 260, 190);
+            ctx.font = '700 15px Arial, sans-serif';
+            ctx.fillText(sheet.querySelector('.invoice-code')?.innerText?.trim() || '', width - 260, 225);
+            ctx.font = '400 13px Arial, sans-serif';
+            ctx.fillStyle = '#64748b';
+            ctx.fillText(sheet.querySelector('.invoice-date')?.innerText?.trim() || '', width - 252, 246);
+
+            y = 330;
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(left, y, 600, 210);
+            ctx.strokeRect(width - 430, y, 330, 210);
+
+            ctx.fillStyle = '#111827';
+            ctx.font = '700 13px Arial, sans-serif';
+            ctx.fillText('BILLED & SHIPPED TO', left + 22, y + 36);
+            ctx.font = '700 20px Arial, sans-serif';
+            ctx.fillText(sheet.querySelector('.customer-name')?.innerText?.trim() || '', left + 22, y + 75);
+            ctx.font = '400 15px Arial, sans-serif';
+            let detailY = y + 102;
+            invoiceLinesFromElement(sheet.querySelector('.detail-card')).slice(2).forEach(function (line) {
+                detailY = drawWrappedText(ctx, line, left + 22, detailY, 540, 22);
+            });
+
+            ctx.font = '700 13px Arial, sans-serif';
+            ctx.fillText('PAYMENT & DELIVERY', width - 365, y + 36);
+            ctx.font = '400 15px Arial, sans-serif';
+            invoiceLinesFromElement(sheet.querySelector('.payment-card')).slice(1).forEach(function (line, index) {
+                drawWrappedText(ctx, line, width - 365, y + 75 + (index * 26), 280, 22);
+            });
+
+            y = 610;
+            ctx.fillStyle = mode === 'mono' ? '#f3f4f6' : '#e3f5ef';
+            ctx.fillRect(left, y, width - 224, 48);
+            ctx.fillStyle = '#0f172a';
+            ctx.font = '800 13px Arial, sans-serif';
+            ctx.fillText('SL', left + 18, y + 30);
+            ctx.fillText('IMAGE', left + 70, y + 30);
+            ctx.fillText('ITEM & DESCRIPTION', left + 170, y + 30);
+            ctx.fillText('PRICE', width - 355, y + 30);
+            ctx.fillText('QTY', width - 250, y + 30);
+            ctx.fillText('TOTAL', width - 165, y + 30);
+
+            y += 78;
+            tableRows.forEach(function (row, index) {
+                const cells = row.querySelectorAll('td');
+                const itemTitle = cells[2]?.querySelector('.item-title')?.innerText?.trim() || cells[2]?.innerText?.trim() || '';
+                const sku = cells[2]?.querySelector('.item-sku')?.innerText?.trim() || '';
+                const price = cells[3]?.innerText?.trim() || '';
+                const qty = cells[4]?.innerText?.trim() || '';
+                const total = cells[5]?.innerText?.trim() || '';
+
+                ctx.strokeStyle = '#e5e7eb';
+                ctx.beginPath();
+                ctx.moveTo(left, y + 70);
+                ctx.lineTo(width - 112, y + 70);
+                ctx.stroke();
+
+                ctx.fillStyle = '#111827';
+                ctx.font = '400 15px Arial, sans-serif';
+                ctx.fillText(String(index + 1), left + 18, y + 18);
+
+                if (index === 0 && productImage) {
+                    try {
+                        ctx.drawImage(productImage, left + 68, y - 12, 58, 58);
+                    } catch (error) {
+                        ctx.strokeRect(left + 68, y - 12, 58, 58);
+                    }
+                } else {
+                    ctx.strokeRect(left + 68, y - 12, 58, 58);
+                    ctx.font = '700 10px Arial, sans-serif';
+                    ctx.fillText('IMAGE', left + 79, y + 20);
+                }
+
+                ctx.font = '700 17px Arial, sans-serif';
+                drawWrappedText(ctx, itemTitle, left + 170, y + 4, 470, 23);
+                ctx.font = '400 12px Arial, sans-serif';
+                ctx.fillStyle = '#64748b';
+                if (sku) ctx.fillText(sku, left + 170, y + 64);
+                ctx.fillStyle = '#111827';
+                ctx.font = '400 15px Arial, sans-serif';
+                ctx.fillText(price, width - 378, y + 18);
+                ctx.fillText(qty, width - 238, y + 18);
+                ctx.font = '700 15px Arial, sans-serif';
+                ctx.fillText(total, width - 183, y + 18);
+
+                y += 116;
+            });
+
+            y += 18;
+            ctx.font = '400 15px Arial, sans-serif';
+            ctx.fillStyle = '#334155';
+            invoiceLinesFromElement(sheet.querySelector('.notes-content')).forEach(function (line) {
+                y = drawWrappedText(ctx, line, left, y, 580, 24);
+            });
+
+            const summaryLines = invoiceLinesFromElement(sheet.querySelector('.summary-table'));
+            let summaryY = y - 24;
+            ctx.fillStyle = '#111827';
+            ctx.font = '400 16px Arial, sans-serif';
+            summaryLines.forEach(function (line) {
+                drawWrappedText(ctx, line, width - 430, summaryY, 310, 26);
+                summaryY += 30;
+            });
+
+            y = Math.max(y + 90, summaryY + 40);
+            ctx.fillStyle = '#64748b';
+            ctx.font = '400 13px Arial, sans-serif';
+            invoiceLinesFromElement(sheet.querySelector('.footer')).forEach(function (line) {
+                y = drawWrappedText(ctx, line, left, y, width - 224, 22);
+            });
+
+            return new Promise(function (resolve, reject) {
+                canvas.toBlob(function (blob) {
+                    if (blob) resolve(blob);
+                    else reject(new Error('Image generation failed'));
+                }, 'image/png', 0.94);
+            });
+        }
+
+        async function sendInvoiceImage(button) {
+            const mode = button.dataset.waInvoice === 'mono' ? 'mono' : 'color';
+            const fileName = 'Invoice_' + button.dataset.waOrder + '_' + mode + '.png';
+
+            try {
+                const blob = await buildInvoiceImageBlob(mode);
+                const file = new File([blob], fileName, { type: 'image/png' });
+                const canShareFile = typeof navigator.share === 'function'
+                    && (!navigator.canShare || navigator.canShare({ files: [file] }));
+
+                if (canShareFile) {
+                    try {
+                        await navigator.share({
+                            title: 'Invoice #' + button.dataset.waOrder,
+                            text: invoiceMessage(button, mode, false),
+                            files: [file],
+                        });
+                        closeWhatsAppChoice();
+                        return;
+                    } catch (shareError) {
+                        if (shareError?.name === 'AbortError') {
+                            return;
+                        }
+                    }
+                }
+
+                downloadInvoiceAttachment(button, mode, blob, fileName, 'invoice image');
+            } catch (error) {
+                if (error?.name !== 'AbortError') {
+                    window.alert('Could not prepare the invoice image. Please try again or send the invoice link.');
+                }
+            }
         }
 
         async function sendInvoicePdf(button) {
@@ -1278,6 +1537,8 @@
                     closeWhatsAppChoice();
                 } else if (activeWhatsAppButton && choice.dataset.waChoice === 'link') {
                     openWhatsAppLink(activeWhatsAppButton);
+                } else if (activeWhatsAppButton && choice.dataset.waChoice === 'image') {
+                    sendInvoiceImage(activeWhatsAppButton);
                 } else if (activeWhatsAppButton && choice.dataset.waChoice === 'pdf') {
                     sendInvoicePdf(activeWhatsAppButton);
                 }
