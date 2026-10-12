@@ -13,7 +13,7 @@ class AdminInvoiceController extends Controller
 {
     public function show(Order $order)
     {
-        $order->load(['items.product']);
+        $order->load(['items.product.images']);
         $store = $this->getStoreDetails();
 
         return view('admin.orders.invoice', [
@@ -28,7 +28,7 @@ class AdminInvoiceController extends Controller
      */
     public function pdf(Order $order, Request $request)
     {
-        $order->load(['items.product']);
+        $order->load(['items.product.images']);
         $store = $this->getStoreDetails();
         $printMode = $request->query('mode') === 'mono' ? 'mono' : 'color';
 
@@ -71,7 +71,7 @@ class AdminInvoiceController extends Controller
             return redirect()->route('admin.orders.index')->with('error', 'You can print a maximum of 200 invoices at once. Please select fewer orders.');
         }
 
-        $orders = Order::with(['items.product'])
+        $orders = Order::with(['items.product.images'])
             ->whereIn('id', $idArray)
             ->latest()
             ->get();
@@ -91,7 +91,7 @@ class AdminInvoiceController extends Controller
 
     public function customerInvoice(string $orderNumber, Request $request)
     {
-        $order = Order::with(['items.product'])
+        $order = Order::with(['items.product.images'])
             ->where('order_number', $orderNumber)
             ->firstOrFail();
 

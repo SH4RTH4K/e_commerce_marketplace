@@ -469,6 +469,20 @@
             padding-right: 12px;
         }
 
+        .item-image-cell {
+            width: 58px;
+        }
+
+        .item-thumb {
+            display: block;
+            width: 46px;
+            height: 46px;
+            border: 1px solid var(--line-soft);
+            border-radius: 8px;
+            background: #fff;
+            object-fit: contain;
+        }
+
         .item-title {
             color: var(--ink);
             font-family: 'Space Grotesk', sans-serif;
@@ -656,7 +670,7 @@
             }
 
             table.items-table {
-                min-width: 570px;
+                min-width: 630px;
             }
 
             .table-wrap {
@@ -984,7 +998,8 @@
                     <table class="items-table">
                         <thead>
                             <tr>
-                                <th style="width: 36px;">#</th>
+                                <th style="width: 36px;">SL</th>
+                                <th style="width: 58px;">Image</th>
                                 <th>Item &amp; description</th>
                                 <th class="text-right" style="width: 92px;">Price</th>
                                 <th class="text-center" style="width: 42px;">Qty</th>
@@ -995,13 +1010,20 @@
                             @forelse($order->items as $idx => $item)
                                 <tr>
                                     <td class="text-center font-mono">{{ $idx + 1 }}</td>
+                                    <td class="item-image-cell">
+                                        @php
+                                            $productName = $item->product_name ?: ($item->product?->name ?? 'Product');
+                                            $productImage = $item->image ?: $item->product?->primaryImage()?->path;
+                                            $productImageUrl = image_url($productImage, $productName);
+                                        @endphp
+                                        <img class="item-thumb" src="{{ $productImageUrl }}" alt="{{ $productName }}">
+                                    </td>
                                     <td>
                                         @php
                                             $itemQuantity = $item->quantity ?? $item->qty ?? 1;
                                             $itemLineTotal = (float) $item->line_total > 0
                                                 ? (float) $item->line_total
                                                 : (float) $item->unit_price * (int) $itemQuantity;
-                                            $productName = $item->product_name ?: ($item->product?->name ?? 'Product');
                                             $productUrl = $item->product ? route('product.show', $item->product) : null;
                                         @endphp
                                         <div class="item-title">
@@ -1024,7 +1046,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" style="text-align: center; color: var(--muted); padding: 18px;">No items in order.</td>
+                                    <td colspan="6" style="text-align: center; color: var(--muted); padding: 18px;">No items in order.</td>
                                 </tr>
                             @endforelse
                         </tbody>
