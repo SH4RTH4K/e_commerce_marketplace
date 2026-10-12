@@ -474,14 +474,13 @@
         }
 
         .item-thumb {
-            display: grid;
-            place-items: center;
+            display: block;
             width: 46px;
             height: 46px;
+            line-height: 46px;
             border: 1px solid var(--line-soft);
             border-radius: 8px;
             background: #fff;
-            object-fit: contain;
             overflow: hidden;
             color: var(--muted);
             font-size: 8px;
@@ -493,6 +492,8 @@
 
         img.item-thumb {
             display: block;
+            line-height: normal;
+            object-fit: contain;
         }
 
         .item-thumb-placeholder {
@@ -955,7 +956,7 @@
             <article class="invoice-sheet">
                 <header class="header">
                     <div class="brand-lockup">
-                        @if(!empty($store['logo']))
+                        @if(!empty($store['logo']) && !($isPdf ?? false))
                             <div class="brand-row">
                                 <img class="brand-logo" src="{{ $store['logo'] }}" alt="{{ $store['name'] }}">
                                 <div class="brand-copy">
