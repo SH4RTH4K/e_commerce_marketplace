@@ -42,7 +42,7 @@ const ROLE_META = {
   manager:   { label: 'Store Manager', color: 'bg-blue-100 text-blue-700 border-blue-200' },
   support:   { label: 'Support & Orders', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   inventory: { label: 'Product & Stock', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  staff:     { label: 'Custom Staff', color: 'bg-gray-100 text-gray-700 border-gray-200' },
+  staff:     { label: 'Custom Role', color: 'bg-gray-100 text-gray-700 border-gray-200' },
 };
 
 export default function AdminsIndex({ admins = [] }) {
@@ -51,19 +51,19 @@ export default function AdminsIndex({ admins = [] }) {
 
   const handleDelete = (admin) => {
     if (admin.id === currentUserId) return alert("You cannot delete your own account.");
-    window.showConfirm(`Delete staff account "${admin.name}"?`, () => {
+    window.showConfirm(`Delete user account "${admin.name}"?`, () => {
       router.delete(`/admin/admins/${admin.id}`);
     });
   };
 
   return (
     <>
-      <Head title="Staff & Admins" />
-      <AdminLayout title="Staff & Roles Management">
+      <Head title="Users & Roles" />
+      <AdminLayout title="Users & Roles Management">
         <div className="space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-gray-500">Manage store managers, support agents, product uploaders, and their permissions.</p>
+              <p className="text-sm text-gray-500">Manage admin users separately from their assigned roles and permissions.</p>
             </div>
             <div className="flex items-center gap-3">
               <a
@@ -77,7 +77,7 @@ export default function AdminsIndex({ admins = [] }) {
                 className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2 shadow-sm"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8zM16 11h6M19 8v6"/></svg>
-                Add Staff Member
+                Add User
               </a>
             </div>
           </div>
@@ -87,7 +87,7 @@ export default function AdminsIndex({ admins = [] }) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50/70 border-b border-gray-100">
-                    <th className="px-5 py-3.5 text-xs font-bold text-gray-500 uppercase tracking-wider text-left">Staff Member</th>
+                    <th className="px-5 py-3.5 text-xs font-bold text-gray-500 uppercase tracking-wider text-left">User</th>
                     <th className="px-5 py-3.5 text-xs font-bold text-gray-500 uppercase tracking-wider text-left">Username</th>
                     <th className="px-5 py-3.5 text-xs font-bold text-gray-500 uppercase tracking-wider text-left">Email Address</th>
                     <th className="px-5 py-3.5 text-xs font-bold text-gray-500 uppercase tracking-wider text-left">Assigned Role</th>
@@ -169,7 +169,7 @@ export default function AdminsIndex({ admins = [] }) {
                               href={`/admin/admins/${admin.id}/edit`}
                               className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors"
                             >
-                              Edit &amp; Permissions
+                              Edit User &amp; Role
                             </a>
                             {admin.id !== currentUserId && (
                               <button

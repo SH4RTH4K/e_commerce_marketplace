@@ -55,7 +55,7 @@ class AdminUserController extends Controller
             'email_verified_at' => now(),
         ]);
 
-        return redirect()->route('admin.admins.index')->with('status', 'Staff account created successfully.');
+        return redirect()->route('admin.admins.index')->with('status', 'User account created successfully.');
     }
 
     public function edit(User $admin)
@@ -97,7 +97,7 @@ class AdminUserController extends Controller
         }
         $admin->save();
 
-        return redirect()->route('admin.admins.index')->with('status', 'Staff account updated successfully.');
+        return redirect()->route('admin.admins.index')->with('status', 'User account updated successfully.');
     }
 
     public function destroy(User $admin)
@@ -114,7 +114,7 @@ class AdminUserController extends Controller
 
         $admin->delete();
 
-        return redirect()->route('admin.admins.index')->with('status', 'Staff account deleted.');
+        return redirect()->route('admin.admins.index')->with('status', 'User account deleted.');
     }
 
     public function editPassword()

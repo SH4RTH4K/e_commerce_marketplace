@@ -140,7 +140,7 @@ const navGroups = [
         ],
       },
       {
-        key: 'admins', label: 'Staff & Roles', href: '/admin/admins', pattern: /^\/admin\/admins/,
+        key: 'admins', label: 'Users & Roles', href: '/admin/admins', pattern: /^\/admin\/admins/,
         icon: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1',
         perm: 'admins.manage',
       },
