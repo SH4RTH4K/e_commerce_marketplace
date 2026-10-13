@@ -368,12 +368,17 @@ class AdminInvoiceController extends Controller
             $content .= $this->pdfText((string) ($index + 1), 72, $y, 9, false, '#111827');
             $content .= $this->pdfRect(94, $y - 18, 28, 28, '#f8fafc', '#cbd5e1');
             $content .= $this->pdfText('Image', 98, $y - 3, 6, true, '#64748b');
-            $content .= $this->pdfWrappedText($productName, 140, $y + 2, 9, true, '#111827', 44, 11);
+            $productLines = array_slice($this->pdfWrapLines($productName, 38), 0, 4);
+            foreach ($productLines as $lineIndex => $line) {
+                $content .= $this->pdfText($line, 140, $y + 2 - ($lineIndex * 11), 9, true, '#111827');
+            }
+            $metaY = $y + 2 - (count($productLines) * 11) - 4;
             if ($item->variant) {
-                $content .= $this->pdfText((string) $item->variant, 140, $y - 23, 7, false, '#64748b');
+                $content .= $this->pdfText((string) $item->variant, 140, $metaY, 7, false, '#64748b');
+                $metaY -= 10;
             }
             if ($item->product && $item->product->sku) {
-                $content .= $this->pdfText('SKU: ' . $item->product->sku, 140, $y - 35, 7, false, '#64748b');
+                $content .= $this->pdfText('SKU: ' . $item->product->sku, 140, $metaY, 7, false, '#64748b');
             }
             $content .= $this->pdfText('BDT ' . number_format((float) $item->unit_price, 2), 392, $y, 8, false, '#111827');
             $content .= $this->pdfText((string) $quantity, 464, $y, 8, true, '#111827');
@@ -405,7 +410,7 @@ class AdminInvoiceController extends Controller
         $content .= $this->pdfText('BDT ' . number_format($subtotal, 2), 475, $summaryY, 8, true, '#111827');
         $content .= $this->pdfText('Delivery', $summaryX, $summaryY - 18, 8, false, '#475569');
         $content .= $this->pdfText('BDT ' . number_format((float) ($order->shipping_charge ?? 0), 2), 475, $summaryY - 18, 8, true, '#111827');
-        $summaryTotalY = $summaryY - 42;
+        $summaryTotalY = $summaryY - 72;
         if ($discount > 0) {
             $content .= $this->pdfText('Discount', $summaryX, $summaryY - 36, 8, false, '#475569');
             $content .= $this->pdfText('-BDT ' . number_format($discount, 2), 475, $summaryY - 36, 8, true, '#b91c1c');
@@ -485,13 +490,18 @@ class AdminInvoiceController extends Controller
     private function pdfWrappedText(mixed $text, float $x, float $y, int $size, bool $bold, string $color, int $maxChars, int $lineHeight): string
     {
         $output = '';
-        $lines = explode("\n", wordwrap($this->pdfAscii($text), $maxChars, "\n", true));
+        $lines = $this->pdfWrapLines($text, $maxChars);
 
         foreach ($lines as $index => $line) {
             $output .= $this->pdfText($line, $x, $y - ($index * $lineHeight), $size, $bold, $color);
         }
 
         return $output;
+    }
+
+    private function pdfWrapLines(mixed $text, int $maxChars): array
+    {
+        return explode("\n", wordwrap($this->pdfAscii($text), $maxChars, "\n", true));
     }
 
     private function pdfColor(string $hex, bool $fill): string
