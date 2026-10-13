@@ -290,14 +290,24 @@ class AdminInvoiceController extends Controller
         $softGreen = $isMono ? '#f3f4f6' : '#e7f6f1';
         $tableHead = $isMono ? '#f3f4f6' : '#e3f5ef';
         $content = '';
+        $images = [];
 
         $content .= $this->pdfRect(0, 0, 595, 842, '#f4fbf8');
         $content .= $this->pdfRect(28, 24, 539, 794, '#ffffff');
         $content .= $this->pdfRect(28, 814, 388, 4, $green);
         $content .= $this->pdfRect(416, 814, 151, 4, $gold);
 
-        $content .= $this->pdfText($store['name'], 62, 752, 18, true, '#152238');
-        $content .= $this->pdfText($store['tagline'], 62, 735, 8, true, $green);
+        $brandTextX = 62;
+        if (! empty($store['logo'])) {
+            $logoName = $this->addPdfImage($images, $store['logo'], 180);
+            if ($logoName) {
+                $content .= $this->pdfImage($logoName, 62, 735, 38, 38);
+                $brandTextX = 112;
+            }
+        }
+
+        $content .= $this->pdfText($store['name'], $brandTextX, 752, 18, true, '#152238');
+        $content .= $this->pdfText($store['tagline'], $brandTextX, 735, 8, true, $green);
         $content .= $this->pdfWrappedText(
             $store['address'] . ' | ' . $store['phone'] . ' | ' . $store['email'],
             62,
@@ -366,8 +376,16 @@ class AdminInvoiceController extends Controller
             }
 
             $content .= $this->pdfText((string) ($index + 1), 72, $y, 9, false, '#111827');
-            $content .= $this->pdfRect(94, $y - 18, 28, 28, '#f8fafc', '#cbd5e1');
-            $content .= $this->pdfText('Image', 98, $y - 3, 6, true, '#64748b');
+            $productImage = $item->image ?: $item->product?->primaryImage()?->path;
+            $productImageSource = $productImage ? image_url($productImage, $productName) : null;
+            $productImageName = $this->addPdfImage($images, $productImageSource, 220);
+            if ($productImageName) {
+                $content .= $this->pdfRect(94, $y - 18, 28, 28, '#ffffff', '#cbd5e1');
+                $content .= $this->pdfImage($productImageName, 95, $y - 17, 26, 26);
+            } else {
+                $content .= $this->pdfRect(94, $y - 18, 28, 28, '#f8fafc', '#cbd5e1');
+                $content .= $this->pdfText('Image', 98, $y - 3, 6, true, '#64748b');
+            }
             $productLines = array_slice($this->pdfWrapLines($productName, 38), 0, 4);
             foreach ($productLines as $lineIndex => $line) {
                 $content .= $this->pdfText($line, 140, $y + 2 - ($lineIndex * 11), 9, true, '#111827');
@@ -430,17 +448,30 @@ class AdminInvoiceController extends Controller
         $content .= $this->pdfText($store['name'] . ' | ' . url('/'), 62, 62, 7, true, '#64748b');
         $content .= $this->pdfWrappedText($store['footer_text'] ?: 'Computer-generated invoice.', 62, 48, 7, false, '#64748b', 96, 9);
 
-        return $this->buildPdfPage($content);
+        return $this->buildPdfPage($content, $images);
     }
 
-    private function buildPdfPage(string $stream): string
+    private function buildPdfPage(string $stream, array $images = []): string
     {
+        $imageObjects = [];
+        $xObjects = '';
+        $nextObjectId = 5;
+        foreach ($images as $name => $image) {
+            $objectId = $nextObjectId++;
+            $xObjects .= '/' . $name . ' ' . $objectId . ' 0 R ';
+            $imageObjects[$objectId] = '<< /Type /XObject /Subtype /Image /Width ' . $image['width']
+                . ' /Height ' . $image['height']
+                . ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' . strlen($image['data'])
+                . " >>\nstream\n" . $image['data'] . "\nendstream";
+        }
+
+        $resourceXObjects = $xObjects !== '' ? ' /XObject << ' . $xObjects . '>>' : '';
         $objects = [
             1 => '<< /Type /Catalog /Pages 2 0 R >>',
             2 => '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-            3 => '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> >> >> /Contents 4 0 R >>',
+            3 => '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> >>' . $resourceXObjects . ' >> /Contents 4 0 R >>',
             4 => '<< /Length ' . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream",
-        ];
+        ] + $imageObjects;
 
         $pdf = "%PDF-1.4\n";
         $offsets = [0];
@@ -480,6 +511,127 @@ class AdminInvoiceController extends Controller
     private function pdfLine(float $x1, float $y1, float $x2, float $y2, string $stroke): string
     {
         return 'q ' . $this->pdfColor($stroke, false) . ' 0.7 w ' . $this->pdfNumber($x1) . ' ' . $this->pdfNumber($y1) . ' m ' . $this->pdfNumber($x2) . ' ' . $this->pdfNumber($y2) . " l S Q\n";
+    }
+
+    private function pdfImage(string $name, float $x, float $y, float $width, float $height): string
+    {
+        return 'q ' . $this->pdfNumber($width) . ' 0 0 ' . $this->pdfNumber($height) . ' ' . $this->pdfNumber($x) . ' ' . $this->pdfNumber($y) . ' cm /' . $name . " Do Q\n";
+    }
+
+    private function addPdfImage(array &$images, ?string $source, int $maxPixels): ?string
+    {
+        $image = $this->pdfJpegImage($source, $maxPixels);
+        if (! $image) {
+            return null;
+        }
+
+        $name = 'Im' . (count($images) + 1);
+        $images[$name] = $image;
+
+        return $name;
+    }
+
+    private function pdfJpegImage(?string $source, int $maxPixels): ?array
+    {
+        if (! extension_loaded('gd')) {
+            return null;
+        }
+
+        $bytes = $this->readPdfImageBytes($source);
+        if (! $bytes) {
+            return null;
+        }
+
+        $image = @imagecreatefromstring($bytes);
+        if (! $image) {
+            return null;
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+        if ($width < 1 || $height < 1) {
+            imagedestroy($image);
+            return null;
+        }
+
+        $scale = min(1, $maxPixels / max($width, $height));
+        $targetWidth = max(1, (int) round($width * $scale));
+        $targetHeight = max(1, (int) round($height * $scale));
+        $canvas = imagecreatetruecolor($targetWidth, $targetHeight);
+        $white = imagecolorallocate($canvas, 255, 255, 255);
+        imagefilledrectangle($canvas, 0, 0, $targetWidth, $targetHeight, $white);
+        imagecopyresampled($canvas, $image, 0, 0, 0, 0, $targetWidth, $targetHeight, $width, $height);
+
+        ob_start();
+        imagejpeg($canvas, null, 84);
+        $jpeg = ob_get_clean();
+
+        imagedestroy($image);
+        imagedestroy($canvas);
+
+        if (! $jpeg) {
+            return null;
+        }
+
+        return [
+            'width' => $targetWidth,
+            'height' => $targetHeight,
+            'data' => $jpeg,
+        ];
+    }
+
+    private function readPdfImageBytes(?string $source): ?string
+    {
+        $source = trim((string) $source);
+        if ($source === '' || str_starts_with($source, 'data:image/svg')) {
+            return null;
+        }
+
+        $path = $this->localPathFromImageSource($source);
+        if ($path && is_file($path) && is_readable($path)) {
+            return file_get_contents($path) ?: null;
+        }
+
+        if (str_starts_with($source, 'http://') || str_starts_with($source, 'https://')) {
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 4,
+                    'user_agent' => 'TAQI LIFE invoice PDF',
+                ],
+            ]);
+
+            return @file_get_contents($source, false, $context) ?: null;
+        }
+
+        return null;
+    }
+
+    private function localPathFromImageSource(string $source): ?string
+    {
+        $parts = parse_url($source);
+        $path = $parts['path'] ?? $source;
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        $path = ltrim($path, '/');
+        if (str_starts_with($path, 'public/')) {
+            $path = substr($path, 7);
+        }
+
+        $candidates = [
+            public_path($path),
+            public_path('storage/' . preg_replace('#^(storage/|public/storage/)#', '', $path)),
+            storage_path('app/public/' . preg_replace('#^(storage/|public/storage/)#', '', $path)),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     private function pdfText(mixed $text, float $x, float $y, int $size = 10, bool $bold = false, string $color = '#111111'): string
