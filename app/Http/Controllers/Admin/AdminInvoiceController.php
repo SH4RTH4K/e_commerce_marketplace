@@ -56,7 +56,7 @@ class AdminInvoiceController extends Controller
         } catch (Throwable $exception) {
             report($exception);
 
-            $output = $this->nativeInvoicePdf($order, $store);
+            $output = $this->nativeInvoicePdf($order, $store, $printMode);
         }
 
         return response($output, 200, [
@@ -282,27 +282,77 @@ class AdminInvoiceController extends Controller
 </html>';
     }
 
-    private function nativeInvoicePdf(Order $order, array $store): string
+    private function nativeInvoicePdf(Order $order, array $store, string $printMode = 'color'): string
     {
-        $lines = [
-            $store['name'],
-            $store['tagline'],
+        $isMono = $printMode === 'mono';
+        $green = $isMono ? '#111827' : '#0f8b72';
+        $gold = $isMono ? '#9ca3af' : '#d7a22a';
+        $softGreen = $isMono ? '#f3f4f6' : '#e7f6f1';
+        $tableHead = $isMono ? '#f3f4f6' : '#e3f5ef';
+        $content = '';
+
+        $content .= $this->pdfRect(0, 0, 595, 842, '#f4fbf8');
+        $content .= $this->pdfRect(28, 24, 539, 794, '#ffffff');
+        $content .= $this->pdfRect(28, 814, 388, 4, $green);
+        $content .= $this->pdfRect(416, 814, 151, 4, $gold);
+
+        $content .= $this->pdfText($store['name'], 62, 752, 18, true, '#152238');
+        $content .= $this->pdfText($store['tagline'], 62, 735, 8, true, $green);
+        $content .= $this->pdfWrappedText(
             $store['address'] . ' | ' . $store['phone'] . ' | ' . $store['email'],
-            '',
-            'INVOICE #' . $order->order_number,
-            'Date: ' . ($order->created_at ? $order->created_at->format('d M Y, h:i A') : ''),
-            '',
-            'Billed and shipped to:',
-            $order->customer_name,
-            'Phone: ' . $order->customer_phone,
+            62,
+            714,
+            9,
+            false,
+            '#64748b',
+            70,
+            12
+        );
+
+        $content .= $this->pdfRect(425, 682, 110, 105, $softGreen);
+        $content .= $this->pdfText('OFFICIAL DOCUMENT', 449, 758, 7, true, $green);
+        $content .= $this->pdfText('INVOICE', 453, 734, 20, true, '#0f172a');
+        $content .= $this->pdfText('#' . $order->order_number, 452, 709, 9, true, '#334155');
+        $content .= $this->pdfText($order->created_at ? $order->created_at->format('d M Y, h:i A') : '', 461, 692, 8, false, '#64748b');
+
+        $content .= $this->pdfLine(62, 658, 535, 658, '#e5e7eb');
+        $content .= $this->pdfRect(62, 548, 285, 88, '#ffffff', '#e5e7eb');
+        $content .= $this->pdfRect(360, 548, 175, 88, '#ffffff', '#e5e7eb');
+        $content .= $this->pdfText('BILLED & SHIPPED TO', 76, 612, 7, true, $gold);
+        $content .= $this->pdfText($order->customer_name, 76, 590, 12, true, '#1f2937');
+        $content .= $this->pdfText('Phone: ' . $order->customer_phone, 76, 574, 9, false, '#111827');
+        $content .= $this->pdfWrappedText(
             trim($order->shipping_address . ($order->city ? ', ' . $order->city : '')),
-            '',
-            'Payment: ' . $order->paymentMethodLabel(),
-            'Status: ' . strtoupper($order->payment_status) . ' / ' . strtoupper($order->status),
-            '',
-            'SL | Image | Item and description | Price | Qty | Total',
-            str_repeat('-', 92),
-        ];
+            76,
+            559,
+            8,
+            false,
+            '#475569',
+            58,
+            10
+        );
+        if ($order->delivery_note) {
+            $content .= $this->pdfRect(76, 518, 250, 18, '#fff7df', '#f1dfad');
+            $content .= $this->pdfText('Note: ' . $order->delivery_note, 82, 524, 7, false, '#6b4f00');
+        }
+
+        $content .= $this->pdfText('PAYMENT & DELIVERY', 425, 612, 7, true, $gold);
+        $content .= $this->pdfText('Payment: ' . $order->paymentMethodLabel(), 390, 588, 9, false, '#111827');
+        $content .= $this->pdfRect(411, 568, 46, 16, '#fff7df', '#f1dfad');
+        $content .= $this->pdfText(strtoupper((string) $order->payment_status), 417, 573, 6, true, '#6b4f00');
+        $content .= $this->pdfRect(463, 568, 42, 16, '#edf2f7', '#d1d5db');
+        $content .= $this->pdfText(strtoupper((string) $order->status), 470, 573, 6, true, '#334155');
+
+        $content .= $this->pdfLine(62, 496, 535, 496, '#e5e7eb');
+        $content .= $this->pdfRect(62, 462, 473, 24, $tableHead);
+        $content .= $this->pdfText('SL', 70, 471, 7, true, '#0f172a');
+        $content .= $this->pdfText('IMAGE', 94, 471, 7, true, '#0f172a');
+        $content .= $this->pdfText('ITEM & DESCRIPTION', 140, 471, 7, true, '#0f172a');
+        $content .= $this->pdfText('PRICE', 404, 471, 7, true, '#0f172a');
+        $content .= $this->pdfText('QTY', 459, 471, 7, true, '#0f172a');
+        $content .= $this->pdfText('TOTAL', 500, 471, 7, true, '#0f172a');
+
+        $y = 430;
 
         foreach ($order->items as $index => $item) {
             $quantity = $item->quantity ?? $item->qty ?? 1;
@@ -310,74 +360,82 @@ class AdminInvoiceController extends Controller
                 ? (float) $item->line_total
                 : (float) $item->unit_price * (int) $quantity;
             $productName = $item->product_name ?: ($item->product?->name ?? 'Product');
-            $variant = $item->variant ? ' (' . $item->variant . ')' : '';
 
-            $lines[] = sprintf(
-                '%02d | Image | %s%s | BDT %s | %s | BDT %s',
-                $index + 1,
-                $productName,
-                $variant,
-                number_format((float) $item->unit_price, 2),
-                $quantity,
-                number_format($lineTotal, 2)
-            );
+            if ($y < 176) {
+                break;
+            }
+
+            $content .= $this->pdfText((string) ($index + 1), 72, $y, 9, false, '#111827');
+            $content .= $this->pdfRect(94, $y - 18, 28, 28, '#f8fafc', '#cbd5e1');
+            $content .= $this->pdfText('Image', 98, $y - 3, 6, true, '#64748b');
+            $content .= $this->pdfWrappedText($productName, 140, $y + 2, 9, true, '#111827', 44, 11);
+            if ($item->variant) {
+                $content .= $this->pdfText((string) $item->variant, 140, $y - 23, 7, false, '#64748b');
+            }
+            if ($item->product && $item->product->sku) {
+                $content .= $this->pdfText('SKU: ' . $item->product->sku, 140, $y - 35, 7, false, '#64748b');
+            }
+            $content .= $this->pdfText('BDT ' . number_format((float) $item->unit_price, 2), 392, $y, 8, false, '#111827');
+            $content .= $this->pdfText((string) $quantity, 464, $y, 8, true, '#111827');
+            $content .= $this->pdfText('BDT ' . number_format($lineTotal, 2), 486, $y, 8, true, '#111827');
+            $content .= $this->pdfLine(62, $y - 48, 535, $y - 48, '#e5e7eb');
+
+            $y -= 64;
         }
 
         $subtotal = (float) ($order->subtotal ?: ($order->total - ($order->shipping_charge ?? 0)));
         $discount = (float) ($order->discount_amount ?: ($order->discount ?? 0));
+        $tax = (float) ($order->tax ?? 0);
+        $summaryY = max(120, $y - 18);
 
-        $lines = array_merge($lines, [
-            '',
-            'Subtotal: BDT ' . number_format($subtotal, 2),
-            'Delivery: BDT ' . number_format((float) ($order->shipping_charge ?? 0), 2),
-        ]);
+        $content .= $this->pdfWrappedText(
+            $order->internal_note ? 'Note: ' . $order->internal_note : 'Thank you for your order. Please check the parcel before accepting delivery.',
+            62,
+            $summaryY,
+            8,
+            false,
+            '#334155',
+            54,
+            11
+        );
+        $content .= $this->pdfText('Cash on Delivery Amount: BDT ' . number_format((float) $order->total, 2), 62, $summaryY - 30, 8, true, '#334155');
 
+        $summaryX = 390;
+        $content .= $this->pdfText('Subtotal', $summaryX, $summaryY, 8, false, '#475569');
+        $content .= $this->pdfText('BDT ' . number_format($subtotal, 2), 475, $summaryY, 8, true, '#111827');
+        $content .= $this->pdfText('Delivery', $summaryX, $summaryY - 18, 8, false, '#475569');
+        $content .= $this->pdfText('BDT ' . number_format((float) ($order->shipping_charge ?? 0), 2), 475, $summaryY - 18, 8, true, '#111827');
+        $summaryTotalY = $summaryY - 42;
         if ($discount > 0) {
-            $lines[] = 'Discount: -BDT ' . number_format($discount, 2);
+            $content .= $this->pdfText('Discount', $summaryX, $summaryY - 36, 8, false, '#475569');
+            $content .= $this->pdfText('-BDT ' . number_format($discount, 2), 475, $summaryY - 36, 8, true, '#b91c1c');
+            $summaryTotalY -= 18;
+        }
+        if ($tax > 0) {
+            $content .= $this->pdfText('Tax', $summaryX, $summaryTotalY + 18, 8, false, '#475569');
+            $content .= $this->pdfText('BDT ' . number_format($tax, 2), 475, $summaryTotalY + 18, 8, true, '#111827');
+            $summaryTotalY -= 18;
         }
 
-        if (($order->tax ?? 0) > 0) {
-            $lines[] = 'Tax: BDT ' . number_format((float) $order->tax, 2);
-        }
+        $content .= $this->pdfRect(388, $summaryTotalY - 8, 148, 34, $green);
+        $content .= $this->pdfText('Total due', 400, $summaryTotalY + 5, 10, true, '#ffffff');
+        $content .= $this->pdfText('BDT ' . number_format((float) $order->total, 2), 472, $summaryTotalY + 5, 10, true, '#ffffff');
 
-        $lines[] = 'Total due: BDT ' . number_format((float) $order->total, 2);
-        $lines[] = '';
-        $lines[] = $store['footer_text'] ?: 'Computer-generated invoice.';
+        $content .= $this->pdfLine(62, 84, 535, 84, '#e5e7eb');
+        $content .= $this->pdfText($store['name'] . ' | ' . url('/'), 62, 62, 7, true, '#64748b');
+        $content .= $this->pdfWrappedText($store['footer_text'] ?: 'Computer-generated invoice.', 62, 48, 7, false, '#64748b', 96, 9);
 
-        return $this->buildTextPdf($lines);
+        return $this->buildPdfPage($content);
     }
 
-    private function buildTextPdf(array $lines): string
+    private function buildPdfPage(string $stream): string
     {
-        $wrappedLines = [];
-        foreach ($lines as $line) {
-            $cleanLine = $this->pdfAscii($line);
-            $parts = explode("\n", wordwrap($cleanLine, 96, "\n", true));
-            array_push($wrappedLines, ...($parts ?: ['']));
-        }
-
-        $pages = array_chunk($wrappedLines, 48);
-        if (empty($pages)) {
-            $pages = [[]];
-        }
-
         $objects = [
             1 => '<< /Type /Catalog /Pages 2 0 R >>',
-            2 => '',
+            2 => '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+            3 => '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> >> >> /Contents 4 0 R >>',
+            4 => '<< /Length ' . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream",
         ];
-        $kids = [];
-
-        foreach ($pages as $pageLines) {
-            $pageObject = count($objects) + 1;
-            $contentObject = $pageObject + 1;
-            $kids[] = $pageObject . ' 0 R';
-
-            $stream = $this->textPdfStream($pageLines);
-            $objects[$pageObject] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> /Contents ' . $contentObject . ' 0 R >>';
-            $objects[$contentObject] = '<< /Length ' . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream";
-        }
-
-        $objects[2] = '<< /Type /Pages /Kids [' . implode(' ', $kids) . '] /Count ' . count($kids) . ' >>';
 
         $pdf = "%PDF-1.4\n";
         $offsets = [0];
@@ -402,15 +460,53 @@ class AdminInvoiceController extends Controller
         return $pdf;
     }
 
-    private function textPdfStream(array $lines): string
+    private function pdfRect(float $x, float $y, float $width, float $height, string $fill, ?string $stroke = null): string
     {
-        $stream = "BT\n/F1 10 Tf\n14 TL\n50 800 Td\n";
-
-        foreach ($lines as $line) {
-            $stream .= '(' . $this->escapePdfText($line) . ") Tj\nT*\n";
+        $command = 'q ' . $this->pdfColor($fill, true);
+        if ($stroke) {
+            $command .= ' ' . $this->pdfColor($stroke, false);
         }
 
-        return $stream . "ET";
+        $command .= ' ' . $this->pdfNumber($x) . ' ' . $this->pdfNumber($y) . ' ' . $this->pdfNumber($width) . ' ' . $this->pdfNumber($height) . ' re ' . ($stroke ? 'B' : 'f') . " Q\n";
+
+        return $command;
+    }
+
+    private function pdfLine(float $x1, float $y1, float $x2, float $y2, string $stroke): string
+    {
+        return 'q ' . $this->pdfColor($stroke, false) . ' 0.7 w ' . $this->pdfNumber($x1) . ' ' . $this->pdfNumber($y1) . ' m ' . $this->pdfNumber($x2) . ' ' . $this->pdfNumber($y2) . " l S Q\n";
+    }
+
+    private function pdfText(mixed $text, float $x, float $y, int $size = 10, bool $bold = false, string $color = '#111111'): string
+    {
+        return 'BT ' . $this->pdfColor($color, true) . ' /' . ($bold ? 'F2' : 'F1') . ' ' . $size . ' Tf ' . $this->pdfNumber($x) . ' ' . $this->pdfNumber($y) . ' Td (' . $this->escapePdfText($this->pdfAscii($text)) . ") Tj ET\n";
+    }
+
+    private function pdfWrappedText(mixed $text, float $x, float $y, int $size, bool $bold, string $color, int $maxChars, int $lineHeight): string
+    {
+        $output = '';
+        $lines = explode("\n", wordwrap($this->pdfAscii($text), $maxChars, "\n", true));
+
+        foreach ($lines as $index => $line) {
+            $output .= $this->pdfText($line, $x, $y - ($index * $lineHeight), $size, $bold, $color);
+        }
+
+        return $output;
+    }
+
+    private function pdfColor(string $hex, bool $fill): string
+    {
+        $hex = ltrim($hex, '#');
+        $red = hexdec(substr($hex, 0, 2)) / 255;
+        $green = hexdec(substr($hex, 2, 2)) / 255;
+        $blue = hexdec(substr($hex, 4, 2)) / 255;
+
+        return $this->pdfNumber($red) . ' ' . $this->pdfNumber($green) . ' ' . $this->pdfNumber($blue) . ' ' . ($fill ? 'rg' : 'RG');
+    }
+
+    private function pdfNumber(float $value): string
+    {
+        return rtrim(rtrim(sprintf('%.3F', $value), '0'), '.');
     }
 
     private function pdfAscii(mixed $value): string
