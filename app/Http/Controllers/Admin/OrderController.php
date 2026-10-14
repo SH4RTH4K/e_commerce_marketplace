@@ -377,9 +377,8 @@ class OrderController extends Controller
             'variant_label' => $item->variant,
             'quantity' => $item->quantity,
             'unit_price' => $item->unit_price,
-            'line_total' => (float) $item->line_total > 0
-                ? $item->line_total
-                : round((float) $item->unit_price * (int) $item->quantity, 2),
+            'unit_discount' => $item->unit_discount ?? '0.00',
+            'line_total' => $item->effectiveLineTotal(),
         ]);
 
         // Load the latest saved result without making an API call on every page view.
@@ -478,6 +477,39 @@ class OrderController extends Controller
         });
 
         return back()->with('status', "Products added to order {$order->order_number}.");
+    }
+
+    public function updateItemDiscount(Request $request, Order $order, OrderItem $item)
+    {
+        abort_unless($item->order_id === $order->id, 404);
+        $data = $request->validate([
+            'unit_discount' => ['required', 'numeric', 'min:0', 'max:' . $item->unit_price, 'decimal:0,2'],
+        ]);
+
+        DB::transaction(function () use ($order, $item, $data) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $item = $order->items()->whereKey($item->id)->lockForUpdate()->firstOrFail();
+            if ((float) $item->unit_discount === (float) $data['unit_discount']) {
+                return;
+            }
+
+            $lineTotal = round(((float) $item->unit_price - (float) $data['unit_discount']) * (int) $item->quantity, 2);
+            $subtotal = round((float) $order->subtotal - $item->effectiveLineTotal() + $lineTotal, 2);
+            if ($subtotal < (float) $order->discount_amount) {
+                throw ValidationException::withMessages(['unit_discount' => 'Reduce the order discount first so combined discounts do not exceed the product subtotal.']);
+            }
+
+            $taxable = max(0, $subtotal - (float) $order->discount_amount);
+            $tax = round($taxable * (float) setting('tax_percent', 0) / 100, 2);
+            $item->update(['unit_discount' => $data['unit_discount'], 'line_total' => $lineTotal]);
+            $order->update([
+                'subtotal' => $subtotal,
+                'tax' => $tax,
+                'total' => round($taxable + (float) $order->shipping_charge + $tax, 2),
+            ]);
+        });
+
+        return back()->with('status', "Product discount updated for order {$order->order_number}.");
     }
 
     /** Verify the manual payment (accept the order). */

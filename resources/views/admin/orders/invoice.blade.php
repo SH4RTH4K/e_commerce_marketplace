@@ -1042,9 +1042,7 @@
                                     <td>
                                         @php
                                             $itemQuantity = $item->quantity ?? $item->qty ?? 1;
-                                            $itemLineTotal = (float) $item->line_total > 0
-                                                ? (float) $item->line_total
-                                                : (float) $item->unit_price * (int) $itemQuantity;
+                                            $itemLineTotal = $item->effectiveLineTotal();
                                             $productUrl = $item->product ? route('product.show', $item->product) : null;
                                         @endphp
                                         <div class="item-title">
@@ -1059,6 +1057,9 @@
                                         @endif
                                         @if($item->product && $item->product->sku)
                                             <div class="item-sku">SKU: {{ $item->product->sku }}</div>
+                                        @endif
+                                        @if((float) $item->unit_discount > 0)
+                                            <div class="item-discount item-variant">Discount per unit: -{{ $store['currency'] }}{{ number_format($item->unit_discount, 2) }}</div>
                                         @endif
                                     </td>
                                     <td class="text-right font-mono">{{ $store['currency'] }}{{ number_format($item->unit_price, 2) }}</td>
@@ -1364,6 +1365,7 @@
                 const cells = row.querySelectorAll('td');
                 const itemTitle = cells[2]?.querySelector('.item-title')?.innerText?.trim() || cells[2]?.innerText?.trim() || '';
                 const sku = cells[2]?.querySelector('.item-sku')?.innerText?.trim() || '';
+                const itemDiscount = cells[2]?.querySelector('.item-discount')?.innerText?.trim() || '';
                 const price = cells[3]?.innerText?.trim() || '';
                 const qty = cells[4]?.innerText?.trim() || '';
                 const total = cells[5]?.innerText?.trim() || '';
@@ -1394,7 +1396,7 @@
                 drawWrappedText(ctx, itemTitle, left + 170, y + 4, 470, 23);
                 ctx.font = '400 12px Arial, sans-serif';
                 ctx.fillStyle = '#64748b';
-                if (sku) ctx.fillText(sku, left + 170, y + 64);
+                if (sku || itemDiscount) drawWrappedText(ctx, [sku, itemDiscount].filter(Boolean).join(' · '), left + 170, y + 64, 470, 16);
                 ctx.fillStyle = '#111827';
                 ctx.font = '400 15px Arial, sans-serif';
                 ctx.fillText(price, width - 378, y + 18);

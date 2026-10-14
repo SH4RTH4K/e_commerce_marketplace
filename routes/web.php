@@ -233,6 +233,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('orders/{order:id}/invoice/pdf', [\App\Http\Controllers\Admin\AdminInvoiceController::class, 'pdf'])->name('orders.invoice.pdf');
         Route::patch('orders/{order:id}', [AdminOrderController::class, 'update'])->name('orders.update');
         Route::post('orders/{order:id}/items', [AdminOrderController::class, 'addItems'])->name('orders.items.store');
+        Route::patch('orders/{order:id}/items/{item}/discount', [AdminOrderController::class, 'updateItemDiscount'])->name('orders.items.discount');
 
         // Courier integration
         Route::post('orders/{order:id}/send-to-courier', [CourierController::class, 'sendToCourier'])->name('orders.send-to-courier');

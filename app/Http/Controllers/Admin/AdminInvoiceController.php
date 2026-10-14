@@ -172,17 +172,17 @@ class AdminInvoiceController extends Controller
 
         foreach ($order->items as $index => $item) {
             $quantity = $item->quantity ?? $item->qty ?? 1;
-            $lineTotal = (float) $item->line_total > 0
-                ? (float) $item->line_total
-                : (float) $item->unit_price * (int) $quantity;
+            $lineTotal = $item->effectiveLineTotal();
             $productName = e($item->product_name ?: ($item->product?->name ?? 'Product'));
             $variant = $item->variant ? '<br><small>' . e($item->variant) . '</small>' : '';
             $sku = ($item->product && $item->product->sku) ? '<br><small>SKU: ' . e($item->product->sku) . '</small>' : '';
+            $itemDiscount = (float) $item->unit_discount > 0
+                ? '<br><small>Discount per unit: -' . $currency . number_format((float) $item->unit_discount, 2) . '</small>' : '';
 
             $rows .= '<tr>'
                 . '<td class="center">' . ($index + 1) . '</td>'
                 . '<td class="center"><span class="image-box">Image</span></td>'
-                . '<td><strong>' . $productName . '</strong>' . $variant . $sku . '</td>'
+                . '<td><strong>' . $productName . '</strong>' . $variant . $sku . $itemDiscount . '</td>'
                 . '<td class="right">' . $currency . number_format((float) $item->unit_price, 2) . '</td>'
                 . '<td class="center">' . e((string) $quantity) . '</td>'
                 . '<td class="right">' . $currency . number_format($lineTotal, 2) . '</td>'
@@ -366,9 +366,7 @@ class AdminInvoiceController extends Controller
 
         foreach ($order->items as $index => $item) {
             $quantity = $item->quantity ?? $item->qty ?? 1;
-            $lineTotal = (float) $item->line_total > 0
-                ? (float) $item->line_total
-                : (float) $item->unit_price * (int) $quantity;
+            $lineTotal = $item->effectiveLineTotal();
             $productName = $item->product_name ?: ($item->product?->name ?? 'Product');
 
             if ($y < 176) {
@@ -397,6 +395,10 @@ class AdminInvoiceController extends Controller
             }
             if ($item->product && $item->product->sku) {
                 $content .= $this->pdfText('SKU: ' . $item->product->sku, 140, $metaY, 7, false, '#64748b');
+                $metaY -= 10;
+            }
+            if ((float) $item->unit_discount > 0) {
+                $content .= $this->pdfText('Discount/unit: -BDT ' . number_format((float) $item->unit_discount, 2), 140, $metaY, 7, false, '#64748b');
             }
             $content .= $this->pdfText('BDT ' . number_format((float) $item->unit_price, 2), 392, $y, 8, false, '#111827');
             $content .= $this->pdfText((string) $quantity, 464, $y, 8, true, '#111827');

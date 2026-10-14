@@ -3,6 +3,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { useState, useEffect, useCallback } from 'react';
 import CourierShipModal from '@/Components/CourierShipModal';
 import AddOrderProducts from '@/Components/AddOrderProducts';
+import OrderItemDiscount from '@/Components/OrderItemDiscount';
 
 function StatusBadge({ status }) {
   const map = { pending:'bg-amber-100 text-amber-700',confirmed:'bg-blue-100 text-blue-700',shipped:'bg-purple-100 text-purple-700',delivered:'bg-green-100 text-green-700',cancelled:'bg-red-100 text-red-700' };
@@ -710,7 +711,8 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
                         const quantity = Number(item.quantity) || 0;
                         const unitPrice = Number(item.unit_price) || 0;
                         const storedLineTotal = Number(item.line_total ?? item.subtotal) || 0;
-                        const lineTotal = storedLineTotal > 0 ? storedLineTotal : unitPrice * quantity;
+                        const unitDiscount = Number(item.unit_discount || 0);
+                        const lineTotal = storedLineTotal > 0 ? storedLineTotal : Math.max(0, unitPrice - unitDiscount) * quantity;
 
                         return (
                           <tr key={item.id}>
@@ -725,11 +727,15 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
                                   </p>
                                   {item.variant_label && <p className="text-xs text-gray-400">{item.variant_label}</p>}
                                   {item.sku && <p className="text-xs text-gray-500 break-all">SKU: {item.sku}</p>}
+                                  <OrderItemDiscount key={`${order.id}-${item.id}`} orderId={order.id} item={item} />
                                 </div>
                               </div>
                             </td>
                             <td className="px-5 py-3.5 text-center text-gray-600">{quantity}</td>
-                            <td className="px-5 py-3.5 text-right text-gray-600">৳{unitPrice.toLocaleString()}</td>
+                            <td className="px-5 py-3.5 text-right text-gray-600">
+                              {unitDiscount > 0 && <p className="text-xs text-gray-400 line-through">৳{unitPrice.toLocaleString()}</p>}
+                              ৳{Math.max(0, unitPrice - unitDiscount).toLocaleString()}
+                            </td>
                             <td className="px-5 py-3.5 text-right font-semibold text-gray-900">৳{lineTotal.toLocaleString()}</td>
                           </tr>
                         );
@@ -742,7 +748,7 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
                     </tbody>
                     <tfoot className="divide-y divide-gray-100 bg-gray-50/50">
                       <tr>
-                        <td colSpan="3" className="px-5 py-2.5 text-right text-xs font-medium text-gray-500">Subtotal</td>
+                        <td colSpan="3" className="px-5 py-2.5 text-right text-xs font-medium text-gray-500">Subtotal{order.items?.some(item => Number(item.unit_discount) > 0) ? ' after product discounts' : ''}</td>
                         <td className="px-5 py-2.5 text-right text-xs font-semibold text-gray-800">৳{Number(order.subtotal || 0).toLocaleString()}</td>
                       </tr>
                       {Number(order.discount_amount || 0) > 0 && (
@@ -796,7 +802,7 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
                       aria-describedby="order-discount-help order-discount-error"
                       className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
                     />
-                    <p id="order-discount-help" className="mt-1.5 text-xs text-gray-500">Total discount, including any coupon discount. Enter 0 to remove it. Maximum: ৳{Number(order.subtotal).toLocaleString()}.</p>
+                    <p id="order-discount-help" className="mt-1.5 text-xs text-gray-500">Order discount, including any coupon discount, applies after product discounts. Enter 0 to remove it. Maximum: ৳{Number(order.subtotal).toLocaleString()}.</p>
                     <p id="order-discount-error" className="mt-1 text-xs text-red-600" role="alert">{discountForm.errors.discount_amount}</p>
                   </div>
                   {validDiscount && (

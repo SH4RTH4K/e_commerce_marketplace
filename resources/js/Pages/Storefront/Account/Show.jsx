@@ -131,9 +131,10 @@ export default function AccountShow({ order }) {
                       </Link>
                       {item.variant && <p className="text-xs text-gray-500 mt-0.5">{item.variant}</p>}
                       <p className="text-xs text-gray-500 mt-1">Qty: {item.quantity} × ৳{Number(item.unit_price).toLocaleString()}</p>
+                      {Number(item.unit_discount) > 0 && <p className="text-xs text-green-600 mt-1">Discount per unit: ৳{Number(item.unit_discount).toLocaleString()}</p>}
                     </div>
                     <div className="font-bold text-sm text-gray-900 text-right">
-                      ৳{Number(item.line_total || item.quantity * item.unit_price).toLocaleString()}
+                      ৳{Number(Number(item.unit_discount) > 0 ? Math.max(0, Number(item.unit_price) - Number(item.unit_discount)) * item.quantity : (item.line_total || item.quantity * item.unit_price)).toLocaleString()}
                     </div>
                   </div>
                 );

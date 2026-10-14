@@ -29,6 +29,9 @@
             @endif
             @if($item->variant)<p class="text-xs text-slate-400">{{ $item->variant }}</p>@endif
             <p class="text-xs text-slate-500 mt-0.5">{{ money($item->unit_price) }} × {{ $item->quantity }}</p>
+            @if((float) $item->unit_discount > 0)
+              <p class="text-xs text-green-600 mt-0.5">Discount per unit: {{ money($item->unit_discount) }}</p>
+            @endif
           </div>
           <span class="font-bold text-sm shrink-0">{{ money($item->line_total) }}</span>
         </div>

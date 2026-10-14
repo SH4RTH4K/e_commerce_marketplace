@@ -11,6 +11,7 @@ class OrderItem extends Model
 
     protected $casts = [
         'unit_price' => 'decimal:2',
+        'unit_discount' => 'decimal:2',
         'line_total' => 'decimal:2',
     ];
 
@@ -34,5 +35,16 @@ class OrderItem extends Model
     public function imageUrl(): string
     {
         return image_url($this->image, $this->product_name);
+    }
+
+    public function effectiveLineTotal(): float
+    {
+        if ((float) $this->unit_discount > 0) {
+            return round(max(0, (float) $this->unit_price - (float) $this->unit_discount) * (int) $this->quantity, 2);
+        }
+
+        return (float) $this->line_total > 0
+            ? (float) $this->line_total
+            : round((float) $this->unit_price * (int) $this->quantity, 2);
     }
 }
