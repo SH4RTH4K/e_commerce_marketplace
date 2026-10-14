@@ -694,8 +694,18 @@ export default function OrderShow({ order, bdcourier }) {
                         return (
                           <tr key={item.id}>
                             <td className="px-5 py-3.5">
-                              <p className="font-medium text-gray-800">{item.product_name}</p>
-                              {item.variant_label && <p className="text-xs text-gray-400">{item.variant_label}</p>}
+                              <div className="flex items-start gap-3 min-w-48">
+                                <img src={item.image_url} alt={item.product_name} className="w-14 h-14 shrink-0 rounded-lg border border-gray-100 bg-gray-50 object-contain" />
+                                <div className="min-w-0 space-y-1">
+                                  <p className="font-medium text-gray-800 break-words">
+                                    {item.product_url ? (
+                                      <a href={item.product_url} target="_blank" rel="noopener noreferrer" className="hover:text-orange-600 hover:underline">{item.product_name}</a>
+                                    ) : item.product_name}
+                                  </p>
+                                  {item.variant_label && <p className="text-xs text-gray-400">{item.variant_label}</p>}
+                                  {item.sku && <p className="text-xs text-gray-500 break-all">SKU: {item.sku}</p>}
+                                </div>
+                              </div>
                             </td>
                             <td className="px-5 py-3.5 text-center text-gray-600">{quantity}</td>
                             <td className="px-5 py-3.5 text-right text-gray-600">৳{unitPrice.toLocaleString()}</td>
@@ -703,6 +713,11 @@ export default function OrderShow({ order, bdcourier }) {
                           </tr>
                         );
                       })}
+                      {!order.items?.length && (
+                        <tr>
+                          <td colSpan="4" className="px-5 py-6 text-center text-gray-400">No items in order.</td>
+                        </tr>
+                      )}
                     </tbody>
                     <tfoot className="divide-y divide-gray-100 bg-gray-50/50">
                       <tr>

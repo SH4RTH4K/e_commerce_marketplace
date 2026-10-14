@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="<?php echo e(str_replace('_', '-', app()->getLocale())); ?>">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>" />
+    <?php
+        $defaultMetaTitle = trim((string) setting('default_meta_title', '')) ?: site_name();
+        $defaultMetaDescription = trim((string) setting('default_meta_description', ''));
+        $defaultMetaKeywords = trim((string) setting('default_meta_keywords', ''));
+        $pageSeo = $page['props']['seo'] ?? [];
+        $pageMetaTitle = trim((string) ($pageSeo['title'] ?? '')) ?: $defaultMetaTitle;
+        $pageMetaDescription = trim(strip_tags((string) (($pageSeo['description'] ?? '') ?: $defaultMetaDescription)));
+        $pageMetaKeywords = trim((string) (($pageSeo['keywords'] ?? '') ?: $defaultMetaKeywords));
+        $pageCanonical = $pageSeo['canonical'] ?? url()->current();
+        $pageMetaImage = $pageSeo['image'] ?? null;
+        $pageComponent = $page['component'] ?? '';
+        $pageProps = $page['props'] ?? [];
+        $keywordConsistencyEnabled = ! request()->is('admin*') && (string) setting('seo_keyword_consistency_enabled', '1') === '1';
+        $seoKeywordPhrases = seo_keyword_list(trim((string) setting('seo_target_keywords', '')) ?: $pageMetaKeywords);
+        if ($keywordConsistencyEnabled && $seoKeywordPhrases === [] && $pageComponent === 'Storefront/Home') {
+            $homeKeywordNames = [];
+            foreach (($pageProps['featuredCategories'] ?? []) as $category) {
+                if (is_array($category) && ! empty($category['name'])) {
+                    $homeKeywordNames[] = $category['name'];
+                }
+            }
+            foreach (($pageProps['templateTwoCategorySections'] ?? []) as $section) {
+                if (is_array($section) && ! empty($section['name'])) {
+                    $homeKeywordNames[] = $section['name'];
+                }
+            }
+            $seoKeywordPhrases = seo_keyword_list(implode(', ', array_slice(array_unique($homeKeywordNames), 0, 8)));
+        }
+        if ($keywordConsistencyEnabled && $seoKeywordPhrases !== []) {
+            $pageMetaTitle = seo_append_missing_keywords($pageMetaTitle, $seoKeywordPhrases, 180);
+            $pageMetaDescription = seo_description_with_keywords($pageMetaDescription ?: site_name(), $seoKeywordPhrases, 400);
+            $pageMetaKeywords = seo_append_missing_keywords($pageMetaKeywords, $seoKeywordPhrases, 500, ', ');
+        }
+        $fallbackH1Enabled = ! request()->is('admin*') && (string) setting('seo_fallback_h1_enabled', '1') === '1';
+        $fallbackH1 = trim((string) setting('seo_h1_heading', ''))
+            ?: trim((string) ($pageSeo['h1'] ?? ''))
+            ?: $pageMetaTitle
+            ?: site_name();
+        if ($keywordConsistencyEnabled && $seoKeywordPhrases !== []) {
+            $fallbackH1 = seo_append_missing_keywords($fallbackH1, $seoKeywordPhrases, 180);
+        }
+    ?>
+    <title data-inertia=""><?php echo e($pageMetaTitle); ?></title>
+    <meta name="site-name" content="<?php echo e(site_name()); ?>" />
+    <meta name="seo-default-title" content="<?php echo e($pageMetaTitle); ?>" />
+    
+    <?php if($pageMetaDescription): ?><meta data-inertia="description" name="description" content="<?php echo e($pageMetaDescription); ?>" /><?php endif; ?>
+    <?php if($pageMetaKeywords): ?><meta data-inertia="keywords" name="keywords" content="<?php echo e($pageMetaKeywords); ?>" /><?php endif; ?>
+    <meta property="og:site_name" content="<?php echo e(site_name()); ?>" />
+    <meta data-inertia="og:type" property="og:type" content="<?php echo e($pageSeo['type'] ?? 'website'); ?>" />
+    <meta data-inertia="og:title" property="og:title" content="<?php echo e($pageMetaTitle); ?>" />
+    <?php if($pageMetaDescription): ?><meta data-inertia="og:description" property="og:description" content="<?php echo e($pageMetaDescription); ?>" /><?php endif; ?>
+    <meta data-inertia="og:url" property="og:url" content="<?php echo e($pageCanonical); ?>" />
+    <?php if($pageMetaImage): ?><meta data-inertia="og:image" property="og:image" content="<?php echo e($pageMetaImage); ?>" /><?php endif; ?>
+    <meta data-inertia="twitter:card" name="twitter:card" content="summary_large_image" />
+    <meta data-inertia="twitter:title" name="twitter:title" content="<?php echo e($pageMetaTitle); ?>" />
+    <?php if($pageMetaDescription): ?><meta data-inertia="twitter:description" name="twitter:description" content="<?php echo e($pageMetaDescription); ?>" /><?php endif; ?>
+    <?php if($pageMetaImage): ?><meta data-inertia="twitter:image" name="twitter:image" content="<?php echo e($pageMetaImage); ?>" /><?php endif; ?>
+    <?php if(!empty($pageSeo['robots'])): ?><meta data-inertia="robots" name="robots" content="<?php echo e($pageSeo['robots']); ?>" /><?php endif; ?>
+    <link data-inertia="canonical" rel="canonical" href="<?php echo e($pageCanonical); ?>" />
+    <link rel="icon" href="<?php echo e(favicon_url()); ?>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <?php if(! request()->is('admin*')): ?>
+        
+        <link rel="preload" as="style" href="<?php echo e(asset('theme/css/storefront-typography.css')); ?>">
+        <link rel="stylesheet" href="<?php echo e(asset('theme/css/storefront-typography.css')); ?>">
+        <?php if(setting('storefront_template', 'template-2') === 'template-1'): ?>
+            <link rel="preload" as="style" href="<?php echo e(asset('theme/css/template-1-storefront.css')); ?>">
+            <link rel="stylesheet" href="<?php echo e(asset('theme/css/template-1-storefront.css')); ?>">
+        <?php endif; ?>
+    <?php endif; ?>
+    <?php echo $__env->make('partials.tracking-head', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    <?php echo app('Illuminate\Foundation\Vite')->reactRefresh(); ?>
+    <?php echo app('Illuminate\Foundation\Vite')(['resources/js/app.jsx']); ?>
+    <?php $__inertiaSsrResponse = app(\Inertia\Ssr\SsrState::class)->setPage($page)->dispatch();  if ($__inertiaSsrResponse) { echo $__inertiaSsrResponse->head; } ?>
+</head>
+<body class="antialiased">
+    <?php echo $__env->make('partials.tracking-body', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    <?php if($fallbackH1Enabled && $fallbackH1 !== ''): ?>
+        <h1 data-seo-fallback-h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;"><?php echo e($fallbackH1); ?></h1>
+    <?php endif; ?>
+    <?php $__inertiaSsrResponse = app(\Inertia\Ssr\SsrState::class)->setPage($page)->dispatch();  if ($__inertiaSsrResponse) { echo $__inertiaSsrResponse->body; } else { ?><script data-page="app" type="application/json"><?php echo json_encode($page, JSON_HEX_TAG); ?></script><div id="app"></div><?php } ?>
+</body>
+</html>
+<?php /**PATH E:\Project\e_commerce_marketplace\resources\views/app.blade.php ENDPATH**/ ?>

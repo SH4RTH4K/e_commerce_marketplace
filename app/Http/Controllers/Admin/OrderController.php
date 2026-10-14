@@ -365,9 +365,14 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        $order->load('items');
+        $order->load('items.product.images');
         $items = $order->items->map(fn($item) => [
-            'id' => $item->id, 'product_name' => $item->product_name, 'variant_label' => $item->variant,
+            'id' => $item->id,
+            'product_name' => $item->product_name ?: ($item->product?->name ?? 'Product'),
+            'image_url' => image_url($item->image ?: $item->product?->primaryImage()?->path, $item->product_name ?: ($item->product?->name ?? 'Product')),
+            'product_url' => $item->product ? route('product.show', $item->product) : null,
+            'sku' => $item->product?->sku,
+            'variant_label' => $item->variant,
             'quantity' => $item->quantity,
             'unit_price' => $item->unit_price,
             'line_total' => (float) $item->line_total > 0
