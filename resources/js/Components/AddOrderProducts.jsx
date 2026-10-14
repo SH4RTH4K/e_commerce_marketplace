@@ -71,12 +71,12 @@ export default function AddOrderProducts({ order, taxPercent = 0 }) {
 
   const submit = (event) => {
     event.preventDefault();
-    form.transform(data => ({ items: data.items.map(item => ({ product_id: item.product_id, quantity: Number(item.quantity) })) }))
-      .post(`/admin/orders/${order.id}/items`, {
-        preserveScroll: true,
-        onError: () => productCache.current.clear(),
-        onSuccess: () => { productCache.current.clear(); form.reset(); setQuery(''); setProducts([]); setOpen(false); },
-      });
+    form.transform(data => ({ items: data.items.map(item => ({ product_id: item.product_id, quantity: Number(item.quantity) })) }));
+    form.post(`/admin/orders/${order.id}/items`, {
+      preserveScroll: true,
+      onError: () => productCache.current.clear(),
+      onSuccess: () => { productCache.current.clear(); form.reset(); setQuery(''); setProducts([]); setOpen(false); },
+    });
   };
 
   return (

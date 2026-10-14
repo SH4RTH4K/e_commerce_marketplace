@@ -5,19 +5,28 @@ import vm from 'node:vm';
 import React, { act, useEffect, useRef, useState } from 'react';
 import { create } from 'react-test-renderer';
 import { transformWithOxc } from 'vite';
+import { router, useForm } from '@inertiajs/react';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+globalThis.window = { setTimeout: () => 0 };
 const filename = new URL('../../resources/js/Components/AddOrderProducts.jsx', import.meta.url);
 const source = (await readFile(filename, 'utf8')).replace(/^import .*;\r?\n/gm, '').replace('export default function', 'function');
 const transformed = await transformWithOxc(source, filename.pathname, { jsx: { runtime: 'classic' } });
 const product = { id: 7, name: 'Test backpack', sku: 'BAG-7', price: 200, stock_quantity: 5, image_url: '/bag.jpg' };
 
-async function mount(responses) {
+async function mount(responses, submitErrors = null) {
   const calls = [];
+  const submissions = [];
+  const originalPost = router.post;
+  router.post = (url, data, options) => {
+    submissions.push({ url, data: JSON.parse(JSON.stringify(data)), options });
+    options.onBefore?.({});
+    options.onStart?.({});
+  };
   const timers = new Map();
   let nextTimer = 0;
   const context = vm.createContext({
-    React, useEffect, useRef, useState, AbortController,
+    React, useEffect, useRef, useState, useForm, AbortController,
     money: value => `৳${value}`,
     setTimeout: callback => { timers.set(++nextTimer, callback); return nextTimer; },
     clearTimeout: id => timers.delete(id),
@@ -27,15 +36,6 @@ async function mount(responses) {
       if (response instanceof Error) throw response;
       if (typeof response === 'function') return response(options.signal);
       return response ?? { ok: true, status: 200, json: async () => [product] };
-    },
-    useForm: initial => {
-      const [data, setData] = useState(initial);
-      return {
-        data, processing: false, errors: {}, clearErrors() {},
-        setData: (key, value) => setData(current => ({ ...current, [key]: value })),
-        reset: () => setData(initial),
-        transform: () => ({ post: (url, options) => options.onSuccess() }),
-      };
     },
   });
   vm.runInContext(`${transformed.code}\n globalThis.Component = AddOrderProducts;`, context);
@@ -61,11 +61,19 @@ async function mount(responses) {
     return requests;
   };
   return {
-    renderer, calls, click, flush, startRequests,
+    renderer, calls, submissions, click, flush, startRequests,
     text: () => JSON.stringify(renderer.toJSON()),
     search: async value => { await act(async () => { renderer.root.findByProps({ id: 'order-product-search' }).props.onChange({ target: { value } }); }); },
-    submit: async () => { await act(async () => { renderer.root.findByType('form').props.onSubmit({ preventDefault() {} }); }); },
-    close: async () => { await act(async () => renderer.unmount()); },
+    submit: async () => {
+      await act(async () => {
+        renderer.root.findByType('form').props.onSubmit({ preventDefault() {} });
+        const submission = submissions.at(-1);
+        if (submitErrors) submission.options.onError(submitErrors);
+        else await submission.options.onSuccess({ props: {} });
+        submission.options.onFinish({});
+      });
+    },
+    close: async () => { await act(async () => renderer.unmount()); router.post = originalPost; },
   };
 }
 
@@ -139,5 +147,30 @@ test('login redirects display a session-expiry message', async () => {
   try {
     await app.click('Add Products'); await app.flush();
     assert.match(app.text(), /Your admin session expired/);
+  } finally { await app.close(); }
+});
+
+test('Add to Order posts the selected product quantities with the real Inertia form hook', async () => {
+  const app = await mount([]);
+  try {
+    await app.click('Add Products'); await app.flush();
+    await app.click('Add'); await app.click('Add');
+    await app.submit();
+    assert.equal(app.submissions.length, 1);
+    assert.equal(app.submissions[0].url, '/admin/orders/44/items');
+    assert.deepEqual(app.submissions[0].data, { items: [{ product_id: 7, quantity: 2 }] });
+    assert.equal(app.submissions[0].options.preserveScroll, true);
+    assert.doesNotMatch(app.text(), /Products to add/);
+  } finally { await app.close(); }
+});
+
+test('stock validation errors keep the selection so the admin can correct it', async () => {
+  const app = await mount([], { 'items.0.quantity': 'Only one item remains in stock.' });
+  try {
+    await app.click('Add Products'); await app.flush(); await app.click('Add');
+    await app.submit();
+    assert.match(app.text(), /Products to add/);
+    assert.match(app.text(), /Only one item remains in stock/);
+    assert.equal(app.renderer.root.findByProps({ type: 'submit' }).props.disabled, false);
   } finally { await app.close(); }
 });
