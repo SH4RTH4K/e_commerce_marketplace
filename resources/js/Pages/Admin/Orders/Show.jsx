@@ -596,7 +596,7 @@ function EditCustomerModal({ order, onClose }) {
 /* ─────────────────────────────────────────────────────────────────────────────
    Main Order Show page
    ───────────────────────────────────────────────────────────────────────────── */
-export default function OrderShow({ order, bdcourier }) {
+export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
   const [showCourierModal, setShowCourierModal] = useState(false);
   const [showEditCustomerModal, setShowEditCustomerModal] = useState(false);
   const bdcourierRiskLevel = resolveRiskLevel(bdcourier?._risk_level, bdcourier?._risk_label);
@@ -615,6 +615,26 @@ export default function OrderShow({ order, bdcourier }) {
     payment_status: order.payment_status,
     internal_note: order.internal_note || '',
   });
+
+  const discountForm = useForm({ discount_amount: order.discount_amount ?? 0 });
+  const discountAmount = Number(discountForm.data.discount_amount);
+  const validDiscount = discountForm.data.discount_amount !== '' && Number.isFinite(discountAmount)
+    && discountAmount >= 0 && discountAmount <= Number(order.subtotal);
+  const discountChanged = discountAmount !== Number(order.discount_amount || 0);
+  const discountedSubtotal = Math.max(0, Number(order.subtotal) - discountAmount);
+  const previewTax = Math.round(discountedSubtotal * Number(taxPercent) / 100 * 100) / 100;
+  const previewTotal = discountChanged
+    ? Math.round((discountedSubtotal + Number(order.shipping_charge || 0) + previewTax) * 100) / 100
+    : Number(order.total);
+
+  useEffect(() => {
+    discountForm.setData('discount_amount', order.discount_amount ?? 0);
+  }, [order.discount_amount]);
+
+  const saveDiscount = (event) => {
+    event.preventDefault();
+    discountForm.patch(`/admin/orders/${order.id}`, { preserveScroll: true });
+  };
 
   const submit = (e) => {
     e.preventDefault();
@@ -753,6 +773,43 @@ export default function OrderShow({ order, bdcourier }) {
                     </tfoot>
                   </table>
                 </div>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                <h2 className="font-semibold text-gray-900 mb-4">Order Discount</h2>
+                <form onSubmit={saveDiscount} className="space-y-4">
+                  <div>
+                    <label htmlFor="order-discount" className="block text-sm font-medium text-gray-700 mb-1.5">Discount Amount (৳)</label>
+                    <input
+                      id="order-discount"
+                      type="number"
+                      min="0"
+                      max={order.subtotal}
+                      step="0.01"
+                      required
+                      value={discountForm.data.discount_amount}
+                      onChange={event => discountForm.setData('discount_amount', event.target.value)}
+                      aria-invalid={!!discountForm.errors.discount_amount}
+                      aria-describedby="order-discount-help order-discount-error"
+                      className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                    />
+                    <p id="order-discount-help" className="mt-1.5 text-xs text-gray-500">Total discount, including any coupon discount. Enter 0 to remove it. Maximum: ৳{Number(order.subtotal).toLocaleString()}.</p>
+                    <p id="order-discount-error" className="mt-1 text-xs text-red-600" role="alert">{discountForm.errors.discount_amount}</p>
+                  </div>
+                  {validDiscount && (
+                    <div className="flex items-center justify-between gap-3 rounded-xl bg-orange-50 px-4 py-3" aria-live="polite">
+                      <span className="text-sm font-medium text-gray-700">Total after discount</span>
+                      <span className="text-lg font-bold text-orange-600">৳{previewTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <button type="submit" disabled={discountForm.processing || !validDiscount || !discountChanged}
+                      className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors">
+                      {discountForm.processing ? 'Saving…' : 'Apply Discount'}
+                    </button>
+                    {discountForm.recentlySuccessful && <span className="text-sm text-green-600" role="status">Discount saved.</span>}
+                  </div>
+                </form>
               </div>
 
               {/* Update form */}

@@ -415,6 +415,7 @@ class OrderController extends Controller
                 'courier_status'          => $order->courier_status,
             ]),
             'bdcourier' => $bdcourier,
+            'taxPercent' => (float) setting('tax_percent', 0),
         ]);
     }
 
@@ -453,7 +454,7 @@ class OrderController extends Controller
         return back()->with('status', "Payment rejected for {$order->order_number}.");
     }
 
-    /** Update fulfilment status, payment status, customer details and internal note from the detail page. */
+    /** Update status, customer details, discount and notes from the detail page. */
     public function update(Request $request, Order $order)
     {
         $data = $request->validate([
@@ -468,19 +469,31 @@ class OrderController extends Controller
             'postal_code'      => ['nullable', 'string', 'max:20'],
             'shipping_zone'    => ['sometimes', 'nullable', Rule::in(['inside_dhaka', 'outside_dhaka'])],
             'delivery_note'    => ['nullable', 'string', 'max:2000'],
+            'discount_amount'  => ['sometimes', 'required', 'numeric', 'min:0', 'max:' . $order->subtotal, 'decimal:0,2'],
         ]);
 
-        if (isset($data['status'])) {
-            $wasNotCancelled = $order->status !== 'cancelled';
-            $becomingCancelled = $data['status'] === 'cancelled' && $wasNotCancelled;
+        DB::transaction(function () use ($order, $data) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
 
-            if ($becomingCancelled) {
-                $order->restoreStock();
-                $order->releaseCoupon();
+            if (isset($data['discount_amount'])
+                && (float) $data['discount_amount'] !== (float) $order->discount_amount) {
+                $data['discount_amount'] = round((float) $data['discount_amount'], 2);
+                $taxable = max(0, (float) $order->subtotal - $data['discount_amount']);
+                $data['tax'] = round($taxable * (float) setting('tax_percent', 0) / 100, 2);
+                $data['total'] = round($taxable + (float) $order->shipping_charge + $data['tax'], 2);
             }
-        }
 
-        $order->update($data);
+            if (isset($data['status'])) {
+                $becomingCancelled = $data['status'] === 'cancelled' && $order->status !== 'cancelled';
+
+                if ($becomingCancelled) {
+                    $order->restoreStock();
+                    $order->releaseCoupon();
+                }
+            }
+
+            $order->update($data);
+        });
 
         return back()->with('status', "Order {$order->order_number} updated.");
     }
