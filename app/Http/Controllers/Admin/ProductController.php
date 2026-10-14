@@ -7,7 +7,11 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Models\DropshipProductLink;
+use App\Models\DropshipSupplierProduct;
 use App\Support\PublicUploader;
+use App\Services\ProductPricingService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -62,6 +66,7 @@ class ProductController extends Controller
         $this->applyFlags($request, $data, null);
         $data['specifications'] = $this->normalizeSpecifications($request);
 
+        $data = app(ProductPricingService::class)->prepare($data);
         $product = Product::create($data);
         $this->syncVariants($product, $request);
         $this->storeImages($product, $request);
@@ -102,12 +107,14 @@ class ProductController extends Controller
 
         return Inertia::render('Admin/Products/Form', [
             'product'    => array_merge($product->toArray(), [
+                ...$product->only(['selling_price', 'minimum_price', 'maximum_price', 'pricing_mode', 'enforce_minimum_price', 'enforce_maximum_price', 'protect_minimum_price']),
                 'images' => $product->images->map(fn($img) => ['id' => $img->id, 'path' => $img->path, 'alt' => $img->alt, 'is_primary' => $img->is_primary])->values(),
                 'variants' => $variants,
                 'custom_variant_groups' => $customGroups,
                 'specifications' => $product->specifications ?? [],
             ]),
             'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'pricing' => app(ProductPricingService::class)->context($product),
         ]);
     }
 
@@ -119,7 +126,20 @@ class ProductController extends Controller
         $this->applyFlags($request, $data, $product);
         $data['specifications'] = $this->normalizeSpecifications($request);
 
-        $product->update($data);
+        DB::transaction(function () use ($product, $data) {
+            $links = $product->supplierLinks()->orderBy('id')->get(['id', 'supplier_product_row_id']);
+            // Match the supplier sync lock order so an edit and sync cannot
+            // overwrite each other or deadlock over product/link rows.
+            DropshipSupplierProduct::whereIn('id', $links->pluck('supplier_product_row_id'))->orderBy('id')->lockForUpdate()->get();
+            DropshipProductLink::whereIn('id', $links->pluck('id'))->orderBy('id')->lockForUpdate()->get();
+            $product = Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
+            $data = app(ProductPricingService::class)->prepare($data, $product);
+            $product->update($data);
+            if (($data['pricing_mode'] ?? null) === 'auto') {
+                $product->supplierLinks()->update(['price_override' => null]);
+            }
+        });
+        $product->refresh();
         $this->syncVariants($product, $request);
         $this->storeImages($product, $request);
 
@@ -201,6 +221,13 @@ class ProductController extends Controller
             'description'                    => ['nullable', 'string'],
             'regular_price'                  => ['nullable', 'numeric', 'min:0'],
             'sale_price'                     => ['nullable', 'numeric', 'min:0'],
+            'selling_price'                  => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
+            'minimum_price'                  => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
+            'maximum_price'                  => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
+            'pricing_mode'                   => ['sometimes', 'required', 'in:auto,manual'],
+            'enforce_minimum_price'           => ['sometimes', 'boolean'],
+            'enforce_maximum_price'           => ['sometimes', 'boolean'],
+            'protect_minimum_price'           => ['sometimes', 'boolean'],
             'stock_quantity'                 => ['nullable', 'integer', 'min:0'],
             'unit'                           => ['nullable', 'string', 'max:40'],
             'meta_title'                     => ['nullable', 'string', 'max:180'],

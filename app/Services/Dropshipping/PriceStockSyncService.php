@@ -4,6 +4,7 @@ namespace App\Services\Dropshipping;
 
 use App\Models\DropshipSupplierProduct;
 use App\Models\Product;
+use App\Services\ProductPricingService;
 use Illuminate\Support\Facades\DB;
 
 class PriceStockSyncService
@@ -48,7 +49,7 @@ class PriceStockSyncService
                 $descriptionUpdated = true;
             }
 
-            if (($rules['price'] ?? false) === true) {
+            if (($rules['price'] ?? false) === true && $product->pricing_mode !== 'manual' && ! $link->price_override) {
                 if ($source->currency !== 'BDT') {
                     $warnings[] = 'unsupported_currency';
                 } else {
@@ -58,6 +59,7 @@ class PriceStockSyncService
                         $source->supplier?->pricing_rules ?? [],
                     );
                     if ($price->isValid()) {
+                        $productUpdates = array_merge($productUpdates, ProductPricingService::fields($price, $source->supplier?->pricing_rules ?? []));
                         $productUpdates['regular_price'] = $price->regularSellingPrice ?? $price->finalPrice;
                         $productUpdates['sale_price'] = $this->salePrice($price);
                         $linkUpdates['last_price_synced_at'] = $now;

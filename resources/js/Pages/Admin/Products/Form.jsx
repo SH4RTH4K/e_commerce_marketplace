@@ -3,6 +3,7 @@ import { Head, useForm, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { fileToBase64 } from '@/lib/utils';
 import RichTextEditor from '@/Components/Admin/RichTextEditor';
+import ProductPricingFields, { pricingConflicts, pricingValues } from '@/Components/Admin/ProductPricingFields';
 
 function FormSection({ title, children, action, className = "" }) {
   return (
@@ -55,7 +56,7 @@ const COLOR_PRESETS = [
 
 const SIZE_PRESETS = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '30', '32', '34', '36', '38', '40', '42'];
 
-export default function ProductForm({ product, categories }) {
+export default function ProductForm({ product, categories, pricing = { linked: false, mode: 'manual' } }) {
   const isEdit = !!product.id;
   const [submitting, setSubmitting] = useState(false);
 
@@ -66,7 +67,7 @@ export default function ProductForm({ product, categories }) {
     existingVariants.length > 0 || existingCustomGroups.length > 0 ? 'variable' : 'simple'
   );
 
-  const { data, setData, processing, errors } = useForm({
+  const { data, setData, processing, errors, setError, clearErrors } = useForm({
     category_id: product.category_id || '',
     name: product.name || '',
     slug: product.slug || '',
@@ -74,8 +75,7 @@ export default function ProductForm({ product, categories }) {
     brand: product.brand || '',
     short_description: product.short_description || '',
     description: product.description || '',
-    regular_price: product.regular_price && parseFloat(product.regular_price) !== 0 ? product.regular_price : '',
-    sale_price: product.sale_price && parseFloat(product.sale_price) !== 0 ? product.sale_price : '',
+    ...pricingValues(product, pricing),
     stock_quantity: product.stock_quantity && parseInt(product.stock_quantity) !== 0 ? product.stock_quantity : '',
     unit: product.unit || '',
     is_published: product.is_published ?? true,
@@ -132,8 +132,11 @@ export default function ProductForm({ product, categories }) {
 
   const [specs, setSpecs] = useState(Array.isArray(product.specifications) ? product.specifications : []);
 
+  const pricingInvalid = data.pricing_mode === 'auto' ? !pricing.suggested : pricingConflicts(data).length > 0;
   const submit = async (e) => {
     e.preventDefault();
+    if (pricingInvalid) return;
+    clearErrors();
     setSubmitting(true);
     try {
       const formData = new FormData();
@@ -218,7 +221,8 @@ export default function ProductForm({ product, categories }) {
       const options = {
         forceFormData: true,
         onFinish: () => setSubmitting(false),
-        onError: () => setSubmitting(false),
+        onError: validationErrors => { setError(validationErrors); setSubmitting(false); },
+        onSuccess: page => setData(current => ({ ...current, ...pricingValues(page.props.product, page.props.pricing) })),
       };
 
       if (isEdit) {
@@ -422,35 +426,12 @@ export default function ProductForm({ product, categories }) {
                   </div>
                 </div>
 
+                <ProductPricingFields data={data} setData={setData} errors={errors} pricing={pricing} />
+
                 {/* ── CASE A: SIMPLE PRODUCT (Show standard single price & stock) ── */}
                 {productType === 'simple' ? (
                   <div className="space-y-4 pt-1">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      <Field label="Regular Price" required error={errors.regular_price} hint="৳ Base Price">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={data.regular_price}
-                          onChange={e => setData('regular_price', e.target.value)}
-                          onFocus={e => e.target.select()}
-                          className={inputClass}
-                          required
-                          placeholder="0.00"
-                        />
-                      </Field>
-                      <Field label="Sale Price" error={errors.sale_price} hint="৳ Discount Price">
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={data.sale_price}
-                          onChange={e => setData('sale_price', e.target.value)}
-                          onFocus={e => e.target.select()}
-                          className={inputClass}
-                          placeholder="Optional"
-                        />
-                      </Field>
                       <Field label="Stock Quantity" required error={errors.stock_quantity} hint="Total Qty">
                         <input
                           type="number"
@@ -483,32 +464,6 @@ export default function ProductForm({ product, categories }) {
                         <span className="text-[11px] text-gray-500">প্রতিটি ভ্যারিয়েন্টে আলাদা দাম দিতে পারেন, এখানে বেস প্রাইজ নির্ধারণ করতে পারেন</span>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-[11px] font-semibold text-gray-600 mb-1">Base Regular Price (৳)</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={data.regular_price}
-                            onChange={e => setData('regular_price', e.target.value)}
-                            onFocus={e => e.target.select()}
-                            className={inputClass}
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-semibold text-gray-600 mb-1">Base Sale Price (৳, optional)</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={data.sale_price}
-                            onChange={e => setData('sale_price', e.target.value)}
-                            onFocus={e => e.target.select()}
-                            className={inputClass}
-                            placeholder="Optional"
-                          />
-                        </div>
                         <div>
                           <label className="block text-[11px] font-semibold text-gray-600 mb-1">Unit (একক)</label>
                           <input
@@ -998,7 +953,7 @@ export default function ProductForm({ product, categories }) {
 
               {/* Submit */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                <button type="submit" disabled={processing || submitting}
+                <button type="submit" disabled={processing || submitting || pricingInvalid}
                   className="w-full py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors cursor-pointer">
                   {processing || submitting ? 'Saving…' : (isEdit ? 'Update Product' : 'Create Product')}
                 </button>

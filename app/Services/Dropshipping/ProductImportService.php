@@ -6,6 +6,7 @@ use App\Models\DropshipProductLink;
 use App\Models\DropshipSupplierProduct;
 use App\Models\ProductImage;
 use App\Models\Product;
+use App\Services\ProductPricingService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -60,6 +61,8 @@ class ProductImportService
                 'sale_price' => $this->salePrice($price),
                 'stock_quantity' => $this->stockQuantity($source),
                 'is_published' => false,
+                ...($price->isValid() ? ProductPricingService::fields($price, $source->supplier->pricing_rules ?? []) : []),
+                'pricing_mode' => 'auto',
             ]);
 
             if ($link === null) {

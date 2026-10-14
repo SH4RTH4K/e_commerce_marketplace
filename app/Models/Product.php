@@ -52,6 +52,13 @@ class Product extends Model
         'description',
         'regular_price',
         'sale_price',
+        'selling_price',
+        'minimum_price',
+        'maximum_price',
+        'pricing_mode',
+        'enforce_minimum_price',
+        'enforce_maximum_price',
+        'protect_minimum_price',
         'stock_quantity',
         'unit',
         'is_published',
@@ -69,9 +76,20 @@ class Product extends Model
         'meta_keywords',
     ];
 
+    protected $hidden = [
+        'selling_price', 'minimum_price', 'maximum_price', 'pricing_mode',
+        'enforce_minimum_price', 'enforce_maximum_price', 'protect_minimum_price',
+    ];
+
     protected $casts = [
         'regular_price'    => 'decimal:2',
         'sale_price'       => 'decimal:2',
+        'selling_price'    => 'decimal:2',
+        'minimum_price'    => 'decimal:2',
+        'maximum_price'    => 'decimal:2',
+        'enforce_minimum_price' => 'boolean',
+        'enforce_maximum_price' => 'boolean',
+        'protect_minimum_price' => 'boolean',
         'rating'           => 'decimal:2',
         'is_published'     => 'boolean',
         'is_featured'      => 'boolean',
