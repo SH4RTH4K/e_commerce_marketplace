@@ -242,7 +242,7 @@ class OrderController extends Controller
                 'image_url' => $p->imageUrl(),
             ]);
 
-        return response()->json($products);
+        return response()->json($products)->header('Cache-Control', 'private, no-store');
     }
 
     public function store(Request $request)

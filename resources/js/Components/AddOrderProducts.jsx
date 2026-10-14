@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from '@inertiajs/react';
 import { money } from '@/lib/utils';
 
@@ -8,22 +8,39 @@ export default function AddOrderProducts({ order, taxPercent = 0 }) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [retry, setRetry] = useState(0);
+  const productCache = useRef(new Map());
   const form = useForm({ items: [] });
 
   useEffect(() => {
     if (!open) return;
+    const search = query.trim();
+    if (productCache.current.has(search)) {
+      setProducts(productCache.current.get(search));
+      setLoading(false);
+      setSearchError('');
+      return;
+    }
     const controller = new AbortController();
     setLoading(true);
+    setProducts([]);
     setSearchError('');
     const timeout = setTimeout(async () => {
       try {
-        const response = await fetch(`/admin/orders/product-search?q=${encodeURIComponent(query)}`, {
-          headers: { Accept: 'application/json' }, signal: controller.signal,
+        const response = await fetch(`/admin/orders/product-search?q=${encodeURIComponent(search)}`, {
+          headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
         });
+        if (response.status === 401 || (response.redirected && response.url.includes('/login'))) {
+          throw new Error('Your admin session expired. Refresh the page and sign in again.');
+        }
         if (!response.ok) throw new Error('Could not load products. Please try again.');
         const results = await response.json();
         if (!Array.isArray(results)) throw new Error('Could not load products. Please try again.');
-        if (!controller.signal.aborted) setProducts(results);
+        if (!controller.signal.aborted) {
+          productCache.current.set(search, results);
+          setProducts(results);
+        }
       } catch (error) {
         if (!controller.signal.aborted) setSearchError(error.message);
       } finally {
@@ -31,7 +48,7 @@ export default function AddOrderProducts({ order, taxPercent = 0 }) {
       }
     }, 250);
     return () => { clearTimeout(timeout); controller.abort(); };
-  }, [open, query]);
+  }, [open, query, retry]);
 
   const selectProduct = (product) => {
     form.clearErrors();
@@ -57,7 +74,8 @@ export default function AddOrderProducts({ order, taxPercent = 0 }) {
     form.transform(data => ({ items: data.items.map(item => ({ product_id: item.product_id, quantity: Number(item.quantity) })) }))
       .post(`/admin/orders/${order.id}/items`, {
         preserveScroll: true,
-        onSuccess: () => { form.reset(); setQuery(''); setProducts([]); setOpen(false); },
+        onError: () => productCache.current.clear(),
+        onSuccess: () => { productCache.current.clear(); form.reset(); setQuery(''); setProducts([]); setOpen(false); },
       });
   };
 
@@ -82,7 +100,12 @@ export default function AddOrderProducts({ order, taxPercent = 0 }) {
           </div>
           <div className="max-h-64 overflow-y-auto border border-gray-100 rounded-xl" aria-live="polite">
             {loading ? <p className="p-4 text-sm text-gray-500">Loading products…</p>
-              : searchError ? <p className="p-4 text-sm text-red-600" role="alert">{searchError}</p>
+              : searchError ? (
+                <div className="p-4 space-y-2">
+                  <p className="text-sm text-red-600" role="alert">{searchError}</p>
+                  <button type="button" onClick={() => setRetry(value => value + 1)} className="text-sm font-semibold text-orange-600 hover:underline">Retry loading products</button>
+                </div>
+              )
               : !products.length ? <p className="p-4 text-sm text-gray-500">No products found.</p>
               : products.map(product => {
                 const selected = form.data.items.find(item => item.product_id === product.id);

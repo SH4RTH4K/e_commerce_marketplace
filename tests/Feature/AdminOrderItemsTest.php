@@ -169,6 +169,7 @@ class AdminOrderItemsTest extends TestCase
         $product->images()->create(['path' => 'https://example.test/extra.jpg', 'is_primary' => true, 'position' => 0]);
         foreach (['Extra Product', 'SKU-EXTRA'] as $search) {
             $this->getJson('/admin/orders/product-search?q='.urlencode($search))->assertOk()
+                ->assertHeader('Cache-Control', 'no-store, private')
                 ->assertJsonPath('0.id', $product->id)
                 ->assertJsonPath('0.price', 199.99)
                 ->assertJsonPath('0.stock_quantity', 10)
