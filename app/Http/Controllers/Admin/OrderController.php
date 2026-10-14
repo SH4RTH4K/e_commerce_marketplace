@@ -8,6 +8,7 @@ use App\Services\BdCourierService;
 use App\Models\BdCourierCheck;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use App\Models\Product;
 use App\Models\OrderItem;
@@ -235,9 +236,10 @@ class OrderController extends Controller
                 'id' => $p->id,
                 'name' => $p->name,
                 'sku' => $p->sku,
-                'price' => (float) ($p->sale_price > 0 ? $p->sale_price : $p->regular_price),
+                'price' => $p->unitPriceForVariant(),
                 'stock_quantity' => $p->stock_quantity,
                 'image' => $p->images->where('is_primary', true)->first()?->path,
+                'image_url' => $p->imageUrl(),
             ]);
 
         return response()->json($products);
@@ -417,6 +419,65 @@ class OrderController extends Controller
             'bdcourier' => $bdcourier,
             'taxPercent' => (float) setting('tax_percent', 0),
         ]);
+    }
+
+    public function addItems(Request $request, Order $order)
+    {
+        $data = $request->validate([
+            'items' => ['required', 'array', 'min:1', 'max:50'],
+            'items.*.product_id' => ['required', 'integer', 'distinct', Rule::exists('products', 'id')->where('is_published', true)],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:100000'],
+        ]);
+
+        DB::transaction(function () use ($order, $data) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if ($order->status !== 'pending') {
+                throw ValidationException::withMessages(['items' => 'Products can only be added to pending orders.']);
+            }
+
+            $products = Product::with('images')
+                ->whereIn('id', array_column($data['items'], 'product_id'))
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            $addedSubtotal = 0;
+            foreach ($data['items'] as $index => $item) {
+                $product = $products->get($item['product_id']);
+                if (! $product || ! $product->is_published) {
+                    throw ValidationException::withMessages(["items.{$index}.product_id" => 'This product is no longer available.']);
+                }
+                if ($item['quantity'] > $product->stock_quantity) {
+                    throw ValidationException::withMessages(["items.{$index}.quantity" => "{$product->name} only has {$product->stock_quantity} in stock."]);
+                }
+
+                $price = round($product->unitPriceForVariant(), 2);
+                $lineTotal = round($price * $item['quantity'], 2);
+                $order->items()->create([
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'image' => $product->primaryImage()?->path,
+                    'unit_price' => $price,
+                    'quantity' => $item['quantity'],
+                    'line_total' => $lineTotal,
+                ]);
+                $product->decrement('stock_quantity', $item['quantity']);
+                $addedSubtotal += $lineTotal;
+            }
+
+            $subtotal = round((float) $order->subtotal + $addedSubtotal, 2);
+            $taxable = max(0, $subtotal - (float) $order->discount_amount);
+            $tax = round($taxable * (float) setting('tax_percent', 0) / 100, 2);
+            $order->update([
+                'subtotal' => $subtotal,
+                'tax' => $tax,
+                'total' => round($taxable + (float) $order->shipping_charge + $tax, 2),
+            ]);
+        });
+
+        return back()->with('status', "Products added to order {$order->order_number}.");
     }
 
     /** Verify the manual payment (accept the order). */

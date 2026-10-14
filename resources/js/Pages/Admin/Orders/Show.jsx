@@ -2,6 +2,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState, useEffect, useCallback } from 'react';
 import CourierShipModal from '@/Components/CourierShipModal';
+import AddOrderProducts from '@/Components/AddOrderProducts';
 
 function StatusBadge({ status }) {
   const map = { pending:'bg-amber-100 text-amber-700',confirmed:'bg-blue-100 text-blue-700',shipped:'bg-purple-100 text-purple-700',delivered:'bg-green-100 text-green-700',cancelled:'bg-red-100 text-red-700' };
@@ -774,6 +775,8 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
                   </table>
                 </div>
               </div>
+
+              {order.status === 'pending' && <AddOrderProducts key={order.id} order={order} taxPercent={taxPercent} />}
 
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                 <h2 className="font-semibold text-gray-900 mb-4">Order Discount</h2>
