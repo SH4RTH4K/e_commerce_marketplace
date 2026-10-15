@@ -496,10 +496,10 @@ export default function StorefrontLayout({ children, title, description, activeC
           {/*
             Category names vary greatly in length. A flex bar full of long names
             can make the page wider than a desktop viewport and hide edge items.
-            This grid keeps every category within the navigation bar and adds a
-            row when there is not enough horizontal room.
+            The default grid and Template 2's content-sized flex links keep
+            categories within the bar and wrap when more room is needed.
           */}
-          <div className={`mx-auto grid w-full max-w-7xl grid-cols-6 items-stretch gap-x-2 px-4 sm:px-6 lg:px-8 xl:grid-cols-8 2xl:grid-cols-10 text-[13px] font-semibold ${isTemplateOne ? 'text-[#222]' : 'text-white'}`}>
+          <div className={`storefront-category-list mx-auto grid w-full max-w-7xl grid-cols-6 items-stretch gap-x-2 px-4 sm:px-6 lg:px-8 xl:grid-cols-8 2xl:grid-cols-10 text-[13px] font-semibold ${isTemplateOne ? 'text-[#222]' : 'text-white'}`}>
             {categoryList.map(cat => {
               const children = categoryChildren(cat);
               const isActive = categoryHasActive(cat, activeCategoryId);
@@ -526,7 +526,7 @@ export default function StorefrontLayout({ children, title, description, activeC
             );})}
 
             {hasFlashSale && (
-              <a href="/shop?flash=1" className="flex items-center gap-1.5 text-white whitespace-nowrap shrink-0 hover:text-[#f15a24] transition-colors py-3">
+              <a href="/shop?flash=1" className="storefront-category-link flex items-center gap-1.5 text-white whitespace-nowrap shrink-0 hover:text-[#f15a24] transition-colors py-3">
                 ⚡ Offer Zone
               </a>
             )}
