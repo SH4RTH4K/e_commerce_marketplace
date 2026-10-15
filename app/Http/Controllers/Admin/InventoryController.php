@@ -8,6 +8,7 @@ use App\Models\DropshipSupplier;
 use App\Models\InventoryAdjustment;
 use App\Models\Product;
 use App\Services\InventoryStockService;
+use App\Services\ProductPricingService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -86,7 +87,7 @@ class InventoryController extends Controller
             fputcsv($output, ['SKU', 'Product', 'Category', 'Type', 'Stock', 'Stock status', 'Visibility', 'Stock source', 'Supplier', 'Customer price', 'Regular price', 'Selling price', 'Minimum price', 'Maximum price'], ',', '"', '');
             foreach ($query->lazy(200) as $product) {
                 $row = $this->row($product);
-                $values = [$product->sku, $product->name, $product->category?->name, $row['has_variants'] ? 'Variable' : 'Simple', $product->stock_quantity, $product->stock_quantity === 0 ? 'Out of stock' : ($product->stock_quantity <= 5 ? 'Low stock' : 'Healthy stock'), $product->is_published ? 'Published' : 'Draft', $row['stock_source'], $row['supplier'], $product->sale_price ?? $product->regular_price, $product->regular_price, $product->selling_price, $product->minimum_price, $product->maximum_price];
+                $values = [$product->sku, $product->name, $product->category?->name, $row['has_variants'] ? 'Variable' : 'Simple', $product->stock_quantity, $product->stock_quantity === 0 ? 'Out of stock' : ($product->stock_quantity <= 5 ? 'Low stock' : 'Healthy stock'), $product->is_published ? 'Published' : 'Draft', $row['stock_source'], $row['supplier'], $product->sale_price ?? $product->regular_price, $product->regular_price, $row['selling_price'], $row['minimum_price'], $row['maximum_price']];
                 fputcsv($output, array_map(fn ($value) => is_string($value) && preg_match('/^[=+@\-\t\r]/', $value) ? "'".$value : $value, $values), ',', '"', '');
             }
             fclose($output);
@@ -152,8 +153,8 @@ class InventoryController extends Controller
             'image_url' => $product->imageUrl(), 'stock_quantity' => (int) $product->stock_quantity,
             'is_published' => $product->is_published, 'has_variants' => $product->variants_count > 0, 'variants_count' => $product->variants_count,
             'price' => $product->sale_price ?? $product->regular_price, 'regular_price' => $product->regular_price,
-            'sale_price' => $product->sale_price, 'selling_price' => $product->selling_price,
-            'minimum_price' => $product->minimum_price, 'maximum_price' => $product->maximum_price,
+            'sale_price' => $product->sale_price,
+            ...app(ProductPricingService::class)->inventoryDetails($product),
             'pricing_mode' => $product->pricing_mode,
             'stock_source' => $automatic ? 'supplier' : ($link ? 'manual' : 'local'),
             'supplier' => $link?->supplierProduct?->supplier?->name,

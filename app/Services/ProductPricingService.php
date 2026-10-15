@@ -11,6 +11,49 @@ class ProductPricingService
 {
     public function __construct(private readonly PricingEngine $engine) {}
 
+    /** Resolve older imports without changing their saved customer prices. */
+    public function inventoryDetails(Product $product): array
+    {
+        $details = $product->only(['selling_price', 'minimum_price', 'maximum_price']);
+        $details['price_details_source'] = null;
+        if (! in_array(null, array_values($product->only(['selling_price', 'minimum_price', 'maximum_price'])), true)) {
+            return $details;
+        }
+
+        $product->loadMissing('supplierLinks.supplierProduct.supplier');
+        $link = $product->supplierLinks->sortBy('id')->sortBy(fn ($link) => $link->sync_status === 'active' ? 0 : 1)->first();
+        $source = $link?->supplierProduct;
+        $suggested = null;
+        $origin = null;
+        if ($product->pricing_mode !== 'manual' && ! $link?->price_override && $source?->currency === 'BDT') {
+            $snapshot = $link->pricing_snapshot ?? [];
+            if (($snapshot['status'] ?? null) === PriceBreakdown::STATUS_VALID) {
+                $suggested = [
+                    'selling_price' => $snapshot['priceAfterMaximumCap'] ?? $snapshot['finalPrice'] ?? null,
+                    'minimum_price' => $snapshot['calculatedMinimumPrice'] ?? $snapshot['minimumPrice'] ?? null,
+                    'maximum_price' => $snapshot['calculatedMaximumPrice'] ?? $snapshot['ceilingPrice'] ?? null,
+                ];
+                $origin = 'supplier_snapshot';
+            } elseif ($source->supplier) {
+                $price = $this->engine->calculate($source->cost_price, $source->max_price, $source->supplier->pricing_rules ?? []);
+                if ($price->isValid()) {
+                    $suggested = self::fields($price, $source->supplier->pricing_rules ?? []);
+                    $origin = 'supplier_rules';
+                }
+            }
+        }
+        foreach (['selling_price', 'minimum_price', 'maximum_price'] as $field) {
+            if ($details[$field] === null && isset($suggested[$field])) {
+                $details[$field] = number_format((float) $suggested[$field], 2, '.', '');
+                $details['price_details_source'] = $origin;
+            }
+        }
+        // Before separate selling prices existed, local/manual products used Regular.
+        $details['selling_price'] ??= $product->regular_price;
+
+        return $details;
+    }
+
     public function context(Product $product): array
     {
         $link = $product->supplierLinks()->with('supplierProduct.supplier')

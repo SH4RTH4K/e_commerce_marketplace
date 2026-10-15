@@ -10,6 +10,7 @@ use App\Models\InventoryAdjustment;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Dropshipping\PriceStockSyncService;
+use App\Services\Dropshipping\PricingEngine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -118,6 +119,75 @@ class InventoryWorkflowTest extends TestCase
         $this->get('/admin/inventory?type=variable')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
             ->where('products.data.0.has_variants', true)->where('products.data.0.variants_count', 1)
             ->where('products.data.0.price', '0.00')->where('products.data.0.image_url', asset('storage/products/inventory.jpg')));
+    }
+
+    public function test_older_import_uses_its_last_pricing_snapshot_without_changing_saved_prices(): void
+    {
+        $product = $this->product(['regular_price' => 990, 'sale_price' => 891]);
+        $source = $this->supplierSource($product);
+        $rules = ['minimum_markup' => ['type' => 'percent', 'value' => 10], 'selling_markup' => ['type' => 'percent', 'value' => 25]];
+        $source->productLink->update(['pricing_snapshot' => app(PricingEngine::class)->calculate(100, 300, $rules)->toArray()]);
+        $source->update(['cost_price' => 200, 'max_price' => 500]);
+        $this->get('/admin/inventory')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('products.data.0.selling_price', '125.00')->where('products.data.0.minimum_price', '110.00')
+            ->where('products.data.0.maximum_price', '300.00')->where('products.data.0.price_details_source', 'supplier_snapshot')
+            ->where('products.data.0.regular_price', '990.00')->where('products.data.0.sale_price', '891.00'));
+        $this->assertNull($product->fresh()->selling_price);
+        $this->assertSame('891.00', $product->fresh()->sale_price);
+    }
+
+    public function test_older_import_without_snapshot_uses_supplier_rules_in_inventory_and_csv(): void
+    {
+        $product = $this->product(['sku' => 'OLD-IMPORT', 'regular_price' => 990, 'sale_price' => 891]);
+        $source = $this->supplierSource($product);
+        $source->update(['cost_price' => 590, 'max_price' => 990]);
+        $source->supplier->update(['pricing_rules' => [
+            'selling' => ['base' => 'supplier_cost', 'adjustment_type' => 'none', 'adjustment_value' => 0],
+            'minimum' => ['base' => 'supplier_cost', 'adjustment_type' => 'plus_percent', 'adjustment_value' => 20, 'cap_enabled' => true, 'rounding' => ['mode' => 'down', 'increment' => 5]],
+            'maximum' => ['base' => 'supplier_maximum', 'adjustment_type' => 'none', 'adjustment_value' => 0, 'cap_enabled' => true],
+            'regular_price_source' => 'maximum', 'discount' => ['type' => 'percent', 'value' => 10, 'protect_minimum' => true],
+        ]]);
+        $this->get('/admin/inventory')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('products.data.0.selling_price', '705.00')->where('products.data.0.minimum_price', '705.00')
+            ->where('products.data.0.maximum_price', '990.00')->where('products.data.0.price_details_source', 'supplier_rules'));
+        $csv = $this->get('/admin/inventory/export')->assertOk()->streamedContent();
+        $this->assertStringContainsString('891.00,990.00,705.00,705.00,990.00', $csv);
+        $this->assertNull($product->fresh()->minimum_price);
+    }
+
+    public function test_inventory_preserves_saved_prices_including_zero_with_supplier_fallback(): void
+    {
+        $product = $this->product(['selling_price' => 0, 'minimum_price' => 0, 'maximum_price' => null]);
+        $this->supplierSource($product);
+        $this->get('/admin/inventory')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('products.data.0.selling_price', '0.00')->where('products.data.0.minimum_price', '0.00')
+            ->where('products.data.0.maximum_price', '300.00'));
+    }
+
+    public function test_inventory_does_not_invent_supplier_limits_for_manual_or_legacy_overrides(): void
+    {
+        $product = $this->product(['pricing_mode' => 'manual', 'selling_price' => 250]);
+        $source = $this->supplierSource($product);
+        $this->get('/admin/inventory')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('products.data.0.selling_price', '250.00')->where('products.data.0.minimum_price', null)
+            ->where('products.data.0.maximum_price', null)->where('products.data.0.price_details_source', null));
+        $product->update(['pricing_mode' => 'auto', 'selling_price' => null]);
+        $source->productLink->update(['price_override' => ['result_regular_price' => 300]]);
+        $this->get('/admin/inventory')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('products.data.0.selling_price', '300.00')->where('products.data.0.minimum_price', null)
+            ->where('products.data.0.maximum_price', null)->where('products.data.0.price_details_source', null));
+    }
+
+    public function test_inventory_does_not_show_invalid_or_foreign_currency_price_estimates(): void
+    {
+        $product = $this->product();
+        $source = $this->supplierSource($product);
+        $source->update(['currency' => 'USD']);
+        $this->get('/admin/inventory')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('products.data.0.minimum_price', null)->where('products.data.0.maximum_price', null));
+        $source->update(['currency' => 'BDT', 'cost_price' => 500]);
+        $this->get('/admin/inventory')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('products.data.0.minimum_price', null)->where('products.data.0.maximum_price', null));
     }
 
     public function test_overview_counts_match_category_and_visibility_before_stock_filter(): void
