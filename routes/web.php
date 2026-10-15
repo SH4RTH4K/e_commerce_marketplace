@@ -356,6 +356,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('blocked-phones', BlockedPhoneController::class)->only(['index', 'store', 'destroy']);
 
         // System
+        Route::middleware('permission:settings.manage')->group(function () {
+            Route::get('settings/seo-completion', [\App\Http\Controllers\Admin\SeoCompletionController::class, 'index'])->name('seo-completion.index');
+            Route::post('settings/seo-completion', [\App\Http\Controllers\Admin\SeoCompletionController::class, 'store'])->name('seo-completion.store');
+        });
         Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');
         Route::match(['put', 'post'], 'settings/{section}', [SettingController::class, 'updateSection'])->name('settings.update-section');
         Route::post('settings/test-mail', [SettingController::class, 'testMail'])->name('settings.test-mail');

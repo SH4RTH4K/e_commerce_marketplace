@@ -282,7 +282,7 @@ function TypographyEditor({ template, value, onChange, onReset }) {
 }
 
 export default function Settings({ settings, templateStatus = {} }) {
-  const [activeTab, setActiveTab] = useState('brand');
+  const [activeTab, setActiveTab] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'seo' ? 'seo' : 'brand');
   const [testEmail, setTestEmail] = useState('');
   const [processing, setProcessing] = useState(false);
   const [legalPreview, setLegalPreview] = useState(null);
@@ -1524,6 +1524,7 @@ export default function Settings({ settings, templateStatus = {} }) {
 
             {activeTab === 'seo' && (
               <form onSubmit={e => submitSection(e, 'seo')} className="space-y-5">
+                <div className="rounded-2xl border border-orange-100 bg-orange-50 p-5"><h3 className="font-semibold text-gray-900">Category and product SEO</h3><p className="mt-1 text-sm text-gray-600">Preview and fill missing SEO fields across the catalog while keeping existing text.</p><a href="/admin/settings/seo-completion" className="mt-3 inline-flex rounded-xl bg-white px-4 py-2 text-sm font-semibold text-orange-700 shadow-sm">Open catalog SEO</a></div>
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
                   <h3 className="font-bold text-gray-900 pb-3 border-b border-gray-50">Default SEO Setup</h3>
                   <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-950">
