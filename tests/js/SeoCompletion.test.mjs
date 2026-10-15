@@ -29,7 +29,7 @@ test('SEO completion submits only an explicit fill-missing intent with the real 
     await act(async () => app.renderer.root.findByType('form').props.onSubmit({ preventDefault() {} }));
     assert.equal(app.calls[0].url, '/admin/settings/seo-completion');
     assert.equal(app.calls[0].data.fill_missing, true);
-    assert.deepEqual(Object.keys(app.calls[0].data), ['fill_missing']);
+    assert.deepEqual(Object.keys(app.calls[0].data), ['fill_missing', 'english_names']);
   } finally { await app.close(); }
 });
 

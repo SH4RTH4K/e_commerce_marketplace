@@ -206,4 +206,22 @@ class SeoCompletionTest extends TestCase
         $this->postJson('/admin/settings/seo-completion', [])->assertUnprocessable()->assertJsonValidationErrors('fill_missing');
         $this->assertNull(Category::first()->meta_title);
     }
+
+    public function test_bengali_names_require_english_labels_and_repeated_names_share_the_translation(): void
+    {
+        $category = $this->category();
+        $first = $this->product($category, ['name' => 'প্রিমিয়াম টু-পিস এমব্রয়ডারি কটি সেট', 'sku' => '1001']);
+        $second = $this->product($category, ['name' => $first->name, 'sku' => '1002']);
+        $this->post('/admin/settings/seo-completion', ['fill_missing' => true])->assertSessionHasErrors('completion');
+        $this->assertNull($category->fresh()->meta_title);
+        $this->post('/admin/settings/seo-completion', ['fill_missing' => true, 'english_names' => [$first->id => 'Premium Two-Piece Embroidered Waistcoat Set']])->assertSessionHasNoErrors();
+        foreach ([$first, $second] as $product) {
+            $this->assertSame($first->name, $product->fresh()->name);
+            foreach (SeoCompletionService::FIELDS as $field) {
+                $this->assertSame(0, preg_match('/\p{Bengali}/u', $product->fresh()->{$field}));
+            }
+        }
+        $this->assertNotSame($first->fresh()->meta_title, $second->fresh()->meta_title);
+        $this->assertSame([], app(SeoCompletionService::class)->englishNames());
+    }
 }

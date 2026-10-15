@@ -11,14 +11,15 @@ class SeoCompletionController extends Controller
 {
     public function index(SeoCompletionService $seo)
     {
-        return Inertia::render('Admin/SeoCompletion', ['summary' => $seo->summary(), 'samples' => $seo->preview(), 'result' => session('seo_completion_result')]);
+        return Inertia::render('Admin/SeoCompletion', ['summary' => $seo->summary(), 'samples' => $seo->preview(), 'englishNames' => $seo->englishNames(), 'result' => session('seo_completion_result')]);
     }
 
     public function store(Request $request, SeoCompletionService $seo)
     {
-        $request->validate(['fill_missing' => ['required', 'accepted']]);
+        $data = $request->validate(['fill_missing' => ['required', 'accepted'], 'english_names' => ['nullable', 'array', 'max:3500'],
+            'english_names.*' => ['nullable', 'string', 'max:300', 'regex:/[A-Za-z]/', 'not_regex:/\p{Bengali}/u']]);
         try {
-            $result = $seo->complete((int) $request->user()->id);
+            $result = $seo->complete((int) $request->user()->id, array_filter($data['english_names'] ?? [], fn ($value) => trim((string) $value) !== ''));
         } catch (\RuntimeException $exception) {
             report($exception);
 

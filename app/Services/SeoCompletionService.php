@@ -62,23 +62,44 @@ class SeoCompletionService
         return $samples;
     }
 
-    public function proposed(Category|Product $record): array
+    public function englishNames(): array
     {
-        $name = $this->plain($record->name);
+        return $this->pending(Product::class)->orderBy('id')->get(['id', 'name'])->filter(fn ($product) => preg_match('/\p{Bengali}/u', $product->name))
+            ->groupBy('name')->map(fn ($records, $name) => ['id' => $records->first()->id, 'name' => $name, 'count' => $records->count()])->values()->all();
+    }
+
+    public function proposed(Category|Product $record, ?string $englishName = null): array
+    {
+        $name = $this->plain($englishName ?? $record->name);
         $store = $this->plain(site_name()) ?: 'TAQI LIFE';
         $store = $this->clip($store, 24);
         $titleBudget = max(20, 65 - mb_strlen($store) - 3);
         $core = $name;
+        $details = '';
         if ($record instanceof Product) {
-            $firstClause = preg_split('/\s+[–—|]\s+/', $name)[0];
+            $parts = preg_split('/\s+[–—|]\s+/u', $name, 2);
+            $firstClause = $parts[0];
+            $details = $parts[1] ?? '';
             if (mb_strlen($firstClause) >= 15) {
                 $core = $firstClause;
             }
             $sku = $this->clip($this->plain($record->sku), 12);
-            if (mb_strlen($name) > $titleBudget && $sku !== '' && ! str_contains(mb_strtolower($core), mb_strtolower($sku))) {
-                $core = $this->clip($core, $titleBudget - mb_strlen($sku) - 3).' ('.$sku.')';
-            } else {
-                $core = $this->clip($core, $titleBudget);
+            $addSku = ($englishName !== null || mb_strlen($name) > $titleBudget) && $sku !== '' && ! str_contains(mb_strtolower($core), mb_strtolower($sku));
+            $budget = $titleBudget - ($addSku ? mb_strlen($sku) + 3 : 0);
+            foreach (['Professional ', 'Premium ', 'Ultra-Thin ', 'Ergonomic ', 'Mini '] as $word) {
+                if (mb_strlen($core) > $budget) {
+                    $core = str_ireplace($word, '', $core);
+                }
+            }
+            if (mb_strlen($core) > $budget) {
+                $words = explode(' ', $core);
+                $last = implode(' ', array_slice($words, -2));
+                $head = $this->clip($core, max(8, $budget - mb_strlen($last) - 3));
+                $core = $this->clip($head.' … '.$last, $budget);
+            }
+            $productCore = $core;
+            if ($addSku) {
+                $core .= ' ('.$sku.')';
             }
         } else {
             $core = $this->clip($core, $titleBudget);
@@ -86,6 +107,25 @@ class SeoCompletionService
         $title = $core.' | '.$store;
         $ending = ' at '.$store.' in Bangladesh.';
         $description = 'Shop '.$this->clip($name, 160 - mb_strlen($ending) - 5).$ending;
+        if ($record instanceof Product) {
+            $ending = ' Shop at '.$store.' in Bangladesh.';
+            $description = $productCore;
+            $room = 160 - mb_strlen($description) - mb_strlen($ending) - 3;
+            $features = [];
+            foreach (explode(',', $details) as $feature) {
+                $feature = trim($feature, ' .');
+                if ($feature === '' || mb_strlen(implode(', ', [...$features, $feature])) > $room) {
+                    break;
+                }
+                $features[] = $feature;
+            }
+            if ($features !== []) {
+                $description .= ': '.implode(', ', $features);
+            } elseif ($room >= 43) {
+                $description .= '. View product details and availability';
+            }
+            $description = rtrim($description, ' .').'.'.$ending;
+        }
         if ($record instanceof Category && isset(self::CATEGORY_COPY[$record->slug])) {
             $description = str_replace('TAQI LIFE', $store, self::CATEGORY_COPY[$record->slug]);
         }
@@ -101,18 +141,27 @@ class SeoCompletionService
     }
 
     /** Update only blank metadata, with a private before/after snapshot and concurrency checks. */
-    public function complete(int $actorId): array
+    public function complete(int $actorId, array $englishNames = []): array
     {
         $lock = Cache::lock('catalog-seo-completion', 300);
         if (! $lock->get()) {
             throw new RuntimeException('SEO completion is already running. Refresh this page to check the results.');
         }
         try {
+            $translations = [];
+            foreach (Product::whereIn('id', array_keys($englishNames))->get(['id', 'name']) as $product) {
+                $translations[$product->name] = $englishNames[$product->id];
+            }
+            foreach ($this->englishNames() as $item) {
+                if (! isset($translations[$item['name']]) && $this->pending(Product::class)->where('name', $item['name'])->exists()) {
+                    throw new RuntimeException('Enter English SEO names for the Bengali product names shown below before completing the catalog.');
+                }
+            }
             $changes = [];
             foreach (['categories' => Category::class, 'products' => Product::class] as $type => $model) {
-                $this->pending($model)->orderBy('id')->chunkById(200, function ($records) use (&$changes, $type) {
+                $this->pending($model)->orderBy('id')->chunkById(200, function ($records) use (&$changes, $type, $translations) {
                     foreach ($records as $record) {
-                        $patch = $this->proposed($record);
+                        $patch = $this->proposed($record, $translations[$record->name] ?? null);
                         if ($patch !== []) {
                             $changes[] = ['type' => $type, 'id' => $record->id, 'name' => $record->name,
                                 'before' => $record->only(array_keys($patch)), 'after' => $patch];

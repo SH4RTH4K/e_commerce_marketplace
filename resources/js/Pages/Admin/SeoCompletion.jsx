@@ -3,8 +3,8 @@ import { Head, useForm } from '@inertiajs/react';
 
 const labels = { meta_title: 'Meta Title', meta_description: 'Meta Description', meta_keywords: 'Meta Keywords' };
 
-export default function SeoCompletion({ summary, samples = [], result }) {
-  const { post, processing, errors } = useForm({ fill_missing: true });
+export default function SeoCompletion({ summary, samples = [], englishNames = [], result }) {
+  const { data, setData, post, processing, errors } = useForm({ fill_missing: true, english_names: {} });
   const remaining = summary.categories.incomplete + summary.products.incomplete;
   return <><Head title="Catalog SEO" /><AdminLayout title="Catalog SEO">
     <div className="max-w-6xl space-y-5">
@@ -31,6 +31,9 @@ export default function SeoCompletion({ summary, samples = [], result }) {
           <dl className="mt-4 grid gap-3">{Object.entries(labels).map(([field, label]) => <div key={field}><dt className="text-xs font-semibold text-gray-500">{label} {item.proposed[field] ? '· will fill' : '· kept'}</dt><dd className="mt-1 break-words text-sm text-gray-700">{item.proposed[field] || item.current[field]}</dd></div>)}</dl>
         </article>)}
       </div>}
+      {remaining > 0 && englishNames.length > 0 && <section className="rounded-2xl border border-gray-100 bg-white p-5"><h3 className="font-semibold text-gray-900">English SEO names</h3><p className="mt-1 text-sm text-gray-500">Translate these product names for English SEO. Product names in the catalog stay unchanged. Repeated names share the same translation.</p>
+        <div className="mt-4 space-y-4">{englishNames.map(item => <label key={item.id} className="block"><span className="block text-sm text-gray-700">{item.name} <span className="text-xs text-gray-400">({item.count} products)</span></span><input aria-label={`English SEO name ${item.id}`} value={data.english_names[item.id] || ''} onChange={event => setData('english_names', {...data.english_names, [item.id]:event.target.value})} className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm" /></label>)}</div>
+      </section>}
     </div>
   </AdminLayout></>;
 }
