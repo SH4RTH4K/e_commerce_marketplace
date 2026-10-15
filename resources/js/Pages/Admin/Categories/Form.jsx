@@ -18,8 +18,10 @@ function Field({ label, error, children, required }) {
 
 export default function CategoryForm({ category, parents = [] }) {
   const isEdit = !!category.id;
+  const selectedParent = parents.find(parent => Number(parent.id) === Number(category.parent_id));
+  const [categoryLevel, setCategoryLevel] = useState((selectedParent?.depth || 0) + 1);
   const [submitting, setSubmitting] = useState(false);
-  const { data, setData, post, put, processing, errors } = useForm({
+  const { data, setData, setError, clearErrors, processing, errors } = useForm({
     name: category.name || '',
     slug: category.slug || '',
     parent_id: category.parent_id || '',
@@ -36,6 +38,7 @@ export default function CategoryForm({ category, parents = [] }) {
 
   const submit = async (e) => {
     e.preventDefault();
+    clearErrors();
     setSubmitting(true);
     try {
       const formData = new FormData();
@@ -52,7 +55,7 @@ export default function CategoryForm({ category, parents = [] }) {
       const options = {
         forceFormData: true,
         onFinish: () => setSubmitting(false),
-        onError: () => setSubmitting(false),
+        onError: errors => { setError(errors); setSubmitting(false); },
       };
       if (isEdit) {
         formData.append('_method', 'PUT');
@@ -85,15 +88,22 @@ export default function CategoryForm({ category, parents = [] }) {
               <Field label="Slug (URL)" error={errors.slug}>
                 <input value={data.slug} onChange={e => setData('slug', e.target.value)} className={inputClass} placeholder="auto-generated from name" />
               </Field>
-              <Field label="Parent Category" error={errors.parent_id}>
-                <select value={data.parent_id} onChange={e => setData('parent_id', e.target.value)} className={inputClass}>
-                  <option value="">None (Top-Level)</option>
-                  {parents.map(p => (
-                    <option key={p.id} value={p.id}>{p.label || p.name}</option>
-                  ))}
+              <Field label="Category level">
+                <select aria-label="Category level" value={categoryLevel} onChange={e => { setCategoryLevel(Number(e.target.value)); setData('parent_id', ''); }} className={inputClass}>
+                  <option value={1}>Category (top level)</option>
+                  <option value={2}>Subcategory</option>
+                  <option value={3}>Sub-subcategory</option>
                 </select>
               </Field>
             </div>
+            {categoryLevel > 1 && <Field label={categoryLevel === 2 ? 'Parent category' : 'Parent subcategory'} error={errors.parent_id} required>
+              <select aria-label="Parent category" value={data.parent_id} onChange={e => setData('parent_id', e.target.value)} className={inputClass} required>
+                <option value="">Choose the parent for this category</option>
+                {parents.filter(parent => parent.depth === categoryLevel - 1).map(parent => <option key={parent.id} value={parent.id}>{parent.label || parent.name}</option>)}
+              </select>
+            </Field>}
+            {categoryLevel === 1 && errors.parent_id && <p className="text-sm text-red-600">{errors.parent_id}</p>}
+            <p className="rounded-xl bg-gray-50 px-3 py-2 text-xs text-gray-500">Products can belong to any level. A parent page includes products in that category and its active descendants. Menu visibility applies to the whole branch.</p>
             <div className="grid grid-cols-2 gap-4">
               <Field label="Category Icon" error={errors.icon}>
                 <select value={data.icon} onChange={e => setData('icon', e.target.value)} className={inputClass}>

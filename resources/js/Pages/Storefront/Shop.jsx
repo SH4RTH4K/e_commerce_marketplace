@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import ProductCard from '@/Components/Storefront/ProductCard';
+import { CategoryTrail } from '@/Components/Storefront/CategoryNavigation';
 
 function categoryChildren(category) {
   if (!category?.children) return [];
@@ -69,6 +70,8 @@ function TemplateTwoCategoryLinks({ categories = [], activeCategory, level = 0 }
 export default function ShopPage({ 
   products, 
   activeCategory, 
+  categoryPath = [],
+  browseCategories = [],
   filterCategories = [],
   allProductsCount, 
   brands, 
@@ -243,6 +246,7 @@ export default function ShopPage({
         <Head title={seo?.title || title} />
 
         <main className="storefront-shop-page template-1-shop template-1-container min-w-0">
+          <CategoryTrail path={categoryPath} children={browseCategories} />
           <div className="template-1-shop-toolbar">
             <div className="template-1-shop-actions">
               <button type="button" onClick={() => setIsFilterOpen(open => !open)} className={isFilterOpen ? 'is-active' : ''}>
@@ -405,6 +409,7 @@ export default function ShopPage({
       <Head title={seo?.title || title} />
       
       <main className="storefront-shop-page max-w-[1440px] mx-auto px-4 sm:px-5 py-5 sm:py-6">
+        <CategoryTrail path={categoryPath} children={browseCategories} />
         <div className="flex flex-col lg:flex-row gap-5 lg:gap-6">
           
           {/* Overlay for mobile filter */}

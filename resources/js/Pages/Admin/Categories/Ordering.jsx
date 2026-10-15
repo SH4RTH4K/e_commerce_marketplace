@@ -67,7 +67,7 @@ export default function CategoryOrdering({ categories }) {
                             />
                           </td>
                           <td className="px-5 py-3 font-medium text-gray-800">
-                            {category.name}
+                            {category.label || category.name}
                           </td>
                           <td className="px-5 py-3">
                             <div className="flex flex-col gap-1">

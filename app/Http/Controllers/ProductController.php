@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use App\Models\Feature;
 use App\Models\Product;
 use App\Models\ProductReview;
+use App\Services\CategoryHierarchyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -83,6 +84,7 @@ class ProductController extends Controller
             'reviews',
             'canReview'
         ), [
+            'categoryPath' => $product->category ? array_map(fn ($item) => collect($item)->only(['id', 'name', 'slug'])->all(), app(CategoryHierarchyService::class)->path($product->category)) : [],
             'seo' => [
                 'title' => $product->meta_title ?: $product->name,
                 'description' => Str::limit(trim(strip_tags((string) ($product->meta_description ?: $product->short_description ?: $product->description))), 300),

@@ -7,17 +7,19 @@ export default function CategoriesIndex({ categories }) {
   const [selected, setSelected] = useState([]);
   const [bulkAction, setBulkAction] = useState('');
   const [deleteModal, setDeleteModal] = useState(null);
+  const [actionError, setActionError] = useState('');
 
   const toggleSelect = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const toggleAll = (e) => setSelected(e.target.checked ? (categories || []).map(c => c.id) : []);
 
   const handleBulk = () => {
+    setActionError('');
     if (!bulkAction || selected.length === 0) return;
     if (bulkAction === 'delete') {
       setDeleteModal({ type: 'bulk' });
       return;
     }
-    router.post('/admin/categories/bulk', { ids: selected, bulk_action: bulkAction }, { onSuccess: () => { setSelected([]); setBulkAction(''); } });
+    router.post('/admin/categories/bulk', { ids: selected, bulk_action: bulkAction }, { onSuccess: () => { setSelected([]); setBulkAction(''); }, onError: errors => setActionError(Object.values(errors)[0]) });
   };
 
   const confirmDelete = (category) => {
@@ -25,15 +27,16 @@ export default function CategoriesIndex({ categories }) {
   };
 
   const executeDelete = () => {
+    setActionError('');
     if (!deleteModal) return;
     if (deleteModal.type === 'bulk') {
-      router.post('/admin/categories/bulk', { ids: selected, bulk_action: 'delete' }, { onSuccess: () => { setSelected([]); setBulkAction(''); setDeleteModal(null); } });
+      router.post('/admin/categories/bulk', { ids: selected, bulk_action: 'delete' }, { onSuccess: () => { setSelected([]); setBulkAction(''); setDeleteModal(null); }, onError: errors => { setDeleteModal(null); setActionError(Object.values(errors)[0]); } });
     } else {
       router.delete(`/admin/categories/${deleteModal.category.id}`, {
         onSuccess: () => setDeleteModal(null),
         onError: (errors) => {
           setDeleteModal(null);
-          alert("Failed to delete. It may be attached to products or have other constraints.");
+          setActionError(Object.values(errors)[0] || 'Could not delete this category.');
         }
       });
     }
@@ -45,12 +48,13 @@ export default function CategoriesIndex({ categories }) {
       <AdminLayout title="Categories">
         <div className="space-y-5">
           <div className="flex items-center justify-between">
-            <div />
+            <div><p className="font-semibold text-gray-900">Category hierarchy</p><p className="mt-1 text-sm text-gray-500">Category → Subcategory → Sub-subcategory. Products may be assigned at any level.</p></div>
             <a href="/admin/categories/create" className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
               Add Category
             </a>
           </div>
+          {actionError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{actionError}</p>}
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             {selected.length > 0 && (
@@ -101,7 +105,11 @@ export default function CategoriesIndex({ categories }) {
                               <CategoryIcon icon={category.icon} name={category.name} className="h-6 w-6" />
                             </div>
                           )}
-                          <span className="font-semibold text-gray-800">{category.name}</span>
+                          <div style={{ paddingLeft: `${Math.max(0, (category.depth || 1) - 1) * 12}px` }}>
+                            <span className="font-semibold text-gray-800">{category.name}</span>
+                            <p className="mt-0.5 text-xs text-gray-500">{['Category', 'Subcategory', 'Sub-subcategory'][(category.depth || 1) - 1] || `Level ${category.depth}`}</p>
+                            {category.depth > 1 && <p className="mt-0.5 text-xs text-gray-400">{category.label}</p>}
+                          </div>
                         </div>
                       </td>
                       <td className="px-5 py-3.5 text-gray-500 font-medium text-xs">
@@ -118,10 +126,12 @@ export default function CategoriesIndex({ categories }) {
                         <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${category.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                           {category.is_active ? 'Active' : 'Hidden'}
                         </span>
+                        <p className="mt-1 text-xs text-gray-500">{category.show_in_menu ? 'In menu' : 'Outside menu'}</p>
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <a href={`/admin/categories/${category.id}/edit`} className="px-2.5 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-medium transition-colors">Edit</a>
+                          {category.depth < 3 && <a href={`/admin/categories/create?parent_id=${category.id}`} className="px-2.5 py-1 text-xs bg-orange-50 text-orange-700 rounded-lg font-medium">Add child</a>}
                           <button type="button" onClick={(e) => { e.preventDefault(); confirmDelete(category); }} className="px-2.5 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-medium transition-colors">Delete</button>
                         </div>
                       </td>

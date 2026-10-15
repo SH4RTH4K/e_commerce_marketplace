@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product;
+use App\Models\Category;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 
@@ -41,7 +42,10 @@ class ProductCatalogService
                     ->orWhereRaw("sku LIKE ? ESCAPE '!'", [$pattern])->orWhereRaw("brand LIKE ? ESCAPE '!'", [$pattern]));
             }
         }
-        if ($filters['category'] !== '') $query->where('category_id', $filters['category']);
+        if ($filters['category'] !== '') {
+            $category = Category::find($filters['category']);
+            $query->whereIn('category_id', $category?->selfAndDescendantIds() ?? []);
+        }
         if ($filters['supplier'] !== '') $query->whereHas('supplierLinks.supplierProduct', fn ($query) => $query->where('supplier_id', $filters['supplier']));
         if ($filters['type'] === 'variable') $query->has('variants');
         if ($filters['type'] === 'simple') $query->doesntHave('variants');

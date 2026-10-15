@@ -36,12 +36,13 @@ class HomeController extends Controller
                 'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
             ]);
 
-        $categories = Category::where('is_active', true)
+        $categoryCounts = collect(Category::storefrontFilterTree())->keyBy('id');
+        $categories = Category::whereNull('parent_id')->where('is_active', true)
             ->where('show_in_menu', true)
             ->orderBy('menu_order')
             ->orderBy('name')
             ->get()
-            ->each(fn (Category $category) => $category->setAttribute('products_count', $category->publishedProductsInTreeCount()));
+            ->each(fn (Category $category) => $category->setAttribute('products_count', $categoryCounts->get($category->id)['products_count'] ?? 0));
 
         $banners = fn (string $placement) => Banner::active()
             ->placement($placement)
@@ -104,7 +105,7 @@ class HomeController extends Controller
                 ->map(function (Category $category) use ($withImages, $setStorefrontSku, $templateTwoCategoryOrder): array {
                     $products = Product::query()
                         ->tap($withImages)
-                        ->whereIn('category_id', $category->selfAndDescendantIds())
+                        ->whereIn('category_id', $category->selfAndDescendantIds(true))
                         ->tap($templateTwoCategoryOrder)
                         ->take(10)
                         ->get()
@@ -232,7 +233,7 @@ class HomeController extends Controller
             'exclude.*' => ['integer', 'distinct', 'min:1'],
         ]);
 
-        $category = Category::where('is_active', true)
+        $category = Category::whereNull('parent_id')->where('is_active', true)
             ->where('show_in_menu', true)
             ->findOrFail($data['category_id']);
 
@@ -243,7 +244,7 @@ class HomeController extends Controller
             ->withExists([
                 'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
             ])
-            ->whereIn('category_id', $category->selfAndDescendantIds())
+            ->whereIn('category_id', $category->selfAndDescendantIds(true))
             ->whereNotIn('id', $data['exclude'] ?? [])
             ->when(
                 setting('homepage_category_product_order', setting('template_2_category_product_order', 'newest')) === 'shuffle',

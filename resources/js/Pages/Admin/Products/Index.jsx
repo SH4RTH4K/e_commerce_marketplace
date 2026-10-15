@@ -50,7 +50,7 @@ export default function ProductsIndex({ products, categories = [], suppliers = [
   const dirty = ['q', 'category', 'supplier', 'status', 'stock', 'type'].some(key => String(draft[key] ?? '') !== String(initial[key] ?? ''));
   const activeFilters = ['q', 'category', 'supplier', 'status', 'stock', 'type'].some(key => initial[key] !== '' && initial[key] != null);
   const selects = [
-    ['category', 'Category', [['', 'All categories'], ...categories.map(category => [category.id, category.name])]],
+    ['category', 'Category', [['', 'All categories'], ...categories.map(category => [category.id, category.label || category.name])]],
     ['status', 'Visibility', [['', 'All visibility'], ['published', 'Published'], ['draft', 'Draft']]],
     ['stock', 'Stock level', [['', 'All stock levels'], ['in', 'Healthy (>5)'], ['low', 'Low (1–5)'], ['out', 'Out of stock']]],
     ['type', 'Product type', [['', 'All product types'], ['simple', 'Simple'], ['variable', 'Variable']]],

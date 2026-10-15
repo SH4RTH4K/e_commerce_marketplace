@@ -162,7 +162,7 @@ const hasDescriptionContent = (value) => String(value || '')
   .replace(/&nbsp;/gi, '')
   .trim().length > 0;
 
-export default function ProductPage({ product, related, sizes, colors, weights, variantGroups = [], features, reviews, canReview, auth, seo }) {
+export default function ProductPage({ product, related, sizes, colors, weights, variantGroups = [], features, reviews, canReview, auth, seo, categoryPath = [] }) {
   const { app } = usePage().props;
   const settings = app?.settings || {};
   const isTemplateOne = settings.storefront_template === 'template-1';
@@ -438,11 +438,11 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
     const description = productDescription || 'No description available.';
     const descriptionMarkup = formatDescriptionHtml(description);
     return (
-      <StorefrontLayout>
+      <StorefrontLayout activeCategory={product.category}>
         <Head title={seo?.title || product.name} />
         <div className="template-1-breadcrumb">
           <Link href="/">Home</Link> <span>&nbsp; / &nbsp;</span>
-          {product.category && <><Link href={`/category/${product.category.slug}`}>{product.category.name}</Link> <span>&nbsp; / &nbsp;</span></>}
+          {(categoryPath.length ? categoryPath : product.category ? [product.category] : []).map(category => <span key={category.id}><Link href={`/category/${category.slug}`}>{category.name}</Link> <span>&nbsp; / &nbsp;</span></span>)}
           {product.name}
         </div>
         <main className="template-1-detail">
@@ -565,7 +565,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
   }
 
   return (
-    <StorefrontLayout>
+    <StorefrontLayout activeCategory={product.category}>
       <Head title={seo?.title || product.name} />
       
       <main className="storefront-product-page max-w-[1440px] mx-auto w-full px-4 sm:px-5 py-6 overflow-x-hidden">
@@ -573,12 +573,12 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
         <nav className="text-sm text-gray-500 mb-5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 break-words">
           <Link href="/" className="shrink-0 hover:text-[#f15a24] transition-colors">Home</Link>
           <span className="text-gray-300">/</span>
-          {product.category && (
-            <>
-              <Link href={`/category/${product.category.slug}`} className="min-w-0 max-w-full break-words hover:text-[#f15a24] transition-colors">{product.category.name}</Link>
+          {(categoryPath.length ? categoryPath : product.category ? [product.category] : []).map(category => (
+            <span key={category.id} className="inline-flex min-w-0 items-center gap-2">
+              <Link href={`/category/${category.slug}`} className="min-w-0 max-w-full break-words hover:text-[#f15a24] transition-colors">{category.name}</Link>
               <span className="text-gray-300">/</span>
-            </>
-          )}
+            </span>
+          ))}
           <span className="storefront-product-breadcrumb-name basis-full min-w-0 max-w-full text-gray-900 font-medium break-words whitespace-normal sm:basis-auto sm:max-w-md">{product.name}</span>
         </nav>
 

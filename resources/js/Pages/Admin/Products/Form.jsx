@@ -3,6 +3,7 @@ import { Head, useForm, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { fileToBase64 } from '@/lib/utils';
 import RichTextEditor from '@/Components/Admin/RichTextEditor';
+import CategoryPicker from '@/Components/Admin/CategoryPicker';
 import ProductPricingFields, { pricingConflicts, pricingValues } from '@/Components/Admin/ProductPricingFields';
 
 function FormSection({ title, children, action, className = "" }) {
@@ -364,10 +365,7 @@ export default function ProductForm({ product, categories, pricing = { linked: f
                       <input value={data.brand} onChange={e => setData('brand', e.target.value)} className={inputClass} placeholder="e.g. Nike, Apple, Local" />
                     </Field>
                     <Field label="Category" required error={errors.category_id}>
-                      <select value={data.category_id} onChange={e => setData('category_id', e.target.value)} className={inputClass} required>
-                        <option value="">Select category…</option>
-                        {(categories || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
+                      <CategoryPicker categories={categories} value={data.category_id} onChange={value => setData('category_id', value)} className={inputClass} />
                     </Field>
                   </div>
                   <Field label="Short Highlights / Short Description" error={errors.short_description}>

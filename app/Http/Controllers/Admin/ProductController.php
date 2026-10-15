@@ -12,6 +12,7 @@ use App\Models\DropshipSupplierProduct;
 use App\Support\PublicUploader;
 use App\Services\ProductPricingService;
 use App\Services\ProductCatalogService;
+use App\Services\CategoryHierarchyService;
 use App\Models\DropshipSupplier;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -40,7 +41,7 @@ class ProductController extends Controller
                     'supplier' => $product->supplierLinks->first()?->supplierProduct?->supplier?->name,
                     'updated_at' => $product->updated_at?->setTimezone('Asia/Dhaka')->format('d M Y, h:i A'),
                 ]),
-            'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'categories' => app(CategoryHierarchyService::class)->options(),
             'suppliers' => DropshipSupplier::whereHas('products.productLink')->orderBy('name')->get(['id', 'name']),
             'filters' => $filters, 'q' => $filters['q'], 'category' => $filters['category'], 'status' => $filters['status'],
             'summary' => ['all' => (int) $totals->total, 'published' => (int) $totals->published, 'draft' => (int) $totals->draft],
@@ -52,7 +53,7 @@ class ProductController extends Controller
     {
         return Inertia::render('Admin/Products/Form', [
             'product'    => ['is_published' => true, 'regular_price' => 0, 'stock_quantity' => 0, 'specifications' => [], 'variants' => [], 'images' => []],
-            'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'categories' => app(CategoryHierarchyService::class)->options(),
             'returnTo' => ProductCatalogService::returnUrl($request->input('return_to')),
         ]);
     }
@@ -112,7 +113,7 @@ class ProductController extends Controller
                 'custom_variant_groups' => $customGroups,
                 'specifications' => $product->specifications ?? [],
             ]),
-            'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'categories' => app(CategoryHierarchyService::class)->options(),
             'pricing' => app(ProductPricingService::class)->context($product),
             'returnTo' => ProductCatalogService::returnUrl($request->input('return_to')),
         ]);

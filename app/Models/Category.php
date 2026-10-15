@@ -5,7 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Collection;
+use App\Services\CategoryHierarchyService;
+use Illuminate\Support\Facades\Cache;
 
 class Category extends Model
 {
@@ -13,7 +14,14 @@ class Category extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'show_in_menu' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::saved(fn () => Cache::forget('sitemap_urls'));
+        static::deleted(fn () => Cache::forget('sitemap_urls'));
+    }
 
     public function parent(): BelongsTo
     {
@@ -25,7 +33,7 @@ class Category extends Model
         return $this->hasMany(Category::class, 'parent_id')->orderBy('menu_order')->orderBy('name');
     }
 
-    public function selfAndDescendantIds(): array
+    public function selfAndDescendantIds(bool $activeOnly = false): array
     {
         $ids = [(int) $this->getKey()];
         $frontier = $ids;
@@ -33,6 +41,7 @@ class Category extends Model
         while ($frontier !== []) {
             $children = static::query()
                 ->whereIn('parent_id', $frontier)
+                ->when($activeOnly, fn ($query) => $query->where('is_active', true))
                 ->pluck('id')
                 ->map(fn ($id) => (int) $id)
                 ->all();
@@ -53,51 +62,12 @@ class Category extends Model
 
     public static function storefrontMenuTree(): array
     {
-        $categories = static::query()
-            ->where('is_active', true)
-            ->where('show_in_menu', true)
-            ->orderBy('menu_order')
-            ->orderBy('name')
-            ->get(['id', 'name', 'slug', 'parent_id', 'icon', 'image']);
-
-        return static::buildMenuBranch($categories, null);
+        return app(CategoryHierarchyService::class)->storefrontTree();
     }
 
     public static function storefrontFilterTree(): array
     {
-        $categories = static::query()
-            ->where('is_active', true)
-            ->where('show_in_menu', true)
-            ->orderBy('menu_order')
-            ->orderBy('name')
-            ->get(['id', 'name', 'slug', 'parent_id', 'icon', 'image']);
-
-        return static::buildMenuBranch($categories, null, true);
-    }
-
-    private static function buildMenuBranch(Collection $categories, ?int $parentId, bool $withProductCounts = false): array
-    {
-        return $categories
-            ->filter(fn (Category $category) => (int) ($category->parent_id ?? 0) === (int) ($parentId ?? 0))
-            ->values()
-            ->map(function (Category $category) use ($categories, $withProductCounts): array {
-                $payload = [
-                    'id' => $category->id,
-                    'name' => $category->name,
-                    'slug' => $category->slug,
-                    'parent_id' => $category->parent_id,
-                    'icon' => $category->icon,
-                    'image' => $category->image,
-                    'children' => static::buildMenuBranch($categories, (int) $category->id, $withProductCounts),
-                ];
-
-                if ($withProductCounts) {
-                    $payload['products_count'] = $category->publishedProductsInTreeCount();
-                }
-
-                return $payload;
-            })
-            ->all();
+        return app(CategoryHierarchyService::class)->storefrontTree(true);
     }
 
     public function products(): HasMany

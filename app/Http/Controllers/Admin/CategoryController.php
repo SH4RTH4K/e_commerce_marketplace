@@ -6,6 +6,9 @@ use Inertia\Inertia;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Services\CategoryHierarchyService;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Cache;
 use App\Support\PublicUploader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -16,14 +19,14 @@ class CategoryController extends Controller
     public function index()
     {
         return Inertia::render('Admin/Categories/Index', [
-            'categories' => Category::with('parent')->withCount('products')->orderBy('menu_order')->orderBy('name')->get(),
+            'categories' => app(CategoryHierarchyService::class)->options(Category::with('parent')->withCount('products')->orderBy('menu_order')->orderBy('name')->get()),
         ]);
     }
 
     public function ordering()
     {
         return Inertia::render('Admin/Categories/Ordering', [
-            'categories' => Category::orderBy('menu_order')->orderBy('name')->get(['id', 'name', 'menu_order', 'is_active', 'show_in_menu']),
+            'categories' => app(CategoryHierarchyService::class)->options(),
         ]);
     }
 
@@ -45,11 +48,13 @@ class CategoryController extends Controller
         return redirect()->route('admin.categories.index')->with('status', 'Category ordering updated.');
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        $parents = $this->parentOptions();
+        $parentId = collect($parents)->firstWhere('id', (int) $request->input('parent_id'))['id'] ?? null;
         return Inertia::render('Admin/Categories/Form', [
-            'category' => new Category(['is_active' => true]),
-            'parents'  => $this->parentOptions(),
+            'category' => new Category(['is_active' => true, 'parent_id' => $parentId]),
+            'parents'  => $parents,
         ]);
     }
 
@@ -91,6 +96,7 @@ class CategoryController extends Controller
 
     public function destroy(Category $category)
     {
+        $this->ensureEmpty([$category->id]);
         $this->deleteStoredImage($category->image);
         $category->delete();
 
@@ -100,12 +106,13 @@ class CategoryController extends Controller
     public function bulk(Request $request)
     {
         $data = $request->validate([
-            'ids'         => ['required', 'array', 'min:1'],
-            'ids.*'       => ['integer', 'exists:categories,id'],
+            'ids'         => ['required', 'array', 'min:1', 'max:100'],
+            'ids.*'       => ['integer', 'distinct', 'exists:categories,id'],
             'bulk_action' => ['required', 'in:activate,deactivate,delete'],
         ]);
 
         $ids = $data['ids'];
+        Cache::forget('sitemap_urls');
         $count = count($ids);
 
         if ($data['bulk_action'] === 'activate') {
@@ -120,6 +127,7 @@ class CategoryController extends Controller
             return back()->with('status', "{$count} categor" . ($count === 1 ? 'y' : 'ies') . ' set to Hidden.');
         }
 
+        $this->ensureEmpty($ids);
         $categories = Category::whereIn('id', $ids)->get();
         foreach ($categories as $category) {
             $this->deleteStoredImage($category->image);
@@ -131,7 +139,7 @@ class CategoryController extends Controller
 
     private function validateData(Request $request, ?Category $category = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'name'             => ['required', 'string', 'max:120'],
             'slug'             => ['nullable', 'string', 'max:120'],
             'parent_id'        => ['nullable', 'integer', 'exists:categories,id'],
@@ -143,6 +151,15 @@ class CategoryController extends Controller
             'meta_keywords'    => ['nullable', 'string', 'max:500'],
             'image_file'       => ['nullable', 'file', 'extensions:jpg,jpeg,png,webp,gif', 'max:5120'],
         ]);
+        app(CategoryHierarchyService::class)->validateParent(! empty($data['parent_id']) ? (int) $data['parent_id'] : null, $category);
+        return $data;
+    }
+
+    private function ensureEmpty(array $ids): void
+    {
+        if (Category::whereIn('id', $ids)->where(fn ($query) => $query->has('products')->orHas('children'))->exists()) {
+            throw ValidationException::withMessages(['category' => 'Move the products and child categories before deleting this category.']);
+        }
     }
 
     private function handleImage(Request $request, array &$data, ?Category $category = null): void
@@ -204,27 +221,14 @@ class CategoryController extends Controller
             ? $exclude->selfAndDescendantIds()
             : [];
 
-        $categories = Category::query()
-            ->whereNotIn('id', $excludedIds)
-            ->orderBy('menu_order')
-            ->orderBy('name')
-            ->get(['id', 'name', 'parent_id']);
-
-        $byId = $categories->keyBy('id');
-        $labelFor = function (Category $category) use (&$labelFor, $byId): string {
-            $parent = $category->parent_id ? $byId->get($category->parent_id) : null;
-
-            return $parent
-                ? $labelFor($parent) . ' / ' . $category->name
-                : $category->name;
-        };
-
-        return $categories
-            ->map(fn (Category $category) => [
-                'id' => $category->id,
-                'name' => $category->name,
-                'label' => $labelFor($category),
-            ])
+        $options = collect(app(CategoryHierarchyService::class)->options());
+        $height = 1;
+        if ($exclude) foreach ($options as $option) {
+            $index = array_search((int) $exclude->id, $option['path_ids'], true);
+            if ($index !== false) $height = max($height, count($option['path_ids']) - $index);
+        }
+        return $options
+            ->filter(fn ($option) => ! in_array($option['id'], $excludedIds) && $option['depth'] + $height <= 3 && $option['hierarchy_valid'])
             ->values();
     }
 

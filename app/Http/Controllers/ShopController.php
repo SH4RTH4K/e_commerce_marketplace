@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Services\CategoryHierarchyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Throwable;
@@ -14,7 +15,9 @@ class ShopController extends Controller
 {
     public function index(Request $request, ?Category $category = null)
     {
-        $categoryIds = $category?->selfAndDescendantIds();
+        $categoryPath = $category ? app(CategoryHierarchyService::class)->path($category) : [];
+        if ($category) abort_if($categoryPath === [] || collect($categoryPath)->contains(fn ($item) => ! $item['is_active']), 404);
+        $categoryIds = $category?->selfAndDescendantIds(true);
 
         $query = Product::published()
             ->with('images', 'category', 'supplierLinks.supplierProduct')
@@ -184,6 +187,8 @@ class ShopController extends Controller
         return Inertia::render('Storefront/Shop', [
             'products'         => $products,
             'activeCategory'   => $category,
+            'categoryPath' => array_map(fn ($item) => collect($item)->only(['id', 'name', 'slug'])->all(), $categoryPath),
+            'browseCategories' => $category ? $category->children()->where('is_active', true)->where('show_in_menu', true)->get(['id', 'name', 'slug']) : [],
             'filterCategories' => Category::storefrontFilterTree(),
             'allProductsCount' => Product::published()->count(),
             'brands'           => $brands,
