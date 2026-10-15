@@ -56,7 +56,7 @@ const COLOR_PRESETS = [
 
 const SIZE_PRESETS = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '30', '32', '34', '36', '38', '40', '42'];
 
-export default function ProductForm({ product, categories, pricing = { linked: false, mode: 'manual' } }) {
+export default function ProductForm({ product, categories, pricing = { linked: false, mode: 'manual' }, returnTo = '/admin/products' }) {
   const isEdit = !!product.id;
   const [submitting, setSubmitting] = useState(false);
 
@@ -76,7 +76,7 @@ export default function ProductForm({ product, categories, pricing = { linked: f
     short_description: product.short_description || '',
     description: product.description || '',
     ...pricingValues(product, pricing),
-    stock_quantity: product.stock_quantity && parseInt(product.stock_quantity) !== 0 ? product.stock_quantity : '',
+    stock_quantity: product.stock_quantity ?? 0,
     unit: product.unit || '',
     is_published: product.is_published ?? true,
     is_featured: product.is_featured ?? false,
@@ -226,9 +226,11 @@ export default function ProductForm({ product, categories, pricing = { linked: f
       };
 
       if (isEdit) {
+        formData.append('return_to', returnTo);
         formData.append('_method', 'PUT');
         router.post(`/admin/products/${product.id}`, formData, options);
       } else {
+        formData.append('return_to', returnTo);
         router.post('/admin/products', formData, options);
       }
     } catch (err) {
@@ -335,7 +337,7 @@ export default function ProductForm({ product, categories, pricing = { linked: f
       <AdminLayout title={isEdit ? `Edit Product` : 'Add Product'}>
         <form onSubmit={submit} className="max-w-5xl space-y-5">
           {/* Back */}
-          <a href="/admin/products" className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 w-fit">
+          <a href={returnTo} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 w-fit">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
             Products
           </a>

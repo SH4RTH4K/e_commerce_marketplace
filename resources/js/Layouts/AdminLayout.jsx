@@ -25,7 +25,7 @@ const navGroups = [
         key: 'products-group', label: 'Products & Stock', defaultOpen: true,
         icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9z',
         children: [
-          { key: 'products',     label: 'All Products',        href: '/admin/products',        pattern: /^\/admin\/products$/, perm: 'products.view' },
+          { key: 'products',     label: 'All Products',        href: '/admin/products',        pattern: /^\/admin\/products(?:\/\d+\/edit)?\/?(?:\?.*)?$/, perm: 'products.view' },
           { key: 'product-add',  label: 'Add New Product',     href: '/admin/products/create', pattern: /^\/admin\/products\/create/, perm: 'products.create' },
           { key: 'inventory',    label: 'Inventory / Stock',   href: '/admin/inventory',       pattern: /^\/admin\/inventory/, perm: 'products.view' },
           { key: 'categories',   label: 'Categories',          href: '/admin/categories',      pattern: /^\/admin\/categories/, perm: 'catalog.manage' },

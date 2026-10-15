@@ -1,288 +1,70 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-/* ─── Type badge ─────────────────────────────────────────────────── */
-function TypeBadge({ hasVariants }) {
-  return hasVariants
-    ? <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100">VARIABLE</span>
-    : <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-gray-50 text-gray-500 border border-gray-100">SIMPLE</span>;
+export function catalogParameters(filters) {
+  return Object.fromEntries(Object.entries(filters).filter(([, value]) => value !== '' && value !== null && value !== undefined));
 }
 
-/* ─── Status pill ─────────────────────────────────────────────────── */
-function StatusPill({ published, onClick }) {
-  return (
-    <button onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full transition-colors ${
-        published ? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200'
-      }`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${published ? 'bg-green-500' : 'bg-gray-400'}`} />
-      {published ? 'Published' : 'Draft'}
-    </button>
-  );
+function ProductPrice({ product, money }) {
+  return <div><p className="font-bold text-slate-900 tabular-nums">{money(product.price)}</p>{product.sale_price != null && Number(product.sale_price) < Number(product.regular_price) && <p className="text-xs text-gray-400 line-through mt-0.5">{money(product.regular_price)}</p>}<details className="text-xs mt-2"><summary className="text-gray-400 cursor-pointer hover:text-orange-600">Price details</summary><dl className="space-y-1 mt-2">{[['Regular', product.regular_price], ['Selling', product.selling_price], ['Discounted', product.sale_price], ['Minimum', product.minimum_price], ['Maximum', product.maximum_price]].map(([label, value]) => <div key={label} className="flex justify-between gap-3"><dt className="text-gray-400">{label}</dt><dd className="text-gray-700">{value == null ? label === 'Discounted' ? 'No discount' : 'Not set' : money(value)}</dd></div>)}</dl>{product.price_details_source && <p className="text-[10px] text-gray-400 mt-2 max-w-44">{product.price_details_source === 'supplier_snapshot' ? 'Includes last calculated supplier prices.' : 'Includes estimates from current supplier rules.'}</p>}</details></div>;
 }
 
-/* ─── Main page ──────────────────────────────────────────────────── */
-export default function ProductsIndex({ products, categories, q, category, status }) {
-  const { auth } = usePage().props;
-  const user = auth?.user;
-  const canDelete = user?.is_super_admin || user?.role === 'admin' || (user?.permissions || []).includes('products.delete');
+function ProductStock({ quantity }) {
+  return <div><p className="font-semibold text-slate-800 tabular-nums">{Number(quantity).toLocaleString()}</p><p className={`text-[10px] mt-1 ${quantity === 0 ? 'text-red-600' : quantity <= 5 ? 'text-amber-700' : 'text-emerald-700'}`}>{quantity === 0 ? 'Out of stock' : quantity <= 5 ? 'Low stock' : 'Healthy stock'}</p></div>;
+}
 
-  const [search, setSearch]           = useState(q || '');
-  const [catFilter, setCatFilter]     = useState(category || '');
-  const [statusFilter, setStatusFilter] = useState(status || '');
-  const [selected, setSelected]       = useState([]);
-  const [bulkAction, setBulkAction]   = useState('');
+function ProductVisibility({ product, onToggle, canEdit, busy }) {
+  const style = `inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${product.is_published ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`;
+  const content = <><span className="h-1.5 w-1.5 rounded-full bg-current" />{product.is_published ? 'Published' : 'Draft'}</>;
+  return canEdit ? <button type="button" disabled={busy} onClick={() => onToggle(product)} aria-label={`${product.is_published ? 'Set to draft' : 'Publish'} ${product.name}`} className={`${style} disabled:opacity-50`}>{content}</button> : <span className={style}>{content}</span>;
+}
 
-  const handleFilter = (overrides = {}) => {
-    router.get('/admin/products', { q: search, category: catFilter, status: statusFilter, ...overrides }, { preserveState: true });
+export default function ProductsIndex({ products, categories = [], suppliers = [], filters = {}, summary = {}, canEdit = false, canDelete = false }) {
+  const { url, props } = usePage();
+  const currency = props.app?.currency_symbol || '৳';
+  const money = value => `${currency}${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  const initial = { q: '', category: '', supplier: '', status: '', stock: '', type: '', sort: 'newest', per_page: 15, ...filters };
+  const [draft, setDraft] = useState(initial); const [selected, setSelected] = useState([]); const [bulkAction, setBulkAction] = useState(''); const [busy, setBusy] = useState(false);
+  const rows = products.data || []; const resultIds = rows.map(product => product.id).join(',');
+  const canSelect = canEdit || canDelete;
+  useEffect(() => { setDraft(initial); }, [filters.q, filters.category, filters.supplier, filters.status, filters.stock, filters.type, filters.sort, filters.per_page]);
+  useEffect(() => { setSelected([]); setBulkAction(''); }, [filters.q, filters.category, filters.supplier, filters.status, filters.stock, filters.type, filters.sort, filters.per_page, products.current_page, resultIds]);
+  const options = { preserveState: true, preserveScroll: true, onStart: () => setBusy(true), onFinish: () => setBusy(false) };
+  const clearSelection = () => { setSelected([]); setBulkAction(''); };
+  const visit = overrides => { clearSelection(); router.get('/admin/products', catalogParameters({ ...initial, ...overrides }), options); };
+  const toggleSelect = id => setSelected(current => current.includes(id) ? current.filter(value => value !== id) : [...current, id]);
+  const selectedRows = rows.filter(product => selected.includes(product.id));
+  const toggleVisibility = product => router.patch(`/admin/products/${product.id}/toggle`, { is_published: !product.is_published }, options);
+  const removeProduct = product => window.showConfirm(`Delete "${product.name}" permanently?`, () => router.delete(`/admin/products/${product.id}?return_to=${encodeURIComponent(url)}`, options));
+  const bulk = () => {
+    if (!bulkAction || !selectedRows.length || busy) return;
+    const save = () => router.post('/admin/products/bulk', { ids: selectedRows.map(product => product.id), bulk_action: bulkAction }, { ...options, onSuccess: clearSelection });
+    bulkAction === 'delete' ? window.showConfirm(`Delete ${selectedRows.length} selected products permanently?`, save) : save();
   };
-
-  const toggleSelect = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  const toggleAll    = (e) => setSelected(e.target.checked ? products.data?.map(p => p.id) : []);
-
-  const handleBulk = () => {
-    if (!bulkAction || selected.length === 0) return;
-    if (bulkAction === 'delete') {
-      window.showConfirm(`Delete ${selected.length} product(s)?`, () => {
-        router.post('/admin/products/bulk', { ids: selected, bulk_action: 'delete' }, {
-          onSuccess: () => { setSelected([]); setBulkAction(''); }
-        });
-      });
-      return;
-    }
-    router.post('/admin/products/bulk', { ids: selected, bulk_action: bulkAction }, {
-      onSuccess: () => { setSelected([]); setBulkAction(''); }
-    });
-  };
-
-  const handleToggle = (productId) => router.patch(`/admin/products/${productId}/toggle`);
-  const handleDelete = (product) => {
-    window.showConfirm(`Delete "${product.name}" permanently?`, () => router.delete(`/admin/products/${product.id}`));
-  };
-
-  return (
-    <>
-      <Head title="Product Catalog" />
-      <AdminLayout title="">
-        <div className="space-y-5">
-
-          {/* ── Header ── */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Product Catalog</h1>
-              <p className="text-sm text-gray-400 mt-0.5">
-                {products.total != null ? `${products.total} products` : 'Manage your products'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <a href="/admin/inventory"
-                className="px-3.5 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors flex items-center gap-1.5">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                </svg>
-                Inventory
-              </a>
-              <a href="/admin/products/create"
-                className="px-3.5 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-colors flex items-center gap-1.5 shadow-sm shadow-orange-200">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 5v14M5 12h14"/>
-                </svg>
-                Add Product
-              </a>
-            </div>
-          </div>
-
-          {/* ── Table card ── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-
-            {/* Filters */}
-            <form onSubmit={e => { e.preventDefault(); handleFilter(); }} className="p-4 border-b border-gray-50">
-              <div className="flex flex-wrap gap-2.5 items-center">
-                <div className="relative flex-1 min-w-[220px]">
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                  </svg>
-                  <input value={search} onChange={e => setSearch(e.target.value)}
-                    placeholder="Search by name or SKU…"
-                    className="w-full border border-gray-200 rounded-xl pl-9 pr-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent" />
-                </div>
-                <select value={statusFilter}
-                  onChange={e => { setStatusFilter(e.target.value); handleFilter({ status: e.target.value }); }}
-                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-600 focus:outline-none">
-                  <option value="">All Status</option>
-                  <option value="active">Published</option>
-                  <option value="inactive">Draft</option>
-                </select>
-                <select value={catFilter}
-                  onChange={e => { setCatFilter(e.target.value); handleFilter({ category: e.target.value }); }}
-                  className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-600 focus:outline-none">
-                  <option value="">All Categories</option>
-                  {(categories || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <button type="submit"
-                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition-colors">
-                  Search
-                </button>
-                {(search || catFilter || statusFilter) && (
-                  <button type="button"
-                    onClick={() => { setSearch(''); setCatFilter(''); setStatusFilter(''); handleFilter({ q: '', category: '', status: '' }); }}
-                    className="px-3.5 py-2 text-sm text-gray-500 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors">
-                    Clear
-                  </button>
-                )}
-              </div>
-            </form>
-
-            {/* Bulk action bar */}
-            {selected.length > 0 && (
-              <div className="px-5 py-3 border-b border-gray-50 bg-orange-50 flex flex-wrap items-center gap-3">
-                <span className="text-sm font-semibold text-orange-700">{selected.length} selected</span>
-                <select value={bulkAction} onChange={e => setBulkAction(e.target.value)}
-                  className="border border-orange-200 rounded-xl px-3 py-1.5 text-sm bg-white focus:outline-none">
-                  <option value="">Choose action…</option>
-                  <option value="activate">Publish</option>
-                  <option value="deactivate">Set to Draft</option>
-                  <option value="delete">Delete</option>
-                </select>
-                <button onClick={handleBulk} disabled={!bulkAction}
-                  className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors">
-                  Apply
-                </button>
-                <button onClick={() => setSelected([])} className="text-sm text-gray-500 hover:text-gray-700 ml-auto">
-                  Clear selection
-                </button>
-              </div>
-            )}
-
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50/60">
-                    <th className="px-5 py-3 w-10">
-                      <input type="checkbox" onChange={toggleAll}
-                        checked={selected.length === products.data?.length && products.data?.length > 0}
-                        className="h-4 w-4 accent-orange-500 rounded" />
-                    </th>
-                    {['PRODUCT DETAILS', 'TYPE', 'PRICE INFO', 'STOCK', 'STATUS', 'ACTIONS'].map(h => (
-                      <th key={h} className={`px-5 py-3 text-[11px] font-bold text-gray-400 uppercase tracking-wider text-left ${h === 'ACTIONS' ? 'text-right' : ''}`}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {(products.data || []).length === 0 ? (
-                    <tr>
-                      <td colSpan="7" className="px-5 py-16 text-center">
-                        <div className="flex flex-col items-center gap-3 text-gray-400">
-                          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="opacity-30">
-                            <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/>
-                          </svg>
-                          <p className="text-sm font-medium">No products found</p>
-                          <a href="/admin/products/create" className="text-xs text-orange-500 hover:text-orange-600 font-medium">Add your first product →</a>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (products.data || []).map(product => (
-                    <tr key={product.id}
-                      className={`hover:bg-orange-50/20 transition-colors ${selected.includes(product.id) ? 'bg-orange-50/40' : ''}`}>
-                      <td className="px-5 py-3.5">
-                        <input type="checkbox" checked={selected.includes(product.id)} onChange={() => toggleSelect(product.id)}
-                          className="h-4 w-4 accent-orange-500 rounded" />
-                      </td>
-
-                      {/* Product details */}
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          {product.primary_image
-                            ? <img
-                                src={product.primary_image.startsWith('http') ? product.primary_image : `/${product.primary_image}`}
-                                alt="" className="h-11 w-11 rounded-xl object-cover shrink-0 border border-gray-100" />
-                            : <div className="h-11 w-11 rounded-xl bg-gray-50 border border-gray-100 shrink-0 flex items-center justify-center">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="2">
-                                  <rect x="3" y="3" width="18" height="18" rx="2"/>
-                                  <circle cx="8.5" cy="8.5" r="1.5"/>
-                                  <path d="M21 15l-5-5L5 21"/>
-                                </svg>
-                              </div>
-                          }
-                          <div className="min-w-0">
-                            <p className="font-semibold text-gray-800 leading-tight truncate max-w-[200px]">{product.name}</p>
-                            {product.sku && <p className="text-[11px] text-gray-400 mt-0.5">SKU: {product.sku}</p>}
-                            {product.category?.name && <p className="text-[11px] text-gray-400">{product.category.name}</p>}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Type */}
-                      <td className="px-5 py-3.5">
-                        <TypeBadge hasVariants={product.has_variants} />
-                      </td>
-
-                      {/* Price */}
-                      <td className="px-5 py-3.5">
-                        <p className="font-bold text-gray-900">৳{Number(product.regular_price).toLocaleString()}</p>
-                        {product.sale_price > 0 && (
-                          <p className="text-xs text-orange-500 font-medium">৳{Number(product.sale_price).toLocaleString()} sale</p>
-                        )}
-                      </td>
-
-                      {/* Stock */}
-                      <td className="px-5 py-3.5">
-                        <span className={`font-semibold text-sm ${
-                          product.stock_quantity === 0 ? 'text-red-500' :
-                          product.stock_quantity <= 5 ? 'text-amber-500' : 'text-gray-800'
-                        }`}>
-                          {product.stock_quantity}
-                        </span>
-                        {product.stock_quantity === 0 && <p className="text-[10px] text-red-400 font-medium">OUT OF STOCK</p>}
-                        {product.stock_quantity > 0 && product.stock_quantity <= 5 && <p className="text-[10px] text-amber-400 font-medium">LOW STOCK</p>}
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-5 py-3.5">
-                        <StatusPill published={product.is_published} onClick={() => handleToggle(product.id)} />
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <a href={`/admin/products/${product.id}/edit`}
-                            className="px-2.5 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors">
-                            Edit
-                          </a>
-                          {canDelete && (
-                            <button onClick={() => handleDelete(product)}
-                              className="px-2.5 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-semibold transition-colors">
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {products.links && products.links.length > 3 && (
-              <div className="p-4 border-t border-gray-50 flex flex-wrap gap-1.5 items-center justify-center">
-                {products.links.map((link, i) => (
-                  link.url ? (
-                    <button key={i} onClick={() => router.get(link.url)}
-                      className={`min-w-[36px] h-9 px-3 rounded-xl text-sm font-medium transition-colors ${link.active ? 'bg-orange-500 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                      dangerouslySetInnerHTML={{ __html: link.label }} />
-                  ) : (
-                    <span key={i} className="min-w-[36px] h-9 px-3 flex items-center justify-center text-sm text-gray-300"
-                      dangerouslySetInnerHTML={{ __html: link.label }} />
-                  )
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </AdminLayout>
-    </>
-  );
+  const inventoryParams = catalogParameters({ q: initial.q, category: initial.category, supplier: initial.supplier, visibility: initial.status, stock_level: initial.stock, type: initial.type });
+  const inventoryHref = '/admin/inventory?' + new URLSearchParams(inventoryParams);
+  const editHref = product => `/admin/products/${product.id}/edit?return_to=${encodeURIComponent(url)}`;
+  const actions = product => <div className="flex flex-wrap items-center justify-end gap-2">{product.is_published && <a href={`/product/${product.url_key}`} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-orange-600">View ↗</a>}{canEdit && <a href={editHref(product)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white">Edit</a>}{canDelete && <button disabled={busy} onClick={() => removeProduct(product)} className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-600 disabled:opacity-50">Delete</button>}</div>;
+  const description = product => <div className="min-w-0 break-words"><p className="font-semibold text-slate-800 line-clamp-2 leading-snug">{canEdit ? <a href={editHref(product)} className="hover:text-orange-600">{product.name}</a> : product.name}</p><p className="text-[11px] text-gray-400 mt-1">SKU: {product.sku || 'Not set'} · {product.category?.name || 'Uncategorized'}</p><p className="text-[10px] text-gray-500 mt-1">{product.has_variants ? `${product.variants_count} variant options` : 'Simple product'}{product.brand ? ` · ${product.brand}` : ''}</p>{product.supplier && <p className="text-[10px] text-blue-600 mt-1">Supplier: {product.supplier}</p>}</div>;
+  const dirty = ['q', 'category', 'supplier', 'status', 'stock', 'type'].some(key => String(draft[key] ?? '') !== String(initial[key] ?? ''));
+  const activeFilters = ['q', 'category', 'supplier', 'status', 'stock', 'type'].some(key => initial[key] !== '' && initial[key] != null);
+  const selects = [
+    ['category', 'Category', [['', 'All categories'], ...categories.map(category => [category.id, category.name])]],
+    ['status', 'Visibility', [['', 'All visibility'], ['published', 'Published'], ['draft', 'Draft']]],
+    ['stock', 'Stock level', [['', 'All stock levels'], ['in', 'Healthy (>5)'], ['low', 'Low (1–5)'], ['out', 'Out of stock']]],
+    ['type', 'Product type', [['', 'All product types'], ['simple', 'Simple'], ['variable', 'Variable']]],
+    ['supplier', 'Supplier', [['', 'All suppliers'], ...suppliers.map(supplier => [supplier.id, supplier.name])]],
+  ];
+  return <><Head title="Product catalog" /><AdminLayout title=""><div className="space-y-5 max-w-[1600px]">
+    <header className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-[10px] uppercase tracking-widest text-orange-600 font-semibold mb-1">Catalog management</p><h1 className="text-2xl font-bold text-slate-900">Product catalog</h1><p className="text-sm text-gray-500 mt-1">Find products, review prices, and manage storefront visibility.</p></div><div className="flex gap-2"><a href={inventoryHref} className="rounded-xl bg-white border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600">Inventory</a>{canEdit && <a href={`/admin/products/create?return_to=${encodeURIComponent(url)}`} className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white">Add product</a>}</div></header>
+    <nav aria-label="Product visibility segments" className="grid grid-cols-3 gap-3">{[['', 'All products', summary.all], ['published', 'Published', summary.published], ['draft', 'Draft', summary.draft]].map(([value, label, count]) => <button key={label} type="button" disabled={busy} aria-current={initial.status === value ? 'page' : undefined} onClick={() => visit({ status: value })} className={`text-left rounded-2xl border bg-white shadow-sm p-4 disabled:opacity-50 ${initial.status === value ? 'border-orange-300 ring-1 ring-orange-100' : 'border-gray-100'}`}><p className="text-xs text-gray-500 font-semibold">{label}</p><p className="text-2xl font-bold text-slate-900 mt-2">{Number(count || 0).toLocaleString()}</p></button>)}</nav>
+    <section className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4 sm:p-5"><form onSubmit={event => { event.preventDefault(); visit(draft); }} className="space-y-4"><div className="flex flex-col sm:flex-row gap-3"><input type="search" aria-label="Search products" maxLength={200} value={draft.q} onChange={event => setDraft(current => ({ ...current, q: event.target.value }))} placeholder="Search by product name, SKU, or brand…" className="flex-1 min-w-0 rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-orange-200 focus:outline-none" /><button disabled={busy} className="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{busy ? 'Loading…' : 'Apply filters'}</button>{activeFilters && <button type="button" onClick={() => visit({ q: '', category: '', supplier: '', status: '', stock: '', type: '' })} className="text-sm text-gray-500 px-2">Reset filters</button>}</div><div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">{selects.map(([key, label, choices]) => <label key={key} className="text-xs font-medium text-gray-500">{label}<select aria-label={label} value={draft[key]} onChange={event => setDraft(current => ({ ...current, [key]: event.target.value }))} className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm">{!choices.some(([value]) => String(value) === String(draft[key])) && draft[key] !== '' && <option value={draft[key]}>Unavailable selection</option>}{choices.map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></label>)}</div><p className="text-[11px] text-gray-400">{dirty ? 'You have unapplied changes. Apply filters to update results.' : 'Search matches all entered words. Visibility counts use all other applied filters.'}</p>{Object.entries(props.errors || {}).map(([key, error]) => <p key={key} role="alert" className="text-xs text-red-600">{error}</p>)}</form></section>
+    <section className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden" aria-busy={busy}><div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-100"><h2 className="text-sm font-semibold text-gray-900">{Number(products.total || 0).toLocaleString()} {activeFilters ? 'matching' : ''} products</h2><div className="flex flex-wrap items-center gap-3"><select aria-label="Sort products" value={initial.sort} disabled={busy} onChange={event => visit({ sort: event.target.value })} className="rounded-lg border border-gray-200 px-2 py-2 text-xs"><option value="relevance">Best search match</option><option value="newest">Newest first</option><option value="updated">Recently updated</option><option value="name">Name: A–Z</option><option value="price_asc">Customer price: low to high</option><option value="price_desc">Customer price: high to low</option><option value="stock_asc">Stock: low to high</option><option value="stock_desc">Stock: high to low</option></select><label className="text-xs text-gray-500">Rows <select aria-label="Products per page" value={initial.per_page} disabled={busy} onChange={event => visit({ per_page: event.target.value })} className="ml-1 rounded-lg border border-gray-200 px-2 py-2">{[15, 30, 50, 100].map(size => <option key={size}>{size}</option>)}</select></label></div></div>
+      {canSelect && <div className={`px-4 py-3 border-b border-gray-100 flex flex-wrap items-center gap-3 ${selectedRows.length ? 'bg-orange-50' : ''}`}><label className="flex items-center gap-2 text-xs text-gray-500"><input type="checkbox" aria-label="Select products on this page" disabled={busy} checked={rows.length > 0 && selectedRows.length === rows.length} onChange={event => setSelected(event.target.checked ? rows.map(product => product.id) : [])} />{selectedRows.length ? `${selectedRows.length} selected on this page` : 'Select products on this page'}</label>{selectedRows.length > 0 && <><select aria-label="Product bulk action" value={bulkAction} onChange={event => setBulkAction(event.target.value)} className="rounded-lg border border-orange-200 bg-white px-2 py-2 text-xs"><option value="">Choose action…</option>{canEdit && <><option value="activate">Publish</option><option value="deactivate">Set to draft</option></>}{canDelete && <option value="delete">Delete</option>}</select><button disabled={!bulkAction || busy} onClick={bulk} className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Apply to selected</button><button type="button" onClick={clearSelection} className="text-xs text-gray-500 ml-auto">Clear selection</button></>}</div>}
+      {!rows.length ? <div className="py-14 text-center"><p className="text-sm font-semibold text-gray-600">No products match this view</p><p className="text-xs text-gray-400 mt-2">Try another name or SKU, or reset the filters.</p></div> : <><div className="lg:hidden divide-y divide-gray-100">{rows.map(product => <article key={product.id} className={`p-4 space-y-4 ${selected.includes(product.id) ? 'bg-orange-50/30' : ''}`}><div className="flex items-start gap-3">{canSelect && <input type="checkbox" disabled={busy} aria-label={`Select product ${product.id}`} checked={selected.includes(product.id)} onChange={() => toggleSelect(product.id)} className="mt-1 shrink-0" />}<img src={product.image_url} alt="" className="h-12 w-12 rounded-xl border border-gray-100 object-contain shrink-0" />{description(product)}</div><div className="grid grid-cols-2 gap-3"><ProductPrice product={product} money={money} /><div className="text-right"><ProductVisibility product={product} canEdit={canEdit} onToggle={toggleVisibility} busy={busy} /><div className="mt-3"><ProductStock quantity={product.stock_quantity} /></div></div></div><div className="border-t border-gray-100 pt-3 flex flex-wrap justify-between items-center gap-3"><p className="text-[10px] text-gray-400">Updated {product.updated_at || '—'}</p>{actions(product)}</div></article>)}</div>
+      <div className="hidden lg:block overflow-x-auto"><table className="w-full text-sm min-w-[900px]"><thead className="text-[10px] uppercase tracking-wide text-gray-400 bg-gray-50"><tr>{canSelect && <th className="w-10" />}{['Product', 'Customer price', 'Available stock', 'Visibility', 'Updated (Dhaka)', 'Actions'].map(label => <th key={label} className={`px-4 py-3 font-semibold ${label === 'Actions' ? 'text-right' : 'text-left'}`}>{label}</th>)}</tr></thead><tbody className="divide-y divide-gray-100">{rows.map(product => <tr key={product.id} className={`hover:bg-gray-50/50 ${selected.includes(product.id) ? 'bg-orange-50/30' : ''}`}>{canSelect && <td className="pl-4 py-4 align-top"><input type="checkbox" disabled={busy} aria-label={`Select product ${product.id}`} checked={selected.includes(product.id)} onChange={() => toggleSelect(product.id)} /></td>}<td className="px-4 py-4 max-w-sm align-top"><div className="flex gap-3"><img src={product.image_url} alt="" className="h-12 w-12 rounded-xl border border-gray-100 object-contain shrink-0" />{description(product)}</div></td><td className="px-4 py-4 align-top min-w-36"><ProductPrice product={product} money={money} /></td><td className="px-4 py-4 align-top"><ProductStock quantity={product.stock_quantity} /></td><td className="px-4 py-4 align-top"><ProductVisibility product={product} canEdit={canEdit} onToggle={toggleVisibility} busy={busy} /></td><td className="px-4 py-4 text-xs text-gray-400 align-top min-w-28">{product.updated_at || '—'}</td><td className="px-4 py-4 align-top">{actions(product)}</td></tr>)}</tbody></table></div></>}
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 p-4"><p className="text-xs text-gray-400">{products.from ? `${products.from}–${products.to} of ${Number(products.total).toLocaleString()}` : '0 results'}</p><nav aria-label="Product pagination" className="flex flex-wrap gap-1">{(products.links || []).map((link, index) => <button key={index} disabled={!link.url || busy} aria-current={link.active ? 'page' : undefined} onClick={() => { clearSelection(); router.get(link.url, {}, options); }} dangerouslySetInnerHTML={{ __html: link.label }} className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold disabled:opacity-40 ${link.active ? 'bg-orange-500 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`} />)}</nav></footer>
+    </section>
+  </div></AdminLayout></>;
 }

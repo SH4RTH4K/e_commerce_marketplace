@@ -253,16 +253,16 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('orders/{order:id}', [AdminOrderController::class, 'destroy'])->name('orders.destroy');
 
         // Catalog — explicit {model:id} binding so admin uses numeric id, not slug
-        Route::delete('products/{product:id}/images/{image}', [AdminProductController::class, 'destroyImage'])->name('products.images.destroy');
-        Route::patch('products/{product:id}/toggle', [AdminProductController::class, 'toggle'])->name('products.toggle');
+        Route::delete('products/{product:id}/images/{image}', [AdminProductController::class, 'destroyImage'])->middleware('permission:products.create')->name('products.images.destroy');
+        Route::patch('products/{product:id}/toggle', [AdminProductController::class, 'toggle'])->middleware('permission:products.create')->name('products.toggle');
         Route::post('products/bulk', [AdminProductController::class, 'bulk'])->name('products.bulk');
-        Route::get('products', [AdminProductController::class, 'index'])->name('products.index');
-        Route::get('products/create', [AdminProductController::class, 'create'])->name('products.create');
-        Route::post('products', [AdminProductController::class, 'store'])->name('products.store');
-        Route::get('products/{product:id}/edit', [AdminProductController::class, 'edit'])->name('products.edit');
-        Route::put('products/{product:id}', [AdminProductController::class, 'update'])->name('products.update');
-        Route::patch('products/{product:id}', [AdminProductController::class, 'update']);
-        Route::delete('products/{product:id}', [AdminProductController::class, 'destroy'])->name('products.destroy');
+        Route::get('products', [AdminProductController::class, 'index'])->middleware('permission:products.view')->name('products.index');
+        Route::get('products/create', [AdminProductController::class, 'create'])->middleware('permission:products.create')->name('products.create');
+        Route::post('products', [AdminProductController::class, 'store'])->middleware('permission:products.create')->name('products.store');
+        Route::get('products/{product:id}/edit', [AdminProductController::class, 'edit'])->middleware('permission:products.create')->name('products.edit');
+        Route::put('products/{product:id}', [AdminProductController::class, 'update'])->middleware('permission:products.create')->name('products.update');
+        Route::patch('products/{product:id}', [AdminProductController::class, 'update'])->middleware('permission:products.create');
+        Route::delete('products/{product:id}', [AdminProductController::class, 'destroy'])->middleware('permission:products.delete')->name('products.destroy');
         Route::get('categories/ordering', [AdminCategoryController::class, 'ordering'])->name('categories.ordering');
         Route::post('categories/ordering', [AdminCategoryController::class, 'saveOrdering'])->name('categories.save-ordering');
         Route::post('categories/bulk', [AdminCategoryController::class, 'bulk'])->name('categories.bulk');

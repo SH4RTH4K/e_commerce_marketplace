@@ -1,0 +1,95 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { test } from 'node:test';
+import vm from 'node:vm';
+import React, { act, useEffect, useState } from 'react';
+import { create } from 'react-test-renderer';
+import { router } from '@inertiajs/react';
+import { transformWithOxc } from 'vite';
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+globalThis.window = { showConfirm: (_message, callback) => callback() };
+const filename = new URL('../../resources/js/Pages/Admin/Products/Index.jsx', import.meta.url);
+const source = (await readFile(filename, 'utf8')).replace(/^import .*;\r?\n/gm, '').replaceAll('export default function', 'function').replaceAll('export function', 'function');
+const { code } = await transformWithOxc(source, filename.pathname, { jsx: { runtime: 'classic' } });
+const product = { id: 7, name: 'Sample Speaker', sku: 'SKU-7', is_published: true, stock_quantity: 0, price: '0.00', regular_price: '500.00', sale_price: '0.00', image_url: '/storage/products/sample.jpg', url_key: 'sample-speaker-SKU-7', selling_price: '400.00', variants_count: 0, has_variants: false };
+const defaults = { products: { data: [product], total: 1, current_page: 1, links: [] }, filters: { q: 'Speaker', category: 2, supplier: '', status: 'published', stock: '', type: '', sort: 'relevance', per_page: 15 }, canEdit: true, canDelete: false };
+
+async function mount(props = {}) {
+  const calls = []; const originals = Object.fromEntries(['get', 'patch', 'post', 'delete'].map(method => [method, router[method]]));
+  for (const method of Object.keys(originals)) router[method] = (url, data, options) => calls.push({ method, url, data: JSON.parse(JSON.stringify(data)), options });
+  const context = vm.createContext({ React, useState, useEffect, URLSearchParams, router, window: globalThis.window,
+    Head: () => null, AdminLayout: ({ children }) => React.createElement('main', {}, children),
+    usePage: () => ({ url: '/admin/products?q=Speaker&status=published&page=2', props: { app: { currency_symbol: '৳' }, errors: {} } }),
+  });
+  vm.runInContext(`${code}\nglobalThis.Component = ProductsIndex;`, context);
+  let renderer; let currentProps = { ...defaults, ...props };
+  await act(async () => { renderer = create(React.createElement(context.Component, currentProps)); });
+  return { renderer, calls,
+    change: async (element, value) => { await act(async () => element.props.onChange({ target: { value } })); },
+    click: async element => { await act(async () => element.props.onClick()); },
+    submit: async () => { await act(async () => renderer.root.findByType('form').props.onSubmit({ preventDefault() {} })); },
+    select: async id => { await act(async () => renderer.root.findAllByProps({ 'aria-label': `Select product ${id}` })[0].props.onChange()); },
+    update: async next => { currentProps = { ...currentProps, ...next }; await act(async () => renderer.update(React.createElement(context.Component, currentProps))); },
+    close: async () => { await act(async () => renderer.unmount()); for (const method of Object.keys(originals)) router[method] = originals[method]; },
+  };
+}
+
+test('search submits literal text with combined filters and no stale pagination', async () => {
+  const app = await mount();
+  try {
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Search products' }), '50% Speaker & Case');
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Stock level' }), 'out');
+    await app.submit();
+    assert.equal(app.calls[0].url, '/admin/products');
+    assert.deepEqual(app.calls[0].data, { q: '50% Speaker & Case', category: 2, status: 'published', stock: 'out', sort: 'relevance', per_page: 15 });
+    assert.equal(Object.hasOwn(app.calls[0].data, 'page'), false);
+  } finally { await app.close(); }
+});
+
+test('sorting uses the applied search and resetting removes every active filter', async () => {
+  const app = await mount();
+  try {
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Search products' }), 'Unapplied search');
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Sort products' }), 'price_asc');
+    assert.equal(app.calls[0].data.q, 'Speaker');
+    await app.click(app.renderer.root.findAllByType('button').find(button => button.children[0] === 'Reset filters'));
+    assert.deepEqual(app.calls[1].data, { sort: 'relevance', per_page: 15 });
+  } finally { await app.close(); }
+});
+
+test('server filters refresh controls and selections clear on changed results', async () => {
+  const app = await mount();
+  try {
+    await app.select(7);
+    assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Product bulk action' }).length, 1);
+    await app.update({ filters: { ...defaults.filters, q: 'New search', status: 'draft' }, products: { ...defaults.products, data: [{ ...product, id: 8 }], current_page: 2 } });
+    assert.equal(app.renderer.root.findByProps({ 'aria-label': 'Search products' }).props.value, 'New search');
+    assert.equal(app.renderer.root.findByProps({ 'aria-label': 'Visibility' }).props.value, 'draft');
+    assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Product bulk action' }).length, 0);
+    assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Select product 8' }).every(input => !input.props.checked), true);
+  } finally { await app.close(); }
+});
+
+test('publishing sends an explicit desired state and bulk actions only send current selection', async () => {
+  const app = await mount();
+  try {
+    await app.click(app.renderer.root.findAllByProps({ 'aria-label': 'Set to draft Sample Speaker' })[0]);
+    assert.equal(app.calls[0].method, 'patch'); assert.deepEqual(app.calls[0].data, { is_published: false });
+    await app.select(7); await app.change(app.renderer.root.findByProps({ 'aria-label': 'Product bulk action' }), 'deactivate');
+    await app.click(app.renderer.root.findAllByType('button').find(button => button.children[0] === 'Apply to selected'));
+    assert.deepEqual(app.calls[1].data, { ids: [7], bulk_action: 'deactivate' });
+    assert.equal(app.renderer.root.findAllByProps({ value: 'delete' }).length, 0);
+  } finally { await app.close(); }
+});
+
+test('read-only catalog shows zero customer prices without edit or publication controls', async () => {
+  const app = await mount({ canEdit: false, canDelete: false });
+  try {
+    assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Select products on this page' }).length, 0);
+    assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Set to draft Sample Speaker' }).length, 0);
+    assert.equal(app.renderer.root.findAllByType('a').some(link => String(link.props.href).includes('/edit')), false);
+    assert.ok(app.renderer.root.findAllByType('p').some(paragraph => paragraph.children.includes('৳0')));
+    assert.equal(app.renderer.root.findAllByType('img').every(image => image.props.src === '/storage/products/sample.jpg'), true);
+  } finally { await app.close(); }
+});

@@ -11,50 +11,49 @@ use App\Models\DropshipProductLink;
 use App\Models\DropshipSupplierProduct;
 use App\Support\PublicUploader;
 use App\Services\ProductPricingService;
+use App\Services\ProductCatalogService;
+use App\Models\DropshipSupplier;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ProductController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, ProductCatalogService $catalog)
     {
-        $query = Product::with('category', 'images', 'variants')->latest();
-        $term = trim((string) $request->input('q'));
-
-        if ($term !== '') {
-            $query->where(function ($q) use ($term) {
-                $q->where('name', 'like', "%{$term}%")->orWhere('sku', 'like', "%{$term}%");
-            });
-        }
-        if ($request->filled('category')) {
-            $query->where('category_id', $request->input('category'));
-        }
-        if ($request->filled('status')) {
-            $query->where('is_published', $request->input('status') === 'active');
-        }
-
+        $filters = $catalog->filters($request);
+        $query = $catalog->query($filters);
+        $totals = (clone $query)->selectRaw('COUNT(*) AS total, SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END) AS published, SUM(CASE WHEN is_published = 0 THEN 1 ELSE 0 END) AS draft')->first();
+        $catalog->visibility($query, $filters['status']);
+        $catalog->sort($query, $filters);
         return Inertia::render('Admin/Products/Index', [
-            'products'   => $query->paginate(15)->withQueryString()->through(fn($p) => [
-                'id' => $p->id, 'name' => $p->name, 'sku' => $p->sku, 'is_published' => $p->is_published,
-                'regular_price' => $p->regular_price, 'sale_price' => $p->sale_price,
-                'stock_quantity' => $p->stock_quantity,
-                'has_variants' => $p->variants->isNotEmpty(),
-                'category' => $p->category ? ['name' => $p->category->name] : null,
-                'primary_image' => $p->images->where('is_primary', true)->first()?->path,
-            ]),
+            'products' => $query->with('category', 'images', 'supplierLinks.supplierProduct.supplier')->withCount('variants')
+                ->paginate($filters['per_page'])->appends($catalog->parameters($filters))->through(fn ($product) => [
+                    'id' => $product->id, 'name' => $product->name, 'sku' => $product->sku, 'brand' => $product->brand,
+                    'url_key' => $product->url_key, 'is_published' => $product->is_published,
+                    'price' => $product->sale_price ?? $product->regular_price, 'regular_price' => $product->regular_price, 'sale_price' => $product->sale_price,
+                    ...app(ProductPricingService::class)->inventoryDetails($product),
+                    'stock_quantity' => (int) $product->stock_quantity, 'has_variants' => $product->variants_count > 0,
+                    'variants_count' => (int) $product->variants_count, 'image_url' => $product->imageUrl(),
+                    'category' => $product->category ? ['name' => $product->category->name] : null,
+                    'supplier' => $product->supplierLinks->first()?->supplierProduct?->supplier?->name,
+                    'updated_at' => $product->updated_at?->setTimezone('Asia/Dhaka')->format('d M Y, h:i A'),
+                ]),
             'categories' => Category::orderBy('name')->get(['id', 'name']),
-            'q'          => $term,
-            'category'   => $request->input('category'),
-            'status'     => $request->input('status'),
+            'suppliers' => DropshipSupplier::whereHas('products.productLink')->orderBy('name')->get(['id', 'name']),
+            'filters' => $filters, 'q' => $filters['q'], 'category' => $filters['category'], 'status' => $filters['status'],
+            'summary' => ['all' => (int) $totals->total, 'published' => (int) $totals->published, 'draft' => (int) $totals->draft],
+            'canEdit' => $request->user()->hasPermission('products.create'), 'canDelete' => $request->user()->hasPermission('products.delete'),
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
         return Inertia::render('Admin/Products/Form', [
             'product'    => ['is_published' => true, 'regular_price' => 0, 'stock_quantity' => 0, 'specifications' => [], 'variants' => [], 'images' => []],
             'categories' => Category::orderBy('name')->get(['id', 'name']),
+            'returnTo' => ProductCatalogService::returnUrl($request->input('return_to')),
         ]);
     }
 
@@ -71,10 +70,10 @@ class ProductController extends Controller
         $this->syncVariants($product, $request);
         $this->storeImages($product, $request);
 
-        return redirect()->route('admin.products.edit', $product)->with('status', 'Product created.');
+        return redirect()->route('admin.products.edit', ['product' => $product->id, ...($request->filled('return_to') ? ['return_to' => ProductCatalogService::returnUrl($request->input('return_to'))] : [])])->with('status', 'Product created.');
     }
 
-    public function edit(Product $product)
+    public function edit(Request $request, Product $product)
     {
         $product->load('images', 'variants');
 
@@ -115,6 +114,7 @@ class ProductController extends Controller
             ]),
             'categories' => Category::orderBy('name')->get(['id', 'name']),
             'pricing' => app(ProductPricingService::class)->context($product),
+            'returnTo' => ProductCatalogService::returnUrl($request->input('return_to')),
         ]);
     }
 
@@ -143,19 +143,20 @@ class ProductController extends Controller
         $this->syncVariants($product, $request);
         $this->storeImages($product, $request);
 
-        return redirect()->route('admin.products.edit', $product)->with('status', 'Product updated.');
+        return redirect()->route('admin.products.edit', ['product' => $product->id, ...($request->filled('return_to') ? ['return_to' => ProductCatalogService::returnUrl($request->input('return_to'))] : [])])->with('status', 'Product updated.');
     }
 
-    public function destroy(Product $product)
+    public function destroy(Request $request, Product $product)
     {
         $product->delete();
 
-        return redirect()->route('admin.products.index')->with('status', 'Product deleted.');
+        return redirect(ProductCatalogService::returnUrl($request->input('return_to')))->with('status', 'Product deleted.');
     }
 
-    public function toggle(Product $product)
+    public function toggle(Request $request, Product $product)
     {
-        $product->update(['is_published' => ! $product->is_published]);
+        $data = $request->validate(['is_published' => ['sometimes', 'required', 'boolean']]);
+        $product->update(['is_published' => $data['is_published'] ?? ! $product->is_published]);
 
         return back()->with(
             'status',
@@ -167,28 +168,33 @@ class ProductController extends Controller
 
     public function bulk(Request $request)
     {
+        abort_unless($request->user()->hasPermission('products.create') || $request->user()->hasPermission('products.delete'), 403);
         $data = $request->validate([
-            'ids'         => ['required', 'array', 'min:1'],
-            'ids.*'       => ['integer', 'exists:products,id'],
+            'ids'         => ['required', 'array', 'min:1', 'max:100'],
+            'ids.*'       => ['integer', 'distinct', 'exists:products,id'],
             'bulk_action' => ['required', 'in:activate,deactivate,delete'],
         ]);
 
+        abort_unless($request->user()->hasPermission($data['bulk_action'] === 'delete' ? 'products.delete' : 'products.create'), 403);
         $ids = $data['ids'];
         $count = count($ids);
 
         if ($data['bulk_action'] === 'activate') {
             Product::whereIn('id', $ids)->update(['is_published' => true]);
+            Cache::forget('sitemap_urls');
 
             return back()->with('status', "{$count} product(s) set to Active.");
         }
 
         if ($data['bulk_action'] === 'deactivate') {
             Product::whereIn('id', $ids)->update(['is_published' => false]);
+            Cache::forget('sitemap_urls');
 
             return back()->with('status', "{$count} product(s) set to Inactive.");
         }
 
         Product::whereIn('id', $ids)->delete();
+        Cache::forget('sitemap_urls');
 
         return back()->with('status', "{$count} product(s) deleted.");
     }
