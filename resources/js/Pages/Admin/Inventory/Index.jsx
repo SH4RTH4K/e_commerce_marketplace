@@ -1,310 +1,107 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { StockAdjustmentDialog, AdjustmentHistoryDialog, ResumeStockSyncDialog } from '@/Components/Admin/InventoryDialogs';
 
-// ─── Icon helper ──────────────────────────────────────────────────────────────
-function Icon({ d, size = 15, className = '' }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 ${className}`}>
-      <path d={d} />
-    </svg>
-  );
+const inputClass = 'w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200';
+function Icon({ path, className = 'w-4 h-4' }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={path} /></svg>;
 }
-
-// ─── Summary Stat Card ─────────────────────────────────────────────────────────
-function SummaryCard({ label, value, color, iconD, href }) {
-  return (
-    <a href={href} aria-label={`Filter inventory by ${label}`} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-3 hover:border-orange-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-300 transition-all">
-      <div className="p-2.5 rounded-xl shrink-0" style={{ background: `${color}18` }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d={iconD} />
-        </svg>
-      </div>
-      <div>
-        <p className="text-xl font-bold text-gray-900">{value}</p>
-        <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium">{label}</p>
-      </div>
-    </a>
-  );
+function StockBadge({ quantity }) {
+  const label = quantity === 0 ? 'Out of stock' : quantity <= 5 ? 'Low stock' : 'Healthy stock';
+  return <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium px-2.5 py-1 rounded-full ${quantity === 0 ? 'bg-red-50 text-red-700' : quantity <= 5 ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-700'}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{label}</span>;
 }
-
-// ─── Stock Alert Badge ────────────────────────────────────────────────────────
-function StockAlert({ qty }) {
-  if (qty <= 0)  return <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-full bg-red-50 text-red-600 border border-red-200"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />OUT OF STOCK</span>;
-  if (qty <= 5)  return <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-full bg-amber-50 text-amber-600 border border-amber-200"><span className="w-1.5 h-1.5 rounded-full bg-amber-400" />LOW STOCK</span>;
-  return              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-full bg-green-50 text-green-700 border border-green-200"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />IN STOCK</span>;
-}
-
-// ─── Inline stock editor ──────────────────────────────────────────────────────
-function StockEditor({ product }) {
-  const [editing, setEditing] = useState(false);
-  const [val, setVal]         = useState(String(product.stock_quantity ?? 0));
-
-  const save = () => {
-    router.patch(`/admin/inventory/${product.id}/stock`, { stock_quantity: parseInt(val, 10) }, {
-      preserveScroll: true,
-      onSuccess: () => setEditing(false),
-    });
-  };
-
-  if (editing) {
-    return (
-      <div className="flex items-center gap-1.5">
-        <input type="number" value={val} onChange={e => setVal(e.target.value)} min="0"
-          className="w-20 border border-orange-300 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-orange-300 text-center"
-          onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
-          autoFocus
-        />
-        <button onClick={save} className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-lg transition-colors">✓</button>
-        <button onClick={() => setEditing(false)} className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-500 text-xs rounded-lg transition-colors">✗</button>
-      </div>
-    );
-  }
-
-  return (
-    <button onClick={() => setEditing(true)}
-      className="text-sm font-bold text-gray-800 hover:text-orange-600 flex items-center gap-1.5 group transition-colors">
-      {product.stock_quantity ?? 0}
-      <Icon d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" size={11} className="text-gray-300 group-hover:text-orange-400 transition-colors" />
-    </button>
-  );
-}
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
-export default function InventoryIndex({ products, categories, q, category, stock_level, visibility, order, summary }) {
+export default function InventoryIndex({ products, categories = [], suppliers = [], q = '', category = '', supplier = '', stock_level = '', visibility = '', source = '', type = '', order = 'stock_asc', per_page = 20, summary = {}, matching_units = 0, can_adjust = false }) {
   const { props } = usePage();
-  const sym = props.app?.currency_symbol || '৳';
-
-  const [search, setSearch]     = useState(q || '');
-  const [catFilter, setCatFilter] = useState(category || '');
-  const [levelFilter, setLevelFilter] = useState(stock_level || '');
-  const [visibilityFilter, setVisibilityFilter] = useState(visibility || '');
-  const [orderFilter, setOrderFilter] = useState(order || 'stock_asc');
-
-  const handleFilter = (overrides = {}) => {
-    router.get('/admin/inventory', { q: search, category: catFilter, stock_level: levelFilter, visibility: visibilityFilter, order: orderFilter, ...overrides }, { preserveState: true });
+  const currency = props.app?.currency_symbol || '৳';
+  const price = value => value == null ? '—' : `${currency}${Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+  const applied = { q, category: category || '', supplier: supplier || '', stock_level, visibility, source, type, order, per_page };
+  const [filters, setFilters] = useState(applied);
+  const [selected, setSelected] = useState([]); const [dialog, setDialog] = useState(null); const [loading, setLoading] = useState(false);
+  const rows = products.data || [];
+  useEffect(() => { setFilters(applied); setSelected([]); }, [q, category, supplier, stock_level, visibility, source, type, order, per_page, products.current_page]);
+  const visit = (overrides = {}) => {
+    setSelected([]);
+    const parameters = Object.fromEntries(Object.entries({ ...filters, ...overrides }).filter(([, value]) => value !== '' && value != null));
+    router.get('/admin/inventory', parameters, { preserveState: true, preserveScroll: true, onStart: () => setLoading(true), onFinish: () => setLoading(false) });
   };
-
-  const clearFilters = () => {
-    setSearch('');
-    setCatFilter('');
-    setLevelFilter('');
-    setVisibilityFilter('');
-    setOrderFilter('stock_asc');
-    router.get('/admin/inventory');
-  };
-
-  const hasFilters = Boolean(search || catFilter || levelFilter || visibilityFilter || orderFilter !== 'stock_asc');
-
-  const outCount = summary?.out_stock ?? (products.data || []).filter(p => (p.stock_quantity ?? 0) <= 0).length;
-  const lowCount = summary?.low_stock ?? (products.data || []).filter(p => (p.stock_quantity ?? 0) > 0 && (p.stock_quantity ?? 0) <= 5).length;
-
-  return (
-    <>
-      <Head title="Stock & Inventory Master" />
-      <AdminLayout title="">
-        <div className="space-y-5">
-
-          {/* ── Page Header ── */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Stock &amp; Inventory Master</h1>
-              <p className="text-sm text-gray-400 mt-0.5">Monitor, filter, and quick-edit product stock levels.</p>
-            </div>
-            <a href="/admin/products/create"
-              className="px-3.5 py-2 text-sm font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-colors flex items-center gap-1.5 shadow-sm shadow-orange-200 self-start sm:self-auto">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
-              Add Product
-            </a>
+  const filtered = !!(q || category || supplier || stock_level || visibility || source || type);
+  const selectedRows = rows.filter(product => selected.includes(product.id));
+  const exportUrl = '/admin/inventory/export?' + new URLSearchParams(Object.fromEntries(Object.entries(applied).filter(([, value]) => value !== '' && value != null))).toString();
+  const onSaved = () => { setDialog(null); setSelected([]); };
+  const cards = [
+    { label: 'All products', value: summary.total, level: '', color: 'text-slate-900', note: `${Number(summary.units || 0).toLocaleString()} units available` },
+    { label: 'Healthy stock', value: summary.in_stock, level: 'in', color: 'text-emerald-700', note: 'More than 5 units' },
+    { label: 'Low stock', value: summary.low_stock, level: 'low', color: 'text-amber-700', note: '1–5 units · review replenishment' },
+    { label: 'Out of stock', value: summary.out_stock, level: 'out', color: 'text-red-700', note: '0 units · unavailable to order' },
+  ];
+  const selects = [
+    ['category', 'Category', [['', 'All categories'], ...categories.map(item => [item.id, item.name])]],
+    ['stock_level', 'Stock level', [['', 'All stock levels'], ['in', 'Healthy (>5)'], ['low', 'Low stock (1–5)'], ['out', 'Out of stock']]],
+    ['visibility', 'Visibility', [['', 'All visibility'], ['published', 'Published'], ['draft', 'Draft']]],
+    ['source', 'Stock source', [['', 'All stock sources'], ['local', 'Local inventory'], ['supplier', 'Supplier synced'], ['manual', 'Supplier · manual stock']]],
+    ['supplier', 'Supplier', [['', 'All suppliers'], ...suppliers.map(item => [item.id, item.name])]],
+    ['type', 'Product type', [['', 'All product types'], ['simple', 'Simple'], ['variable', 'Variable']]],
+  ];
+  return <>
+    <Head title="Inventory" />
+    <AdminLayout title="Inventory">
+      <div className="space-y-5 max-w-[1600px]">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div><p className="text-[11px] text-orange-600 font-semibold uppercase tracking-widest mb-1">Catalog operations</p><h1 className="text-2xl font-bold text-slate-900">Inventory overview</h1><p className="text-sm text-gray-500 mt-1">Review availability, manage stock, and track manual adjustments.</p></div>
+          <div className="flex flex-wrap gap-2">
+            <a href={exportUrl} className="inline-flex gap-2 items-center px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50"><Icon path="M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4" />Export CSV</a>
+            {can_adjust && <a href="/admin/products/create" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold"><Icon path="M12 5v14M5 12h14" />Add product</a>}
           </div>
-
-          {/* ── Summary cards ── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <SummaryCard label="Total Products" value={(summary?.total ?? 0).toLocaleString()} color="#6366f1" href="/admin/inventory"
-              iconD="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            <SummaryCard label="In Stock" value={(summary?.in_stock ?? 0).toLocaleString()} color="#10b981" href="/admin/inventory?stock_level=in"
-              iconD="M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3" />
-            <SummaryCard label="Low Stock" value={lowCount.toLocaleString()} color="#f59e0b" href="/admin/inventory?stock_level=low"
-              iconD="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-            <SummaryCard label="Out of Stock" value={outCount.toLocaleString()} color="#ef4444" href="/admin/inventory?stock_level=out"
-              iconD="M18 6L6 18M6 6l12 12" />
-          </div>
-
-          {/* ── Filter Bar ── */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <form onSubmit={e => { e.preventDefault(); handleFilter(); }}>
-              <div className="flex flex-wrap gap-2.5 items-center">
-                <div className="relative flex-1 min-w-[200px]">
-                  <Icon d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input value={search} onChange={e => setSearch(e.target.value)}
-                    placeholder="Search by name, code or SKU..."
-                    className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-                </div>
-                <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
-                  className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none bg-white text-gray-600 min-w-[150px]">
-                  <option value="">All Categories</option>
-                  {(categories || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <select value={levelFilter} onChange={e => setLevelFilter(e.target.value)}
-                  className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none bg-white text-gray-600 min-w-[160px]">
-                  <option value="">All Stock Levels</option>
-                  <option value="out">Out of Stock</option>
-                  <option value="low">Low Stock (≤5)</option>
-                  <option value="in">In Stock (&gt;5)</option>
-                </select>
-                <select value={visibilityFilter} onChange={e => setVisibilityFilter(e.target.value)}
-                  className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none bg-white text-gray-600 min-w-[145px]">
-                  <option value="">All Visibility</option>
-                  <option value="published">Published</option>
-                  <option value="draft">Draft</option>
-                </select>
-                <select value={orderFilter} onChange={e => setOrderFilter(e.target.value)}
-                  className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none bg-white text-gray-600 min-w-[175px]">
-                  <option value="stock_asc">Stock: Low to High</option>
-                  <option value="stock_desc">Stock: High to Low</option>
-                  <option value="updated">Recently Updated</option>
-                  <option value="name_asc">Name: A to Z</option>
-                  <option value="name_desc">Name: Z to A</option>
-                  <option value="price_asc">Price: Low to High</option>
-                  <option value="price_desc">Price: High to Low</option>
-                </select>
-                <button type="submit"
-                  className="flex items-center gap-1.5 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm shadow-orange-200">
-                  <Icon d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" size={13} />
-                  Apply
-                </button>
-                {hasFilters && <button type="button" onClick={clearFilters} className="px-3 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700">Clear</button>}
-              </div>
-            </form>
-          </div>
-
-          {/* ── Table ── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50/70 border-b border-gray-100">
-                    {['PRODUCT INFO', 'CATEGORY', 'SKU', 'TYPE', 'BASE PRICE', 'CURRENT STOCK', 'STATUS ALERT', 'ACTIONS'].map(h => (
-                      <th key={h} className={`px-4 py-3.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-left ${h === 'ACTIONS' ? 'text-right' : ''}`}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {(products.data || []).length === 0 ? (
-                    <tr>
-                      <td colSpan="8" className="px-5 py-16 text-center">
-                        <div className="flex flex-col items-center gap-3 text-gray-300">
-                          <Icon d="M9 17H5a2 2 0 00-2 2M9 17h6M9 17V5a2 2 0 012-2h2a2 2 0 012 2v12m0 0h4a2 2 0 012 2" size={40} />
-                          <p className="text-gray-400 text-sm">No products match your filter.</p>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (products.data || []).map(product => {
-                    const isVariable = product.has_variants || product.product_type === 'variable';
-                    const qty = product.stock_quantity ?? 0;
-
-                    return (
-                      <tr key={product.id} className={`hover:bg-gray-50/50 transition-colors ${qty <= 0 ? 'bg-red-50/20' : qty <= 5 ? 'bg-amber-50/20' : ''}`}>
-
-                        {/* Product Info */}
-                        <td className="px-4 py-3.5">
-                          <div className="flex items-center gap-3">
-                            {product.primary_image
-                              ? <img src={product.primary_image.startsWith('http') ? product.primary_image : `/${product.primary_image}`}
-                                  alt="" className="h-10 w-10 rounded-xl object-cover border border-gray-100 shrink-0" />
-                              : <div className="h-10 w-10 rounded-xl bg-gray-100 shrink-0 flex items-center justify-center">
-                                  <Icon d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" size={14} className="text-gray-300" />
-                                </div>
-                            }
-                            <div>
-                              <p className="font-semibold text-gray-800 text-sm leading-tight">{product.name}</p>
-                              {product.is_published
-                                ? <span className="text-[10px] text-green-600 font-semibold">● Published</span>
-                                : <span className="text-[10px] text-gray-400 font-semibold">○ Draft</span>
-                              }
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* Category */}
-                        <td className="px-4 py-3.5 text-xs text-gray-500">{product.category?.name || '—'}</td>
-
-                        {/* SKU */}
-                        <td className="px-4 py-3.5">
-                          <span className="text-xs font-mono text-gray-600 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-lg">
-                            {product.sku || '—'}
-                          </span>
-                        </td>
-
-                        {/* Type */}
-                        <td className="px-4 py-3.5">
-                          <span className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded-lg ${isVariable ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
-                            {isVariable ? 'VARIABLE' : 'SIMPLE'}
-                          </span>
-                        </td>
-
-                        {/* Price */}
-                        <td className="px-4 py-3.5 font-bold text-gray-900 text-sm">
-                          {sym}{Number(product.regular_price).toLocaleString()}
-                        </td>
-
-                        {/* Current Stock (editable) */}
-                        <td className="px-4 py-3.5">
-                          <StockEditor product={product} />
-                        </td>
-
-                        {/* Status Alert */}
-                        <td className="px-4 py-3.5">
-                          <StockAlert qty={qty} />
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-4 py-3.5 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <a href={`/admin/products/${product.id}/edit`}
-                              className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-orange-50 rounded-lg transition-colors">
-                              <Icon d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" size={14} />
-                            </a>
-                            <a href={`/product/${product.url_key || product.slug || product.id}`} target="_blank" rel="noreferrer"
-                              className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
-                              <Icon d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" size={14} />
-                            </a>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            {products.links && products.links.length > 3 && (
-              <div className="p-4 border-t border-gray-50 flex flex-wrap gap-1.5 items-center justify-between">
-                <p className="text-xs text-gray-400">
-                  {products.from && `Showing ${products.from}–${products.to} of ${products.total} products`}
-                </p>
-                <div className="flex gap-1.5">
-                  {products.links.map((link, i) => (
-                    link.url ? (
-                      <button key={i} onClick={() => router.get(link.url)}
-                        className={`min-w-[34px] h-8 px-2.5 rounded-xl text-xs font-semibold transition-colors ${link.active ? 'bg-orange-500 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                        dangerouslySetInnerHTML={{ __html: link.label }} />
-                    ) : (
-                      <span key={i} className="min-w-[34px] h-8 px-2.5 flex items-center justify-center text-xs text-gray-300"
-                        dangerouslySetInnerHTML={{ __html: link.label }} />
-                    )
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
+        </header>
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+          {cards.map(card => <button key={card.label} type="button" onClick={() => visit({ stock_level: card.level })} aria-pressed={stock_level === card.level}
+            className={`text-left bg-white border rounded-2xl p-4 sm:p-5 shadow-sm transition hover:shadow-md ${stock_level === card.level ? 'border-orange-300 ring-1 ring-orange-100' : 'border-gray-100'}`}>
+            <p className="text-xs font-semibold text-gray-500">{card.label}</p><p className={`text-3xl font-bold mt-2 tabular-nums ${card.color}`}>{Number(card.value || 0).toLocaleString()}</p><p className="text-[11px] text-gray-400 mt-2 leading-relaxed">{card.note}</p>
+          </button>)}
         </div>
-      </AdminLayout>
-    </>
-  );
+        <section className="rounded-2xl border border-gray-100 bg-white shadow-sm p-4 sm:p-5">
+          <form onSubmit={event => { event.preventDefault(); visit(); }} className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <label className="flex-1"><span className="sr-only">Search inventory</span><input type="search" placeholder="Search product name or SKU…" value={filters.q} onChange={event => setFilters(current => ({ ...current, q: event.target.value }))} className={inputClass} /></label>
+              <button disabled={loading} className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl disabled:opacity-50">{loading ? 'Loading…' : 'Apply filters'}</button>
+              {filtered && <button type="button" onClick={() => { setSelected([]); router.get('/admin/inventory'); }} className="px-3 py-2.5 text-gray-500 text-sm hover:text-gray-900">Reset filters</button>}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">{selects.map(([key, label, options]) => <label key={key} className="text-xs font-medium text-gray-500">{label}<select value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value }))} className={`${inputClass} mt-1.5`}>{options.map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></label>)}</div>
+            <div className="flex flex-wrap justify-between items-center gap-3 border-t border-gray-100 pt-3">
+              <p className="text-xs text-gray-400">Overview cards use all filters except stock level.</p>
+              <button type="button" onClick={() => visit({ stock_level: 'out', visibility: 'published' })} className="text-xs font-semibold text-orange-600 hover:underline">Review published products with no stock →</button>
+            </div>
+          </form>
+        </section>
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden" aria-busy={loading}>
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-100">
+            <div><h2 className="font-semibold text-gray-900">{Number(products.total || 0).toLocaleString()} {filtered ? 'matching' : ''} products</h2><p className="text-xs text-gray-400 mt-1">{Number(matching_units).toLocaleString()} units in this view</p></div>
+            <div className="flex items-center gap-3"><label className="sr-only" htmlFor="inventory-sort">Sort inventory</label><select id="inventory-sort" value={filters.order} onChange={event => { setFilters(current => ({ ...current, order: event.target.value })); visit({ order: event.target.value }); }} className="border border-gray-200 rounded-lg px-2 py-2 text-xs"><option value="stock_asc">Stock: low to high</option><option value="stock_desc">Stock: high to low</option><option value="updated">Recently updated</option><option value="name_asc">Name: A–Z</option><option value="name_desc">Name: Z–A</option><option value="price_asc">Customer price: low to high</option><option value="price_desc">Customer price: high to low</option></select>
+              <label className="text-xs text-gray-500">Rows <select value={filters.per_page} onChange={event => { setFilters(current => ({ ...current, per_page: event.target.value })); visit({ per_page: event.target.value }); }} className="ml-1 border border-gray-200 rounded-lg px-2 py-2"><option>20</option><option>50</option><option>100</option></select></label>
+            </div>
+          </div>
+          {selectedRows.length > 0 && <div className="flex items-center justify-between gap-3 bg-orange-50 border-b border-orange-100 px-4 py-3"><span className="text-sm font-semibold text-orange-900">{selectedRows.length} selected on this page</span><div className="flex gap-3"><button onClick={() => setSelected([])} className="text-xs text-orange-700">Clear selection</button><button onClick={() => setDialog({ type: 'adjust', products: selectedRows })} className="bg-orange-500 text-white rounded-lg px-3 py-2 text-xs font-semibold">Adjust selected stock</button></div></div>}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[850px]">
+              <thead className="bg-gray-50/80 text-gray-500 text-[11px] uppercase tracking-wide"><tr>{can_adjust && <th className="pl-4 py-3 w-10"><input type="checkbox" aria-label="Select this page" checked={rows.length > 0 && selectedRows.length === rows.length} onChange={event => setSelected(event.target.checked ? rows.map(product => product.id) : [])} /></th>}{['Product', 'Customer price', 'Available stock', 'Stock source', 'Updated', 'Actions'].map(label => <th key={label} className={`px-4 py-3 text-left font-semibold ${label === 'Actions' ? 'text-right' : ''}`}>{label}</th>)}</tr></thead>
+              <tbody className="divide-y divide-gray-100">{!rows.length ? <tr><td colSpan={can_adjust ? 7 : 6} className="py-16 text-center"><p className="font-semibold text-gray-600">No products found</p><p className="text-sm text-gray-400 mt-1">Try a different search or reset the filters.</p></td></tr> : rows.map(product => <tr key={product.id} className={`hover:bg-gray-50/60 ${selected.includes(product.id) ? 'bg-orange-50/30' : ''}`}>
+                {can_adjust && <td className="pl-4 py-4"><input type="checkbox" aria-label={`Select ${product.name}`} checked={selected.includes(product.id)} onChange={event => setSelected(current => event.target.checked ? [...current, product.id] : current.filter(id => id !== product.id))} /></td>}
+                <td className="px-4 py-4 max-w-sm"><div className="flex items-start gap-3"><img src={product.image_url} alt="" className="w-12 h-12 object-contain rounded-xl border border-gray-100 bg-gray-50 shrink-0" /><div className="min-w-0">{can_adjust ? <a href={`/admin/products/${product.id}/edit`} className="font-semibold text-slate-800 hover:text-orange-600 leading-snug line-clamp-2">{product.name}</a> : <p className="font-semibold text-slate-800 leading-snug line-clamp-2">{product.name}</p>}<p className="text-xs text-gray-400 mt-1">SKU: {product.sku || '—'} · {product.category?.name || 'Uncategorized'}</p><div className="flex gap-2 items-center mt-1.5 text-[10px]"><span className={product.is_published ? 'text-emerald-700' : 'text-gray-400'}>{product.is_published ? 'Published' : 'Draft'}</span><span className="text-gray-300">·</span><span className="text-gray-500">{product.has_variants ? `${product.variants_count} variant options` : 'Simple product'}</span></div></div></div></td>
+                <td className="px-4 py-4 align-top whitespace-nowrap"><p className="font-bold text-slate-900 tabular-nums">{price(product.price)}</p>{product.sale_price != null && Number(product.sale_price) < Number(product.regular_price) && <p className="text-xs text-gray-400 line-through">{price(product.regular_price)}</p>}<details className="mt-2 text-xs"><summary className="cursor-pointer text-gray-400 hover:text-orange-600">Price details</summary><dl className="space-y-1 mt-2 text-gray-500">{[['Regular', product.regular_price], ['Selling', product.selling_price], ['Discounted', product.sale_price], ['Minimum', product.minimum_price], ['Maximum', product.maximum_price]].map(([label, value]) => <div key={label} className="flex justify-between gap-3"><dt>{label}</dt><dd>{price(value)}</dd></div>)}</dl></details></td>
+                <td className="px-4 py-4 align-top"><p className="text-xl font-bold text-slate-800 tabular-nums mb-1.5">{Number(product.stock_quantity).toLocaleString()}</p><StockBadge quantity={product.stock_quantity} /></td>
+                <td className="px-4 py-4 align-top"><p className={`text-xs font-semibold ${product.stock_source === 'supplier' ? 'text-blue-700' : 'text-slate-600'}`}>{product.stock_source === 'supplier' ? 'Supplier synced' : product.stock_source === 'manual' ? 'Manual supplier stock' : 'Local inventory'}</p>{product.supplier && <p className="text-xs text-gray-400 mt-1">{product.supplier}</p>}{product.last_synced && <p className="text-[10px] text-gray-400 mt-1">Last sync: {product.last_synced}</p>}{can_adjust && product.can_resume_sync && <button onClick={() => setDialog({ type: 'resume', product })} className="text-xs text-orange-600 hover:underline mt-2">Resume supplier sync</button>}</td>
+                <td className="px-4 py-4 align-top text-xs text-gray-400 min-w-28">{product.updated_at || '—'}</td>
+                <td className="px-4 py-4 align-top text-right"><div className="flex flex-col gap-2 items-end">{can_adjust && <button onClick={() => setDialog({ type: 'adjust', products: [product] })} aria-label={`Adjust stock for ${product.name}`} className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 whitespace-nowrap">Adjust stock</button>}<button onClick={() => setDialog({ type: 'history', product })} aria-label={`Adjustment history for ${product.name}`} className="text-xs text-gray-500 hover:text-orange-600">History</button>{product.is_published && <a href={`/product/${product.url_key || product.slug}`} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-blue-600">View product ↗</a>}</div></td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+          <footer className="border-t border-gray-100 p-4 flex flex-wrap justify-between items-center gap-3"><p className="text-xs text-gray-400">{products.from ? `${products.from}–${products.to} of ${Number(products.total).toLocaleString()}` : '0 results'}</p><nav aria-label="Inventory pagination" className="flex flex-wrap gap-1">{(products.links || []).map((link, index) => <button key={index} disabled={!link.url || loading} aria-current={link.active ? 'page' : undefined} onClick={() => { setSelected([]); router.get(link.url, {}, { preserveScroll: true }); }} className={`min-w-8 px-2.5 py-1.5 rounded-lg text-xs disabled:opacity-40 ${link.active ? 'bg-orange-500 text-white font-semibold' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`} dangerouslySetInnerHTML={{ __html: link.label }} />)}</nav></footer>
+        </section>
+      </div>
+      {dialog?.type === 'adjust' && <StockAdjustmentDialog products={dialog.products} onClose={() => setDialog(null)} onSaved={onSaved} />}
+      {dialog?.type === 'history' && <AdjustmentHistoryDialog product={dialog.product} onClose={() => setDialog(null)} />}
+      {dialog?.type === 'resume' && <ResumeStockSyncDialog product={dialog.product} onClose={() => setDialog(null)} onSaved={onSaved} />}
+    </AdminLayout>
+  </>;
 }

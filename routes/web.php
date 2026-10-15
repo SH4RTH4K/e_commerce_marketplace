@@ -159,8 +159,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
 
         // Inventory
-        Route::get('inventory', [AdminInventoryController::class, 'index'])->name('inventory.index');
-        Route::patch('inventory/{product:id}/stock', [AdminInventoryController::class, 'updateStock'])->name('inventory.stock');
+        Route::get('inventory', [AdminInventoryController::class, 'index'])->middleware('permission:products.view')->name('inventory.index');
+        Route::get('inventory/export', [AdminInventoryController::class, 'export'])->middleware('permission:products.view')->name('inventory.export');
+        Route::post('inventory/adjust', [AdminInventoryController::class, 'adjust'])->middleware('permission:products.create')->name('inventory.adjust');
+        Route::get('inventory/{product:id}/history', [AdminInventoryController::class, 'history'])->middleware('permission:products.view')->name('inventory.history');
+        Route::post('inventory/{product:id}/resume-sync', [AdminInventoryController::class, 'resume'])->middleware('permission:products.create')->name('inventory.resume-sync');
+        Route::patch('inventory/{product:id}/stock', [AdminInventoryController::class, 'updateStock'])->middleware('permission:products.create')->name('inventory.stock');
 
         // Dropshipping integration (all supplier work is queued)
         Route::middleware(['dropshipping.enabled', 'permission:dropshipping.manage'])
