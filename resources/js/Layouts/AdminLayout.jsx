@@ -1,6 +1,7 @@
 import { Link, usePage, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import { orderSegments, activeOrderSegment, orderSegmentHref } from '@/lib/orderSegments';
+import { customerSegments, activeCustomerSegment } from '@/lib/customerCrm';
 
 /* ─── Nav structure ──────────────────────────────────────────────── */
 const navGroups = [
@@ -49,7 +50,7 @@ const navGroups = [
         key: 'crm-group', label: 'Customer CRM', defaultOpen: false,
         icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
         children: [
-          { key: 'customers', label: 'All Customers', href: '/admin/customers', pattern: /^\/admin\/customers/, perm: 'customers.manage' },
+          ...customerSegments.map(segment => ({ key: `customers-${segment.key}`, label: segment.label, href: segment.key === 'all' ? '/admin/customers' : `/admin/customers?segment=${segment.key}`, pattern: /^\/admin\/customers/, crmSegment: segment.key, perm: 'customers.manage' })),
           { key: 'reviews',   label: 'Customer Reviews',href: '/admin/reviews', pattern: /^\/admin\/reviews/, badge: 'pending_reviews', perm: 'reviews.manage' },
         ],
       },
@@ -204,7 +205,7 @@ function CollapsibleItem({ item, isActive, admin_badges, hasPerm, featureEnabled
   const visibleChildren = item.children.filter(c => featureEnabled(c.feature) && hasPerm(c.perm));
   if (visibleChildren.length === 0) return null;
 
-  const childActive = visibleChildren.some(c => isActive(c.pattern, c.orderSegment));
+  const childActive = visibleChildren.some(c => isActive(c.pattern, c.orderSegment, c.crmSegment));
   const [open, setOpen] = useState(item.defaultOpen || childActive);
 
   const badge = item.badge && admin_badges ? admin_badges[item.badge] : 0;
@@ -230,7 +231,7 @@ function CollapsibleItem({ item, isActive, admin_badges, hasPerm, featureEnabled
       <div hidden={!open} className={`overflow-hidden transition-all duration-200 ${open ? 'max-h-[640px] opacity-100' : 'max-h-0 opacity-0'}`}>
         <div className="ml-3 pl-3 border-l border-gray-100 space-y-0.5 mb-1">
           {visibleChildren.map(child => {
-            const active = isActive(child.pattern, child.orderSegment);
+            const active = isActive(child.pattern, child.orderSegment, child.crmSegment);
             const childBadge = child.badge && admin_badges ? admin_badges[child.badge] : 0;
             return (
               <div key={child.key}>
@@ -283,7 +284,9 @@ export default function AdminLayout({ children, title }) {
     return () => { delete window.showConfirm; };
   }, []);
 
-  const isActive = (pattern, orderSegment) => orderSegment !== undefined
+  const isActive = (pattern, orderSegment, crmSegment) => crmSegment !== undefined
+    ? activeCustomerSegment(url) === crmSegment
+    : orderSegment !== undefined
     ? activeOrderSegment(url) === orderSegment
     : pattern.test(url);
 

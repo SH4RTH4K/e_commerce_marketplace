@@ -1,137 +1,31 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { CrmPagination, crmInput } from '@/Components/Admin/CustomerCrm';
 
-export default function ReviewsIndex({ reviews, status, q, counts }) {
-  const [search, setSearch] = useState(q || '');
-  const [selected, setSelected] = useState([]);
-  const [bulkAction, setBulkAction] = useState('');
-
-  const tabs = [
-    { key: 'pending', label: 'Pending' },
-    { key: 'approved', label: 'Approved' },
-    { key: 'rejected', label: 'Rejected' },
-    { key: 'all', label: 'All' },
-  ];
-
-  const handleTab = (tab) => router.get('/admin/reviews', { status: tab, q: search }, { preserveState: true });
-  const handleFilter = () => router.get('/admin/reviews', { status, q: search }, { preserveState: true });
-
-  const toggleSelect = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  const toggleAll = (e) => setSelected(e.target.checked ? (reviews?.data || []).map(r => r.id) : []);
-
-  const handleBulk = () => {
-    if (!bulkAction || selected.length === 0) return;
-    if (bulkAction === 'delete') { window.showConfirm(`Delete ${selected.length} review(s)?`, () => { router.post('/admin/' + window.location.pathname.split('/')[2] + '/bulk', { ids: selected, bulk_action: bulkAction }, { onSuccess: () => { setSelected([]); setBulkAction(''); } }); }); return; }
-    router.post('/admin/reviews/bulk', { ids: selected, bulk_action: bulkAction }, { onSuccess: () => { setSelected([]); setBulkAction(''); } });
+export default function ReviewsIndex({ reviews, filters = {}, counts = {} }) {
+  const [draft, setDraft] = useState({ q: '', rating: '', purchase: '', ...filters });
+  const [selected, setSelected] = useState([]); const [bulkAction, setBulkAction] = useState(''); const [loading, setLoading] = useState(false);
+  const resultIds = (reviews.data || []).map(review => review.id).join(',');
+  useEffect(() => { setDraft({ q: '', rating: '', purchase: '', ...filters }); }, [filters.q, filters.rating, filters.purchase, filters.status, filters.sort, filters.per_page]);
+  useEffect(() => { setSelected([]); setBulkAction(''); }, [filters.q, filters.rating, filters.purchase, filters.status, filters.sort, filters.per_page, reviews.current_page, resultIds]);
+  const navigate = (url, data = {}) => { setSelected([]); setBulkAction(''); router.get(url, data, { preserveState: true, preserveScroll: true, onStart: () => setLoading(true), onFinish: () => setLoading(false) }); };
+  const visit = overrides => navigate('/admin/reviews', { ...filters, ...draft, ...overrides });
+  const bulk = () => {
+    if (!bulkAction || !selected.length || loading) return;
+    const action = () => router.post('/admin/reviews/bulk', { ids: selected, bulk_action: bulkAction }, { preserveScroll: true, onStart: () => setLoading(true), onFinish: () => setLoading(false), onSuccess: () => { setSelected([]); setBulkAction(''); } });
+    bulkAction === 'delete' ? window.showConfirm(`Delete ${selected.length} selected reviews? Their ratings will be removed from the products.`, action) : action();
   };
-
-  const stars = (rating) => '★'.repeat(rating) + '☆'.repeat(5 - rating);
-
-  return (
-    <>
-      <Head title="Reviews" />
-      <AdminLayout title="Reviews">
-        <div className="space-y-5">
-          {/* Tabs */}
-          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
-            {tabs.map(tab => (
-              <button key={tab.key} onClick={() => handleTab(tab.key)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${status === tab.key ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
-                {tab.label}
-                {counts?.[tab.key] > 0 && <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-orange-100 text-orange-600">{counts[tab.key]}</span>}
-              </button>
-            ))}
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <form onSubmit={e => { e.preventDefault(); handleFilter(); }} className="p-4 border-b border-gray-50 flex flex-wrap gap-3">
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search reviews…"
-                className="flex-1 min-w-[200px] border border-gray-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300" />
-              <button type="submit" className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium rounded-xl">Search</button>
-            </form>
-
-            {selected.length > 0 && (
-              <div className="px-5 py-3 border-b border-gray-50 bg-orange-50 flex flex-wrap items-center gap-3">
-                <span className="text-sm font-medium text-orange-700">{selected.length} selected</span>
-                <select value={bulkAction} onChange={e => setBulkAction(e.target.value)} className="border border-orange-200 rounded-xl px-3 py-1.5 text-sm bg-white focus:outline-none">
-                  <option value="">Choose action…</option>
-                  <option value="approve">Approve</option>
-                  <option value="reject">Reject</option>
-                  <option value="delete">Delete</option>
-                </select>
-                <button onClick={handleBulk} disabled={!bulkAction} className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-medium rounded-xl">Apply</button>
-                <button onClick={() => setSelected([])} className="text-sm text-gray-500 ml-auto">Clear</button>
-              </div>
-            )}
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50/50">
-                    <th className="px-5 py-3 w-10"><input type="checkbox" onChange={toggleAll} checked={selected.length === (reviews?.data || []).length && (reviews?.data || []).length > 0} className="h-4 w-4 accent-orange-500" /></th>
-                    {['Product', 'Author', 'Rating', 'Review', 'Status', 'Actions'].map(h => (
-                      <th key={h} className={`px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left ${h === 'Actions' ? 'text-right' : ''}`}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {(reviews?.data || []).length === 0 ? (
-                    <tr><td colSpan="7" className="px-5 py-12 text-center text-gray-400">No reviews found.</td></tr>
-                  ) : (reviews?.data || []).map(review => (
-                    <tr key={review.id} className={`hover:bg-gray-50/50 transition-colors ${selected.includes(review.id) ? 'bg-orange-50/30' : ''}`}>
-                      <td className="px-5 py-3.5"><input type="checkbox" checked={selected.includes(review.id)} onChange={() => toggleSelect(review.id)} className="h-4 w-4 accent-orange-500" /></td>
-                      <td className="px-5 py-3.5">
-                        <p className="font-medium text-gray-800 truncate max-w-[160px]">{review.product?.name || '—'}</p>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <p className="text-gray-800">{review.author_name || review.user?.name || '—'}</p>
-                        <p className="text-xs text-gray-400">{review.author_email || review.user?.email || ''}</p>
-                      </td>
-                      <td className="px-5 py-3.5 text-orange-400 text-xs tracking-wide">{stars(review.rating || 0)}</td>
-                      <td className="px-5 py-3.5">
-                        {review.title && <p className="font-medium text-gray-800 text-xs">{review.title}</p>}
-                        <p className="text-gray-500 text-xs truncate max-w-[200px]">{review.body}</p>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`px-2.5 py-1 text-xs font-medium rounded-full capitalize ${
-                          review.status === 'approved' ? 'bg-green-100 text-green-700' :
-                          review.status === 'rejected' ? 'bg-red-100 text-red-600' :
-                          'bg-amber-100 text-amber-700'
-                        }`}>{review.status}</span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {review.status !== 'approved' && (
-                            <button onClick={() => router.post(`/admin/reviews/${review.id}/approve`)} className="px-2 py-1 text-xs bg-green-50 hover:bg-green-100 text-green-700 rounded-lg font-medium transition-colors">Approve</button>
-                          )}
-                          {review.status !== 'rejected' && (
-                            <button onClick={() => router.post(`/admin/reviews/${review.id}/reject`)} className="px-2 py-1 text-xs bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg font-medium transition-colors">Reject</button>
-                          )}
-                          <button onClick={() => { window.showConfirm('Delete this review?', () => router.delete(`/admin/reviews/${review.id}`)); }}
-                            className="px-2 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-medium transition-colors">Delete</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {reviews?.links && reviews.links.length > 3 && (
-              <div className="p-4 border-t border-gray-50 flex flex-wrap gap-1.5 items-center justify-center">
-                {reviews.links.map((link, i) => (
-                  link.url ? (
-                    <button key={i} onClick={() => router.get(link.url)} className={`min-w-[36px] h-9 px-3 rounded-xl text-sm font-medium transition-colors ${link.active ? 'bg-orange-500 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`} dangerouslySetInnerHTML={{ __html: link.label }} />
-                  ) : (
-                    <span key={i} className="min-w-[36px] h-9 px-3 flex items-center justify-center text-sm text-gray-300" dangerouslySetInnerHTML={{ __html: link.label }} />
-                  )
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </AdminLayout>
-    </>
-  );
+  const tabs = [['pending', 'Pending Review'], ['approved', 'Approved'], ['rejected', 'Rejected'], ['all', 'All Reviews']];
+  return <><Head title="Customer reviews" /><AdminLayout title="Customer reviews"><div className="space-y-5 max-w-[1600px]">
+    <header><p className="text-[10px] uppercase tracking-widest text-orange-600 font-semibold mb-1">Customer feedback</p><h1 className="text-2xl font-bold text-slate-900">Review moderation</h1><p className="text-sm text-gray-500 mt-1">Read customer feedback and choose which reviews appear on the storefront.</p></header>
+    <nav aria-label="Review segments" className="flex flex-wrap gap-2">{tabs.map(([key, label]) => <button key={key} type="button" disabled={loading} onClick={() => visit({ status: key })} aria-current={filters.status === key ? 'page' : undefined} className={`rounded-xl border px-4 py-2.5 text-sm font-semibold disabled:opacity-50 ${filters.status === key ? 'border-orange-500 bg-orange-500 text-white' : 'border-gray-200 bg-white text-gray-600'}`}>{label}<span className="ml-2 text-xs opacity-70">{Number(counts[key] || 0).toLocaleString()}</span></button>)}</nav>
+    <section className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden" aria-busy={loading}>
+      <div className="p-4 sm:p-5 border-b border-gray-100"><form onSubmit={event => { event.preventDefault(); visit(); }} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"><input type="search" maxLength={200} aria-label="Search reviews" value={draft.q} onChange={event => setDraft(current => ({ ...current, q: event.target.value }))} className={crmInput} placeholder="Search customer, product, or review…" /><select aria-label="Review rating" value={draft.rating} onChange={event => setDraft(current => ({ ...current, rating: event.target.value }))} className={crmInput}><option value="">All ratings</option>{[5, 4, 3, 2, 1].map(rating => <option key={rating} value={rating}>{rating} stars</option>)}</select><select aria-label="Purchase verification" value={draft.purchase} onChange={event => setDraft(current => ({ ...current, purchase: event.target.value }))} className={crmInput}><option value="">All purchases</option><option value="verified">Verified purchase</option><option value="unverified">Unverified purchase</option></select><button disabled={loading} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">Apply filters</button></form><div className="flex flex-wrap items-center justify-between gap-3 mt-4"><p className="text-xs text-gray-400">{reviews.total || 0} reviews in this view. Counts use applied filters.</p><div className="flex items-center gap-3">{(filters.q || filters.rating || filters.purchase) && <button onClick={() => visit({ q: '', rating: '', purchase: '' })} className="text-xs text-orange-600 font-semibold">Reset filters</button>}<select aria-label="Sort reviews" value={filters.sort || 'newest'} onChange={event => visit({ sort: event.target.value })} className="rounded-lg border border-gray-200 px-2 py-2 text-xs"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="lowest">Lowest rating first</option><option value="highest">Highest rating first</option></select><label className="text-xs text-gray-500">Rows <select aria-label="Reviews per page" value={filters.per_page || 20} onChange={event => visit({ per_page: event.target.value })} className="ml-1 rounded-lg border border-gray-200 px-2 py-2"><option>20</option><option>50</option><option>100</option></select></label></div></div></div>
+      {selected.length > 0 && <div className="flex flex-wrap items-center gap-3 bg-orange-50 px-4 py-3 border-b border-orange-100"><span className="text-xs font-semibold text-orange-800">{selected.length} selected on this page</span><select aria-label="Review bulk action" value={bulkAction} onChange={event => setBulkAction(event.target.value)} className="rounded-lg border border-orange-200 px-2 py-2 text-xs bg-white"><option value="">Choose action…</option><option value="approve">Approve</option><option value="reject">Reject</option><option value="delete">Delete</option></select><button onClick={bulk} disabled={!bulkAction || loading} className="rounded-lg bg-orange-500 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Apply to selected</button><button onClick={() => { setSelected([]); setBulkAction(''); }} className="text-xs text-gray-500 ml-auto">Clear selection</button></div>}
+      <div className="px-4 py-3 border-b border-gray-100"><label className="flex items-center gap-2 text-xs text-gray-500"><input type="checkbox" aria-label="Select reviews on this page" disabled={loading} checked={reviews.data.length > 0 && selected.length === reviews.data.length} onChange={event => setSelected(event.target.checked ? reviews.data.map(review => review.id) : [])} />Select reviews on this page</label></div>
+      <div className="divide-y divide-gray-100">{!reviews.data.length ? <p className="py-14 text-center text-gray-400 text-sm">No reviews match this view.</p> : reviews.data.map(review => <article key={review.id} className={`p-4 sm:p-5 ${selected.includes(review.id) ? 'bg-orange-50/30' : ''}`}><div className="flex items-start gap-3"><input type="checkbox" aria-label={`Select review ${review.id}`} disabled={loading} checked={selected.includes(review.id)} onChange={() => setSelected(current => current.includes(review.id) ? current.filter(id => id !== review.id) : [...current, review.id])} className="mt-1 shrink-0" /><div className="flex-1 min-w-0"><div className="flex flex-wrap justify-between gap-3"><div><p className="font-semibold text-slate-800 text-sm">{review.product?.name || 'Unavailable product'}</p><p className="text-xs text-gray-500 mt-1">{review.author_name} {review.author_email && <span className="text-gray-400">· {review.author_email}</span>}</p><p className="text-[10px] text-gray-400 mt-1">{review.created_at_formatted} (Dhaka)</p></div><div className="flex flex-wrap items-center gap-2 self-start"><span aria-label={`${review.rating} out of 5 stars`} className="text-orange-400 text-sm tracking-wide">{'★'.repeat(Math.max(0, Math.min(5, review.rating || 0)))}{'☆'.repeat(5 - Math.max(0, Math.min(5, review.rating || 0)))}</span><span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${review.is_verified_purchase ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>{review.is_verified_purchase ? 'Verified purchase' : 'Unverified purchase'}</span><span className={`rounded-full px-2 py-1 text-[10px] font-semibold capitalize ${review.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : review.status === 'rejected' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'}`}>{review.status}</span></div></div>{review.title && <h3 className="text-sm font-semibold text-gray-800 mt-4">{review.title}</h3>}<p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap break-words line-clamp-3">{review.body}</p><details className="mt-2"><summary className="cursor-pointer text-xs font-semibold text-orange-600">Read full review</summary><p className="text-sm text-gray-600 mt-3 whitespace-pre-wrap break-words">{review.body}</p></details><div className="flex flex-wrap gap-2 mt-4">{review.status !== 'approved' && <button disabled={loading} onClick={() => router.post(`/admin/reviews/${review.id}/approve`, {}, { preserveScroll: true })} className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">Approve</button>}{review.status !== 'rejected' && <button disabled={loading} onClick={() => router.post(`/admin/reviews/${review.id}/reject`, {}, { preserveScroll: true })} className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Reject</button>}<button disabled={loading} onClick={() => window.showConfirm('Delete this review and remove its rating from the product?', () => router.delete(`/admin/reviews/${review.id}`, { preserveScroll: true }))} className="rounded-lg bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-500">Delete</button></div></div></div></article>)}</div>
+      <CrmPagination pagination={reviews} label="Review pagination" onVisit={url => navigate(url)} />
+    </section>
+  </div></AdminLayout></>;
 }

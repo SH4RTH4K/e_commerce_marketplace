@@ -662,7 +662,7 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
           <div className="flex flex-wrap items-center gap-3">
             <a href={returnUrl} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-              Orders
+              {returnUrl.startsWith('/admin/customers') ? 'Customer CRM' : 'Orders'}
             </a>
             <span className="text-gray-300">/</span>
             <span className="text-sm font-semibold text-gray-800">{order.order_number}</span>

@@ -10,6 +10,7 @@ import { transformWithOxc } from 'vite';
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 globalThis.window = { showConfirm() {}, open() {} };
 const segmentSource = (await readFile(new URL('../../resources/js/lib/orderSegments.js', import.meta.url), 'utf8')).replaceAll('export ', '');
+const customerSource = (await readFile(new URL('../../resources/js/lib/customerCrm.js', import.meta.url), 'utf8')).replaceAll('export ', '');
 
 async function compile(relative, component) {
   const filename = new URL(relative, import.meta.url);
@@ -31,7 +32,7 @@ async function mount(initial = {}, layout = false) {
     usePage: () => page, Head: () => null, Link: ({ children, ...props }) => React.createElement('a', props, children),
     AdminLayout: ({ children }) => React.createElement('div', {}, children),
   });
-  vm.runInContext(`${segmentSource}\n${segmentsCode}\n${layout ? layoutCode : pageCode}\nglobalThis.Component = ${layout ? 'AdminLayout' : 'OrdersIndex'}; globalThis.resolve = activeOrderSegment; globalThis.detailHref = orderDetailHref; globalThis.returnUrl = orderReturnUrl;`, context);
+  vm.runInContext(`${segmentSource}\n${customerSource}\n${segmentsCode}\n${layout ? layoutCode : pageCode}\nglobalThis.Component = ${layout ? 'AdminLayout' : 'OrdersIndex'}; globalThis.resolve = activeOrderSegment; globalThis.detailHref = orderDetailHref; globalThis.returnUrl = orderReturnUrl;`, context);
   let renderer;
   let props = { ...defaults, ...initial };
   await act(async () => { renderer = create(React.createElement(context.Component, props)); });
@@ -97,5 +98,7 @@ test('sidebar highlights exactly the requested segment even with reordered query
     assert.equal(app.returnUrl(detailUrl), listUrl);
     assert.equal(app.resolve(detailUrl), 'processing');
     assert.equal(app.returnUrl('/admin/orders/44?return_to=https%3A%2F%2Fexample.com'), '/admin/orders');
+    const profile = '/admin/customers/profiles/account-7?order_status=processing';
+    assert.equal(app.returnUrl('/admin/orders/44?return_to=' + encodeURIComponent(profile)), profile);
   } finally { await app.close(); }
 });

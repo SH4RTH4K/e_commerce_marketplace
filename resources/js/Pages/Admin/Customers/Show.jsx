@@ -1,84 +1,21 @@
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { useState } from 'react';
+import { CustomerAccountBadge, CustomerAccountDialog, CustomerNotes, CrmPagination, crmMoney } from '@/Components/Admin/CustomerCrm';
 
-export default function CustomerShow({ orders, customer }) {
-  return (
-    <>
-      <Head title={`Customer: ${customer?.customer_name || 'Details'}`} />
-      <AdminLayout title="Customer Details">
-        <div className="max-w-4xl space-y-5">
-          <a href="/admin/customers" className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 w-fit">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-            Customers
-          </a>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {/* Customer Info Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:col-span-1 flex flex-col items-center text-center space-y-4">
-              <div className="h-20 w-20 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-2xl shrink-0">
-                {(customer?.customer_name || '?')[0].toUpperCase()}
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">{customer?.customer_name}</h2>
-                <p className="text-sm text-gray-500">{customer?.customer_phone}</p>
-                {customer?.customer_email && <p className="text-sm text-gray-500 mt-0.5">{customer.customer_email}</p>}
-              </div>
-
-              <div className="w-full pt-4 border-t border-gray-50 flex justify-around text-center mt-2">
-                <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide">Orders</p>
-                  <p className="font-semibold text-gray-800 text-lg">{(orders || []).length}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-400 uppercase tracking-wide">Total Spent</p>
-                  <p className="font-semibold text-gray-800 text-lg">৳{Number((orders || []).reduce((sum, o) => sum + parseFloat(o.total || 0), 0)).toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Order History */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 md:col-span-2 overflow-hidden">
-              <div className="p-5 border-b border-gray-50 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900">Order History</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50/50">
-                      {['Order #', 'Date', 'Amount', 'Status', ''].map(h => (
-                        <th key={h} className={`px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide text-left ${h === '' ? 'text-right' : ''}`}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {(orders || []).length === 0 ? (
-                      <tr><td colSpan="5" className="px-5 py-8 text-center text-gray-400">No orders found.</td></tr>
-                    ) : (orders || []).map(order => (
-                      <tr key={order.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-5 py-3.5">
-                          <a href={`/admin/orders/${order.id}`} className="font-semibold text-gray-800 hover:text-orange-500">#{order.order_number}</a>
-                        </td>
-                        <td className="px-5 py-3.5 text-gray-500">{new Date(order.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                        <td className="px-5 py-3.5 font-medium text-gray-800">৳{Number(order.total).toLocaleString()}</td>
-                        <td className="px-5 py-3.5">
-                          <span className={`px-2 py-0.5 text-xs font-medium rounded-full capitalize ${
-                            order.status === 'delivered' ? 'bg-green-100 text-green-700' :
-                            order.status === 'cancelled' ? 'bg-red-100 text-red-600' :
-                            'bg-blue-100 text-blue-700'
-                          }`}>{order.status}</span>
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          <a href={`/admin/orders/${order.id}`} className="px-2.5 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-medium transition-colors">View</a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </AdminLayout>
-    </>
-  );
+export default function CustomerShow({ orders, customer, notes = { data: [] }, orderStatus = 'all', returnTo = '/admin/customers', canViewOrders = false }) {
+  const { url } = usePage();
+  const [accountDialog, setAccountDialog] = useState(false);
+  const stats = [['Orders placed', customer.orders_count], ['Delivered', customer.delivered_count], ['Open orders', customer.open_count], ['Cancelled', customer.cancelled_count]];
+  return <><Head title={`Customer: ${customer.customer_name}`} /><AdminLayout title="Customer profile"><div className="max-w-7xl space-y-5">
+    <a href={returnTo} className="text-sm text-gray-500 hover:text-orange-600">← Customer CRM</a>
+    <header className="rounded-2xl border border-gray-100 bg-white p-5 sm:p-6 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-4"><div className="flex gap-4"><div className="h-14 w-14 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center text-2xl font-bold shrink-0">{(customer.customer_name || '?')[0].toUpperCase()}</div><div><h1 className="text-xl font-bold text-slate-900">{customer.customer_name}</h1><div className="mt-2"><CustomerAccountBadge customer={customer} /></div><p className="text-xs text-gray-400 mt-2">{customer.first_order_at_formatted ? `Customer since ${customer.first_order_at_formatted}` : customer.registered_at_formatted ? `Registered ${customer.registered_at_formatted}` : 'Guest customer'}</p></div></div>{customer.account_id && <div className="flex gap-2"><a href={`/admin/customers/${customer.account_id}/edit?return_to=${encodeURIComponent(customer.profile_url + '?return_to=' + encodeURIComponent(returnTo))}`} className="rounded-xl border border-gray-200 px-4 py-2.5 text-xs font-semibold text-gray-700">Edit account</a><button onClick={() => setAccountDialog(true)} className="rounded-xl bg-orange-500 px-4 py-2.5 text-xs font-semibold text-white">{customer.is_active ? 'Deactivate' : 'Activate'}</button></div>}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">{stats.map(([label, count]) => <div key={label} className="rounded-xl bg-slate-50 p-3"><p className="text-[11px] text-gray-500">{label}</p><p className="mt-1 text-xl font-bold text-slate-800">{count}</p></div>)}</div>
+    </header>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5"><aside className="space-y-5"><section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"><h2 className="font-semibold text-gray-900">Contact & delivery</h2><dl className="space-y-4 text-sm mt-4">{[['Phone', customer.customer_phone], ['Email', customer.customer_email], ['Address', customer.address], ['City', customer.city], ['Postal code', customer.postal_code]].map(([label, value]) => <div key={label}><dt className="text-[11px] text-gray-400 mb-1">{label}</dt><dd className="text-gray-700 break-words">{value ? label === 'Phone' ? <a href={`tel:${value}`} className="hover:text-orange-600">{value}</a> : label === 'Email' ? <a href={`mailto:${value}`} className="hover:text-orange-600">{value}</a> : value : 'Not provided'}</dd></div>)}</dl></section><section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"><h2 className="font-semibold text-gray-900">Purchase summary</h2><p className="text-xs text-gray-400 mt-4">Delivered order value</p><p className="text-2xl font-bold text-slate-900 mt-1">{crmMoney(customer.total_spent)}</p><p className="text-xs text-gray-400 mt-3">Open order value: {crmMoney(customer.open_value)}</p><p className="text-[11px] text-gray-400 mt-3">Delivered value excludes open and cancelled orders.</p>{customer.last_order_at_formatted && <p className="text-xs text-gray-500 mt-3">Last order: {customer.last_order_at_formatted}</p>}</section></aside>
+      <div className="lg:col-span-2 space-y-5"><section className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 p-5 border-b border-gray-100"><h2 className="font-semibold text-gray-900">Order history</h2><select aria-label="Customer order status" value={orderStatus} onChange={event => router.get(customer.profile_url, { order_status: event.target.value, return_to: returnTo }, { preserveState: true, preserveScroll: true })} className="rounded-xl border border-gray-200 px-3 py-2 text-xs"><option value="all">All order statuses</option>{['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map(status => <option key={status} value={status}>{status[0].toUpperCase() + status.slice(1)}</option>)}</select></div><div className="overflow-x-auto"><table className="w-full text-sm min-w-[520px]"><thead className="bg-gray-50 text-[10px] uppercase text-gray-400"><tr>{['Order', 'Placed (Dhaka)', 'Value', 'Status', ''].map(label => <th key={label} className="px-4 py-3 text-left font-semibold">{label}</th>)}</tr></thead><tbody className="divide-y divide-gray-100">{!orders.data?.length ? <tr><td colSpan={5} className="py-10 text-center text-gray-400">{customer.orders_count ? 'No orders match this status.' : 'This customer has not placed an order yet.'}</td></tr> : orders.data.map(order => <tr key={order.id}><td className="px-4 py-4"><p className="font-semibold text-gray-800">{order.order_number}</p><p className="text-[10px] text-gray-400 mt-1 uppercase">{order.payment_method} · {order.payment_status}</p></td><td className="px-4 py-4 text-xs text-gray-500">{order.created_at_formatted}</td><td className="px-4 py-4 font-semibold text-gray-800">{crmMoney(order.total)}</td><td className="px-4 py-4"><span className={`rounded-full px-2 py-1 text-[11px] font-semibold capitalize ${order.status === 'cancelled' ? 'bg-red-50 text-red-700' : order.status === 'delivered' ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'}`}>{order.status}</span></td><td className="px-4 py-4">{canViewOrders && <a href={`/admin/orders/${order.id}?return_to=${encodeURIComponent(url)}`} className="text-xs font-semibold text-orange-600">View order</a>}</td></tr>)}</tbody></table></div><CrmPagination pagination={orders} label="Customer orders pagination" /></section>
+      <CustomerNotes customer={customer} notes={notes} returnTo={returnTo} orderStatus={orderStatus} />
+      </div></div>
+    {accountDialog && <CustomerAccountDialog customer={customer} onClose={() => setAccountDialog(false)} />}
+  </div></AdminLayout></>;
 }

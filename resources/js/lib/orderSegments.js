@@ -11,7 +11,7 @@ export const orderSegments = [
 
 export function activeOrderSegment(url) {
   const parsed = new URL(url, 'http://localhost');
-  if (/^\/admin\/orders\/\d+\/?$/.test(parsed.pathname)) return activeOrderSegment(orderReturnUrl(url));
+  if (/^\/admin\/orders\/\d+\/?$/.test(parsed.pathname)) return activeOrderSegment(orderReturnUrl(url)) || 'all';
   if (!/^\/admin\/orders\/?$/.test(parsed.pathname)) return null;
   const status = parsed.searchParams.get('status') || 'all';
   return orderSegments.some(segment => segment.key === status) ? status : 'all';
@@ -30,5 +30,7 @@ export function orderDetailHref(id, listUrl, ship = false) {
 }
 
 export function orderReturnUrl(url) {
-  return safeOrderListUrl(new URL(url, 'http://localhost').searchParams.get('return_to'));
+  const target = new URL(url, 'http://localhost').searchParams.get('return_to');
+  if (typeof target === 'string' && /^\/admin\/customers(?:\/profiles\/(?:account|phone|order)-[0-9]+)?(?:\?[^#\u0000-\u001f\u007f]*)?$/.test(target)) return target;
+  return safeOrderListUrl(target);
 }

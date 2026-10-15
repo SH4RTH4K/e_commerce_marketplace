@@ -303,11 +303,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('flash-sale/{product:id}', [AdminFlashSaleController::class, 'remove'])->name('flash-sale.remove');
 
         // Reviews
-        Route::get('reviews', [AdminReviewController::class, 'index'])->name('reviews.index');
-        Route::post('reviews/bulk', [AdminReviewController::class, 'bulk'])->name('reviews.bulk');
-        Route::post('reviews/{review}/approve', [AdminReviewController::class, 'approve'])->name('reviews.approve');
-        Route::post('reviews/{review}/reject', [AdminReviewController::class, 'reject'])->name('reviews.reject');
-        Route::delete('reviews/{review}', [AdminReviewController::class, 'destroy'])->name('reviews.destroy');
+        Route::get('reviews', [AdminReviewController::class, 'index'])->middleware('permission:reviews.manage')->name('reviews.index');
+        Route::post('reviews/bulk', [AdminReviewController::class, 'bulk'])->middleware('permission:reviews.manage')->name('reviews.bulk');
+        Route::post('reviews/{review}/approve', [AdminReviewController::class, 'approve'])->middleware('permission:reviews.manage')->name('reviews.approve');
+        Route::post('reviews/{review}/reject', [AdminReviewController::class, 'reject'])->middleware('permission:reviews.manage')->name('reviews.reject');
+        Route::delete('reviews/{review}', [AdminReviewController::class, 'destroy'])->middleware('permission:reviews.manage')->name('reviews.destroy');
 
         // Contact messages + form fields
         Route::get('messages', [AdminContactMessageController::class, 'index'])->name('contact-messages.index');
@@ -321,12 +321,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
 
         // People
-        Route::get('customers', [AdminCustomerController::class, 'index'])->name('customers.index');
-        Route::get('customers/{customer}/edit', [AdminCustomerController::class, 'edit'])->name('customers.edit');
-        Route::put('customers/{customer}', [AdminCustomerController::class, 'update'])->name('customers.update');
-        Route::patch('customers/{customer}/toggle', [AdminCustomerController::class, 'toggle'])->name('customers.toggle');
-        Route::delete('customers/{customer}', [AdminCustomerController::class, 'destroy'])->name('customers.destroy');
-        Route::get('customers/{phone}', [AdminCustomerController::class, 'show'])->name('customers.show');
+        Route::get('customers', [AdminCustomerController::class, 'index'])->middleware('permission:customers.manage')->name('customers.index');
+        Route::get('customers/{customer}/edit', [AdminCustomerController::class, 'edit'])->middleware('permission:customers.manage')->name('customers.edit');
+        Route::put('customers/{customer}', [AdminCustomerController::class, 'update'])->middleware('permission:customers.manage')->name('customers.update');
+        Route::patch('customers/{customer}/toggle', [AdminCustomerController::class, 'toggle'])->middleware('permission:customers.manage')->name('customers.toggle');
+        Route::delete('customers/{customer}', [AdminCustomerController::class, 'destroy'])->middleware('permission:customers.manage')->name('customers.destroy');
+        Route::get('customers/export', [AdminCustomerController::class, 'export'])->middleware('permission:customers.manage')->name('customers.export');
+        Route::get('customers/profiles/{key}', [AdminCustomerController::class, 'profile'])->middleware('permission:customers.manage')->name('customers.profile');
+        Route::post('customers/profiles/{key}/notes', [AdminCustomerController::class, 'note'])->middleware('permission:customers.manage')->name('customers.notes');
+        Route::get('customers/{phone}', [AdminCustomerController::class, 'show'])->middleware('permission:customers.manage')->name('customers.show');
 
         // Product card button (text + action)
         Route::get('product-button', [ProductCtaController::class, 'edit'])->name('product-cta.edit');
