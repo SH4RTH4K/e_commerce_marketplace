@@ -101,6 +101,18 @@
     box-shadow: 0 1px 0 rgb(0 0 0 / .08);
 }
 .storefront-template-template-2 .storefront-header-area + div a:hover { color: #fff !important; background: rgb(255 255 255 / .12); }
+/* Keep the selected category readable on the orange navigation bar. */
+.storefront-template-template-2 .storefront-category-nav .storefront-category-link[aria-current='true'] {
+    color: #fff !important;
+    background: #9c2f0d;
+    box-shadow: inset 0 -3px 0 #fff;
+}
+.storefront-template-template-2 .storefront-category-nav .storefront-category-link:focus-visible {
+    color: #fff !important;
+    background: #9c2f0d;
+    outline: 2px solid #fff;
+    outline-offset: -3px;
+}
 .storefront-template-template-2 .storefront-main-area { background: #f8f9fb; }
 
 /* Product detail tabs must not inherit the global CTA button color.  The
