@@ -1,12 +1,13 @@
 import AdminLayout from '@/Layouts/AdminLayout';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { orderReturnUrl } from '@/lib/orderSegments';
 import { useState, useEffect, useCallback } from 'react';
 import CourierShipModal from '@/Components/CourierShipModal';
 import AddOrderProducts from '@/Components/AddOrderProducts';
 import OrderItemDiscount from '@/Components/OrderItemDiscount';
 
 function StatusBadge({ status }) {
-  const map = { pending:'bg-amber-100 text-amber-700',confirmed:'bg-blue-100 text-blue-700',shipped:'bg-purple-100 text-purple-700',delivered:'bg-green-100 text-green-700',cancelled:'bg-red-100 text-red-700' };
+  const map = { pending:'bg-amber-100 text-amber-700',confirmed:'bg-blue-100 text-blue-700',processing:'bg-indigo-100 text-indigo-700',shipped:'bg-purple-100 text-purple-700',delivered:'bg-green-100 text-green-700',cancelled:'bg-red-100 text-red-700' };
   return <span className={`px-2.5 py-1 text-xs font-medium rounded-full capitalize ${map[status]||'bg-gray-100 text-gray-600'}`}>{status}</span>;
 }
 function PaymentBadge({ status }) {
@@ -599,6 +600,8 @@ function EditCustomerModal({ order, onClose }) {
    Main Order Show page
    ───────────────────────────────────────────────────────────────────────────── */
 export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
+  const { url } = usePage();
+  const returnUrl = orderReturnUrl(url);
   const [showCourierModal, setShowCourierModal] = useState(false);
   const [showEditCustomerModal, setShowEditCustomerModal] = useState(false);
   const bdcourierRiskLevel = resolveRiskLevel(bdcourier?._risk_level, bdcourier?._risk_label);
@@ -608,7 +611,8 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
     const params = new URLSearchParams(window.location.search);
     if (params.get('ship') === '1') {
       setShowCourierModal(true);
-      window.history.replaceState({}, '', window.location.pathname);
+      params.delete('ship');
+      window.history.replaceState({}, '', window.location.pathname + (params.size ? `?${params}` : ''));
     }
   }, []);
 
@@ -646,7 +650,7 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
   const handleVerify = () => router.post(`/admin/orders/${order.id}/verify`);
   const handleReject = () => { window.showConfirm('Reject payment?', () => router.post(`/admin/orders/${order.id}/reject`)); };
 
-  const statuses = ['pending','confirmed','shipped','delivered','cancelled'];
+  const statuses = ['pending','confirmed','processing','shipped','delivered','cancelled'];
   const paymentStatuses = ['pending','verified','rejected'];
 
   return (
@@ -656,7 +660,7 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
         <div className="max-w-5xl space-y-5">
           {/* Header */}
           <div className="flex flex-wrap items-center gap-3">
-            <a href="/admin/orders" className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
+            <a href={returnUrl} className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
               Orders
             </a>

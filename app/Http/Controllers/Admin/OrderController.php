@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\BdCourierService;
+use App\Services\OrderListService;
 use App\Models\BdCourierCheck;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -18,83 +19,15 @@ use Illuminate\Http\JsonResponse;
 
 class OrderController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, OrderListService $lists)
     {
-        $query = Order::query()->latest();
-
-        $status = $request->input('status', 'all');
-        if ($status === 'pending_verification') {
-            $query->where('payment_status', 'pending');
-        } elseif (in_array($status, Order::STATUSES, true)) {
-            $query->where('status', $status);
-        }
-
-        if ($method = $request->input('method')) {
-            if (in_array($method, Order::PAYMENT_METHODS, true)) {
-                $query->where('payment_method', $method);
-            }
-        }
-
-        if ($term = trim((string) $request->input('q'))) {
-            $query->where(function ($q) use ($term) {
-                $q->where('order_number', 'like', "%{$term}%")
-                    ->orWhere('customer_name', 'like', "%{$term}%")
-                    ->orWhere('customer_phone', 'like', "%{$term}%");
-            });
-        }
-
-        $dateFilter = $request->input('date_filter', 'all');
-        $fromDate = $request->input('from_date');
-        $toDate = $request->input('to_date');
-
-        $nowDhaka = now('Asia/Dhaka');
-
-        if ($dateFilter === 'today') {
-            $query->whereBetween('created_at', [
-                $nowDhaka->copy()->startOfDay(),
-                $nowDhaka->copy()->endOfDay(),
-            ]);
-        } elseif ($dateFilter === 'yesterday') {
-            $query->whereBetween('created_at', [
-                $nowDhaka->copy()->subDay()->startOfDay(),
-                $nowDhaka->copy()->subDay()->endOfDay(),
-            ]);
-        } elseif ($dateFilter === '7days' || $dateFilter === '7_days') {
-            $query->where('created_at', '>=', $nowDhaka->copy()->subDays(7)->startOfDay());
-        } elseif ($dateFilter === '30days' || $dateFilter === '30_days') {
-            $query->where('created_at', '>=', $nowDhaka->copy()->subDays(30)->startOfDay());
-        } elseif ($dateFilter === 'this_month') {
-            $query->where('created_at', '>=', $nowDhaka->copy()->startOfMonth());
-        } elseif ($dateFilter === 'last_month') {
-            $query->whereBetween('created_at', [
-                $nowDhaka->copy()->subMonth()->startOfMonth(),
-                $nowDhaka->copy()->subMonth()->endOfMonth(),
-            ]);
-        } elseif ($dateFilter === '1year' || $dateFilter === 'year' || $dateFilter === 'this_year') {
-            $query->where('created_at', '>=', $nowDhaka->copy()->subYear()->startOfDay());
-        } elseif ($dateFilter === 'custom' || (! empty($fromDate) || ! empty($toDate))) {
-            if (! empty($fromDate) && ! empty($toDate)) {
-                $query->whereBetween('created_at', [
-                    \Illuminate\Support\Carbon::parse($fromDate, 'Asia/Dhaka')->startOfDay(),
-                    \Illuminate\Support\Carbon::parse($toDate, 'Asia/Dhaka')->endOfDay(),
-                ]);
-            } elseif (! empty($fromDate)) {
-                $query->where('created_at', '>=', \Illuminate\Support\Carbon::parse($fromDate, 'Asia/Dhaka')->startOfDay());
-            } elseif (! empty($toDate)) {
-                $query->where('created_at', '<=', \Illuminate\Support\Carbon::parse($toDate, 'Asia/Dhaka')->endOfDay());
-            }
-        }
-
-        $orders = $query->withCount('items')->paginate(15)->withQueryString();
-
-        $counts = [
-            'all'                  => Order::count(),
-            'pending_verification' => Order::where('payment_status', 'pending')->count(),
-            'confirmed'            => Order::where('status', 'confirmed')->count(),
-            'shipped'              => Order::where('status', 'shipped')->count(),
-            'delivered'            => Order::where('status', 'delivered')->count(),
-            'cancelled'            => Order::where('status', 'cancelled')->count(),
-        ];
+        $filters = $lists->filters($request);
+        $query = $lists->query($filters);
+        $counts = Order::segmentCounts($query);
+        $lists->segment($query, $filters['status']);
+        $listedTotal = (clone $query)->sum('total');
+        $lists->sort($query, $filters['sort']);
+        $orders = $query->withCount('items')->paginate($filters['per_page'])->withQueryString();
 
         $ordersData = $orders->through(fn($o) => [
             'id' => $o->id, 'order_number' => $o->order_number, 'customer_name' => $o->customer_name,
@@ -177,13 +110,16 @@ class OrderController extends Controller
 
         return Inertia::render('Admin/Orders/Index', [
             'orders'             => $ordersData,
-            'status'             => $status,
+            'status'             => $filters['status'],
             'counts'             => $counts,
-            'method'             => $request->input('method'),
-            'dateFilter'         => $dateFilter,
-            'fromDate'           => $fromDate,
-            'toDate'             => $toDate,
-            'q'                  => $term,
+            'method'             => $filters['method'],
+            'dateFilter'         => $filters['date_filter'],
+            'fromDate'           => $filters['from_date'],
+            'toDate'             => $filters['to_date'],
+            'q'                  => $filters['q'],
+            'sort'               => $filters['sort'],
+            'per_page'           => $filters['per_page'],
+            'listedTotal'        => $listedTotal,
             'courierStats'       => $courierStats,
             'courierRatios'      => $courierRatios,
             'bdcourierConfigured'=> (string) setting('fog_enabled', '1') === '1'

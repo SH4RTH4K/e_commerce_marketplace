@@ -1,5 +1,6 @@
 import { Link, usePage, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
+import { orderSegments, activeOrderSegment, orderSegmentHref } from '@/lib/orderSegments';
 
 /* ─── Nav structure ──────────────────────────────────────────────── */
 const navGroups = [
@@ -39,8 +40,8 @@ const navGroups = [
         icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
         badge: 'pending_orders',
         children: [
-          { key: 'orders',       label: 'All Orders',       href: '/admin/orders',              pattern: /^\/admin\/orders$/, badge: 'pending_orders', perm: 'orders.view' },
-          { key: 'order-create', label: 'Create Order',     href: '/admin/orders/create',       pattern: /^\/admin\/orders\/create/, perm: 'orders.view' },
+          ...orderSegments.map(segment => ({ key: `orders-${segment.key}`, label: segment.label, href: orderSegmentHref(segment.key), pattern: /^\/admin\/orders/, orderSegment: segment.key, badge: `orders_${segment.key}`, perm: 'orders.view', section: segment.key === 'pending' ? 'Fulfilment' : segment.key === 'pending_verification' ? 'Payment review' : null })),
+          { key: 'order-create', label: 'Create Order',     href: '/admin/orders/create',       pattern: /^\/admin\/orders\/create/, perm: 'orders.view', section: 'Tools' },
           { key: 'abandoned',    label: 'Abandoned Carts',  href: '/admin/abandoned-checkouts', pattern: /^\/admin\/abandoned-checkouts/, perm: 'customers.manage' },
         ],
       },
@@ -203,7 +204,7 @@ function CollapsibleItem({ item, isActive, admin_badges, hasPerm, featureEnabled
   const visibleChildren = item.children.filter(c => featureEnabled(c.feature) && hasPerm(c.perm));
   if (visibleChildren.length === 0) return null;
 
-  const childActive = visibleChildren.some(c => isActive(c.pattern));
+  const childActive = visibleChildren.some(c => isActive(c.pattern, c.orderSegment));
   const [open, setOpen] = useState(item.defaultOpen || childActive);
 
   const badge = item.badge && admin_badges ? admin_badges[item.badge] : 0;
@@ -212,6 +213,7 @@ function CollapsibleItem({ item, isActive, admin_badges, hasPerm, featureEnabled
     <div>
       <button
         onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all mb-0.5 group
           ${childActive ? 'bg-orange-50 text-orange-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
       >
@@ -225,13 +227,16 @@ function CollapsibleItem({ item, isActive, admin_badges, hasPerm, featureEnabled
         <Chevron open={open} />
       </button>
 
-      <div className={`overflow-hidden transition-all duration-200 ${open ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+      <div hidden={!open} className={`overflow-hidden transition-all duration-200 ${open ? 'max-h-[640px] opacity-100' : 'max-h-0 opacity-0'}`}>
         <div className="ml-3 pl-3 border-l border-gray-100 space-y-0.5 mb-1">
           {visibleChildren.map(child => {
-            const active = isActive(child.pattern);
+            const active = isActive(child.pattern, child.orderSegment);
             const childBadge = child.badge && admin_badges ? admin_badges[child.badge] : 0;
             return (
-              <a key={child.key} href={child.href}
+              <div key={child.key}>
+              {child.section && <p className="px-2.5 pt-3 pb-1 text-[9px] font-semibold uppercase tracking-wider text-gray-400">{child.section}</p>}
+              <a href={child.href}
+                aria-current={active ? 'page' : undefined}
                 className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-all
                   ${active
                     ? 'bg-orange-500 text-white font-semibold shadow-sm shadow-orange-200'
@@ -244,6 +249,7 @@ function CollapsibleItem({ item, isActive, admin_badges, hasPerm, featureEnabled
                   </span>
                 )}
               </a>
+              </div>
             );
           })}
         </div>
@@ -277,7 +283,9 @@ export default function AdminLayout({ children, title }) {
     return () => { delete window.showConfirm; };
   }, []);
 
-  const isActive = (pattern) => pattern.test(url);
+  const isActive = (pattern, orderSegment) => orderSegment !== undefined
+    ? activeOrderSegment(url) === orderSegment
+    : pattern.test(url);
 
   const handleLogout = (e) => {
     e.preventDefault();
@@ -429,7 +437,7 @@ export default function AdminLayout({ children, title }) {
           {/* Right side: admin badge + avatar */}
           <div className="flex items-center gap-3">
             {admin_badges?.pending_orders > 0 && (
-              <a href="/admin/orders?status=pending_verification"
+              <a href="/admin/orders?status=pending"
                 className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full hover:bg-amber-100 transition-colors">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>

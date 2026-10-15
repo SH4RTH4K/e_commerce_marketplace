@@ -240,11 +240,7 @@ class HandleInertiaRequests extends Middleware
                     'checkout_delivery_note_label'   => setting('checkout_delivery_note_label', 'ডেলিভারি সংক্রান্ত বিশেষ নোট (ঐচ্ছিক)'),
                 ],
             ],
-            'admin_badges' => fn () => $isAdmin && $request->user() ? [
-                'pending_orders'  => Order::where('payment_status', 'pending')->count(),
-                'pending_reviews' => ProductReview::pending()->count(),
-                'new_messages'    => ContactMessage::new()->count(),
-            ] : null,
+            'admin_badges' => fn () => $isAdmin && $request->user() ? $this->adminBadges($request) : null,
             'cartCount' => fn () => $isAdmin ? 0 : $cartService->count(),
             'cartItems' => fn () => $isAdmin ? collect() : $cartService->items(),
             'cartSubtotal' => fn () => $isAdmin ? 0.0 : $cartService->subtotal(),
@@ -277,6 +273,17 @@ class HandleInertiaRequests extends Middleware
                 'frequency'     => setting('popup_frequency', 'once_per_session'),
             ],
         ]);
+    }
+
+    private function adminBadges(Request $request): array
+    {
+        $counts = $request->user()->hasPermission('orders.view') ? Order::segmentCounts() : [];
+        return [
+            ...collect($counts)->mapWithKeys(fn ($count, $segment) => ['orders_'.$segment => $count])->all(),
+            'pending_orders' => $counts['pending'] ?? 0,
+            'pending_reviews' => ProductReview::pending()->count(),
+            'new_messages' => ContactMessage::new()->count(),
+        ];
     }
 
     private function typographySettings(string $template): array

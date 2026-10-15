@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Database\Factories\OrderFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -73,6 +74,34 @@ class Order extends Model
     public const STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
     public const PAYMENT_STATUSES = ['pending', 'verified', 'rejected'];
     public const PAYMENT_METHODS = ['cod', 'bkash', 'nagad', 'rocket'];
+    public const MOBILE_BANKING_METHODS = ['bkash', 'nagad', 'rocket'];
+
+    public function scopeAwaitingPaymentVerification(Builder $query): Builder
+    {
+        return $query->where('payment_status', 'pending')
+            ->whereIn('payment_method', self::MOBILE_BANKING_METHODS)
+            ->whereIn('status', ['pending', 'confirmed', 'processing', 'shipped']);
+    }
+
+    /** Segment totals share the same search/date/method filters as the list. */
+    public static function segmentCounts(?Builder $query = null): array
+    {
+        $counts = array_fill_keys(['all', ...self::STATUSES, 'pending_verification'], 0);
+        $groups = (clone ($query ?? self::query()))->reorder()
+            ->selectRaw('status, payment_method, payment_status, COUNT(*) AS aggregate')
+            ->groupBy('status', 'payment_method', 'payment_status')->get();
+        foreach ($groups as $group) {
+            $count = (int) $group->aggregate;
+            $counts['all'] += $count;
+            if (in_array($group->status, self::STATUSES, true)) $counts[$group->status] += $count;
+            if ($group->payment_status === 'pending'
+                && in_array($group->payment_method, self::MOBILE_BANKING_METHODS, true)
+                && in_array($group->status, ['pending', 'confirmed', 'processing', 'shipped'], true)) {
+                $counts['pending_verification'] += $count;
+            }
+        }
+        return $counts;
+    }
 
     public function items(): HasMany
     {
@@ -107,7 +136,7 @@ class Order extends Model
 
     public function isMobileBanking(): bool
     {
-        return in_array($this->payment_method, ['bkash', 'nagad', 'rocket'], true);
+        return in_array($this->payment_method, self::MOBILE_BANKING_METHODS, true);
     }
 
     /** Tailwind badge classes for the fulfilment status. */

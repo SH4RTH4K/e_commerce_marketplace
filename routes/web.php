@@ -224,7 +224,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::delete('media/{image}', [AdminMediaController::class, 'destroy'])->name('media.destroy');
 
         // Orders + verification workflow
-        Route::get('orders', [AdminOrderController::class, 'index'])->name('orders.index');
+        Route::get('orders', [AdminOrderController::class, 'index'])->middleware('permission:orders.view')->name('orders.index');
         Route::get('orders/create', [AdminOrderController::class, 'create'])->name('orders.create');
         Route::get('orders/invoices/bulk', [\App\Http\Controllers\Admin\AdminInvoiceController::class, 'bulk'])->name('orders.invoices.bulk');
         Route::get('orders/product-search', [AdminOrderController::class, 'productSearch'])->name('orders.productSearch');

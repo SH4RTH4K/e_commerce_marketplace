@@ -1,12 +1,15 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import OrderSegments from '@/Components/Admin/OrderSegments';
+import { orderSegments, orderDetailHref } from '@/lib/orderSegments';
 
 /* ─── Badges ─────────────────────────────────────────────────────── */
 function StatusBadge({ status }) {
   const map = {
     pending:   'bg-amber-100 text-amber-700',
     confirmed: 'bg-blue-100 text-blue-700',
+    processing: 'bg-indigo-100 text-indigo-700',
     shipped:   'bg-purple-100 text-purple-700',
     delivered: 'bg-green-100 text-green-700',
     cancelled: 'bg-red-100 text-red-700',
@@ -125,29 +128,26 @@ function CourierRatioButton({ ratio, loading, onClick }) {
 }
 
 /* ─── Tab config ─────────────────────────────────────────────────── */
-const tabs = [
-  { key: 'all',                   label: 'All Orders' },
-  { key: 'pending_verification',  label: 'Pending Verification' },
-  { key: 'confirmed',             label: 'Confirmed' },
-  { key: 'shipped',               label: 'Shipped' },
-  { key: 'delivered',             label: 'Delivered' },
-  { key: 'cancelled',             label: 'Cancelled' },
-];
+
 
 /* ─── Main page ──────────────────────────────────────────────────── */
 export default function OrdersIndex({ 
   orders, 
-  status, 
-  counts, 
+  status = 'all',
+  counts = {},
   method: methodFilter, 
   dateFilter: dateFilterProp = 'all',
   fromDate: fromDateProp = '',
   toDate: toDateProp = '',
   q,
+  sort = 'newest',
+  per_page = 15,
+  listedTotal = 0,
   bdcourierConfigured = false,
   courierRatios: courierRatiosProp = {},
 }) {
-  const { auth } = usePage().props;
+  const { url } = usePage();
+  const { auth, errors = {} } = usePage().props;
   const user = auth?.user;
   const canDelete = user?.is_super_admin || user?.role === 'admin' || (user?.permissions || []).includes('orders.delete');
   const canManage = user?.is_super_admin || user?.role === 'admin' || (user?.permissions || []).includes('orders.manage');
@@ -159,6 +159,7 @@ export default function OrdersIndex({
   const [customToDate, setCustomToDate]             = useState(toDateProp || '');
   const [selected, setSelected]                     = useState([]);
   const [bulkAction, setBulkAction]                 = useState('');
+  const [loading, setLoading] = useState(false);
   const [noteModal, setNoteModal]                   = useState({ open: false, order: null, note: '' });
 
   // ── Quick Courier Ratio / Score Checker Modal ──
@@ -218,49 +219,31 @@ export default function OrdersIndex({
     }
   };
 
-  const handleSearch = (e) => {
-    e?.preventDefault();
-    router.get('/admin/orders', { 
-      status, 
-      q: search, 
-      method: selectedMethod,
-      date_filter: selectedDateFilter,
-      from_date: selectedDateFilter === 'custom' ? customFromDate : '',
-      to_date: selectedDateFilter === 'custom' ? customToDate : '',
-    }, { preserveState: true });
-  };
+  const resultIds = (orders.data || []).map(order => order.id).join(',');
+  useEffect(() => {
+    setSearch(q || ''); setSelectedMethod(methodFilter || '');
+    setSelectedDateFilter(dateFilterProp); setCustomFromDate(fromDateProp || ''); setCustomToDate(toDateProp || '');
+  }, [q, methodFilter, dateFilterProp, fromDateProp, toDateProp]);
+  useEffect(() => { setSelected([]); setBulkAction(''); }, [status, q, methodFilter, dateFilterProp, fromDateProp, toDateProp, sort, per_page, orders.current_page, resultIds]);
 
-  const handleFilter = (params) => {
-    router.get('/admin/orders', { 
-      status, 
-      q: search, 
-      method: selectedMethod,
-      date_filter: selectedDateFilter,
+  const handleFilter = (overrides = {}) => {
+    setSelected([]); setBulkAction('');
+    const params = {
+      status, q: search, method: selectedMethod, date_filter: selectedDateFilter,
       from_date: selectedDateFilter === 'custom' ? customFromDate : '',
-      to_date: selectedDateFilter === 'custom' ? customToDate : '',
-      ...params 
-    }, { preserveState: true });
+      to_date: selectedDateFilter === 'custom' ? customToDate : '', sort, per_page, ...overrides,
+    };
+    router.get('/admin/orders', params, {
+      preserveState: true, preserveScroll: true,
+      onStart: () => setLoading(true), onFinish: () => setLoading(false),
+    });
   };
-
+  const handleSearch = event => { event?.preventDefault(); handleFilter(); };
   const handleClear = () => {
-    setSearch('');
-    setSelectedMethod('');
-    setSelectedDateFilter('all');
-    setCustomFromDate('');
-    setCustomToDate('');
-    router.get('/admin/orders', { status });
+    setSearch(''); setSelectedMethod(''); setSelectedDateFilter('all'); setCustomFromDate(''); setCustomToDate('');
+    handleFilter({ q: '', method: '', date_filter: 'all', from_date: '', to_date: '' });
   };
-
-  const handleTabChange = (key) => {
-    router.get('/admin/orders', { 
-      status: key,
-      date_filter: selectedDateFilter !== 'all' ? selectedDateFilter : undefined,
-      from_date: selectedDateFilter === 'custom' && customFromDate ? customFromDate : undefined,
-      to_date: selectedDateFilter === 'custom' && customToDate ? customToDate : undefined,
-      method: selectedMethod || undefined,
-      q: search || undefined
-    }, { preserveState: false });
-  };
+  const handleTabChange = key => handleFilter({ status: key });
 
   const toggleSelect  = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const toggleAll     = (e) => setSelected(e.target.checked ? orders.data.map(o => o.id) : []);
@@ -308,19 +291,20 @@ export default function OrdersIndex({
     });
   };
 
-  const activeTab = tabs.find(t => t.key === status) ? status : 'all';
+  const activeSegment = orderSegments.find(segment => segment.key === status) || orderSegments[0];
 
   return (
     <>
-      <Head title="Orders — Global Order Center" />
+      <Head title={activeSegment.label} />
       <AdminLayout title="">
         <div className="space-y-5 max-w-7xl mx-auto">
 
           {/* ── Header ── */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Orders</h1>
-              <p className="text-xs text-gray-500 mt-0.5">Manage customer orders, manual payments &amp; fulfillment</p>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-orange-600 mb-1">Order management</p>
+              <h1 className="text-2xl font-bold text-gray-900">{activeSegment.key === 'all' || activeSegment.key === 'pending_verification' ? activeSegment.label : `${activeSegment.label} Orders`}</h1>
+              <p className="text-xs text-gray-500 mt-0.5">{activeSegment.description}</p>
             </div>
             <div className="flex items-center gap-2">
               <a href="/admin/orders/create"
@@ -333,36 +317,17 @@ export default function OrdersIndex({
             </div>
           </div>
 
-          {/* ── Status Tabs ── */}
-          <div className="flex items-center gap-1 border-b border-gray-100 overflow-x-auto">
-            {tabs.map(tab => {
-              const count = counts[tab.key] || 0;
-              const isActive = activeTab === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => handleTabChange(tab.key)}
-                  className={`px-4 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors flex items-center gap-1.5 ${
-                    isActive
-                      ? 'border-orange-500 text-orange-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-800'
-                  }`}
-                >
-                  {tab.label}
-                  {count > 0 && (
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                      isActive ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+          <OrderSegments status={status} counts={counts} onChange={handleTabChange} loading={loading} />
 
           {/* ── Main Orders Table Card ── */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden" aria-busy={loading}>
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 border-b border-gray-100">
+              <div><h2 className="text-sm font-semibold text-gray-900">{Number(orders.total || 0).toLocaleString()} orders in this view</h2><p className="text-xs text-gray-400 mt-1">Listed order value: ৳{Number(listedTotal).toLocaleString('en-US', { maximumFractionDigits: 2 })}</p></div>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="text-xs text-gray-500">Sort <select aria-label="Sort orders" value={sort} onChange={event => handleFilter({ sort: event.target.value })} disabled={loading} className="ml-1 rounded-lg border border-gray-200 px-2 py-2 text-xs"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="total_desc">Value: high to low</option><option value="total_asc">Value: low to high</option></select></label>
+                <label className="text-xs text-gray-500">Rows <select aria-label="Orders per page" value={per_page} onChange={event => handleFilter({ per_page: event.target.value })} disabled={loading} className="ml-1 rounded-lg border border-gray-200 px-2 py-2 text-xs">{[15, 25, 50, 100].map(value => <option key={value}>{value}</option>)}</select></label>
+              </div>
+            </div>
 
             {/* Filter toolbar */}
             <form onSubmit={handleSearch} className="p-3.5 sm:p-4 border-b border-gray-50 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2.5 sm:gap-3">
@@ -374,7 +339,7 @@ export default function OrdersIndex({
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Search by order #, customer, phone, trx ID…"
+                  aria-label="Search orders" placeholder="Order #, customer, phone, email, transaction ID…"
                   className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-300"
                 />
               </div>
@@ -382,7 +347,7 @@ export default function OrdersIndex({
               <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                 {/* Date Filter Dropdown */}
                 <select
-                  value={selectedDateFilter}
+                  aria-label="Order date range" value={selectedDateFilter}
                   onChange={e => {
                     const val = e.target.value;
                     setSelectedDateFilter(val);
@@ -399,13 +364,14 @@ export default function OrdersIndex({
                   <option value="30days">Last 30 Days</option>
                   <option value="this_month">This Month</option>
                   <option value="last_month">Last Month</option>
+                  <option value="this_year">This Year</option>
                   <option value="1year">Last 1 Year</option>
                   <option value="custom">Custom Range…</option>
                 </select>
 
                 {/* Payment Method Filter */}
                 <select
-                  value={selectedMethod}
+                  aria-label="Payment method" value={selectedMethod}
                   onChange={e => { setSelectedMethod(e.target.value); handleFilter({ method: e.target.value }); }}
                   className="flex-1 sm:flex-none text-xs border border-gray-200 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
                 >
@@ -425,7 +391,7 @@ export default function OrdersIndex({
                     value={customFromDate}
                     onChange={e => setCustomFromDate(e.target.value)}
                     className="bg-transparent border-0 p-0.5 text-xs text-gray-700 focus:ring-0 focus:outline-none flex-1"
-                    title="From Date"
+                    aria-label="From date" title="From Date"
                   />
                   <span className="text-gray-400 text-xs">to</span>
                   <input
@@ -433,7 +399,7 @@ export default function OrdersIndex({
                     value={customToDate}
                     onChange={e => setCustomToDate(e.target.value)}
                     className="bg-transparent border-0 p-0.5 text-xs text-gray-700 focus:ring-0 focus:outline-none flex-1"
-                    title="To Date"
+                    aria-label="To date" title="To Date"
                   />
                   <button
                     type="button"
@@ -446,7 +412,7 @@ export default function OrdersIndex({
               )}
 
               <div className="flex items-center gap-2">
-                <button type="submit"
+                <button type="submit" disabled={loading}
                   className="flex-1 sm:flex-none px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer text-center">
                   Search
                 </button>
@@ -459,17 +425,19 @@ export default function OrdersIndex({
               </div>
             </form>
 
+            {Object.entries(errors).filter(([key]) => ['q', 'method', 'status', 'date_filter', 'from_date', 'to_date', 'sort', 'per_page'].includes(key)).map(([key, message]) => <p key={key} role="alert" className="px-4 py-2 text-xs text-red-600">{message}</p>)}
+
             {/* Bulk action bar */}
             {selected.length > 0 && (
               <div className="px-4 sm:px-5 py-3 border-b border-gray-50 bg-orange-50 flex flex-wrap items-center justify-between gap-2.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs sm:text-sm font-semibold text-orange-700">{selected.length} selected</span>
+                  <span className="text-xs sm:text-sm font-semibold text-orange-700">{selected.length} selected on this page</span>
                   <select value={bulkAction} onChange={e => setBulkAction(e.target.value)}
                     className="border border-orange-200 rounded-xl px-3 py-1.5 text-xs sm:text-sm bg-white focus:outline-none font-medium">
                     <option value="">Choose action…</option>
                     <option value="invoice">📄 Print Selected Invoices / Packing Slips</option>
-                    <option value="verify">✓ Verify payment</option>
-                    <option value="reject">✕ Reject payment</option>
+                    {canManage && <option value="verify">✓ Verify payment</option>}
+                    {canDelete && <option value="reject">✕ Reject payment</option>}
                     {canDelete && <option value="delete">🗑 Delete</option>}
                   </select>
                   <button onClick={handleBulkApply} disabled={!bulkAction}
@@ -497,11 +465,11 @@ export default function OrdersIndex({
                       <div className="flex items-center gap-2.5">
                         <input 
                           type="checkbox" 
-                          checked={selected.includes(order.id)} 
+                          disabled={loading} aria-label={`Select ${order.order_number}`} checked={selected.includes(order.id)}
                           onChange={() => toggleSelect(order.id)}
                           className="h-4 w-4 accent-orange-500 rounded cursor-pointer" 
                         />
-                        <a href={`/admin/orders/${order.id}`} className="font-bold text-orange-600 hover:underline font-mono text-sm">
+                        <a href={orderDetailHref(order.id, url)} className="font-bold text-orange-600 hover:underline font-mono text-sm">
                           {order.order_number}
                         </a>
                       </div>
@@ -594,17 +562,17 @@ export default function OrdersIndex({
 
                     {/* Row 4: Action buttons */}
                     <div className="pt-2 border-t border-gray-100 flex items-center gap-1.5 flex-wrap">
-                      {order.payment_status === 'pending' && (
+                      {order.payment_status === 'pending' && !['delivered', 'cancelled'].includes(order.status) && (canManage || canDelete) && (
                         <>
-                          <button onClick={() => handleVerify(order.id)} className="flex-1 min-w-[65px] py-1.5 px-2 text-xs bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition-colors text-center cursor-pointer">
+                          {canManage && <button onClick={() => handleVerify(order.id)} className="flex-1 min-w-[65px] py-1.5 px-2 text-xs bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition-colors text-center cursor-pointer">
                             Verify
-                          </button>
-                          <button onClick={() => handleReject(order.id)} className="flex-1 min-w-[65px] py-1.5 px-2 text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-semibold transition-colors text-center cursor-pointer">
+                          </button>}
+                          {canDelete && <button onClick={() => handleReject(order.id)} className="flex-1 min-w-[65px] py-1.5 px-2 text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-semibold transition-colors text-center cursor-pointer">
                             Reject
-                          </button>
+                          </button>}
                         </>
                       )}
-                      <a href={`/admin/orders/${order.id}`} className="flex-1 min-w-[55px] py-1.5 px-2 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors text-center">
+                      <a href={orderDetailHref(order.id, url)} className="flex-1 min-w-[55px] py-1.5 px-2 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors text-center">
                         View
                       </a>
                       <a href={`/admin/orders/${order.id}/invoice`} target="_blank" rel="noreferrer" className="flex-1 min-w-[65px] py-1.5 px-2 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold transition-colors text-center flex items-center justify-center gap-1">
@@ -613,8 +581,8 @@ export default function OrdersIndex({
                         </svg>
                         Invoice
                       </a>
-                      {order.status !== 'delivered' && order.status !== 'cancelled' && !order.courier_tracking_code && (
-                        <a href={`/admin/orders/${order.id}?ship=1`} className="flex-1 min-w-[55px] py-1.5 px-2 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded-lg font-semibold transition-colors text-center flex items-center justify-center gap-1">
+                      {canManage && order.status !== 'delivered' && order.status !== 'cancelled' && !order.courier_tracking_code && (
+                        <a href={orderDetailHref(order.id, url, true)} className="flex-1 min-w-[55px] py-1.5 px-2 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded-lg font-semibold transition-colors text-center flex items-center justify-center gap-1">
                           Ship
                         </a>
                       )}
@@ -645,7 +613,7 @@ export default function OrdersIndex({
                 <thead>
                   <tr className="text-left bg-gray-50/60 border-b border-gray-100">
                     <th className="px-5 py-3.5 w-10">
-                      <input type="checkbox" onChange={toggleAll}
+                      <input type="checkbox" aria-label="Select orders on this page" disabled={loading} onChange={toggleAll}
                         checked={selected.length === orders.data?.length && orders.data?.length > 0}
                         className="h-4 w-4 accent-orange-500 rounded cursor-pointer" />
                     </th>
@@ -665,11 +633,11 @@ export default function OrdersIndex({
                   {orders.data?.map(order => (
                     <tr key={order.id} className="hover:bg-gray-50/50 transition-colors">
                       <td className="px-5 py-3.5">
-                        <input type="checkbox" checked={selected.includes(order.id)} onChange={() => toggleSelect(order.id)}
+                        <input type="checkbox" disabled={loading} aria-label={`Select ${order.order_number}`} checked={selected.includes(order.id)} onChange={() => toggleSelect(order.id)}
                           className="h-4 w-4 accent-orange-500 rounded cursor-pointer" />
                       </td>
                       <td className="px-5 py-3.5">
-                        <a href={`/admin/orders/${order.id}`} className="font-bold text-orange-600 hover:underline font-mono text-xs sm:text-sm">
+                        <a href={orderDetailHref(order.id, url)} className="font-bold text-orange-600 hover:underline font-mono text-xs sm:text-sm">
                           {order.order_number}
                         </a>
                       </td>
@@ -746,19 +714,19 @@ export default function OrdersIndex({
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {order.payment_status === 'pending' && (
+                          {order.payment_status === 'pending' && !['delivered', 'cancelled'].includes(order.status) && (canManage || canDelete) && (
                             <>
-                              <button onClick={() => handleVerify(order.id)}
+                              {canManage && <button onClick={() => handleVerify(order.id)}
                                 className="px-2.5 py-1 text-xs bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition-colors cursor-pointer">
                                 Verify
-                              </button>
-                              <button onClick={() => handleReject(order.id)}
+                              </button>}
+                              {canDelete && <button onClick={() => handleReject(order.id)}
                                 className="px-2.5 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-semibold transition-colors cursor-pointer">
                                 Reject
-                              </button>
+                              </button>}
                             </>
                           )}
-                          <a href={`/admin/orders/${order.id}`}
+                          <a href={orderDetailHref(order.id, url)}
                             className="px-2.5 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg font-semibold transition-colors">
                             View
                           </a>
@@ -770,8 +738,8 @@ export default function OrdersIndex({
                             </svg>
                             Invoice
                           </a>
-                          {order.status !== 'delivered' && order.status !== 'cancelled' && !order.courier_tracking_code && (
-                            <a href={`/admin/orders/${order.id}?ship=1`}
+                          {canManage && order.status !== 'delivered' && order.status !== 'cancelled' && !order.courier_tracking_code && (
+                            <a href={orderDetailHref(order.id, url, true)}
                               className="px-2.5 py-1 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded-lg font-semibold transition-colors flex items-center gap-1">
                               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2l1-12"/>
@@ -800,26 +768,14 @@ export default function OrdersIndex({
               </table>
             </div>
 
-            {/* Pagination */}
-            {orders.links && orders.links.length > 3 && (
-              <div className="p-4 border-t border-gray-50 flex flex-wrap gap-1.5 items-center justify-center">
-                {orders.links.map((link, idx) => (
-                  <Link
-                    key={idx}
-                    href={link.url || '#'}
-                    preserveScroll
-                    dangerouslySetInnerHTML={{ __html: link.label }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                      link.active
-                        ? 'bg-orange-500 text-white'
-                        : link.url
-                        ? 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                        : 'text-gray-300 cursor-not-allowed'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
+            <footer className="p-4 border-t border-gray-100 flex flex-wrap gap-3 items-center justify-between">
+              <p className="text-xs text-gray-400">{orders.from ? `${orders.from}–${orders.to} of ${Number(orders.total).toLocaleString()} orders` : '0 results'}</p>
+              <nav aria-label="Order pagination" className="flex flex-wrap gap-1.5">{(orders.links || []).map((link, index) => <button
+                key={index} type="button" disabled={!link.url || loading} aria-current={link.active ? 'page' : undefined}
+                onClick={() => { setSelected([]); setBulkAction(''); router.get(link.url, {}, { preserveState: true, preserveScroll: true, onStart: () => setLoading(true), onFinish: () => setLoading(false) }); }}
+                dangerouslySetInnerHTML={{ __html: link.label }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold disabled:opacity-40 ${link.active ? 'bg-orange-500 text-white' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'}`} />)}</nav>
+            </footer>
           </div>
 
         </div>
