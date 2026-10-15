@@ -1,6 +1,7 @@
 import { createInertiaApp, router } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import { trackPageView } from '@/lib/tracking';
+import { seoPageTitle } from '@/lib/seoTitle';
 import '../css/app.css';
 
 // Track SPA page views on every Inertia navigation and sync site name
@@ -24,12 +25,7 @@ function getDefaultSeoTitle() {
 
 createInertiaApp({
     title: (title) => {
-        const siteName = getDynamicSiteName() || 'Shop';
-        const cleanTitle = (title || '').trim();
-        if (!cleanTitle || cleanTitle.toLowerCase() === 'home') {
-            return getDefaultSeoTitle() || siteName;
-        }
-        return `${cleanTitle} — ${siteName}`;
+        return seoPageTitle(title, getDynamicSiteName(), getDefaultSeoTitle());
     },
     resolve: (name) => {
         const pages = import.meta.glob('./Pages/**/*.jsx', { eager: true });
