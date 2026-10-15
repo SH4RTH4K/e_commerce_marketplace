@@ -49,13 +49,13 @@ function PolicyContent({ body }) {
 }
 
 export default function PagePage({ title, heading, body, showPageTitle = true }) {
-  const { app } = usePage().props;
+  const { app, seoDefaults } = usePage().props;
   const isTemplateOne = app?.settings?.storefront_template === 'template-1';
 
   if (isTemplateOne) {
     return (
       <StorefrontLayout>
-        <Head title={title || heading} />
+        <Head title={seoDefaults?.title || title || heading} />
         {showPageTitle && <div className="template-1-page-title"><h1>{heading}</h1></div>}
         <main className="template-1-legal-page">
           <article className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm sm:p-10">
@@ -68,7 +68,7 @@ export default function PagePage({ title, heading, body, showPageTitle = true })
 
   return (
     <StorefrontLayout>
-      <Head title={title || heading} />
+      <Head title={seoDefaults?.title || title || heading} />
       
       {showPageTitle && (
         <div className="bg-white border-b border-gray-100 py-16 sm:py-24">

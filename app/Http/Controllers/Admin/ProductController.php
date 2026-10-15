@@ -182,20 +182,20 @@ class ProductController extends Controller
 
         if ($data['bulk_action'] === 'activate') {
             Product::whereIn('id', $ids)->update(['is_published' => true]);
-            Cache::forget('sitemap_urls');
+            Cache::forget('sitemap_urls_v2');
 
             return back()->with('status', "{$count} product(s) set to Active.");
         }
 
         if ($data['bulk_action'] === 'deactivate') {
             Product::whereIn('id', $ids)->update(['is_published' => false]);
-            Cache::forget('sitemap_urls');
+            Cache::forget('sitemap_urls_v2');
 
             return back()->with('status', "{$count} product(s) set to Inactive.");
         }
 
         Product::whereIn('id', $ids)->delete();
-        Cache::forget('sitemap_urls');
+        Cache::forget('sitemap_urls_v2');
 
         return back()->with('status', "{$count} product(s) deleted.");
     }

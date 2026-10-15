@@ -123,12 +123,12 @@ class SeoCompletionTest extends TestCase
         for ($i = 0; $i < 215; $i++) {
             $this->product($category, ['name' => 'Model '.$i.' Desk Lamp', 'sku' => 'LAMP-'.$i]);
         }
-        Cache::put('sitemap_urls', ['old']);
+        Cache::put('sitemap_urls_v2', ['old']);
         $result = app(SeoCompletionService::class)->complete((int) auth()->id());
         $this->assertSame(215, $result['products']);
         $this->assertSame(648, $result['fields']);
         $this->assertSame(215, Product::whereNotNull('meta_title')->count());
-        $this->assertNull(Cache::get('sitemap_urls'));
+        $this->assertNull(Cache::get('sitemap_urls_v2'));
     }
 
     public function test_an_existing_run_lock_prevents_overlapping_updates(): void

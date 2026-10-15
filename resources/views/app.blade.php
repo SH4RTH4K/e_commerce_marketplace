@@ -8,7 +8,7 @@
         $defaultMetaTitle = trim((string) setting('default_meta_title', '')) ?: site_name();
         $defaultMetaDescription = trim((string) setting('default_meta_description', ''));
         $defaultMetaKeywords = trim((string) setting('default_meta_keywords', ''));
-        $pageSeo = $page['props']['seo'] ?? [];
+        $pageSeo = array_replace($page['props']['seoDefaults'] ?? [], array_filter($page['props']['seo'] ?? [], fn ($value) => $value !== null && $value !== ''));
         $pageMetaTitle = trim((string) ($pageSeo['title'] ?? '')) ?: $defaultMetaTitle;
         $pageMetaDescription = trim(strip_tags((string) (($pageSeo['description'] ?? '') ?: $defaultMetaDescription)));
         $pageMetaKeywords = trim((string) (($pageSeo['keywords'] ?? '') ?: $defaultMetaKeywords));
@@ -37,7 +37,7 @@
             $pageMetaDescription = seo_description_with_keywords($pageMetaDescription ?: site_name(), $seoKeywordPhrases, 400);
             $pageMetaKeywords = seo_append_missing_keywords($pageMetaKeywords, $seoKeywordPhrases, 500, ', ');
         }
-        $fallbackH1Enabled = ! request()->is('admin*') && (string) setting('seo_fallback_h1_enabled', '1') === '1';
+        $fallbackH1Enabled = ! app(\App\Services\StorefrontSeoService::class)->isPrivate(request()) && (string) setting('seo_fallback_h1_enabled', '1') === '1';
         $fallbackH1 = trim((string) setting('seo_h1_heading', ''))
             ?: trim((string) ($pageSeo['h1'] ?? ''))
             ?: $pageMetaTitle
@@ -58,12 +58,15 @@
     @if($pageMetaDescription)<meta data-inertia="og:description" property="og:description" content="{{ $pageMetaDescription }}" />@endif
     <meta data-inertia="og:url" property="og:url" content="{{ $pageCanonical }}" />
     @if($pageMetaImage)<meta data-inertia="og:image" property="og:image" content="{{ $pageMetaImage }}" />@endif
-    <meta data-inertia="twitter:card" name="twitter:card" content="summary_large_image" />
+    <meta data-inertia="twitter:card" name="twitter:card" content="{{ $pageMetaImage ? 'summary_large_image' : 'summary' }}" />
     <meta data-inertia="twitter:title" name="twitter:title" content="{{ $pageMetaTitle }}" />
     @if($pageMetaDescription)<meta data-inertia="twitter:description" name="twitter:description" content="{{ $pageMetaDescription }}" />@endif
     @if($pageMetaImage)<meta data-inertia="twitter:image" name="twitter:image" content="{{ $pageMetaImage }}" />@endif
     @if(!empty($pageSeo['robots']))<meta data-inertia="robots" name="robots" content="{{ $pageSeo['robots'] }}" />@endif
     <link data-inertia="canonical" rel="canonical" href="{{ $pageCanonical }}" />
+    @if(!empty($page['props']['structuredData']))
+        <script data-inertia="structured-data" type="application/ld+json">{!! json_encode($page['props']['structuredData'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+    @endif
     <link rel="icon" href="{{ favicon_url() }}" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -85,7 +88,21 @@
 <body class="antialiased">
     @include('partials.tracking-body')
     @if($fallbackH1Enabled && $fallbackH1 !== '')
-        <h1 data-seo-fallback-h1 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">{{ $fallbackH1 }}</h1>
+        <noscript>
+            <h1 data-seo-fallback-h1>{{ $pageProps['product']['name'] ?? $pageProps['activeCategory']['name'] ?? $pageProps['heading'] ?? $fallbackH1 }}</h1>
+            <p>This store uses JavaScript for shopping. Enable JavaScript to use the full store.</p>
+            <nav aria-label="Store links"><a href="{{ route('home') }}">Home</a> · <a href="{{ route('shop') }}">Shop</a> · <a href="{{ route('contact') }}">Contact</a></nav>
+            @foreach(($pageProps['filterCategories'] ?? $pageProps['featuredCategories'] ?? []) as $category)
+                <a href="{{ route('shop.category', $category['slug']) }}">{{ $category['name'] }}</a>
+            @endforeach
+            @if(isset($pageProps['products']['data']))
+                <ul>@foreach($pageProps['products']['data'] as $product)
+                    <li><a href="{{ route('product.show', $product['url_key'] ?? $product['slug']) }}">{{ $product['name'] }}</a></li>
+                @endforeach</ul>
+                @if(!empty($pageProps['products']['prev_page_url']))<a href="{{ $pageProps['products']['prev_page_url'] }}">Previous page</a>@endif
+                @if(!empty($pageProps['products']['next_page_url']))<a href="{{ $pageProps['products']['next_page_url'] }}">Next page</a>@endif
+            @endif
+        </noscript>
     @endif
     @inertia
 </body>

@@ -139,6 +139,7 @@ class ShopController extends Controller
         $productsPerPage = max(1, min(48, (int) setting($productsPerPageKey, '12')));
 
         $products = $query->paginate($productsPerPage)->withQueryString();
+        abort_if($products->currentPage() > $products->lastPage(), 404);
         $products->getCollection()->each(static function (Product $product): void {
             $supplierProduct = $product->supplierLinks->first()?->supplierProduct;
             $product->sku = $supplierProduct?->product_code
@@ -185,6 +186,7 @@ class ShopController extends Controller
             ->values();
 
         return Inertia::render('Storefront/Shop', [
+            'structuredData' => $category ? app(\App\Services\StorefrontSeoService::class)->breadcrumbs($categoryPath) : null,
             'products'         => $products,
             'activeCategory'   => $category,
             'categoryPath' => array_map(fn ($item) => collect($item)->only(['id', 'name', 'slug'])->all(), $categoryPath),
@@ -201,7 +203,9 @@ class ShopController extends Controller
                 'title' => $category?->meta_title ?: ($category?->name ?: ($term ? "Search: {$term}" : 'Shop All Products')),
                 'description' => $category?->meta_description,
                 'keywords' => $category?->meta_keywords,
-                'robots' => $term || $request->query->count() > 0 ? 'noindex,follow' : 'index,follow',
+                'robots' => $term || count(array_diff(array_keys($request->query()), ['page', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid'])) > 0 ? 'noindex,follow' : 'index,follow',
+                'canonical' => $request->url().($products->currentPage() > 1 ? '?page='.$products->currentPage() : ''),
+                'image' => $category?->image ? $category->imageUrl() : logo_url(),
             ],
         ]);
     }

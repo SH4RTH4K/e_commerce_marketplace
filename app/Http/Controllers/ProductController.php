@@ -73,6 +73,8 @@ class ProductController extends Controller
                 ->exists();
         }
 
+        $categoryPath = $product->category ? app(CategoryHierarchyService::class)->path($product->category) : [];
+
         return Inertia::render('Storefront/Product', array_merge(compact(
             'product',
             'related',
@@ -84,7 +86,8 @@ class ProductController extends Controller
             'reviews',
             'canReview'
         ), [
-            'categoryPath' => $product->category ? array_map(fn ($item) => collect($item)->only(['id', 'name', 'slug'])->all(), app(CategoryHierarchyService::class)->path($product->category)) : [],
+            'categoryPath' => array_map(fn ($item) => collect($item)->only(['id', 'name', 'slug'])->all(), $categoryPath),
+            'structuredData' => app(\App\Services\StorefrontSeoService::class)->product($product, $categoryPath),
             'seo' => [
                 'title' => $product->meta_title ?: $product->name,
                 'description' => Str::limit(trim(strip_tags((string) ($product->meta_description ?: $product->short_description ?: $product->description))), 300),

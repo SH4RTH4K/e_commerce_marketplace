@@ -12,12 +12,16 @@ class SitemapController extends Controller
     public function index()
     {
         // Cache sitemap for 6 hours — avoids DB hit on every crawler request
-        $urls = Cache::remember('sitemap_urls', 21600, function () {
+        $urls = Cache::remember('sitemap_urls_v2', 21600, function () {
             $list = [];
             $list[] = ['loc' => route('home'), 'priority' => '1.0', 'changefreq' => 'daily'];
             $list[] = ['loc' => route('shop'), 'priority' => '0.9', 'changefreq' => 'daily'];
 
-            foreach (Category::where('is_active', true)->get() as $category) {
+            foreach (['about', 'contact', 'terms', 'privacy', 'refund', 'shipping'] as $page) {
+                $list[] = ['loc' => route($page), 'priority' => '0.5', 'changefreq' => 'monthly'];
+            }
+
+            foreach ($this->visibleCategories() as $category) {
                 $list[] = [
                     'loc'        => route('shop.category', $category),
                     'priority'   => '0.8',
@@ -76,19 +80,13 @@ class SitemapController extends Controller
             ?: trim((string) setting('footer_text', ''))
             ?: "{$siteName} online store.";
         $notes = trim((string) setting('seo_llms_txt_notes', ''));
-        $categories = Category::query()
-            ->where('is_active', true)
-            ->where('show_in_menu', true)
-            ->orderBy('menu_order')
-            ->orderBy('name')
-            ->limit(12)
-            ->get(['name', 'slug']);
+        $categories = $this->visibleCategories()->where('show_in_menu', true)->take(12);
         $products = Product::query()
             ->published()
             ->orderByDesc('is_featured')
             ->orderByDesc('created_at')
             ->limit(12)
-            ->get(['name', 'slug', 'regular_price', 'sale_price', 'updated_at']);
+            ->get(['id', 'name', 'slug', 'sku', 'regular_price', 'sale_price', 'updated_at']);
 
         $lines = [
             "# {$siteName}",
@@ -124,8 +122,7 @@ class SitemapController extends Controller
         if ($products->isNotEmpty()) {
             $lines = array_merge($lines, ['', '## Featured Products']);
             foreach ($products as $product) {
-                $price = $product->sale_price ?: $product->regular_price;
-                $priceText = $price ? ' - ' . money($price) : '';
+                $priceText = ' - ' . money($product->price);
                 $lines[] = '- ' . $product->name . $priceText . ': ' . route('product.show', $product);
             }
         }
@@ -141,5 +138,22 @@ class SitemapController extends Controller
         return response(implode("\n", $lines), Response::HTTP_OK)
             ->header('Content-Type', 'text/plain; charset=UTF-8')
             ->header('Cache-Control', 'public, max-age=86400');
+    }
+
+    private function visibleCategories(): \Illuminate\Support\Collection
+    {
+        $categories = Category::orderBy('menu_order')->orderBy('name')->get();
+        $byId = $categories->keyBy('id');
+
+        return $categories->filter(function (Category $category) use ($byId) {
+            $seen = [];
+            while ($category) {
+                if (! $category->is_active || isset($seen[$category->id])) return false;
+                $seen[$category->id] = true;
+                if (! $category->parent_id) return true;
+                $category = $byId->get($category->parent_id);
+            }
+            return false;
+        });
     }
 }

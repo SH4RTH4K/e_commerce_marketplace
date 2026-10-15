@@ -117,7 +117,7 @@ export default function StorefrontLayout({ children, title, description, activeC
     chatSettings.pay_nagad_enabled && { label: templateTwoFooter.payment_labels.nagad, tone: 'nagad' },
     chatSettings.pay_rocket_enabled && { label: templateTwoFooter.payment_labels.rocket, tone: 'rocket' },
   ].filter(Boolean);
-  const pageSeo = props.seo || {};
+  const pageSeo = { ...props.seoDefaults, ...Object.fromEntries(Object.entries(props.seo || {}).filter(([, value]) => value != null && value !== '')) };
   const keywordList = String(chatSettings.seo_target_keywords || pageSeo.keywords || chatSettings.default_meta_keywords || '')
     .split(/[\r\n,;|]+/)
     .map(keyword => keyword.trim())
@@ -213,6 +213,7 @@ export default function StorefrontLayout({ children, title, description, activeC
     <>
     <div className={`storefront-theme-root storefront-template-${storefrontTemplate}`} style={typographyStyle}>
       <Head>
+        {props.structuredData && <script head-key="structured-data" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(props.structuredData).replace(/</g, '\\u003c') }} />}
         {seoDescription && <meta head-key="description" name="description" content={seoDescription} />}
         {seoKeywords && <meta head-key="keywords" name="keywords" content={seoKeywords} />}
         <meta head-key="og:title" property="og:title" content={seoTitle} />
@@ -220,7 +221,7 @@ export default function StorefrontLayout({ children, title, description, activeC
         <meta head-key="og:type" property="og:type" content={pageSeo.type || 'website'} />
         {canonicalUrl && <meta head-key="og:url" property="og:url" content={canonicalUrl} />}
         {seoImage && <meta head-key="og:image" property="og:image" content={seoImage} />}
-        <meta head-key="twitter:card" name="twitter:card" content="summary_large_image" />
+        <meta head-key="twitter:card" name="twitter:card" content={seoImage ? 'summary_large_image' : 'summary'} />
         <meta head-key="twitter:title" name="twitter:title" content={seoTitle} />
         {seoDescription && <meta head-key="twitter:description" name="twitter:description" content={seoDescription} />}
         {seoImage && <meta head-key="twitter:image" name="twitter:image" content={seoImage} />}

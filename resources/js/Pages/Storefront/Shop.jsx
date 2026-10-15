@@ -165,14 +165,19 @@ export default function ShopPage({
 
   const loadMoreButton = loadedProducts.next_page_url && (
     <div className="mt-[45px] flex justify-center">
-      <button
-        type="button"
-        onClick={loadMoreProducts}
-        disabled={isLoadingMore}
+      <a
+        href={loadedProducts.next_page_url}
+        onClick={(event) => {
+          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          loadMoreProducts();
+        }}
+        aria-disabled={isLoadingMore}
+        aria-busy={isLoadingMore}
         className="inline-flex h-[46px] min-w-[179px] items-center justify-center rounded-[23px] bg-[#e6e6e6] px-[15px] text-[15px] font-medium uppercase leading-[1.466667] text-[#333] transition-colors duration-300 hover:bg-[#222] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#222] focus:ring-offset-2 disabled:cursor-wait disabled:opacity-70"
       >
         {isLoadingMore ? 'LOADING...' : 'LOAD MORE'}
-      </button>
+      </a>
     </div>
   );
 

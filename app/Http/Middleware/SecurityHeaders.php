@@ -13,6 +13,10 @@ class SecurityHeaders
         /** @var Response $response */
         $response = $next($request);
 
+        if (app(\App\Services\StorefrontSeoService::class)->isPrivate($request)) {
+            $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
+        }
+
         // Clickjacking protection
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
         // MIME-type sniffing protection

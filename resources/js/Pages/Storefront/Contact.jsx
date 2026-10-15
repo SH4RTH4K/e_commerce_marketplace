@@ -4,7 +4,7 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 
 export default function ContactPage({ phone, email, address, hours, fields }) {
   const { flash } = usePage().props;
-  const { app } = usePage().props;
+  const { app, seoDefaults } = usePage().props;
   const isTemplateOne = app?.settings?.storefront_template === 'template-1';
   
   // Initialize form state dynamically
@@ -26,7 +26,7 @@ export default function ContactPage({ phone, email, address, hours, fields }) {
   if (isTemplateOne) {
     return (
       <StorefrontLayout>
-        <Head title="Contact" />
+        <Head title={seoDefaults?.title || 'Contact'} />
         <div className="template-1-page-title"><h1>Contact</h1></div>
         <main className="template-1-contact-page">
           <div className="template-1-contact-layout">
@@ -74,7 +74,7 @@ export default function ContactPage({ phone, email, address, hours, fields }) {
 
   return (
     <StorefrontLayout>
-      <Head title="Contact Us" />
+      <Head title={seoDefaults?.title || 'Contact Us'} />
       
       {/* Hero Section */}
       <div className="bg-white border-b border-gray-100 py-16 sm:py-24">

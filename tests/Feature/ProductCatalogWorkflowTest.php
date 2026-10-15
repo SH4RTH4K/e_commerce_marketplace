@@ -128,9 +128,9 @@ class ProductCatalogWorkflowTest extends TestCase
         $product = $this->product();
         for ($i = 0; $i < 2; $i++) $this->patch('/admin/products/'.$product->id.'/toggle', ['is_published' => false])->assertSessionHasNoErrors();
         $this->assertFalse($product->fresh()->is_published);
-        Cache::put('sitemap_urls', ['stale']);
+        Cache::put('sitemap_urls_v2', ['stale']);
         $this->post('/admin/products/bulk', ['ids' => [$product->id], 'bulk_action' => 'activate'])->assertSessionHasNoErrors();
-        $this->assertTrue($product->fresh()->is_published); $this->assertNull(Cache::get('sitemap_urls'));
+        $this->assertTrue($product->fresh()->is_published); $this->assertNull(Cache::get('sitemap_urls_v2'));
         $this->postJson('/admin/products/bulk', ['ids' => [$product->id, $product->id], 'bulk_action' => 'delete'])->assertUnprocessable();
         $this->assertNotNull($product->fresh());
     }

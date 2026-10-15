@@ -35,11 +35,11 @@ class Product extends Model
         });
 
         static::saved(function (Product $product) {
-            if ($product->wasRecentlyCreated || $product->wasChanged(['slug', 'is_published'])) {
-                Cache::forget('sitemap_urls');
+            if ($product->wasRecentlyCreated || $product->wasChanged(['slug', 'sku', 'is_published', 'updated_at'])) {
+                Cache::forget('sitemap_urls_v2');
             }
         });
-        static::deleted(fn () => Cache::forget('sitemap_urls'));
+        static::deleted(fn () => Cache::forget('sitemap_urls_v2'));
     }
 
     protected $fillable = [

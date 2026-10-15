@@ -112,7 +112,7 @@ class CategoryController extends Controller
         ]);
 
         $ids = $data['ids'];
-        Cache::forget('sitemap_urls');
+        Cache::forget('sitemap_urls_v2');
         $count = count($ids);
 
         if ($data['bulk_action'] === 'activate') {

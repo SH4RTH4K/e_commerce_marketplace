@@ -19,8 +19,8 @@ class Category extends Model
 
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget('sitemap_urls'));
-        static::deleted(fn () => Cache::forget('sitemap_urls'));
+        static::saved(fn () => Cache::forget('sitemap_urls_v2'));
+        static::deleted(fn () => Cache::forget('sitemap_urls_v2'));
     }
 
     public function parent(): BelongsTo
