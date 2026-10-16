@@ -28,11 +28,14 @@ class MerchantFeedController extends Controller
                 if (! $image) continue; // Merchant listings require a real image.
                 $product->sku = $product->supplierLinks->first()?->supplierProduct?->product_code ?: $product->sku;
                 $path = $product->category ? $hierarchy->path($product->category) : [];
+                // Use the existing English SEO copy when the source catalogue
+                // name/description is Bengali. Keep all stored content intact.
+                $feedName = trim(preg_replace('/\s*\|\s*'.preg_quote(site_name(), '/').'\s*$/iu', '', (string) ($product->meta_title ?: $product->name))) ?: $product->name;
                 foreach ($offers->all($product) as $offer) {
                     $xml->startElement('item');
                     $fields = [
-                        'id' => $offer['id'], 'title' => Str::limit($product->name.($offer['label'] ? ' — '.$offer['label'] : ''), 150, ''),
-                        'description' => Str::limit(trim(html_entity_decode(strip_tags((string) ($product->description ?: $product->short_description ?: $product->meta_description ?: $product->name)), ENT_QUOTES | ENT_HTML5, 'UTF-8')), 5000, ''),
+                        'id' => $offer['id'], 'title' => Str::limit($feedName.($offer['label'] ? ' — '.$offer['label'] : ''), 150, ''),
+                        'description' => Str::limit(trim(html_entity_decode(strip_tags((string) ($product->meta_description ?: $product->description ?: $product->short_description ?: $product->name)), ENT_QUOTES | ENT_HTML5, 'UTF-8')), 5000, ''),
                         'link' => $offer['url'], 'image_link' => image_url($image->path, $product->name),
                         'availability' => $offer['in_stock'] ? 'in_stock' : 'out_of_stock',
                         'price' => number_format($offer['price'], 2, '.', '').' BDT',
@@ -42,7 +45,7 @@ class MerchantFeedController extends Controller
                     if ($product->brand) $fields['brand'] = $product->brand;
                     if ($offer['label']) {
                         $fields['item_group_id'] = (string) $product->id;
-                        $fields['item_group_title'] = Str::limit($product->name, 150, '');
+                        $fields['item_group_title'] = Str::limit($feedName, 150, '');
                     }
                     foreach ($offer['selection'] as $type => $value) {
                         $name = strtolower($type) === 'agegroup' ? 'age_group' : strtolower($type);

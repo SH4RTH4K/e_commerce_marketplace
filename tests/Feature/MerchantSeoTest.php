@@ -76,6 +76,10 @@ class MerchantSeoTest extends TestCase
         $fresh = simplexml_load_string($this->get('/merchant-feed.xml')->streamedContent())->channel->item[0]->children('http://base.google.com/ns/1.0');
         $this->assertSame('0.00 BDT', (string) $fresh->price);
         $this->assertSame('out_of_stock', (string) $fresh->availability);
+        $product->update(['meta_title' => 'Cotton shirt | TAQI LIFE', 'meta_description' => 'Cotton shirt with two pockets.']);
+        $english = simplexml_load_string($this->get('/merchant-feed.xml')->streamedContent())->channel->item[0]->children('http://base.google.com/ns/1.0');
+        $this->assertSame('Cotton shirt — Size: S', (string) $english->title);
+        $this->assertSame('Cotton shirt with two pockets.', (string) $english->description);
     }
 
     public function test_only_approved_reviews_are_used_and_return_policy_does_not_promise_free_returns(): void
