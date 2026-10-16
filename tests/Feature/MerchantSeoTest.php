@@ -87,7 +87,12 @@ class MerchantSeoTest extends TestCase
         $product = $this->product();
         $product->reviews()->create(['author_name' => 'Customer A', 'rating' => 4, 'body' => 'Useful product', 'status' => 'approved']);
         $product->reviews()->create(['author_name' => 'Customer B', 'rating' => 1, 'body' => 'Pending review', 'status' => 'pending']);
+        \Illuminate\Support\Facades\DB::enableQueryLog();
         $schema = app(StorefrontSeoService::class)->product($product->load('images', 'variants'), []);
+        $reviewQueries = array_filter(\Illuminate\Support\Facades\DB::getQueryLog(), fn ($query) => str_contains($query['query'], 'COUNT(*) AS review_count'));
+        \Illuminate\Support\Facades\DB::disableQueryLog();
+        $this->assertCount(1, $reviewQueries);
+        $this->assertStringNotContainsString('order by', strtolower(array_values($reviewQueries)[0]['query']), 'Review aggregation must work with MySQL ONLY_FULL_GROUP_BY.');
         $this->assertSame(1, $schema['@graph'][0]['aggregateRating']['reviewCount']);
         $this->assertSame(4.0, $schema['@graph'][0]['aggregateRating']['ratingValue']);
         $policy = app(StorefrontSeoService::class)->organization()['@graph'][0]['hasMerchantReturnPolicy'];

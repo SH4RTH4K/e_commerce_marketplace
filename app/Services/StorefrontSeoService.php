@@ -166,7 +166,7 @@ class StorefrontSeoService
         } else {
             $item['offers'] = count($offerings) === 1 ? $offer($offerings[0]) : array_map($offer, $offerings);
         }
-        $reviews = $product->approvedReviews()->selectRaw('COUNT(*) AS review_count, AVG(rating) AS average_rating')->first();
+        $reviews = $product->approvedReviews()->reorder()->selectRaw('COUNT(*) AS review_count, AVG(rating) AS average_rating')->first();
         if ((int) $reviews->review_count > 0) $item['aggregateRating'] = [
             '@type' => 'AggregateRating', 'ratingValue' => round((float) $reviews->average_rating, 2),
             'reviewCount' => (int) $reviews->review_count, 'bestRating' => 5, 'worstRating' => 1,
