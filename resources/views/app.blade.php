@@ -108,6 +108,16 @@
             @if($pageMetaDescription)<p>{{ $pageMetaDescription }}</p>@endif
             <nav aria-label="Additional store links"><a href="{{ route('about') }}">About TAQI LIFE</a> · <a href="{{ route('blog') }}">Shopping guides</a></nav>
             <nav aria-label="Store links"><a href="{{ route('home') }}">Home</a> · <a href="{{ route('shop') }}">Shop</a> · <a href="{{ route('contact') }}">Contact</a></nav>
+            @if(request()->is('/'))
+                <section aria-labelledby="shopping-guide-title">
+                    <h2 id="shopping-guide-title">Online shopping in Bangladesh with TAQI LIFE</h2>
+                    <p>TAQI LIFE is an online shopping destination for everyday fashion, useful gadgets, home essentials, gifts, and products for children. Explore the store by category or visit the full shop to compare items that fit your needs. Each collection is arranged to help you move from browsing to choosing without losing sight of the details that matter.</p>
+                    <p>Start with a category, then use the product listings to discover current choices. Open a product page to review its photos, price, available options, and description before adding it to your cart. Product availability and offers can change, so the product page is the best place to check the latest information for the item you want.</p>
+                    <p>Before checkout, review the items and quantities in your cart and provide accurate delivery information. Delivery charges are shown as part of the order process. If an item needs special delivery arrangements, contact TAQI LIFE before placing the order so the team can confirm the available option.</p>
+                    <p>Need help after choosing a product? Use order tracking to follow an order, read the shipping and return information before you buy, or contact TAQI LIFE with a product or order question. The shopping guides also share practical ideas for choosing products, comparing useful features, planning thoughtful gifts, and getting more value from your online shopping every day.</p>
+                    <nav aria-label="Shopping help"><a href="{{ route('shop') }}">Browse all products</a> · <a href="{{ route('track') }}">Track an order</a> · <a href="{{ route('shipping') }}">Shipping information</a> · <a href="{{ route('refund') }}">Return and refund policy</a> · <a href="{{ route('contact') }}">Contact TAQI LIFE</a></nav>
+                </section>
+            @endif
             @foreach(($pageProps['filterCategories'] ?? $pageProps['featuredCategories'] ?? []) as $category)
                 <a href="{{ route('shop.category', $category['slug']) }}">{{ $category['name'] }}</a>
             @endforeach

@@ -61,6 +61,18 @@ class SeoFallbackH1Test extends TestCase
         }
     }
 
+    public function test_homepage_fallback_has_structured_useful_content_for_non_javascript_crawlers(): void
+    {
+        Setting::put('seo_fallback_h1_enabled', '1');
+
+        $xpath = $this->htmlFor('/');
+        $content = preg_replace('/\s+/', ' ', trim($xpath->evaluate('string(//*[@data-seo-crawler-fallback])')));
+
+        $this->assertGreaterThanOrEqual(250, str_word_count($content));
+        $this->assertGreaterThanOrEqual(4, $xpath->query('//*[@data-seo-crawler-fallback]//section[@aria-labelledby="shopping-guide-title"]//p')->length);
+        $this->assertStringContainsString('online shopping in bangladesh', mb_strtolower($content));
+    }
+
     private function htmlFor(string $uri): DOMXPath
     {
         $response = $this->get($uri)->assertOk();

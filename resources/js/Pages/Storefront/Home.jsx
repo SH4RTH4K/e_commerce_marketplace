@@ -1332,6 +1332,31 @@ export default function HomePage({
         </section>
       )}
 
+      <section className="storefront-section mx-auto max-w-7xl px-4 pb-12 pt-4 sm:px-6 lg:px-8" aria-labelledby="shopping-guide-title">
+        <div className="overflow-hidden rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 via-white to-stone-50 shadow-sm">
+          <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[0.8fr_1.2fr] lg:p-10">
+            <div>
+              <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#f2541c]">Shop with confidence</p>
+              <h2 id="shopping-guide-title" className="mt-3 text-2xl font-extrabold tracking-tight text-gray-900 sm:text-3xl">Online shopping in Bangladesh with TAQI LIFE</h2>
+              <p className="mt-4 text-sm leading-7 text-gray-600">Find everyday fashion, useful gadgets, home essentials, gifts, and products for children in one easy-to-browse store.</p>
+              <Link href="/shop" className="mt-6 inline-flex items-center rounded-full bg-[#f2541c] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#d94613]">Browse all products</Link>
+            </div>
+            <div className="space-y-4 text-sm leading-7 text-gray-600">
+              <p>TAQI LIFE makes online shopping in Bangladesh simpler by organising products into clear categories and collections. Start with a category or visit the full shop to compare the products that fit your needs. Each collection is designed to help you move from browsing to choosing without losing sight of the details that matter.</p>
+              <p>Open a product page to review photos, prices, available options, and descriptions before adding an item to your cart. Product availability and offers can change, so the product page is the best place to check the latest information for the item you want.</p>
+              <p>Before checkout, review your cart, quantities, and delivery information carefully. Delivery charges are shown during the order process. If an item needs special delivery arrangements, contact TAQI LIFE before placing the order so the available option can be confirmed.</p>
+              <p>Need help after choosing a product? Use order tracking to follow an order, read the shipping and return information before you buy, or contact TAQI LIFE with a product or order question. Our shopping guides also share practical ideas for choosing products and getting more value from your online shopping.</p>
+              <nav aria-label="Shopping help" className="flex flex-wrap gap-x-4 gap-y-2 pt-1 font-semibold">
+                <Link href="/track" className="text-[#d94613] hover:underline">Track an order</Link>
+                <Link href="/shipping" className="text-[#d94613] hover:underline">Shipping information</Link>
+                <Link href="/refund-policy" className="text-[#d94613] hover:underline">Return and refund policy</Link>
+                <Link href="/contact" className="text-[#d94613] hover:underline">Contact TAQI LIFE</Link>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </StorefrontLayout>
   );
 }
