@@ -45,8 +45,22 @@
         if ($keywordConsistencyEnabled && $seoKeywordPhrases !== []) {
             $fallbackH1 = seo_append_missing_keywords($fallbackH1, $seoKeywordPhrases, 180);
         }
+        $fallbackProducts = collect($pageProps['products']['data'] ?? [])
+            ->merge($pageProps['flashProducts'] ?? [])
+            ->merge($pageProps['trending'] ?? [])
+            ->merge($pageProps['newArrivals'] ?? [])
+            ->merge($pageProps['bestSellers'] ?? []);
+        foreach (($pageProps['templateTwoCategorySections'] ?? []) as $section) {
+            $fallbackProducts = $fallbackProducts->merge($section['products'] ?? []);
+        }
+        $fallbackProducts = $fallbackProducts
+            ->filter(fn ($product) => is_array($product) && ! empty($product['name']) && ! empty($product['url_key']))
+            ->unique('url_key')
+            ->take(24);
     @endphp
     <title data-inertia="">{{ $pageMetaTitle }}</title>
+    <script>document.documentElement.classList.add('js')</script>
+    <style>.js .seo-crawler-fallback { display: none; }</style>
     <meta name="site-name" content="{{ site_name() }}" />
     <meta name="seo-default-title" content="{{ $pageMetaTitle }}" />
     {{-- Social crawlers read this HTML without running the storefront JavaScript. --}}
@@ -88,13 +102,20 @@
 <body class="antialiased">
     @include('partials.tracking-body')
     @if($fallbackH1Enabled && $fallbackH1 !== '')
-        <noscript>
+        {{-- Render meaningful content for visitors and crawlers without JavaScript. --}}
+        <main class="seo-crawler-fallback" data-seo-crawler-fallback>
             <h1 data-seo-fallback-h1>{{ $pageProps['product']['name'] ?? $pageProps['activeCategory']['name'] ?? $pageProps['heading'] ?? $fallbackH1 }}</h1>
-            <p>This store uses JavaScript for shopping. Enable JavaScript to use the full store.</p>
+            @if($pageMetaDescription)<p>{{ $pageMetaDescription }}</p>@endif
+            <nav aria-label="Additional store links"><a href="{{ route('about') }}">About TAQI LIFE</a> · <a href="{{ route('blog') }}">Shopping guides</a></nav>
             <nav aria-label="Store links"><a href="{{ route('home') }}">Home</a> · <a href="{{ route('shop') }}">Shop</a> · <a href="{{ route('contact') }}">Contact</a></nav>
             @foreach(($pageProps['filterCategories'] ?? $pageProps['featuredCategories'] ?? []) as $category)
                 <a href="{{ route('shop.category', $category['slug']) }}">{{ $category['name'] }}</a>
             @endforeach
+            @if($fallbackProducts->isNotEmpty())
+                <ul>@foreach($fallbackProducts as $product)
+                    <li><a href="{{ route('product.show', $product['url_key']) }}">{{ $product['name'] }}</a></li>
+                @endforeach</ul>
+            @endif
             @if(isset($pageProps['products']['data']))
                 <ul>@foreach($pageProps['products']['data'] as $product)
                     <li><a href="{{ route('product.show', $product['url_key'] ?? $product['slug']) }}">{{ $product['name'] }}</a></li>
@@ -102,7 +123,7 @@
                 @if(!empty($pageProps['products']['prev_page_url']))<a href="{{ $pageProps['products']['prev_page_url'] }}">Previous page</a>@endif
                 @if(!empty($pageProps['products']['next_page_url']))<a href="{{ $pageProps['products']['next_page_url'] }}">Next page</a>@endif
             @endif
-        </noscript>
+        </main>
     @endif
     @inertia
 </body>

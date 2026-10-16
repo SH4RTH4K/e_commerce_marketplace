@@ -31,9 +31,9 @@ class StorefrontSeoTest extends TestCase
         $html = $this->html($response->getContent());
         $this->assertSame(route('shop.category', $category).'?page=2', $html->evaluate('string(//link[@rel="canonical"]/@href)'));
         $this->assertSame('index,follow', $html->evaluate('string(//meta[@name="robots"]/@content)'));
-        $this->assertGreaterThan(0, $html->query('//noscript//a[contains(@href,"page=3")]')->length);
-        $this->assertGreaterThan(0, $html->query('//noscript//a[contains(@href,"/product/")]')->length);
-        $this->assertSame(0, $html->query('//h1[not(ancestor::noscript)]')->length);
+        $this->assertGreaterThan(0, $html->query('//*[@data-seo-crawler-fallback]//a[contains(@href,"page=3")]')->length);
+        $this->assertGreaterThan(0, $html->query('//*[@data-seo-crawler-fallback]//a[contains(@href,"/product/")]')->length);
+        $this->assertSame(1, $html->query('//*[@data-seo-crawler-fallback]//h1[@data-seo-fallback-h1]')->length);
         $this->get('/category/speakers?page=200')->assertNotFound();
         $filtered = $this->html($this->get('/category/speakers?brand=Example')->assertOk()->getContent());
         $this->assertSame('noindex,follow', $filtered->evaluate('string(//meta[@name="robots"]/@content)'));
