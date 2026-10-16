@@ -10,6 +10,7 @@ use App\Models\Feature;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
 
@@ -52,9 +53,19 @@ class HomeController extends Controller
             'best' => max($overviewAllLimit, min(48, max(1, (int) setting('template_1_overview_best_count', '12')))),
             'new' => max($overviewAllLimit, min(48, max(1, (int) setting('template_1_overview_new_count', '12')))),
         ];
-        $withImages = fn ($q) => $q
+        $withStorefrontCardData = fn ($q) => $q
             ->published()
-            ->with('images', 'category', 'supplierLinks.supplierProduct')
+            ->select([
+                'id', 'category_id', 'name', 'slug', 'sku', 'regular_price', 'sale_price',
+                'stock_quantity', 'is_free_shipping', 'rating', 'reviews_count',
+            ])
+            ->with([
+                'images:id,product_id,path,is_primary,position,updated_at',
+                'category:id,name,slug',
+                'supplierLinks' => fn ($query) => $query
+                    ->select(['id', 'product_id', 'supplier_product_row_id'])
+                    ->with('supplierProduct:id,product_code,supplier_product_id'),
+            ])
             ->withExists('variants')
             ->withExists([
                 'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
@@ -114,9 +125,9 @@ class HomeController extends Controller
             $product->unsetRelation('supplierLinks');
         };
 
-        $trending = $isTemplateOne ? Product::query()->tap($withImages)->where('is_featured', true)->tap($overviewOrder)->take($overviewLimits['featured'])->get()->each($setStorefrontSku) : collect();
-        $bestSellers = $isTemplateOne ? Product::query()->tap($withImages)->where('is_best_seller', true)->tap($overviewOrder)->take($overviewLimits['best'])->get()->each($setStorefrontSku) : collect();
-        $newArrivals = $isTemplateOne ? Product::query()->tap($withImages)->where('is_new_arrival', true)->tap($overviewOrder)->take($overviewLimits['new'])->get()->each($setStorefrontSku) : collect();
+        $trending = $isTemplateOne ? Product::query()->tap($withStorefrontCardData)->where('is_featured', true)->tap($overviewOrder)->take($overviewLimits['featured'])->get()->each($setStorefrontSku) : collect();
+        $bestSellers = $isTemplateOne ? Product::query()->tap($withStorefrontCardData)->where('is_best_seller', true)->tap($overviewOrder)->take($overviewLimits['best'])->get()->each($setStorefrontSku) : collect();
+        $newArrivals = $isTemplateOne ? Product::query()->tap($withStorefrontCardData)->where('is_new_arrival', true)->tap($overviewOrder)->take($overviewLimits['new'])->get()->each($setStorefrontSku) : collect();
         $showHomepageCategorySections = setting('homepage_category_sections_enabled', '1') === '1';
         $homepageCategorySectionLimit = min(12, max(1, (int) setting('homepage_category_sections_limit', '6')));
         $homepageCategoryOrder = setting('homepage_category_product_order', setting('template_2_category_product_order', 'newest'));
@@ -127,9 +138,9 @@ class HomeController extends Controller
             ? $categories
                 ->filter(fn (Category $category) => $category->products_count > 0)
                 ->take($homepageCategorySectionLimit)
-                ->map(function (Category $category) use ($withImages, $setStorefrontSku, $templateTwoCategoryOrder): array {
+                ->map(function (Category $category) use ($withStorefrontCardData, $setStorefrontSku, $templateTwoCategoryOrder): array {
                     $products = Product::query()
-                        ->tap($withImages)
+                        ->tap($withStorefrontCardData)
                         ->whereIn('category_id', $category->selfAndDescendantIds(true))
                         ->tap($templateTwoCategoryOrder)
                         ->take(10)
@@ -161,7 +172,7 @@ class HomeController extends Controller
 
         $flashProducts = $flashSaleEnabled && $flashSaleActive
             ? Product::query()
-                ->tap($withImages)
+                ->tap($withStorefrontCardData)
                 ->where('is_flash_sale', true)
                 ->tap($flashOrder)
                 ->take($flashSaleLimit)
@@ -182,11 +193,15 @@ class HomeController extends Controller
                 ->filter(fn (Coupon $c) => $c->isCurrentlyActive())
                 ->values()
                 ->take(4),
-            'flashProducts'   => $flashProducts,
-            'trending'        => $trending,
-            'bestSellers'     => $bestSellers,
-            'newArrivals'     => $newArrivals,
-            'templateTwoCategorySections' => $templateTwoCategorySections,
+            'flashProducts'   => $this->storefrontProductPayload($flashProducts),
+            'trending'        => $this->storefrontProductPayload($trending),
+            'bestSellers'     => $this->storefrontProductPayload($bestSellers),
+            'newArrivals'     => $this->storefrontProductPayload($newArrivals),
+            'templateTwoCategorySections' => $templateTwoCategorySections->map(function (array $section): array {
+                $section['products'] = $this->storefrontProductPayload($section['products']);
+
+                return $section;
+            })->all(),
             'homeOverviewHasMore' => [
                 'all' => Product::published()
                     ->where(fn ($query) => $query->where('is_featured', true)->orWhere('is_new_arrival', true)->orWhere('is_best_seller', true))
@@ -208,7 +223,14 @@ class HomeController extends Controller
         ]);
 
         $query = Product::published()
-            ->with('images', 'category', 'supplierLinks.supplierProduct')
+            ->select(['id', 'category_id', 'name', 'slug', 'sku', 'regular_price', 'sale_price', 'stock_quantity', 'is_free_shipping', 'rating', 'reviews_count'])
+            ->with([
+                'images:id,product_id,path,is_primary,position,updated_at',
+                'category:id,name,slug',
+                'supplierLinks' => fn ($supplierLinks) => $supplierLinks
+                    ->select(['id', 'product_id', 'supplier_product_row_id'])
+                    ->with('supplierProduct:id,product_code,supplier_product_id'),
+            ])
             ->withExists('variants')
             ->withExists([
                 'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
@@ -245,7 +267,7 @@ class HomeController extends Controller
         $hasMore = $products->count() > $limit;
 
         return response()->json([
-            'products' => $products->take($limit)->values(),
+            'products' => $this->storefrontProductPayload($products->take($limit)),
             'has_more' => $hasMore,
         ]);
     }
@@ -264,7 +286,14 @@ class HomeController extends Controller
 
         $limit = 10;
         $products = Product::published()
-            ->with('images', 'category', 'supplierLinks.supplierProduct')
+            ->select(['id', 'category_id', 'name', 'slug', 'sku', 'regular_price', 'sale_price', 'stock_quantity', 'is_free_shipping', 'rating', 'reviews_count'])
+            ->with([
+                'images:id,product_id,path,is_primary,position,updated_at',
+                'category:id,name,slug',
+                'supplierLinks' => fn ($supplierLinks) => $supplierLinks
+                    ->select(['id', 'product_id', 'supplier_product_row_id'])
+                    ->with('supplierProduct:id,product_code,supplier_product_id'),
+            ])
             ->withExists('variants')
             ->withExists([
                 'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
@@ -289,7 +318,7 @@ class HomeController extends Controller
         $hasMore = $products->count() > $limit;
 
         return response()->json([
-            'products' => $products->take($limit)->values(),
+            'products' => $this->storefrontProductPayload($products->take($limit)),
             'has_more' => $hasMore,
         ]);
     }
@@ -307,7 +336,14 @@ class HomeController extends Controller
 
         $limit = min(48, max(1, (int) setting('homepage_flash_sale_limit', '10')));
         $products = Product::published()
-            ->with('images', 'category', 'supplierLinks.supplierProduct')
+            ->select(['id', 'category_id', 'name', 'slug', 'sku', 'regular_price', 'sale_price', 'stock_quantity', 'is_free_shipping', 'rating', 'reviews_count'])
+            ->with([
+                'images:id,product_id,path,is_primary,position,updated_at',
+                'category:id,name,slug',
+                'supplierLinks' => fn ($supplierLinks) => $supplierLinks
+                    ->select(['id', 'product_id', 'supplier_product_row_id'])
+                    ->with('supplierProduct:id,product_code,supplier_product_id'),
+            ])
             ->withExists('variants')
             ->withExists([
                 'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
@@ -332,7 +368,7 @@ class HomeController extends Controller
         $hasMore = $products->count() > $limit;
 
         return response()->json([
-            'products' => $products->take($limit)->values(),
+            'products' => $this->storefrontProductPayload($products->take($limit)),
             'has_more' => $hasMore,
         ]);
     }
@@ -344,6 +380,32 @@ class HomeController extends Controller
         $default = $tab === 'all' ? 16 : 12;
 
         return $key ? max(1, min(48, (int) setting($key, (string) $default))) : $default;
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function storefrontProductPayload(Collection $products): array
+    {
+        return $products->map(function (Product $product): array {
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'url_key' => $product->url_key,
+                'sku' => $product->sku,
+                'regular_price' => $product->regular_price,
+                'sale_price' => $product->sale_price,
+                'stock_quantity' => $product->stock_quantity,
+                'is_free_shipping' => $product->is_free_shipping,
+                'rating' => $product->rating,
+                'reviews_count' => $product->reviews_count,
+                'variants_exists' => (bool) $product->variants_exists,
+                'variants_in_stock_exists' => (bool) $product->variants_in_stock_exists,
+                'category' => $product->category?->only(['id', 'name', 'slug']),
+                'images' => $product->images->map(fn ($image) => $image->only([
+                    'id', 'product_id', 'path', 'is_primary', 'position', 'updated_at',
+                ]))->all(),
+            ];
+        })->values()->all();
     }
 
     private function flashSaleTimerActive(): bool
