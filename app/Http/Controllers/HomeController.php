@@ -10,11 +10,35 @@ use App\Models\Feature;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 class HomeController extends Controller
 {
     public function index()
+    {
+        return Inertia::render('Storefront/Home', $this->homepageProps());
+    }
+
+    /**
+     * Build the public homepage once, then serve its catalogue payload from the
+     * local file cache. This page previously performed a separate product and
+     * relationship query for every category section on every request.
+     */
+    private function homepageProps(): array
+    {
+        if (app()->environment('testing')) {
+            return $this->buildHomepageProps();
+        }
+
+        return Cache::store('file')->remember(
+            'storefront.home.props.v1',
+            now()->addMinutes(10),
+            fn (): array => $this->buildHomepageProps(),
+        );
+    }
+
+    private function buildHomepageProps(): array
     {
         $isTemplateOne = setting('storefront_template', 'template-2') === 'template-1';
         $isTemplateTwo = setting('storefront_template', 'template-2') === 'template-2';
@@ -94,6 +118,7 @@ class HomeController extends Controller
         $bestSellers = $isTemplateOne ? Product::query()->tap($withImages)->where('is_best_seller', true)->tap($overviewOrder)->take($overviewLimits['best'])->get()->each($setStorefrontSku) : collect();
         $newArrivals = $isTemplateOne ? Product::query()->tap($withImages)->where('is_new_arrival', true)->tap($overviewOrder)->take($overviewLimits['new'])->get()->each($setStorefrontSku) : collect();
         $showHomepageCategorySections = setting('homepage_category_sections_enabled', '1') === '1';
+        $homepageCategorySectionLimit = min(12, max(1, (int) setting('homepage_category_sections_limit', '6')));
         $homepageCategoryOrder = setting('homepage_category_product_order', setting('template_2_category_product_order', 'newest'));
         $templateTwoCategoryOrder = $homepageCategoryOrder === 'shuffle'
             ? fn ($query) => $query->inRandomOrder()
@@ -101,7 +126,7 @@ class HomeController extends Controller
         $templateTwoCategorySections = $isTemplateTwo && $showHomepageCategorySections
             ? $categories
                 ->filter(fn (Category $category) => $category->products_count > 0)
-                ->take(12)
+                ->take($homepageCategorySectionLimit)
                 ->map(function (Category $category) use ($withImages, $setStorefrontSku, $templateTwoCategoryOrder): array {
                     $products = Product::query()
                         ->tap($withImages)
@@ -144,7 +169,7 @@ class HomeController extends Controller
                 ->each($setStorefrontSku)
             : collect();
 
-        return Inertia::render('Storefront/Home', [
+        return [
             'heroBanners'     => $bannerPayload('hero'),
             'heroSideBanners' => $bannerPayload('hero_side'),
             'middleBanners'   => $bannerPayload('middle'),
@@ -171,7 +196,7 @@ class HomeController extends Controller
                 'best' => Product::published()->where('is_best_seller', true)->count() > $bestSellers->take($overviewDisplayLimits['best'])->count(),
             ],
             'flashSaleHasMore' => $flashSaleEnabled && $flashSaleActive && Product::published()->where('is_flash_sale', true)->count() > $flashProducts->count(),
-        ]);
+        ];
     }
 
     public function loadMore(Request $request)

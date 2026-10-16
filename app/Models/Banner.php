@@ -5,9 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Cache;
 
 class Banner extends Model
 {
+    protected static function booted(): void
+    {
+        static::saved(fn () => Cache::store('file')->forget('storefront.home.props.v1'));
+        static::deleted(fn () => Cache::store('file')->forget('storefront.home.props.v1'));
+    }
+
     public const PLACEMENTS = [
         'hero' => 'Hero - homepage slider slides (add multiple; ordered by position)',
         'hero_side' => 'Hero Side Promo - right-side promo block beside homepage slider',

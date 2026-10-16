@@ -35,11 +35,16 @@ class Product extends Model
         });
 
         static::saved(function (Product $product) {
+            Cache::store('file')->forget('storefront.home.props.v1');
+
             if ($product->wasRecentlyCreated || $product->wasChanged(['slug', 'sku', 'is_published', 'updated_at'])) {
                 Cache::forget('sitemap_urls_v2');
             }
         });
-        static::deleted(fn () => Cache::forget('sitemap_urls_v2'));
+        static::deleted(function (): void {
+            Cache::store('file')->forget('storefront.home.props.v1');
+            Cache::forget('sitemap_urls_v2');
+        });
     }
 
     protected $fillable = [
