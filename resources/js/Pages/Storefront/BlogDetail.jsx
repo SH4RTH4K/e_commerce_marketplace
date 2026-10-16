@@ -1,50 +1,34 @@
-import StorefrontLayout from '@/Layouts/StorefrontLayout';
+﻿import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link } from '@inertiajs/react';
-import { posts } from './Blog';
 
-export default function BlogDetailPage({ slug }) {
-  const post = posts.find(item => item.slug === slug) || posts[0];
-
+export default function BlogDetailPage({ guide, guides = [], seo }) {
   return (
     <StorefrontLayout>
-      <Head title={post.title} />
-      <div className="template-1-breadcrumb">
-        <Link href="/">Home</Link> <span>&nbsp; / &nbsp;</span><Link href="/blog">Blog</Link> <span>&nbsp; / &nbsp;</span>{post.title}
-      </div>
-      <main className="template-1-blog-page">
-        <div className="template-1-blog-layout">
-          <article>
-            <div className="template-1-blog-image">
-              <img src={`/templates/template-1/images/${post.image}`} alt={post.title} />
-              <span className="template-1-blog-date"><strong>{post.day}</strong><span>{post.date}</span></span>
+      <Head title={seo?.title} />
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+        <nav aria-label="Breadcrumb" className="mb-7 flex flex-wrap gap-2 text-sm text-gray-600">
+          <Link href="/">Home</Link><span aria-hidden="true">/</span><Link href="/blog">Shopping guides</Link>
+        </nav>
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_260px]">
+          <article className="min-w-0 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-9">
+            <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-gray-900 sm:text-3xl">{guide.title}</h1>
+            <p className="mt-4 text-base leading-relaxed text-gray-600">{guide.summary}</p>
+            {guide.sections.map(section => (
+              <section key={section.heading} className="mt-8">
+                <h2 className="text-lg font-bold text-gray-900">{section.heading}</h2>
+                <p className="mt-3 leading-relaxed text-gray-700">{section.text}</p>
+              </section>
+            ))}
+            <div className="mt-8 flex flex-wrap gap-4 border-t border-gray-100 pt-6 text-sm font-semibold text-gray-900">
+              <Link href="/shop" className="underline">Browse products</Link>
+              <Link href="/shipping" className="underline">Delivery information</Link>
+              <Link href="/refund-policy" className="underline">Return policy</Link>
+              <Link href="/contact" className="underline">Contact support</Link>
             </div>
-            <div className="template-1-blog-meta"><span>By Admin &nbsp; | &nbsp; {post.date} &nbsp; | &nbsp; StreetStyle, Fashion</span><span>8 Comments</span></div>
-            <h2>{post.title}</h2>
-            <p>{post.text} Explore proportions, textures, and small details that help familiar pieces feel fresh through the season.</p>
-            <p>Start with the pieces you already enjoy wearing, then add one considered layer or accessory. The best personal style is practical enough for real life and distinctive enough to feel like yours.</p>
-            <div className="template-1-quote">Tags &nbsp; <strong>Streetstyle</strong> &nbsp; <strong>Crafts</strong></div>
-            <section style={{ marginTop: '42px' }}>
-              <h2>Leave a Comment</h2>
-              <p>Your email address will not be published. Required fields are marked *</p>
-              <form className="template-1-contact-field" onSubmit={event => event.preventDefault()}>
-                <textarea name="comment" placeholder="Comment..." />
-                <input name="name" placeholder="Name *" style={{ marginTop: '20px' }} />
-                <input name="email" type="email" placeholder="Email *" style={{ marginTop: '20px' }} />
-                <button type="submit" className="template-1-primary-button" style={{ marginTop: '20px' }}>Post Comment</button>
-              </form>
-            </section>
           </article>
-          <aside>
-            <div className="template-1-sidebar-block" style={{ marginTop: 0 }}>
-              <h3>Categories</h3>
-              {['Fashion', 'Beauty', 'Street Style', 'Life Style', 'DIY & Crafts'].map(item => <a href="/shop" key={item}>{item}</a>)}
-            </div>
-            <div className="template-1-sidebar-block">
-              <h3>Featured Products</h3>
-              <a href="/shop">White Shirt With Pleat Detail Back</a>
-              <a href="/shop">Converse All Star Hi Black Canvas</a>
-              <a href="/shop">Nixon Porter Leather Watch In Tan</a>
-            </div>
+          <aside className="space-y-4">
+            <h2 className="text-lg font-bold text-gray-900">More shopping guides</h2>
+            {guides.filter(item => item.title !== guide.title).map(item => <Link key={item.slug} href={`/blog/${item.slug}`} className="block rounded-xl border border-gray-200 bg-white p-4 text-sm font-semibold leading-relaxed text-gray-800 hover:underline">{item.title}</Link>)}
           </aside>
         </div>
       </main>

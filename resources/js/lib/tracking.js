@@ -18,6 +18,10 @@ function hasGa4() {
   return Boolean(cfg().ga4);
 }
 
+function directGa4() {
+  return hasGa4() && (!hasGtm() || cfg().ga4Mode !== 'gtm');
+}
+
 function hasPixel() {
   return Boolean(cfg().pixel);
 }
@@ -35,9 +39,9 @@ function dlPush(eventName, ecommercePayload) {
 
 // ─── gtag direct (only when GA4 is present but NO GTM) ──────────────────────
 function gtagEvent(eventName, params) {
-  if (!hasGa4() || hasGtm()) return; // GTM handles GA4 when GTM is set
+  if (!directGa4()) return;
   if (typeof window.gtag === 'function') {
-    window.gtag('event', eventName, params);
+    window.gtag('event', eventName, { ...params, send_to: cfg().ga4 });
   }
 }
 
@@ -64,7 +68,7 @@ function generateEventId() {
  * @param {string} url
  */
 export function trackPageView(url) {
-  const path = url || window.location.href;
+  const path = new URL(url || window.location.href, window.location.origin).href;
 
   // GA4 via GTM dataLayer
   if (hasGtm() || hasGa4()) {
@@ -76,9 +80,7 @@ export function trackPageView(url) {
   }
 
   // GA4 direct (only when no GTM)
-  if (hasGa4() && !hasGtm() && typeof window.gtag === 'function') {
-    window.gtag('config', cfg().ga4, { page_location: path });
-  }
+  gtagEvent('page_view', { page_location: path, page_title: document.title });
 
   // Meta Pixel (skip the very first load — blade already fired PageView)
   // We use a flag so SPA navigations fire correctly
@@ -170,9 +172,9 @@ export function trackAddToCart(product, qty = 1, variant = null) {
  */
 export function trackInitiateCheckout(cartItems = [], value = 0) {
   const items = cartItems.map((ci) => ({
-    item_id: String(ci.id || ci.product_id),
+    item_id: String(ci.product_id ?? ci.id),
     item_name: ci.name || ci.product_name,
-    price: Number(ci.price || ci.unit_price) || 0,
+    price: Number(ci.price ?? ci.unit_price) || 0,
     item_variant: ci.variant || undefined,
     quantity: Number(ci.qty || ci.quantity) || 1,
   }));
@@ -214,9 +216,13 @@ export function trackInitiateCheckout(cartItems = [], value = 0) {
  * }} order
  */
 export function trackPurchase(order) {
+  if ((!hasGtm() && !hasGa4() && !hasPixel()) || !order?.order_number) return;
   const key = 'tracked_order_' + order.order_number;
-  if (sessionStorage.getItem(key)) return; // already fired
-  sessionStorage.setItem(key, '1');
+  window.__trackedPurchases = window.__trackedPurchases || new Set();
+  if (window.__trackedPurchases.has(key)) return;
+  try { if (sessionStorage.getItem(key)) return; } catch {}
+  window.__trackedPurchases.add(key);
+  try { sessionStorage.setItem(key, '1'); } catch {}
 
   const eventId = generateEventId();
 
@@ -228,12 +234,21 @@ export function trackPurchase(order) {
     quantity: Number(item.quantity) || 1,
   }));
 
+  const gross = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const merchandiseValue = Math.max(0, Number(order.total) - (Number(order.tax) || 0) - (Number(order.shipping_charge) || 0));
+  const discountRatio = gross > 0 ? Math.max(0, Math.min(1, (gross - merchandiseValue) / gross)) : 0;
+  items.forEach(item => {
+    const original = item.price;
+    item.price = Number((original * (1 - discountRatio)).toFixed(6));
+    if (discountRatio > 0) item.discount = Number((original - item.price).toFixed(6));
+  });
+
   const currency = order.currency || cfg().currency || 'BDT';
 
   // GTM / GA4 via dataLayer
   dlPush('purchase', {
     transaction_id: order.order_number,
-    value: Number(order.total) || 0,
+    value: Number(merchandiseValue.toFixed(2)),
     currency,
     tax: Number(order.tax) || 0,
     shipping: Number(order.shipping_charge) || 0,
@@ -244,7 +259,7 @@ export function trackPurchase(order) {
   // GA4 direct (no GTM)
   gtagEvent('purchase', {
     transaction_id: order.order_number,
-    value: Number(order.total) || 0,
+    value: Number(merchandiseValue.toFixed(2)),
     currency,
     tax: Number(order.tax) || 0,
     shipping: Number(order.shipping_charge) || 0,

@@ -20,6 +20,10 @@ class SitemapController extends Controller
             foreach (['about', 'contact', 'terms', 'privacy', 'refund', 'shipping'] as $page) {
                 $list[] = ['loc' => route($page), 'priority' => '0.5', 'changefreq' => 'monthly'];
             }
+            $list[] = ['loc' => route('blog'), 'priority' => '0.5', 'changefreq' => 'monthly'];
+            foreach (app(\App\Services\ShoppingGuideService::class)->links() as $guide) {
+                $list[] = ['loc' => route('blog.detail', $guide['slug']), 'priority' => '0.5', 'changefreq' => 'monthly'];
+            }
 
             foreach ($this->visibleCategories() as $category) {
                 $list[] = [
@@ -115,7 +119,7 @@ class SitemapController extends Controller
         if ($categories->isNotEmpty()) {
             $lines = array_merge($lines, ['', '## Main Categories']);
             foreach ($categories as $category) {
-                $lines[] = '- ' . $category->name . ': ' . route('shop.category', $category);
+                $lines[] = '- [' . str_replace(['[', ']'], '', $category->name) . '](' . route('shop.category', $category) . ')';
             }
         }
 
@@ -123,7 +127,7 @@ class SitemapController extends Controller
             $lines = array_merge($lines, ['', '## Featured Products']);
             foreach ($products as $product) {
                 $priceText = ' - ' . money($product->price);
-                $lines[] = '- ' . $product->name . $priceText . ': ' . route('product.show', $product);
+                $lines[] = '- [' . str_replace(['[', ']'], '', $product->name) . '](' . route('product.show', $product) . ')' . $priceText;
             }
         }
 

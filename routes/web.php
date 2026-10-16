@@ -64,8 +64,8 @@ Route::get('/product/{product}', [ProductController::class, 'show'])->name('prod
 Route::get('/home-02', [HomeController::class, 'index'])->name('home.two');
 Route::get('/home-03', [HomeController::class, 'index'])->name('home.three');
 Route::get('/about', [PageController::class, 'about'])->name('about');
-Route::get('/blog', fn () => \Inertia\Inertia::render('Storefront/Blog'))->name('blog');
-Route::get('/blog/{slug}', fn (string $slug) => \Inertia\Inertia::render('Storefront/BlogDetail', compact('slug')))->name('blog.detail');
+Route::get('/blog', [\App\Http\Controllers\ShoppingGuideController::class, 'index'])->name('blog');
+Route::get('/blog/{slug}', [\App\Http\Controllers\ShoppingGuideController::class, 'show'])->name('blog.detail');
 Route::post('/product/{product}/reviews', [\App\Http\Controllers\ReviewController::class, 'store'])
     ->middleware('auth')
     ->name('product.reviews.store');
@@ -108,6 +108,10 @@ Route::post('/contact', [ContactController::class, 'store'])->middleware('thrott
 Route::get('/page/{slug}', [PageController::class, 'show'])->name('page');
 
 // SEO
+Route::get('/merchant-feed.xml', \App\Http\Controllers\MerchantFeedController::class)->name('merchant.feed');
+Route::get('/media/{kind}/{id}/{width}', \App\Http\Controllers\StorefrontImageController::class)
+    ->where('kind', 'product|banner|category|logo')->whereNumber('id')->whereNumber('width')
+    ->middleware('throttle:300,1')->name('storefront.image');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 Route::get('/llms.txt', [SitemapController::class, 'llms'])->name('llms');

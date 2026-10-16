@@ -271,7 +271,7 @@ export default function StorefrontLayout({ children, title, description, activeC
 
             <a href="/" className={`flex items-center gap-2.5 shrink-0 md:mr-4 flex-1 md:flex-none justify-center md:justify-start ${isTemplateOne ? 'template-1-logo-block' : ''}`} aria-label={app?.name || 'Home'}>
               {app?.logo_url
-                ? <img src={app.logo_url} alt="" className="w-auto max-w-[180px] object-contain" style={{ height: `${headerLogoHeight}px` }} />
+                ? <img src="/media/logo/0/320" alt="" width="320" height="320" decoding="async" className="w-auto max-w-[180px] object-contain" style={{ height: `${headerLogoHeight}px` }} />
                 : null
               }
               <div className="hidden sm:flex w-40 min-w-0 flex-col items-start text-left leading-tight">
@@ -473,7 +473,7 @@ export default function StorefrontLayout({ children, title, description, activeC
           <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-sm bg-white flex flex-col shadow-2xl overflow-hidden">
             <div className="h-16 flex items-center justify-between px-5 border-b bg-gray-50">
               <div className="flex items-center gap-2 font-black text-xl text-[#f15a24]">
-                {app?.logo_url ? <img src={app.logo_url} alt="" className="h-8 w-auto object-contain" /> : (app?.name || 'SHARTHAK')}
+                {app?.logo_url ? <img src="/media/logo/0/160" alt="" width="160" height="160" decoding="async" className="h-8 w-auto object-contain" /> : (app?.name || 'SHARTHAK')}
               </div>
               <button onClick={() => setMenuOpen(false)} className="p-2 -mr-2 text-gray-500 hover:text-gray-900 rounded-full hover:bg-gray-200 transition-colors">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
@@ -645,7 +645,7 @@ export default function StorefrontLayout({ children, title, description, activeC
           <div className="template-2-footer-shell template-2-footer-columns">
             <div className="template-2-footer-about">
               <a href="/" className="template-2-footer-logo">
-                {app?.logo_url ? <img src={app.logo_url} alt={siteName} /> : <span>{siteName}</span>}
+                {app?.logo_url ? <img src="/media/logo/0/320" alt={siteName} width="320" height="320" loading="lazy" decoding="async" /> : <span>{siteName}</span>}
               </a>
               <p>{app?.settings?.footer_text || app?.footer_text || 'Your one-stop marketplace for quality products at great prices. We deliver the best items directly to your doorstep with care.'}</p>
             </div>
@@ -659,6 +659,7 @@ export default function StorefrontLayout({ children, title, description, activeC
               <h4>{templateTwoFooter.quick.title}</h4>
               <ul>
                 {templateTwoFooter.quick.links.filter(link => link.label && link.url).map((link, index) => <li key={`${link.url}-${index}`}><a href={link.url}>{link.label}</a></li>)}
+                {!templateTwoFooter.quick.links.some(link => link.url === '/blog') && <li><a href="/blog">Shopping guides</a></li>}
               </ul>
             </div>
             <div className="template-2-footer-contact">

@@ -74,6 +74,11 @@ class ProductController extends Controller
         }
 
         $categoryPath = $product->category ? app(CategoryHierarchyService::class)->path($product->category) : [];
+        try {
+            $initialVariants = app(\App\Services\ProductOfferService::class)->selected($product, $request->query('variant'))['selection'];
+        } catch (\InvalidArgumentException|\TypeError $exception) {
+            abort(404);
+        }
 
         return Inertia::render('Storefront/Product', array_merge(compact(
             'product',
@@ -86,6 +91,7 @@ class ProductController extends Controller
             'reviews',
             'canReview'
         ), [
+            'initialVariants' => $initialVariants,
             'categoryPath' => array_map(fn ($item) => collect($item)->only(['id', 'name', 'slug'])->all(), $categoryPath),
             'structuredData' => app(\App\Services\StorefrontSeoService::class)->product($product, $categoryPath),
             'seo' => [

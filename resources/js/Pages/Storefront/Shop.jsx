@@ -252,6 +252,10 @@ export default function ShopPage({
 
         <main className="storefront-shop-page template-1-shop template-1-container min-w-0">
           <CategoryTrail path={categoryPath} children={browseCategories} />
+          <header className="mb-6">
+            <h1 className="text-2xl font-extrabold text-gray-900">{title}</h1>
+            {activeCategory && <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-600">{String(activeCategory.description || activeCategory.meta_description || '').replace(/<[^>]*>/g, '')}</p>}
+          </header>
           <div className="template-1-shop-toolbar">
             <div className="template-1-shop-actions">
               <button type="button" onClick={() => setIsFilterOpen(open => !open)} className={isFilterOpen ? 'is-active' : ''}>
@@ -604,6 +608,7 @@ export default function ShopPage({
                 <h1 className="text-lg sm:text-xl font-extrabold text-gray-900 tracking-tight truncate">
                   {title}
                 </h1>
+                {activeCategory && <p className="mt-2 max-w-3xl text-sm leading-relaxed text-gray-600">{String(activeCategory.description || activeCategory.meta_description || '').replace(/<[^>]*>/g, '')}</p>}
                 <p className="text-sm text-gray-500 mt-1 hidden lg:block"><span className="font-bold text-gray-900">{products.total}</span> products found</p>
               </div>
               <div className="shrink-0 w-full sm:w-auto">

@@ -45,7 +45,7 @@ function needsBlurFill(value) {
   return imageFit(value) === 'contain';
 }
 
-function BlurFillImage({ src, alt, orientation, position, className = '', imageClassName = '', hoverScale = false }) {
+function BlurFillImage({ src, alt, orientation, position, className = '', imageClassName = '', hoverScale = false, priority = false }) {
   const frameRef = useRef(null);
   const [imageRatio, setImageRatio] = useState(null);
   const [frameRatio, setFrameRatio] = useState(null);
@@ -88,6 +88,9 @@ function BlurFillImage({ src, alt, orientation, position, className = '', imageC
       {useBlurFill && (
         <img
           src={src}
+          loading={priority ? 'eager' : 'lazy'}
+          decoding="async"
+          width="1280" height="720"
           className="absolute -inset-12 z-0 h-[calc(100%+6rem)] w-[calc(100%+6rem)] scale-125 object-cover opacity-45 blur-[44px]"
           aria-hidden="true"
           alt=""
@@ -96,6 +99,10 @@ function BlurFillImage({ src, alt, orientation, position, className = '', imageC
       {useBlurFill && <span aria-hidden="true" className="absolute inset-0 z-[1] bg-white/35" />}
       <img
         src={src}
+        loading={priority ? 'eager' : 'lazy'}
+        fetchPriority={priority ? 'high' : 'auto'}
+        decoding="async"
+        width="1280" height="720"
         alt={alt}
         className={`absolute inset-0 z-[2] h-full w-full ${hoverScale ? 'transition-transform duration-500 group-hover:scale-[1.02]' : ''} ${imageClassName}`}
         style={{ objectPosition: imageFocusPosition(position), objectFit: foregroundFit }}
@@ -108,6 +115,21 @@ function BlurFillImage({ src, alt, orientation, position, className = '', imageC
       />
     </span>
   );
+}
+
+function StoreIntro({ app }) {
+  const name = app?.name || 'TAQI LIFE';
+  const configured = app?.settings?.seo_h1_heading?.trim();
+  return (
+    <header className="mx-auto max-w-7xl px-4 pt-5 sm:px-6 lg:px-8">
+      <h1 className="text-xl font-extrabold leading-snug text-gray-900 sm:text-2xl">{configured && configured !== name ? configured : `${name}: Online shopping in Bangladesh`}</h1>
+      <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-gray-600">Explore fashion, gadgets and everyday essentials. Compare current prices and product details, then check delivery information before ordering.</p>
+    </header>
+  );
+}
+
+function bannerImage(banner, width = 1280) {
+  return banner.id && banner.image ? `/media/banner/${banner.id}/${width}` : imageUrl(banner.image, banner.title);
 }
 
 function textPositionStyle(value, fallback) {
@@ -257,12 +279,11 @@ export default function HomePage({
     link: banner.link || banner.link_url,
   }));
   const hasHeroSideBanner = isTemplateTwo && displayHeroSideBanners.length > 0;
-  const resolveHeroImage = (path, fallback) => path?.startsWith('/templates/') ? path : imageUrl(path, fallback);
   const templateOneBanners = featuredCategories?.length > 0 
     ? featuredCategories.map(cat => ({
         title: cat.name,
         subtitle: cat.description ? cat.description.substring(0, 25) : 'Shop Now',
-        image: cat.image ? imageUrl(cat.image) : null,
+        image: cat.image ? `/media/category/${cat.id}/640` : null,
         href: `/category/${cat.slug}`
       }))
     : [
@@ -717,6 +738,7 @@ export default function HomePage({
     return (
       <StorefrontLayout>
         <Head title="" />
+        <StoreIntro app={app} />
 
         {heroCount > 0 && <section
           className={`template-1-hero storefront-hero-section template-1-hero-position-${heroTextPosition}`}
@@ -736,7 +758,8 @@ export default function HomePage({
               >
                 {banner.image && (
                   <BlurFillImage
-                    src={resolveHeroImage(banner.image, banner.title)}
+                    src={bannerImage(banner)}
+                    priority={index === 0}
                     alt={banner.title}
                     orientation={banner.image_orientation}
                     position={banner.image_position}
@@ -746,7 +769,7 @@ export default function HomePage({
                 <div className="template-1-container template-1-hero-content relative z-30" style={textPositionStyle(banner.text_position, heroTextPosition)}>
                   <div className="template-1-hero-copy" style={{ textAlign: textPositionStyle(banner.text_position, heroTextPosition).textAlign }}>
                     <p>{banner.subtitle}</p>
-                    <h1>{banner.title}</h1>
+                    <h2>{banner.title}</h2>
                     <Link href={banner.link || '/shop'}>{banner.button || 'Shop Now'}</Link>
                   </div>
                 </div>
@@ -812,7 +835,7 @@ export default function HomePage({
               {templateOneBanners.map(banner => (
                 <Link key={banner.title} href={banner.href} className="template-1-banner-card template-1-category-slide">
                   {banner.image ? (
-                    <img src={banner.image} alt={banner.title} />
+                    <img src={banner.image} alt={banner.title} loading="lazy" decoding="async" width="370" height="248" />
                   ) : (
                     <div className="w-full aspect-[370/248] bg-white"></div>
                   )}
@@ -864,7 +887,7 @@ export default function HomePage({
                 {banner.image ? (
                       <div className="relative aspect-[2/1] w-full overflow-hidden sm:aspect-[3/1]">
                         <BlurFillImage
-                          src={imageUrl(banner.image, banner.title)}
+                          src={bannerImage(banner)}
                           alt={banner.title || 'Promotional banner'}
                           orientation={banner.image_orientation}
                           position={banner.image_position}
@@ -931,6 +954,7 @@ export default function HomePage({
   return (
     <StorefrontLayout>
       <Head title="" />
+      <StoreIntro app={app} />
       
       {/* Hero Section */}
       <section className="storefront-hero-section mx-auto max-w-7xl px-3 sm:px-6 lg:px-8 pt-6 min-w-0">
@@ -944,7 +968,7 @@ export default function HomePage({
               <div id="hero-slider" ref={heroSliderRef} className="absolute inset-0 flex snap-x snap-mandatory overflow-hidden scroll-smooth">
                  {displayHeroBanners?.length > 0 ? (
                    displayHeroBanners.map((banner, index) => {
-                     const heroImage = resolveHeroImage(banner.image, banner.title);
+                     const heroImage = bannerImage(banner);
                      const hasHeroCopy = Boolean(banner.subtitle || banner.button);
 
                      return (
@@ -952,6 +976,7 @@ export default function HomePage({
                        {banner.image ? (
                          <BlurFillImage
                            src={heroImage}
+                           priority={index === 0}
                            alt={banner.title}
                            orientation={banner.image_orientation}
                            position={banner.image_position}
@@ -967,7 +992,7 @@ export default function HomePage({
                        {hasHeroCopy && (
                          <div className={`template-two-hero-copy relative z-10 mt-5 mb-16 max-w-md p-5 sm:mt-8 sm:mb-20 sm:p-7 ${heroCopyEdgeSpacing(banner.text_position, templateTwoHeroTextPosition)} ${isTemplateOne ? 'text-[#222] drop-shadow-none' : isTemplateTwo ? 'rounded-xl border border-white/15 text-white shadow-lg backdrop-blur-sm' : 'text-white drop-shadow-md hidden'}`} style={isTemplateTwo ? { backgroundColor: hexToRgba(templateTwoHeroTextBackgroundColor, templateTwoHeroTextBackgroundOpacity) } : undefined}>
                             {banner.subtitle && <p className="text-xl md:text-2xl mb-3 font-light">{banner.subtitle}</p>}
-                            {banner.title && <h1 className="text-4xl md:text-6xl mb-8">{banner.title}</h1>}
+                            {banner.title && <h2 className="text-4xl md:text-6xl mb-8">{banner.title}</h2>}
                             {banner.button && <Link href={banner.link || '/shop'} className={`inline-flex items-center justify-center px-8 py-3 text-sm font-semibold uppercase text-white transition-colors ${isTemplateOne ? 'rounded-full bg-[#717fe0] hover:bg-[#222]' : 'rounded-lg bg-[#f2541c] hover:bg-[#d6431a]'}`}>{banner.button}</Link>}
                          </div>
                        )}
@@ -977,7 +1002,7 @@ export default function HomePage({
                  ) : (
                    <div className="relative w-full h-full flex items-center justify-center p-12 text-center bg-gray-200 text-gray-500 shrink-0">
                      <div>
-                       <h1 className="text-3xl sm:text-4xl font-extrabold mb-4">Welcome to {app?.name || 'our store'}</h1>
+                       <h2 className="text-3xl sm:text-4xl font-extrabold mb-4">Welcome to {app?.name || 'our store'}</h2>
                        <p className="mb-6 opacity-90">Discover our amazing products</p>
                        <Link href="/shop" className="inline-block bg-[#f15a24] text-white px-8 py-3 rounded-full font-bold">Shop Now</Link>
                      </div>
@@ -1023,7 +1048,7 @@ export default function HomePage({
                       )}
                       {banner.image ? (
                         <BlurFillImage
-                          src={resolveHeroImage(banner.image, banner.title)}
+                          src={bannerImage(banner, 640)}
                           alt={banner.title || 'Promotional banner'}
                           orientation={banner.image_orientation}
                           position={banner.image_position}
@@ -1125,7 +1150,7 @@ export default function HomePage({
                 <Link key={cat.id} href={`/category/${cat.slug}`} className="template-two-category-item group/item flex flex-col items-center shrink-0 w-24 sm:w-32 snap-start" style={{ textAlign: templateTwoCategoryTextAlign }}>
                   <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-[24px] bg-gradient-to-br from-[#fff7ed] via-white to-[#eef2ff] text-[#717fe0] shadow-sm border border-gray-100 overflow-hidden group-hover/item:shadow-lg group-hover/item:border-[#f15a24]/30 transition-all duration-300 group-hover/item:-translate-y-1 flex items-center justify-center p-3">
                     {cat.image ? (
-                      <img src={imageUrl(cat.image)} alt={cat.name} className="w-full h-full object-contain" />
+                      <img src={`/media/category/${cat.id}/320`} alt={cat.name} width="160" height="160" loading="lazy" decoding="async" className="w-full h-full object-contain" />
                     ) : (
                       <CategoryIcon icon={cat.icon} name={cat.name} className="h-12 w-12 sm:h-16 sm:w-16 transition-transform duration-300 group-hover/item:scale-110" />
                     )}
@@ -1237,7 +1262,7 @@ export default function HomePage({
                 {banner.image ? (
                   <div className="relative aspect-[2/1] w-full overflow-hidden sm:aspect-[3/1]">
                     <BlurFillImage
-                      src={imageUrl(banner.image, banner.title)}
+                      src={bannerImage(banner)}
                       alt={banner.title || 'Banner'}
                       orientation={banner.image_orientation}
                       position={banner.image_position}

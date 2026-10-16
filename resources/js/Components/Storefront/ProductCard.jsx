@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { money, imageUrl } from '@/lib/utils';
 import PulseHeart from './PulseHeart';
+import { trackAddToCart } from '@/lib/tracking';
 
 export default function ProductCard({ product, highlightDiscount = true }) {
   const { app, cartItems = [] } = usePage().props;
@@ -60,8 +61,8 @@ export default function ProductCard({ product, highlightDiscount = true }) {
   const discountAmount = hasDiscount ? regularPrice - salePrice : 0;
   const discount = hasDiscount ? Math.round((discountAmount / regularPrice) * 100) : 0;
 
-  const primaryImage = product.images?.find(img => img.is_primary)?.path || product.images?.[0]?.path;
-  const imageSrc = imageUrl(primaryImage, product.name);
+  const primaryImage = product.images?.find(img => img.is_primary) || product.images?.[0];
+  const imageSrc = primaryImage?.id ? `/media/product/${primaryImage.id}/640?v=${encodeURIComponent(primaryImage.updated_at || '')}` : imageUrl(primaryImage?.path, product.name);
   const stock = Math.max(0, parseInt(product.stock_quantity) || 0);
   const rating = Math.max(0, Math.min(5, Math.round(parseFloat(product.rating) || 0)));
   const cardBg = app.settings?.product_card_bg_color || '#FFFFFF';
@@ -71,7 +72,7 @@ export default function ProductCard({ product, highlightDiscount = true }) {
   const alreadyOrdered = cartItems.some(item => Number(item.product_id) === Number(product.id));
   const buyText = alreadyOrdered ? 'Already Ordered' : (app.settings?.product_card_buy_text || 'Order Now');
   const hasVariants = Boolean(product.variants_exists);
-  const inStock = stock > 0 || Boolean(product.variants_in_stock_exists);
+  const inStock = stock > 0;
   const buttonStyle = {
     backgroundColor: inStock ? btnBg : '#b7bfed',
     color: btnTextColor,
@@ -105,7 +106,7 @@ export default function ProductCard({ product, highlightDiscount = true }) {
             </span>
           )}
           {imageSrc && !imageError ? (
-            <img src={imageSrc} onError={() => setImageError(true)} className="product-img w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={product.name} loading="lazy" />
+            <img src={imageSrc} width="640" height="640" decoding="async" onError={() => setImageError(true)} className="product-img w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={product.name} loading="lazy" />
           ) : (
             <div className="product-img w-full h-full flex items-center justify-center text-gray-300">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
@@ -196,7 +197,7 @@ export default function ProductCard({ product, highlightDiscount = true }) {
                  router.post('/cart/add', {
                      product_id: product.id,
                      qty: 1
-                 }, { preserveScroll: true });
+                 }, { preserveScroll: true, onSuccess: () => trackAddToCart({ id: product.id, name: product.name, price: product.sale_price ?? product.regular_price, category: product.category?.name }) });
               }}
               style={buttonStyle}
               className={`${buttonClassName} disabled:hover:brightness-100 disabled:active:scale-100 disabled:cursor-not-allowed cursor-pointer`}

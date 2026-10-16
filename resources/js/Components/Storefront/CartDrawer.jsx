@@ -13,17 +13,12 @@ export default function CartDrawer({ isOpen, onClose }) {
       removeItem(item.key);
       return;
     }
-    // Fire add_to_cart only when quantity is increasing
-    if (qty > item.qty) {
-      trackAddToCart(
-        { id: item.product_id, name: item.name, price: item.unit_price },
-        qty - item.qty,
-        item.variant || null
-      );
-    }
     setProcessingKey(item.key);
     router.post('/cart/update', { key: item.key, qty }, {
       preserveScroll: true,
+      onSuccess: () => {
+        if (qty > item.qty) trackAddToCart({ id: item.product_id, name: item.name, price: item.unit_price }, qty - item.qty, item.variant || null);
+      },
       onFinish: () => setProcessingKey(null)
     });
   };

@@ -2,7 +2,6 @@ import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { money, imageUrl } from '@/lib/utils';
 import { useState } from 'react';
-import { trackInitiateCheckout } from '@/lib/tracking';
 
 export default function CartPage({ items, subtotal }) {
   const { app } = usePage().props;
@@ -217,7 +216,6 @@ export default function CartPage({ items, subtotal }) {
                 
                 <button
                   onClick={() => {
-                    trackInitiateCheckout(itemsList, subtotal);
                     router.visit('/checkout');
                   }}
                   className="block w-full text-center bg-gray-900 hover:bg-black text-white font-bold py-4 rounded-xl shadow-md shadow-gray-900/20 transition-all hover:-translate-y-0.5 cursor-pointer"

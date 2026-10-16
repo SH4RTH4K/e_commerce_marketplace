@@ -52,7 +52,7 @@ class StorefrontSeoTest extends TestCase
         $this->assertSame('Product', $item['@type']);
         $this->assertSame('0.00', $item['offers']['price']);
         $this->assertSame('BDT', $item['offers']['priceCurrency']);
-        $this->assertSame('https://schema.org/InStock', $item['offers']['availability']);
+        $this->assertSame('https://schema.org/OutOfStock', $item['offers']['availability']);
         $this->assertSame(route('product.show', $product), $item['url']);
         $this->assertArrayNotHasKey('aggregateRating', $item);
         $this->assertSame(['Home', 'Shop', 'Speakers', 'Portable', 'Speaker'], array_column($schema['@graph'][1]['itemListElement'], 'name'));
@@ -61,7 +61,7 @@ class StorefrontSeoTest extends TestCase
         $this->assertSame('https://schema.org/OutOfStock', $item['offers']['availability']);
         $product->variants()->update(['price_delta' => 100]);
         $item = $this->schema($this->get(route('product.show', $product))->getContent())['@graph'][0];
-        $this->assertArrayNotHasKey('offers', $item);
+        $this->assertSame('100.00', $item['offers']['price']);
     }
 
     public function test_structured_data_cannot_break_out_of_script_tags_and_saved_metadata_is_preserved(): void

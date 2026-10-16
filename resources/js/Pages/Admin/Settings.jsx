@@ -386,7 +386,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     seo_canonical_host: settings.seo_canonical_host || 'non_www',
     
     // Tracking
-    tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '',
+    tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_ga4_mode: settings.tracking_ga4_mode || 'direct', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '',
     
     // Legal
     about_content: settings.about_content || '', terms_content: settings.terms_content || '', privacy_content: settings.privacy_content || '', refund_content: settings.refund_content || '', shipping_content: settings.shipping_content || '', shipping_page_enabled: settings.shipping_page_enabled !== '0',
@@ -1561,7 +1561,7 @@ export default function Settings({ settings, templateStatus = {} }) {
                   <div className="rounded-2xl border border-orange-100 bg-orange-50/40 p-4 space-y-4">
                     <label className="flex cursor-pointer items-center gap-3">
                       <input type="checkbox" checked={data.seo_fallback_h1_enabled} onChange={e => setData('seo_fallback_h1_enabled', e.target.checked)} className={checkboxClass} />
-                      <span className="text-sm font-semibold text-gray-800">Add hidden fallback H1 to storefront HTML</span>
+                      <span className="text-sm font-semibold text-gray-800">Add fallback heading for visitors without JavaScript</span>
                     </label>
                     <Field label="Fallback H1 Heading" error={errors.seo_h1_heading}>
                       <input value={data.seo_h1_heading} onChange={e => setData('seo_h1_heading', e.target.value)} className={inputClass} placeholder="Leave blank to use the meta title or site name" />
@@ -1629,7 +1629,14 @@ export default function Settings({ settings, templateStatus = {} }) {
                     </Field>
                     <Field label="Google Analytics (GA4) ID" error={errors.tracking_ga4_id}>
                       <input value={data.tracking_ga4_id} onChange={e => setData('tracking_ga4_id', e.target.value)} className={inputClass} placeholder="G-XXXXXXX" />
-                      <p className="mt-1.5 text-xs text-gray-500">Use direct GA4 only when GA4 is not managed through GTM.</p>
+                      <p className="mt-1.5 text-xs text-gray-500">Use the measurement ID for this store's web stream.</p>
+                    </Field>
+                    <Field label="GA4 event delivery" error={errors.tracking_ga4_mode}>
+                      <select value={data.tracking_ga4_mode} onChange={e => setData('tracking_ga4_mode', e.target.value)} className={inputClass}>
+                        <option value="direct">Direct GA4 (application sends events)</option>
+                        <option value="gtm">Google Tag Manager (configured GA4 tags required)</option>
+                      </select>
+                      <p className="mt-1.5 text-xs text-gray-500">Choose one sender to prevent duplicate events. GTM mode needs a published Google tag and ecommerce event tag in your container.</p>
                     </Field>
                     <Field label="Meta Pixel ID" error={errors.tracking_meta_pixel_id}>
                       <input value={data.tracking_meta_pixel_id} onChange={e => setData('tracking_meta_pixel_id', e.target.value)} className={inputClass} placeholder="Numeric ID" />

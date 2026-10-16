@@ -2,6 +2,9 @@
   $gtmId   = tracking_gtm_id();
   $ga4Id   = tracking_ga4_id();
   $pixelId = tracking_meta_pixel_id();
+  $ga4Mode = setting('tracking_ga4_mode', 'direct');
+  // Marketing tags belong on the storefront, never in the administrator UI.
+  if (request()->is('admin', 'admin/*')) $gtmId = $ga4Id = $pixelId = null;
 @endphp
 
 {{-- Inject tracking config for JS (tracking.js reads window.__tracking) --}}
@@ -10,6 +13,7 @@
 window.__tracking = {
   gtm:      @json($gtmId),
   ga4:      @json($ga4Id),
+  ga4Mode:  @json($ga4Mode),
   pixel:    @json($pixelId),
   currency: @json(setting('currency_code', 'BDT')),
 };
@@ -26,18 +30,14 @@ j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNo
 </script>
 @endif
 
-@if($ga4Id)
+@if($ga4Id && ($ga4Mode !== 'gtm' || !$gtmId))
 <!-- Google Analytics 4 -->
-{{-- Load gtag.js always so window.gtag is available; but only call gtag('config')
-     when GTM is NOT present — when GTM is active, GA4 config fires via GTM tag. --}}
 <script async src="https://www.googletagmanager.com/gtag/js?id={{ $ga4Id }}"></script>
 <script>
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-@unless($gtmId)
-gtag('config', '{{ $ga4Id }}');
-@endunless
+gtag('config', '{{ $ga4Id }}', { send_page_view: false });
 </script>
 @endif
 

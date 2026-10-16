@@ -162,7 +162,11 @@ const hasDescriptionContent = (value) => String(value || '')
   .replace(/&nbsp;/gi, '')
   .trim().length > 0;
 
-export default function ProductPage({ product, related, sizes, colors, weights, variantGroups = [], features, reviews, canReview, auth, seo, categoryPath = [] }) {
+export default function ProductPage(props) {
+  return <ProductDetail key={`${props.product.id}:${JSON.stringify(props.initialVariants || {})}`} {...props} />;
+}
+
+function ProductDetail({ product, related, sizes, colors, weights, variantGroups = [], initialVariants = {}, features, reviews, canReview, auth, seo, categoryPath = [] }) {
   const { app } = usePage().props;
   const settings = app?.settings || {};
   const isTemplateOne = settings.storefront_template === 'template-1';
@@ -202,7 +206,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
   const [activeTab, setActiveTab] = useState('desc');
   const productDescription = hasDescriptionContent(product.description)
     ? product.description
-    : product.short_description;
+    : (hasDescriptionContent(product.short_description) ? product.short_description : product.meta_description);
   
   // Dynamic variant state
   const [selectedVariants, setSelectedVariants] = useState(() => {
@@ -210,7 +214,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
     if (variantGroups && variantGroups.length > 0) {
       variantGroups.forEach(grp => {
         if (grp.options && grp.options.length > 0) {
-          init[grp.name] = grp.options[0].value;
+          init[grp.name] = grp.options.find(option => option.value === initialVariants[grp.name])?.value || grp.options[0].value;
         }
       });
     } else {
@@ -354,9 +358,9 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
       }
     }
 
-    const basePrice = parseFloat(product.sale_price || product.regular_price) || 0;
+    const basePrice = parseFloat(product.sale_price ?? product.regular_price) || 0;
     const regularPrice = parseFloat(product.regular_price) || 0;
-    const onSale = product.sale_price && parseFloat(product.sale_price) < regularPrice;
+    const onSale = product.sale_price !== null && product.sale_price !== undefined && parseFloat(product.sale_price) < regularPrice;
 
     return {
       price: Math.max(0, basePrice + delta),
@@ -389,38 +393,30 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
   const handleAddToCart = () => {
     const variant = getVariantString();
 
-    trackAddToCart(
-      { id: product.id, name: product.name, price: priceData.price, category: product.category?.name },
-      qty,
-      variant || null
-    );
-
     router.post('/cart/add', {
       product_id: product.id,
       variant: variant || null,
       qty
-    }, { preserveScroll: true });
+    }, { preserveScroll: true, onSuccess: () => trackAddToCart(
+      { id: product.id, name: product.name, price: priceData.price, category: product.category?.name }, qty, variant || null
+    ) });
   };
 
   const handleBuyNow = () => {
     const variant = getVariantString();
 
-    trackAddToCart(
-      { id: product.id, name: product.name, price: priceData.price, category: product.category?.name },
-      qty,
-      variant || null
-    );
-
     router.post('/cart/buy-now', {
       product_id: product.id,
       variant: variant || null,
       qty
-    }, { preserveScroll: true });
+    }, { preserveScroll: true, onSuccess: () => trackAddToCart(
+      { id: product.id, name: product.name, price: priceData.price, category: product.category?.name }, qty, variant || null
+    ) });
   };
 
-  const hasVariantStock = (product.variants || []).some(variant => Number(variant.stock) > 0);
-  const inStock = Number(product.stock_quantity) > 0 || hasVariantStock;
-  const mainImageUrl = imageUrl(activeImage, product.name);
+  const inStock = Number(product.stock_quantity) > 0;
+  const activeImageRecord = (product.images || []).find(image => image.path === activeImage);
+  const mainImageUrl = activeImageRecord?.id ? `/media/product/${activeImageRecord.id}/960` : imageUrl(activeImage, product.name);
   const rating = Math.max(0, Math.min(5, Math.round(parseFloat(product.rating) || 0)));
 
   // Track product view once on mount
@@ -451,12 +447,12 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
               <div className="template-1-gallery-thumbs">
                 {(product.images || []).map(image => (
                   <button key={image.id || image.path} type="button" className={activeImage === image.path ? 'is-active' : ''} onClick={() => selectImage(image.path)}>
-                    <img src={imageUrl(image.path, product.name)} alt="" />
+                    <img src={`/media/product/${image.id}/320`} alt="" width="320" height="320" loading="lazy" decoding="async" />
                   </button>
                 ))}
               </div>
               <div className="template-1-gallery-main">
-                {mainImageUrl && !imageError ? <img src={mainImageUrl} onError={handleMainImageError} alt={product.name} /> : <span>No image available</span>}
+                {mainImageUrl && !imageError ? <img src={mainImageUrl} width="960" height="960" fetchPriority="high" decoding="async" onError={handleMainImageError} alt={product.name} /> : <span>No image available</span>}
                 {mainImageUrl && !imageError && <button type="button" onClick={() => window.open(mainImageUrl, '_blank', 'noopener,noreferrer')} aria-label="View larger image">&#8599;</button>}
               </div>
             </div>
@@ -598,7 +594,8 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
                     className={`relative rounded-xl border-2 shrink-0 overflow-hidden w-20 h-20 bg-white transition-all ${activeImage === img.path ? 'border-[#f15a24]' : 'border-gray-100 hover:border-[#f15a24]/50'}`}
                   >
                     <img 
-                      src={imageUrl(img.path, product.name)} 
+                      src={`/media/product/${img.id}/320`}
+                      width="320" height="320" loading="lazy" decoding="async"
                       onError={(e) => {
                         e.target.style.display = 'none';
                         e.target.nextElementSibling.style.display = 'flex';
@@ -623,6 +620,7 @@ export default function ProductPage({ product, related, sizes, colors, weights, 
               {mainImageUrl && !imageError ? (
                 <img 
                   src={mainImageUrl} 
+                  width="960" height="960" fetchPriority="high" decoding="async"
                   onError={handleMainImageError}
                   className="w-full h-full object-contain object-center transform group-hover:scale-105 transition-transform duration-500" 
                   alt={product.name} 

@@ -73,12 +73,9 @@ export default function CheckoutPage({
     return () => clearTimeout(timer);
   }, [data.customer_name, data.customer_phone, data.customer_email, data.shipping_address, total]);
 
-  // begin_checkout: fire once per checkout session (deduped so it doesn't double
-  // with the Cart page's "Proceed to Checkout" click event)
+  // A new checkout visit is a new attempt. The cart button does not send this
+  // event, and refreshing does not suppress later legitimate checkout attempts.
   useEffect(() => {
-    const dedupKey = 'checkout_tracked';
-    if (sessionStorage.getItem(dedupKey)) return;
-    sessionStorage.setItem(dedupKey, '1');
     trackInitiateCheckout(itemsList, subtotal);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

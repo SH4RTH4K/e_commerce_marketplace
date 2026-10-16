@@ -1,75 +1,27 @@
-import StorefrontLayout from '@/Layouts/StorefrontLayout';
+﻿import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link } from '@inertiajs/react';
 
-const posts = [
-  {
-    slug: 'winter-dresses',
-    day: '22',
-    date: 'Jan 2018',
-    image: 'blog-04.jpg',
-    title: '8 Inspiring Ways to Wear Dresses in the Winter',
-    text: 'Discover simple styling ideas that make winter layers feel comfortable, confident, and distinctly your own.',
-  },
-  {
-    slug: 'mens-holiday-gifts',
-    day: '18',
-    date: 'Jan 2018',
-    image: 'blog-05.jpg',
-    title: "The Great Big List of Men's Gifts for the Holidays",
-    text: 'A practical guide to finding useful, personal gifts for the people who are hardest to shop for.',
-  },
-  {
-    slug: 'winter-to-spring-trends',
-    day: '16',
-    date: 'Jan 2018',
-    image: 'blog-06.jpg',
-    title: '5 Winter-to-Spring Fashion Trends to Try Now',
-    text: 'Lighten up your wardrobe with versatile pieces that move easily from cool mornings to brighter afternoons.',
-  },
-];
-
-export { posts };
-
-export default function BlogPage() {
+export default function BlogPage({ guides = [], seo }) {
   return (
     <StorefrontLayout>
-      <Head title="Blog" />
-      <div className="template-1-page-title"><h1>Blog</h1></div>
-      <main className="template-1-blog-page">
-        <div className="template-1-blog-layout">
-          <section>
-            {posts.map(post => (
-              <article key={post.slug} className="template-1-blog-post">
-                <Link href={`/blog/${post.slug}`} className="template-1-blog-image">
-                  <img src={`/templates/template-1/images/${post.image}`} alt={post.title} />
-                  <span className="template-1-blog-date"><strong>{post.day}</strong><span>{post.date}</span></span>
-                </Link>
-                <h2><Link href={`/blog/${post.slug}`}>{post.title}</Link></h2>
-                <p>{post.text}</p>
-                <div className="template-1-blog-meta">
-                  <span>By Admin &nbsp; | &nbsp; StreetStyle, Fashion</span>
-                  <Link href={`/blog/${post.slug}`}>Continue Reading &rarr;</Link>
-                </div>
-              </article>
-            ))}
-          </section>
-          <aside>
-            <form action="/shop" method="get" className="template-1-sidebar-search">
-              <input name="q" placeholder="Search" aria-label="Search products" />
-              <button type="submit" aria-label="Search">&#128269;</button>
-            </form>
-            <div className="template-1-sidebar-block">
-              <h3>Categories</h3>
-              {['Fashion', 'Beauty', 'Street Style', 'Life Style', 'DIY & Crafts'].map(item => <a href="/shop" key={item}>{item}</a>)}
-            </div>
-            <div className="template-1-sidebar-block">
-              <h3>Featured Products</h3>
-              <a href="/shop">White Shirt With Pleat Detail Back</a>
-              <a href="/shop">Converse All Star Hi Black Canvas</a>
-              <a href="/shop">Nixon Porter Leather Watch In Tan</a>
-            </div>
-          </aside>
+      <Head title={seo?.title} />
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+        <header className="mb-8 max-w-2xl">
+          <p className="text-sm font-semibold text-gray-600">SHOP WITH CONFIDENCE</p>
+          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-gray-900">Shopping guides</h1>
+          <p className="mt-3 leading-relaxed text-gray-600">Helpful checks before you choose a product, place an order or request assistance.</p>
+        </header>
+        <div className="grid gap-5 md:grid-cols-3">
+          {guides.map((guide, index) => (
+            <article key={guide.slug} className="flex flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+              <span className="mb-5 text-sm font-bold text-gray-500">GUIDE {String(index + 1).padStart(2, '0')}</span>
+              <h2 className="text-xl font-bold leading-snug text-gray-900"><Link href={`/blog/${guide.slug}`} className="hover:underline">{guide.title}</Link></h2>
+              <p className="mb-6 mt-3 text-sm leading-relaxed text-gray-600">{guide.summary}</p>
+              <Link href={`/blog/${guide.slug}`} className="mt-auto font-semibold text-gray-900 underline underline-offset-4">Read guide &rarr;</Link>
+            </article>
+          ))}
         </div>
+        <p className="mt-8 text-sm text-gray-600">Need help with a specific product? <Link href="/contact" className="font-semibold text-gray-900 underline">Contact our team</Link> with its name or SKU.</p>
       </main>
     </StorefrontLayout>
   );

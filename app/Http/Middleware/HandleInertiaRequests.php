@@ -86,7 +86,7 @@ class HandleInertiaRequests extends Middleware
                 : (object) [],
             'testing_mode' => testing_mode(),
             'seoDefaults' => fn () => app(\App\Services\StorefrontSeoService::class)->defaults($request),
-            'structuredData' => fn () => $request->routeIs('home', 'home.two', 'home.three', 'about')
+            'structuredData' => fn () => $request->routeIs('home', 'home.two', 'home.three', 'about', 'refund', 'return-policy', 'shipping')
                 ? app(\App\Services\StorefrontSeoService::class)->organization() : null,
             'dropshipping_enabled' => (bool) config('dropshipping.enabled'),
             'app' => [

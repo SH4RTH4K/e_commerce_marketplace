@@ -54,6 +54,9 @@ class StorefrontSeoService
         $organization = [
             '@type' => 'OnlineStore', '@id' => route('home').'#organization',
             'name' => site_name(), 'url' => route('home'), 'logo' => logo_url(),
+            'hasMerchantReturnPolicy' => [
+                '@type' => 'MerchantReturnPolicy', 'merchantReturnLink' => route('refund'),
+            ],
         ];
         foreach (['telephone' => 'contact_phone', 'email' => 'contact_email'] as $property => $setting) {
             if ($value = trim((string) setting($setting, ''))) {
@@ -99,7 +102,7 @@ class StorefrontSeoService
         $item = [
             '@type' => 'Product', '@id' => $url.'#product', 'url' => $url,
             'name' => $product->name,
-            'description' => Str::limit(trim(strip_tags((string) ($product->meta_description ?: $product->short_description ?: $product->description))), 5000),
+            'description' => Str::limit(trim(html_entity_decode(strip_tags((string) ($product->short_description ?: $product->description ?: $product->meta_description)), ENT_QUOTES | ENT_HTML5, 'UTF-8')), 5000, ''),
         ];
         $images = $product->images->map(fn ($image) => image_url($image->path, $product->slug))->filter()->values()->all();
         if ($images !== []) {
@@ -111,18 +114,63 @@ class StorefrontSeoService
         if ($product->brand) {
             $item['brand'] = ['@type' => 'Brand', 'name' => $product->brand];
         }
-        // Selectable price adjustments may make the base price unavailable.
-        // Omit an offer rather than advertise an unselectable price.
-        $variablePrice = $product->variants->contains(fn ($variant) => (float) $variant->price_delta !== 0.0);
-        if (! $variablePrice) {
-            $item['offers'] = [
-                '@type' => 'Offer', 'url' => $url, 'priceCurrency' => 'BDT',
-                'price' => number_format($product->price, 2, '.', ''),
-                'availability' => (int) $product->stock_quantity > 0 || $product->variants->contains(fn ($variant) => (int) $variant->stock > 0)
-                    ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        $service = app(ProductOfferService::class);
+        $offerings = [];
+        foreach ($service->all($product) as $offering) {
+            $offerings[] = $offering;
+            if (count($offerings) > 200) break;
+        }
+        $offer = function (array $offering) use ($product): array {
+            $data = [
+                '@type' => 'Offer', 'url' => $offering['url'], 'priceCurrency' => 'BDT',
+                'price' => number_format($offering['price'], 2, '.', ''),
+                'itemCondition' => 'https://schema.org/NewCondition',
+                'availability' => 'https://schema.org/'.($offering['in_stock'] ? 'InStock' : 'OutOfStock'),
                 'seller' => ['@type' => 'Organization', 'name' => site_name(), 'url' => route('home')],
             ];
+            // Only an explicitly free-shipping product has a single country-wide
+            // rate. Other rates depend on location/weight and stay in checkout.
+            if ($product->is_free_shipping) $data['shippingDetails'] = [
+                '@type' => 'OfferShippingDetails',
+                'shippingDestination' => ['@type' => 'DefinedRegion', 'addressCountry' => 'BD'],
+                'shippingRate' => ['@type' => 'MonetaryAmount', 'value' => '0.00', 'currency' => 'BDT'],
+            ];
+            return $data;
+        };
+        $types = array_keys($service->groups($product));
+        $supported = ['color', 'size', 'material', 'pattern', 'gender', 'ageGroup'];
+        $mapped = array_map(fn ($type) => strtolower($type) === 'agegroup' ? 'ageGroup' : strtolower($type), $types);
+        if (count($offerings) > 200) {
+            // Keep HTML bounded for unusually large combinations. This range
+            // includes all selectable prices, never an unavailable base price.
+            $groups = collect($service->groups($product));
+            $item['offers'] = ['@type' => 'AggregateOffer', 'priceCurrency' => 'BDT',
+                'lowPrice' => number_format(max(0, $product->price + $groups->sum(fn ($options) => collect($options)->min('price_delta'))), 2, '.', ''),
+                'highPrice' => number_format(max(0, $product->price + $groups->sum(fn ($options) => collect($options)->max('price_delta'))), 2, '.', ''),
+                'offerCount' => $groups->reduce(fn ($count, $options) => $count * count($options), 1)];
+        } elseif (count($offerings) > 1 && array_diff($mapped, $supported) === []) {
+            $item['@type'] = 'ProductGroup';
+            $item['productGroupID'] = (string) $product->id;
+            $item['variesBy'] = array_map(fn ($type) => 'https://schema.org/'.$type, $mapped);
+            $item['hasVariant'] = array_map(function ($offering) use ($item, $offer) {
+                $variant = array_diff_key($item, array_flip(['productGroupID', 'variesBy']));
+                $variant['@type'] = 'Product';
+                $variant['@id'] = $offering['url'].'#product';
+                $variant['url'] = $offering['url'];
+                $variant['sku'] = $offering['sku'];
+                $variant['name'] .= ' — '.$offering['label'];
+                foreach ($offering['selection'] as $type => $value) $variant[strtolower($type) === 'agegroup' ? 'ageGroup' : strtolower($type)] = $value;
+                $variant['offers'] = $offer($offering);
+                return $variant;
+            }, $offerings);
+        } else {
+            $item['offers'] = count($offerings) === 1 ? $offer($offerings[0]) : array_map($offer, $offerings);
         }
+        $reviews = $product->approvedReviews()->selectRaw('COUNT(*) AS review_count, AVG(rating) AS average_rating')->first();
+        if ((int) $reviews->review_count > 0) $item['aggregateRating'] = [
+            '@type' => 'AggregateRating', 'ratingValue' => round((float) $reviews->average_rating, 2),
+            'reviewCount' => (int) $reviews->review_count, 'bestRating' => 5, 'worstRating' => 1,
+        ];
 
         return ['@context' => 'https://schema.org', '@graph' => [$item, $this->breadcrumbs($path, $product)]];
     }

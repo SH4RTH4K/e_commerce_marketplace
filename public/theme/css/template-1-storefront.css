@@ -245,7 +245,7 @@ body:has(.template-1-storefront) {
   animation: template-1-hero-rise .7s ease both;
 }
 
-.template-1-hero-slide.is-active .template-1-hero-content h1 {
+.template-1-hero-slide.is-active .template-1-hero-content h2 {
   animation: template-1-hero-rise .7s .35s ease both;
 }
 
@@ -296,7 +296,7 @@ body:has(.template-1-storefront) {
   text-shadow: 0 1px 9px rgb(255 255 255 / .8);
 }
 
-.template-1-hero-content h1 {
+.template-1-hero-content h2 {
   margin: 0 0 38px;
   color: #333;
   font-family: CozaPlayfair, Georgia, serif;
@@ -2175,7 +2175,7 @@ body:has(.template-1-storefront) {
     font-size: 22px;
   }
 
-  .template-1-hero-content h1 {
+  .template-1-hero-content h2 {
     font-size: 48px;
   }
 
@@ -2221,7 +2221,7 @@ body:has(.template-1-storefront) {
     font-size: 20px;
   }
 
-  .template-1-hero-content h1 {
+  .template-1-hero-content h2 {
     font-size: 40px;
   }
 
@@ -2248,7 +2248,7 @@ body:has(.template-1-storefront) {
     font-size: 18px;
   }
 
-  .template-1-hero-content h1 {
+  .template-1-hero-content h2 {
     margin-bottom: 24px;
     font-size: 34px;
     line-height: 1.08;
@@ -2426,7 +2426,6 @@ body:has(.template-1-storefront) {
 }
 
 .storefront-theme-root .storefront-hero-section,
-.storefront-theme-root .storefront-hero-section h1,
 .storefront-theme-root .storefront-hero-section h2,
 .storefront-theme-root .storefront-hero-section p,
 .storefront-theme-root .storefront-hero-section a {
