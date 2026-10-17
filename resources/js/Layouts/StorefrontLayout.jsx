@@ -722,13 +722,13 @@ export default function StorefrontLayout({ children, title, description, activeC
 
       {/* Floating Live Chat Widget */}
       {showChat && (
-        <div ref={chatRef} className="fixed bottom-[80px] right-4 md:bottom-6 md:right-6 z-[999] flex flex-col items-end gap-2">
+        <div ref={chatRef} className="fixed bottom-[84px] right-4 md:bottom-6 md:right-6 z-[999] flex flex-col items-end gap-2.5">
           {/* Action buttons — shown when chatOpen */}
           <div
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px',
+              gap: '12px',
               alignItems: 'flex-end',
               overflow: 'hidden',
               maxHeight: chatOpen ? '300px' : '0',
@@ -743,10 +743,10 @@ export default function StorefrontLayout({ children, title, description, activeC
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Chat on WhatsApp"
-                className="group flex items-center gap-2"
+                className="group flex items-center gap-2.5"
               >
-                <span className="bg-white text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">WhatsApp</span>
-                <div className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-95"
+                <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-[0_8px_22px_rgba(15,23,42,0.12)] opacity-0 transition-all group-hover:-translate-x-1 group-hover:opacity-100 whitespace-nowrap">WhatsApp</span>
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/80 shadow-[0_10px_24px_rgba(18,140,126,0.32)] transition-all duration-200 group-hover:-translate-y-0.5 group-hover:scale-105 active:scale-95"
                   style={{ background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)' }}>
                   <svg viewBox="0 0 32 32" className="w-6 h-6" fill="white" xmlns="http://www.w3.org/2000/svg">
                     <path d="M16 2C8.28 2 2 8.28 2 16c0 2.44.65 4.73 1.78 6.72L2 30l7.52-1.74A13.93 13.93 0 0016 30c7.72 0 14-6.28 14-14S23.72 2 16 2zm0 25.5a11.43 11.43 0 01-5.86-1.62l-.42-.25-4.46 1.03 1.06-4.35-.28-.45A11.47 11.47 0 014.5 16C4.5 9.6 9.6 4.5 16 4.5S27.5 9.6 27.5 16 22.4 27.5 16 27.5zm6.29-8.56c-.34-.17-2.03-1-2.35-1.11-.32-.12-.55-.17-.78.17-.23.34-.9 1.11-1.1 1.34-.2.23-.4.26-.74.09-.34-.17-1.44-.53-2.74-1.69-1.01-.9-1.7-2.02-1.9-2.36-.2-.34-.02-.52.15-.69.15-.15.34-.4.51-.6.17-.2.23-.34.34-.57.12-.23.06-.43-.03-.6-.09-.17-.78-1.88-1.07-2.57-.28-.68-.57-.58-.78-.59h-.66c-.23 0-.6.09-.91.43-.31.34-1.2 1.17-1.2 2.86s1.23 3.32 1.4 3.55c.17.23 2.42 3.7 5.87 5.19.82.35 1.46.56 1.96.72.82.26 1.57.22 2.16.13.66-.1 2.03-.83 2.32-1.63.29-.8.29-1.49.2-1.63-.09-.14-.32-.23-.66-.4z"/>
@@ -759,10 +759,10 @@ export default function StorefrontLayout({ children, title, description, activeC
               <a
                 href={`tel:${chatSettings.call_number}`}
                 title="Call us"
-                className="group flex items-center gap-2"
+                className="group flex items-center gap-2.5"
               >
-                <span className="bg-white text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Call Now</span>
-                <div className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-95"
+                <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-[0_8px_22px_rgba(15,23,42,0.12)] opacity-0 transition-all group-hover:-translate-x-1 group-hover:opacity-100 whitespace-nowrap">Call Now</span>
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/80 shadow-[0_10px_24px_rgba(5,150,105,0.28)] transition-all duration-200 group-hover:-translate-y-0.5 group-hover:scale-105 active:scale-95"
                   style={{ background: 'linear-gradient(135deg, #34d399 0%, #059669 100%)' }}>
                   <svg viewBox="0 0 24 24" className="w-6 h-6" fill="white" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1C9.61 21 3 14.39 3 6.5a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.58a1 1 0 01-.25 1.01l-2.2 2.2z"/>
@@ -777,10 +777,10 @@ export default function StorefrontLayout({ children, title, description, activeC
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Chat on Messenger"
-                className="group flex items-center gap-2"
+                className="group flex items-center gap-2.5"
               >
-                <span className="bg-white text-gray-700 text-xs font-semibold px-3 py-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Messenger</span>
-                <div className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-95"
+                <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-[0_8px_22px_rgba(15,23,42,0.12)] opacity-0 transition-all group-hover:-translate-x-1 group-hover:opacity-100 whitespace-nowrap">Messenger</span>
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/80 shadow-[0_10px_24px_rgba(0,132,255,0.28)] transition-all duration-200 group-hover:-translate-y-0.5 group-hover:scale-105 active:scale-95"
                   style={{ background: 'linear-gradient(135deg, #0084ff 0%, #a033ff 100%)' }}>
                   <svg viewBox="0 0 32 32" className="w-6 h-6" fill="white" xmlns="http://www.w3.org/2000/svg">
                     <path d="M16 2C8.27 2 2 7.8 2 14.93c0 3.9 1.85 7.38 4.76 9.76V30l4.59-2.52A14.86 14.86 0 0016 27.86c7.73 0 14-5.8 14-12.93C30 7.8 23.73 2 16 2zm1.41 17.41l-3.57-3.8-6.97 3.8 7.66-8.13 3.66 3.8 6.88-3.8-7.66 8.13z"/>
@@ -794,15 +794,18 @@ export default function StorefrontLayout({ children, title, description, activeC
           <button
             onClick={() => setChatOpen(o => !o)}
             title={chatOpen ? 'Close' : 'Chat with us'}
-            className="w-14 h-14 rounded-full shadow-2xl flex items-center justify-center border-4 border-white"
+            aria-expanded={chatOpen}
+            aria-label={chatOpen ? 'Close customer support options' : 'Open customer support options'}
+            className="group relative flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-white shadow-[0_14px_34px_rgba(15,23,42,0.24)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_38px_rgba(15,23,42,0.3)] focus-visible:ring-4 focus-visible:ring-[#f2541c]/30 active:scale-95"
             style={{
               background: chatOpen
                 ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                : 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                : 'linear-gradient(135deg, #ff7a45 0%, #f2541c 55%, #dc3d0c 100%)',
               transform: chatOpen ? 'rotate(45deg)' : 'rotate(0deg)',
               transition: 'background 0.3s ease, transform 0.35s cubic-bezier(0.4,0,0.2,1)',
             }}
           >
+            {!chatOpen && <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-400 shadow-sm" />}
             {chatOpen ? (
               <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" xmlns="http://www.w3.org/2000/svg">
                 <path d="M6 18L18 6M6 6l12 12"/>
