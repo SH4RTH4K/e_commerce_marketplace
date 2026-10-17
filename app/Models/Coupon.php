@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Cache;
 
 class Coupon extends Model
 {
@@ -27,8 +26,6 @@ class Coupon extends Model
         static::saving(function (Coupon $coupon) {
             $coupon->code = Str::upper(trim($coupon->code));
         });
-        static::saved(fn () => Cache::store('file')->forget('storefront.home.props.v1'));
-        static::deleted(fn () => Cache::store('file')->forget('storefront.home.props.v1'));
     }
 
     public function orders(): HasMany

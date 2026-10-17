@@ -53,7 +53,6 @@ class Setting extends Model
         static::$bag = null;
         try {
             Cache::forget(self::CACHE_KEY);
-            Cache::store('file')->forget('storefront.home.props.v1');
         } catch (\Throwable) {
         }
     }

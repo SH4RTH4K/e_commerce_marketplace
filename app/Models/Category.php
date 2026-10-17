@@ -19,14 +19,8 @@ class Category extends Model
 
     protected static function booted(): void
     {
-        static::saved(function (): void {
-            Cache::store('file')->forget('storefront.home.props.v1');
-            Cache::forget('sitemap_urls_v2');
-        });
-        static::deleted(function (): void {
-            Cache::store('file')->forget('storefront.home.props.v1');
-            Cache::forget('sitemap_urls_v2');
-        });
+        static::saved(fn () => Cache::forget('sitemap_urls_v2'));
+        static::deleted(fn () => Cache::forget('sitemap_urls_v2'));
     }
 
     public function parent(): BelongsTo
