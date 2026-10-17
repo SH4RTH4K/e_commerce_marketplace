@@ -801,8 +801,7 @@ export default function StorefrontLayout({ children, title, description, activeC
               background: chatOpen
                 ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
                 : 'linear-gradient(135deg, #ff7a45 0%, #f2541c 55%, #dc3d0c 100%)',
-              transform: chatOpen ? 'rotate(45deg)' : 'rotate(0deg)',
-              transition: 'background 0.3s ease, transform 0.35s cubic-bezier(0.4,0,0.2,1)',
+              transition: 'background 0.3s ease',
             }}
           >
             {!chatOpen && <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-400 shadow-sm" />}
