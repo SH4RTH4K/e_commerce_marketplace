@@ -45,6 +45,10 @@
         if ($keywordConsistencyEnabled && $seoKeywordPhrases !== []) {
             $fallbackH1 = seo_append_missing_keywords($fallbackH1, $seoKeywordPhrases, 180);
         }
+        $fallbackHomeH1 = $fallbackH1;
+        if ($pageComponent === 'Storefront/Home' && mb_strlen($fallbackHomeH1) < 20) {
+            $fallbackHomeH1 = site_name() . ': Online shopping in Bangladesh';
+        }
         $fallbackProducts = collect($pageProps['products']['data'] ?? [])
             ->merge($pageProps['flashProducts'] ?? [])
             ->merge($pageProps['trending'] ?? [])
@@ -106,10 +110,21 @@
         {{-- Render meaningful content for visitors and crawlers without JavaScript. --}}
         <main class="seo-crawler-fallback" data-seo-crawler-fallback>
             <p style="margin:0 0 1.25rem"><img src="{{ seo_image_url() }}" alt="{{ site_name() }}" width="180" height="64" style="display:block;max-width:180px;height:64px;object-fit:contain;object-position:left center" /></p>
-            <h1 data-seo-fallback-h1>{{ $pageProps['product']['name'] ?? $pageProps['activeCategory']['name'] ?? $pageProps['heading'] ?? $fallbackH1 }}</h1>
+            <h1 data-seo-fallback-h1>{{ $pageProps['product']['name'] ?? $pageProps['activeCategory']['name'] ?? ($pageComponent === 'Storefront/Home' ? $fallbackHomeH1 : ($pageProps['heading'] ?? $fallbackH1)) }}</h1>
             @if($pageMetaDescription)<p>{{ $pageMetaDescription }}</p>@endif
             <nav aria-label="Additional store links"><a href="{{ route('about') }}">About TAQI LIFE</a> · <a href="{{ route('blog') }}">Shopping guides</a></nav>
-            <nav aria-label="Store links"><a href="{{ route('home') }}">Home</a> · <a href="{{ route('shop') }}">Shop</a> · <a href="{{ route('contact') }}">Contact</a></nav>
+            <nav aria-label="Store links"><a href="{{ route('home') }}">Homepage</a> · <a href="{{ route('shop') }}">Browse the shop</a> · <a href="{{ route('contact') }}">Contact support</a></nav>
+            @php
+                $socialLinks = [
+                    'Facebook' => trim((string) setting('facebook_url', '')),
+                    'Instagram' => trim((string) setting('instagram_url', '')),
+                    'YouTube' => trim((string) setting('youtube_url', '')),
+                    'X' => trim((string) setting('twitter_url', '')),
+                ];
+            @endphp
+            @if(collect($socialLinks)->filter()->isNotEmpty())
+                <nav aria-label="Social links">Follow TAQI LIFE: @foreach($socialLinks as $label => $url) @if($url)<a href="{{ $url }}" rel="noopener">{{ $label }}</a>@endif @endforeach</nav>
+            @endif
             @if(request()->is('/'))
                 <section aria-labelledby="shopping-guide-title">
                     <h2 id="shopping-guide-title">Online shopping in Bangladesh with TAQI LIFE</h2>
@@ -130,7 +145,7 @@
                     <nav aria-label="Shopping help"><a href="{{ route('shop') }}">Browse all products</a> · <a href="{{ route('track') }}">Track an order</a> · <a href="{{ route('shipping') }}">Shipping information</a> · <a href="{{ route('refund') }}">Return and refund policy</a> · <a href="{{ route('contact') }}">Contact TAQI LIFE</a></nav>
                 </section>
             @endif
-            @foreach(($pageProps['filterCategories'] ?? $pageProps['featuredCategories'] ?? []) as $category)
+            @foreach(collect($pageProps['filterCategories'] ?? $pageProps['featuredCategories'] ?? [])->unique('slug') as $category)
                 <a href="{{ route('shop.category', $category['slug']) }}">{{ $category['name'] }}</a>
             @endforeach
             @if($fallbackProducts->isNotEmpty())
@@ -138,7 +153,7 @@
                     <li><a href="{{ route('product.show', $product['url_key']) }}">{{ $product['name'] }}</a></li>
                 @endforeach</ul>
             @endif
-            @if(isset($pageProps['products']['data']))
+            @if(isset($pageProps['products']['data']) && $fallbackProducts->isEmpty())
                 <ul>@foreach($pageProps['products']['data'] as $product)
                     <li><a href="{{ route('product.show', $product['url_key'] ?? $product['slug']) }}">{{ $product['name'] }}</a></li>
                 @endforeach</ul>
