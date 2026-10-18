@@ -173,7 +173,8 @@ class ProductController extends Controller
         $data = $request->validate([
             'ids'         => ['required', 'array', 'min:1', 'max:100'],
             'ids.*'       => ['integer', 'distinct', 'exists:products,id'],
-            'bulk_action' => ['required', 'in:activate,deactivate,delete'],
+            'bulk_action' => ['required', 'in:activate,deactivate,delete,move_category'],
+            'category_id' => ['required_if:bulk_action,move_category', 'nullable', 'integer', 'exists:categories,id'],
         ]);
 
         abort_unless($request->user()->hasPermission($data['bulk_action'] === 'delete' ? 'products.delete' : 'products.create'), 403);
@@ -192,6 +193,12 @@ class ProductController extends Controller
             Cache::forget('sitemap_urls_v2');
 
             return back()->with('status', "{$count} product(s) set to Inactive.");
+        }
+
+        if ($data['bulk_action'] === 'move_category') {
+            Product::whereIn('id', $ids)->update(['category_id' => $data['category_id']]);
+
+            return back()->with('status', "{$count} product(s) moved to the selected category.");
         }
 
         Product::whereIn('id', $ids)->delete();
