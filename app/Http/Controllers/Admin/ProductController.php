@@ -29,7 +29,7 @@ class ProductController extends Controller
         $catalog->visibility($query, $filters['status']);
         $catalog->sort($query, $filters);
         return Inertia::render('Admin/Products/Index', [
-            'products' => $query->with('category', 'images', 'supplierLinks.supplierProduct.supplier')->withCount('variants')
+            'products' => $query->with('category', 'images', 'supplier:id,name', 'supplierLinks.supplierProduct.supplier')->withCount('variants')
                 ->paginate($filters['per_page'])->appends($catalog->parameters($filters))->through(fn ($product) => [
                     'id' => $product->id, 'name' => $product->name, 'sku' => $product->sku, 'brand' => $product->brand,
                     'url_key' => $product->url_key, 'is_published' => $product->is_published,
@@ -38,11 +38,11 @@ class ProductController extends Controller
                     'stock_quantity' => (int) $product->stock_quantity, 'has_variants' => $product->variants_count > 0,
                     'variants_count' => (int) $product->variants_count, 'image_url' => $product->imageUrl(),
                     'category' => $product->category ? ['name' => $product->category->name] : null,
-                    'supplier' => $product->supplierLinks->first()?->supplierProduct?->supplier?->name,
+                    'supplier' => $product->supplier?->name ?: $product->supplierLinks->first()?->supplierProduct?->supplier?->name,
                     'updated_at' => $product->updated_at?->setTimezone('Asia/Dhaka')->format('d M Y, h:i A'),
                 ]),
             'categories' => app(CategoryHierarchyService::class)->options(),
-            'suppliers' => DropshipSupplier::whereHas('products.productLink')->orderBy('name')->get(['id', 'name']),
+            'suppliers' => DropshipSupplier::orderBy('name')->get(['id', 'name']),
             'filters' => $filters, 'q' => $filters['q'], 'category' => $filters['category'], 'status' => $filters['status'],
             'summary' => ['all' => (int) $totals->total, 'published' => (int) $totals->published, 'draft' => (int) $totals->draft],
             'canEdit' => $request->user()->hasPermission('products.create'), 'canDelete' => $request->user()->hasPermission('products.delete'),
@@ -54,6 +54,7 @@ class ProductController extends Controller
         return Inertia::render('Admin/Products/Form', [
             'product'    => ['is_published' => true, 'regular_price' => 0, 'stock_quantity' => 0, 'specifications' => [], 'variants' => [], 'images' => []],
             'categories' => app(CategoryHierarchyService::class)->options(),
+            'suppliers'  => $this->supplierOptions(),
             'returnTo' => ProductCatalogService::returnUrl($request->input('return_to')),
         ]);
     }
@@ -76,7 +77,7 @@ class ProductController extends Controller
 
     public function edit(Request $request, Product $product)
     {
-        $product->load('images', 'variants');
+        $product->load('images', 'variants', 'supplier:id,name,key,driver_key,is_active');
 
         // Group variants
         $variants = $product->variants->map(fn($v) => [
@@ -114,6 +115,7 @@ class ProductController extends Controller
                 'specifications' => $product->specifications ?? [],
             ]),
             'categories' => app(CategoryHierarchyService::class)->options(),
+            'suppliers'  => $this->supplierOptions(),
             'pricing' => app(ProductPricingService::class)->context($product),
             'returnTo' => ProductCatalogService::returnUrl($request->input('return_to')),
         ]);
@@ -227,6 +229,7 @@ class ProductController extends Controller
         return $request->validate([
             'product_type'                   => ['nullable', 'string', 'in:simple,variable'],
             'category_id'                    => ['required', 'exists:categories,id'],
+            'supplier_id'                    => ['nullable', 'integer', 'exists:dropship_suppliers,id'],
             'name'                           => ['required', 'string', 'max:180'],
             'slug'                           => ['nullable', 'string', 'max:180'],
             'sku'                            => ['nullable', 'string', 'max:60'],
@@ -345,6 +348,21 @@ class ProductController extends Controller
         }
 
         return $data;
+    }
+
+    private function supplierOptions(): array
+    {
+        return DropshipSupplier::query()
+            ->orderByDesc('is_active')
+            ->orderBy('name')
+            ->get(['id', 'name', 'key', 'driver_key', 'is_active'])
+            ->map(fn (DropshipSupplier $supplier): array => [
+                'id' => $supplier->id,
+                'name' => $supplier->name,
+                'key' => $supplier->key,
+                'driver_key' => $supplier->driver_key,
+                'is_active' => $supplier->is_active,
+            ])->values()->all();
     }
 
     private function normalizeSpecifications(Request $request): array

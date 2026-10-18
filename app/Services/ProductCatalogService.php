@@ -46,7 +46,12 @@ class ProductCatalogService
             $category = Category::find($filters['category']);
             $query->whereIn('category_id', $category?->selfAndDescendantIds() ?? []);
         }
-        if ($filters['supplier'] !== '') $query->whereHas('supplierLinks.supplierProduct', fn ($query) => $query->where('supplier_id', $filters['supplier']));
+        if ($filters['supplier'] !== '') {
+            $query->where(fn ($supplierQuery) => $supplierQuery
+                ->where('supplier_id', $filters['supplier'])
+                ->orWhereHas('supplierLinks.supplierProduct', fn ($linkQuery) => $linkQuery->where('supplier_id', $filters['supplier']))
+            );
+        }
         if ($filters['type'] === 'variable') $query->has('variants');
         if ($filters['type'] === 'simple') $query->doesntHave('variants');
         match ($filters['stock']) {

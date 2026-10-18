@@ -57,7 +57,7 @@ const COLOR_PRESETS = [
 
 const SIZE_PRESETS = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '30', '32', '34', '36', '38', '40', '42'];
 
-export default function ProductForm({ product, categories, pricing = { linked: false, mode: 'manual' }, returnTo = '/admin/products' }) {
+export default function ProductForm({ product, categories, suppliers = [], pricing = { linked: false, mode: 'manual' }, returnTo = '/admin/products' }) {
   const isEdit = !!product.id;
   const [submitting, setSubmitting] = useState(false);
 
@@ -70,6 +70,7 @@ export default function ProductForm({ product, categories, pricing = { linked: f
 
   const { data, setData, processing, errors, setError, clearErrors } = useForm({
     category_id: product.category_id || '',
+    supplier_id: product.supplier_id || '',
     name: product.name || '',
     slug: product.slug || '',
     sku: product.sku || '',
@@ -368,6 +369,22 @@ export default function ProductForm({ product, categories, pricing = { linked: f
                       <CategoryPicker categories={categories} value={data.category_id} onChange={value => setData('category_id', value)} className={inputClass} />
                     </Field>
                   </div>
+                  <Field label="Supplier" error={errors.supplier_id} hint="Optional for manual products">
+                    <select
+                      value={data.supplier_id}
+                      onChange={e => setData('supplier_id', e.target.value)}
+                      className={`${inputClass} bg-white`}
+                    >
+                      <option value="">Own inventory / no supplier</option>
+                      {suppliers.map(supplier => (
+                        <option key={supplier.id} value={supplier.id} disabled={!supplier.is_active}>
+                          {supplier.name}{supplier.is_active ? '' : ' (inactive)'}{supplier.driver_key ? ` · ${supplier.driver_key}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="mt-1.5 text-[11px] text-gray-400">Choose a configured supplier for ownership and reporting. Dropshipping imports keep their sync link automatically.</p>
+                    {suppliers.length === 0 && <a href="/admin/dropshipping" className="mt-1.5 inline-block text-xs font-semibold text-orange-600 hover:underline">Add or manage suppliers</a>}
+                  </Field>
                   <Field label="Short Highlights / Short Description" error={errors.short_description}>
                     <RichTextEditor
                       value={data.short_description}
