@@ -35,12 +35,16 @@ class SupplierController extends Controller
         return Inertia::render('Admin/Suppliers/Index', [
             'suppliers' => $suppliers, 'filters' => $filters, 'types' => self::TYPES,
             'canManage' => $request->user()->hasPermission('suppliers.manage'),
+            'canManageDropshipping' => $this->canManageDropshipping($request),
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        return Inertia::render('Admin/Suppliers/Form', ['supplier' => null, 'types' => self::TYPES]);
+        return Inertia::render('Admin/Suppliers/Form', [
+            'supplier' => null, 'types' => self::TYPES,
+            'canManageDropshipping' => $this->canManageDropshipping($request),
+        ]);
     }
 
     public function store(Request $request)
@@ -103,13 +107,16 @@ class SupplierController extends Controller
             'supplier' => $this->details($supplier), 'products' => $products, 'history' => $history, 'audits' => $audits,
             'metrics' => $this->metrics($supplier), 'canManage' => $request->user()->hasPermission('suppliers.manage'),
             'canViewProducts' => $request->user()->hasPermission('products.view'),
-            'canManageDropshipping' => config('dropshipping.enabled') && $request->user()->hasPermission('dropshipping.manage'),
+            'canManageDropshipping' => $this->canManageDropshipping($request),
         ]);
     }
 
-    public function edit(DropshipSupplier $supplier)
+    public function edit(Request $request, DropshipSupplier $supplier)
     {
-        return Inertia::render('Admin/Suppliers/Form', ['supplier' => $this->details($supplier), 'types' => self::TYPES]);
+        return Inertia::render('Admin/Suppliers/Form', [
+            'supplier' => $this->details($supplier), 'types' => self::TYPES,
+            'canManageDropshipping' => $this->canManageDropshipping($request),
+        ]);
     }
 
     public function update(Request $request, DropshipSupplier $supplier)
@@ -254,6 +261,11 @@ class SupplierController extends Controller
     {
         return $supplier->hasIntegration()
             ? $supplier->driver_key.' Dropshipping' : null;
+    }
+
+    private function canManageDropshipping(Request $request): bool
+    {
+        return config('dropshipping.enabled') && $request->user()->hasPermission('dropshipping.manage');
     }
 
     private function auditValues(DropshipSupplier $supplier): array

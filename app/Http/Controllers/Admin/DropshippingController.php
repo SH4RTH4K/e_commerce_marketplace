@@ -80,6 +80,9 @@ class DropshippingController extends Controller
 
         return Inertia::render('Admin/Dropshipping/Index', [
             'suppliers' => $suppliers,
+            'unconnected_suppliers' => DropshipSupplier::query()->where('is_active', true)->where('supplier_type', 'dropshipping')
+                ->where(fn ($query) => $query->whereNull('driver_key')->orWhereIn('driver_key', ['', 'manual']))
+                ->orderBy('name')->get(['id', 'name', 'supplier_code', 'supplier_type']),
             'available_drivers' => $registry->driverKeys(),
             'selected_supplier_id' => $this->selectedSupplierId($request),
         ]);
@@ -1286,8 +1289,18 @@ class DropshippingController extends Controller
 
     public function apiSettings(Request $request, SupplierRegistry $registry)
     {
+        $connectSupplierId = null;
+        if ($request->filled('connect_supplier_id')) {
+            $data = $request->validate(['connect_supplier_id' => ['integer', 'min:1']]);
+            $supplier = DropshipSupplier::query()->find($data['connect_supplier_id']);
+            if (! $supplier || ! $supplier->is_active || $supplier->hasIntegration()) {
+                throw ValidationException::withMessages(['connect_supplier_id' => 'Choose an active supplier without an existing API connection. Existing connections can be edited from the dropshipping overview.']);
+            }
+            $connectSupplierId = $supplier->id;
+        }
         return Inertia::render('Admin/Dropshipping/ApiSettings', [
-            'selected_supplier_id' => $this->selectedSupplierId($request),
+            'selected_supplier_id' => $connectSupplierId ? null : $this->selectedSupplierId($request),
+            'connect_supplier_id' => $connectSupplierId,
             'suppliers' => DropshipSupplier::query()->withIntegration()->latest('id')->get([
                 'id', 'key', 'name', 'supplier_type', 'driver_key', 'base_url', 'sync_rules', 'is_active',
                 'last_connection_status', 'last_connection_message', 'last_connection_tested_at', 'api_key', 'secret_key',
@@ -1437,7 +1450,7 @@ class DropshippingController extends Controller
         if (! $registry->hasDriver($data['driver_key'])) {
             throw ValidationException::withMessages(['driver_key' => 'This supplier driver is not registered by the application.']);
         }
-        DB::transaction(function () use ($request, $data): void {
+        $supplier = DB::transaction(function () use ($request, $data): DropshipSupplier {
             $supplier = isset($data['supplier_id']) ? DropshipSupplier::query()->lockForUpdate()->find($data['supplier_id']) : null;
             if (isset($data['supplier_id']) && ($supplier === null || ! $supplier->is_active || app(SupplierAssociationService::class)->hasIntegration($supplier))) {
                 throw ValidationException::withMessages(['supplier_id' => 'Choose an active supplier without an existing API connection. Edit an existing connection instead of creating another one.']);
@@ -1466,9 +1479,11 @@ class DropshippingController extends Controller
                 $supplier->forceFill(['supplier_code' => 'SUP-'.str_pad((string) $supplier->id, 5, '0', STR_PAD_LEFT), 'created_by' => $request->user()?->id, 'updated_by' => $request->user()?->id])->saveQuietly();
             }
             SupplierAudit::create(['supplier_id' => $supplier->id, 'actor_id' => $request->user()?->id, 'actor_name' => $request->user()?->name, 'event' => 'integration_connected', 'before' => $before, 'after' => ['driver_key' => $supplier->driver_key], 'metadata' => ['integration_key' => $supplier->key]]);
+            return $supplier;
         });
 
-        return back()->with('status', 'Supplier connection saved. Test the connection before importing products.');
+        return redirect()->route('admin.dropshipping.settings', ['supplier_id' => $supplier->id])
+            ->with('status', 'Supplier connection saved. Test the connection before importing products.');
     }
 
     public function update(Request $request, DropshipSupplier $supplier, SupplierRegistry $registry)

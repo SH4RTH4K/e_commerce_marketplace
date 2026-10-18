@@ -98,6 +98,101 @@ class DropshippingSetupExperienceTest extends TestCase
         $this->assertSame('private-api-key', $supplier->fresh()->api_key);
     }
 
+    public function test_dashboard_shows_existing_dropshipping_business_waiting_for_connection(): void
+    {
+        $original = $this->supplier('main-supplier', 'Mohasagor Bangladesh');
+        $pending = DropshipSupplier::create(['key' => 'test-provider', 'name' => 'Test dropshipping supplier',
+            'supplier_type' => 'dropshipping', 'driver_key' => 'manual', 'is_active' => true]);
+        DropshipSupplier::create(['key' => 'inactive-provider', 'name' => 'Inactive dropshipping supplier',
+            'supplier_type' => 'dropshipping', 'driver_key' => 'manual', 'is_active' => false]);
+
+        $this->get('/admin/dropshipping')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->where('selected_supplier_id', $original->id)
+            ->has('suppliers', 1)->where('suppliers.0.id', $original->id)
+            ->has('unconnected_suppliers', 1)->where('unconnected_suppliers.0.id', $pending->id)
+            ->where('unconnected_suppliers.0.name', $pending->name)
+            ->where('unconnected_suppliers.0.supplier_type', 'dropshipping'));
+
+        $this->assertSame('manual', $pending->fresh()->driver_key);
+        $this->assertFalse($pending->fresh()->hasIntegration());
+        $this->assertDatabaseCount('dropship_suppliers', 3);
+        $this->assertDatabaseCount('dropship_driver_profiles', 0);
+    }
+
+    public function test_connection_settings_can_target_existing_unconnected_supplier_without_changing_saved_data(): void
+    {
+        $original = $this->supplier('main-supplier', 'Mohasagor Bangladesh');
+        $originalAttributes = $original->fresh()->getAttributes();
+        $pending = DropshipSupplier::create(['key' => 'test-provider', 'name' => 'Test dropshipping supplier',
+            'supplier_type' => 'dropshipping', 'driver_key' => 'manual', 'is_active' => true]);
+
+        $this->get('/admin/dropshipping/settings?connect_supplier_id='.$pending->id)
+            ->assertOk()->assertInertia(fn (Assert $page) => $page
+                ->where('connect_supplier_id', $pending->id)
+                ->has('suppliers', 1)->where('suppliers.0.id', $original->id)
+                ->has('unconnected_suppliers', 1)->where('unconnected_suppliers.0.id', $pending->id)
+                ->where('unconnected_suppliers.0.name', $pending->name)
+                ->where('unconnected_suppliers.0.supplier_type', 'dropshipping'));
+
+        $this->assertSame('manual', $pending->fresh()->driver_key);
+        $this->assertFalse($pending->fresh()->hasIntegration());
+        $this->assertSame($originalAttributes, $original->fresh()->getAttributes());
+        $this->assertDatabaseCount('dropship_suppliers', 2);
+        $this->assertDatabaseCount('dropship_driver_profiles', 0);
+        $this->assertDatabaseCount('supplier_audits', 0);
+    }
+
+    public function test_connection_settings_reject_inactive_missing_or_already_connected_targets(): void
+    {
+        $original = $this->supplier('main-supplier', 'Mohasagor Bangladesh');
+        $originalAttributes = $original->fresh()->getAttributes();
+        $inactive = DropshipSupplier::create(['key' => 'inactive-provider', 'name' => 'Inactive dropshipping supplier',
+            'supplier_type' => 'dropshipping', 'driver_key' => 'manual', 'is_active' => false]);
+
+        foreach ([$original->id, $inactive->id, 999999, 'invalid'] as $target) {
+            $this->from('/admin/dropshipping')->get('/admin/dropshipping/settings?connect_supplier_id='.$target)
+                ->assertRedirect('/admin/dropshipping')->assertSessionHasErrors('connect_supplier_id');
+        }
+
+        $this->assertSame($originalAttributes, $original->fresh()->getAttributes());
+        $this->assertSame('manual', $inactive->fresh()->driver_key);
+        $this->assertDatabaseCount('dropship_suppliers', 2);
+        $this->assertDatabaseCount('dropship_driver_profiles', 0);
+    }
+
+    public function test_saving_connection_reuses_selected_business_and_selects_it_after_save(): void
+    {
+        $original = $this->supplier('main-supplier', 'Mohasagor Bangladesh');
+        $originalAttributes = $original->fresh()->getAttributes();
+        $pending = DropshipSupplier::create(['key' => 'existing-wholesale', 'supplier_code' => 'SUP-TEST',
+            'name' => 'Wholesale business with dropshipping service', 'supplier_type' => 'wholesale',
+            'driver_key' => 'manual', 'is_active' => true]);
+
+        $this->from('/admin/dropshipping/settings?connect_supplier_id='.$pending->id)
+            ->post('/admin/dropshipping/suppliers', ['supplier_id' => $pending->id,
+                'name' => 'Do not rename this supplier', 'driver_key' => 'mohasagor',
+                'base_url' => 'https://other-supplier.example/api', 'api_key' => 'new-private-key',
+                'secret_key' => 'new-private-secret', 'import_status' => 'draft', 'import_images' => true])
+            ->assertSessionHasNoErrors()->assertRedirect('/admin/dropshipping/settings?supplier_id='.$pending->id);
+
+        $pending->refresh();
+        $this->assertSame('existing-wholesale', $pending->key);
+        $this->assertSame('SUP-TEST', $pending->supplier_code);
+        $this->assertSame('Wholesale business with dropshipping service', $pending->name);
+        $this->assertSame('wholesale', $pending->supplier_type);
+        $this->assertSame('mohasagor', $pending->driver_key);
+        $this->assertSame('new-private-key', $pending->api_key);
+        $this->assertSame('new-private-secret', $pending->secret_key);
+        $this->assertTrue($pending->hasIntegration());
+        $this->assertSame($originalAttributes, $original->fresh()->getAttributes());
+        $this->assertDatabaseCount('dropship_suppliers', 2);
+        $this->assertDatabaseCount('dropship_driver_profiles', 0);
+        $this->assertDatabaseHas('supplier_audits', ['supplier_id' => $pending->id, 'event' => 'integration_connected']);
+        $this->get('/admin/dropshipping/settings?supplier_id='.$pending->id)->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('selected_supplier_id', $pending->id)
+                ->where('connect_supplier_id', null)->has('unconnected_suppliers', 0));
+    }
+
     public function test_pricing_retains_supplier_scope_and_status_changes_are_audited(): void
     {
         $supplier = $this->supplier('main-supplier', 'Mohasagor Bangladesh');

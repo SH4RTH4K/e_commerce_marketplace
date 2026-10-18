@@ -81,3 +81,55 @@ test('suppliers navigation remains available when dropshipping is disabled and r
     assert.equal(integration.root.findAllByProps({ href: '/admin/suppliers' }).length, 0);
   } finally { await act(async () => integration.unmount()); }
 });
+
+test('saved dropshipping suppliers offer direct API setup across list, details and edit pages', async () => {
+  const dropship = { ...supplier, supplier_type: 'dropshipping' };
+  const useForm = initial => ({ data: initial, errors: {}, setData() {}, post() {}, patch() {} });
+  const { SupplierForm } = await load('Pages/Admin/Suppliers/Form.jsx', { ...base, useForm }, ['SupplierForm']);
+  const { SupplierShow } = await load('Pages/Admin/Suppliers/Show.jsx', base, ['SupplierShow']);
+  const { SupplierIndex } = await load('Pages/Admin/Suppliers/Index.jsx', base, ['SupplierIndex']);
+  for (const [Component, props] of [[SupplierForm, { supplier: dropship }], [SupplierShow, { supplier: dropship }],
+    [SupplierIndex, { suppliers: { ...page, data: [dropship] } }]]) {
+    const renderer = await mount(Component, { ...props, canManageDropshipping: true });
+    try {
+      assert.equal(renderer.root.findByProps({ href: '/admin/dropshipping/settings?connect_supplier_id=12' }).children.join(''), 'Set up API connection');
+    } finally { await act(async () => renderer.unmount()); }
+    for (const limitedProps of [{ canManageDropshipping: false }, { canManageDropshipping: true,
+      ...(Component === SupplierIndex ? { suppliers: { ...page, data: [{ ...dropship, is_active: false }] } } : { supplier: { ...dropship, is_active: false } }) }]) {
+      const limited = await mount(Component, { ...props, ...limitedProps });
+      try { assert.equal(limited.root.findAllByProps({ href: '/admin/dropshipping/settings?connect_supplier_id=12' }).length, 0); }
+      finally { await act(async () => limited.unmount()); }
+    }
+  }
+});
+
+test('new unsaved dropshipping suppliers explain save-first workflow without a connection navigation link', async () => {
+  const useForm = initial => {
+    const [data, update] = useState(initial);
+    return { data, setData: (key, value) => update(previous => ({ ...previous, [key]: value })), errors: {}, post() {}, patch() {} };
+  };
+  const { SupplierForm } = await load('Pages/Admin/Suppliers/Form.jsx', { ...base, useForm }, ['SupplierForm']);
+  const renderer = await mount(SupplierForm, { supplier: null, types: ['local', 'dropshipping'], canManageDropshipping: true });
+  try {
+    await act(async () => renderer.root.findByType('select').props.onChange({ target: { value: 'dropshipping' } }));
+    assert.ok(text(renderer).includes('Save this supplier first'));
+    assert.ok(text(renderer).includes('Manual dropshipping works without an API'));
+    assert.equal(renderer.root.findAllByType('a').filter(link => link.props.href.includes('/admin/dropshipping')).length, 0);
+  } finally { await act(async () => renderer.unmount()); }
+});
+
+test('connected suppliers open their existing API settings and do not offer another setup connection', async () => {
+  const connected = { ...supplier, supplier_type: 'dropshipping', integration: 'mohasagor Dropshipping' };
+  const useForm = initial => ({ data: initial, errors: {}, setData() {}, post() {}, patch() {} });
+  const { SupplierForm } = await load('Pages/Admin/Suppliers/Form.jsx', { ...base, useForm }, ['SupplierForm']);
+  const { SupplierShow } = await load('Pages/Admin/Suppliers/Show.jsx', base, ['SupplierShow']);
+  const { SupplierIndex } = await load('Pages/Admin/Suppliers/Index.jsx', base, ['SupplierIndex']);
+  for (const [Component, props] of [[SupplierForm, { supplier: connected }], [SupplierShow, { supplier: connected }],
+    [SupplierIndex, { suppliers: { ...page, data: [connected] } }]]) {
+    const renderer = await mount(Component, { ...props, canManageDropshipping: true });
+    try {
+      assert.ok(renderer.root.findByProps({ href: '/admin/dropshipping/settings?supplier_id=12' }));
+      assert.equal(renderer.root.findAllByProps({ href: '/admin/dropshipping/settings?connect_supplier_id=12' }).length, 0);
+    } finally { await act(async () => renderer.unmount()); }
+  }
+});

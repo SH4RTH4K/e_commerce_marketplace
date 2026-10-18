@@ -100,3 +100,50 @@ test('workflow navigation keeps the selected supplier when moving between setup 
     assert.ok(JSON.stringify(rendered.toJSON()).includes('Mohasagor Bangladesh'));
   } finally { await act(async () => rendered.unmount()); }
 });
+
+test('unconfigured dropshipping suppliers have a direct setup action beside the saved connection', async () => {
+  const { DropshippingIndex } = await load('Index', ['DropshippingIndex']);
+  const rendered = await mount(DropshippingIndex, { suppliers: [supplier], unconnected_suppliers: [{ id: 2, name: 'Test Supplier', supplier_code: '0001' }] });
+  try {
+    const action = rendered.root.findByProps({ href: '/admin/dropshipping/settings?connect_supplier_id=2' });
+    assert.ok(action);
+    const output = JSON.stringify(rendered.toJSON());
+    assert.ok(output.includes('Test Supplier'));
+    assert.ok(output.includes('API not configured'));
+    assert.ok(output.includes('Mohasagor Bangladesh'));
+    assert.equal(requests.length, 0);
+  } finally { await act(async () => rendered.unmount()); }
+});
+
+test('setup link selects the existing business supplier and saves that supplier instead of another account', async () => {
+  const { ApiSettings } = await load('ApiSettings', ['ApiSettings'], { FormData: class { constructor(form) { this.values = form.values; } [Symbol.iterator]() { return Object.entries(this.values)[Symbol.iterator](); } } });
+  const target = { id: 2, name: 'Test Supplier', supplier_code: '0001', supplier_type: 'dropshipping' };
+  const newerConnection = { ...supplier, id: 99, name: 'Newest saved account' };
+  const rendered = await mount(ApiSettings, { suppliers: [newerConnection, supplier], selected_supplier_id: null, connect_supplier_id: 2, unconnected_suppliers: [target], available_drivers: ['mohasagor'] });
+  try {
+    const form = rendered.root.findAllByType('form').find(item => item.findAllByProps({ name: 'api_key' }).length > 0);
+    assert.equal(form.findByProps({ name: 'supplier_id' }).props.value, '2');
+    assert.equal(form.findByProps({ name: 'name' }).props.defaultValue, 'Test Supplier');
+    assert.ok(JSON.stringify(rendered.toJSON()).includes('Connect Test Supplier'));
+    await act(async () => form.props.onSubmit({ preventDefault() {}, currentTarget: { values: { supplier_id: '2', name: target.name, driver_key: 'mohasagor', base_url: 'https://supplier.example', api_key: 'new-key', secret_key: 'new-secret' }, elements: { import_images: { checked: false }, import_variations: { checked: true } } } }));
+    assert.equal(requests[0][0], 'post');
+    assert.equal(requests[0][1], '/admin/dropshipping/suppliers');
+    assert.equal(requests[0][2].supplier_id, '2');
+    await act(async () => requests[0][3].onSuccess({ props: { selected_supplier_id: 2, suppliers: [newerConnection, { ...target, driver_key: 'mohasagor' }, supplier] } }));
+    const account = rendered.root.findAllByType('select').find(select => select.props.value === '2' && select.findAllByType('option').some(option => option.props.value === ''));
+    assert.ok(account, 'the saved target remains selected even when another account has a greater ID');
+  } finally { await act(async () => rendered.unmount()); }
+});
+
+test('pending setup keeps the target supplier visible and prevents navigation into another suppliers products', async () => {
+  const { DropshippingSubpage } = await load('Subpage', ['DropshippingSubpage'], { usePage: () => ({ url: '/admin/dropshipping/settings?connect_supplier_id=2', props: { suppliers: [supplier], connect_supplier_id: 2 } }) });
+  const rendered = await mount(DropshippingSubpage, { title: 'Connection', supplier: { id: 2, name: 'Test Supplier' }, connectionPending: true });
+  try {
+    const nav = rendered.root.findByProps({ 'aria-label': 'Dropshipping workflow' });
+    assert.equal(nav.findAllByType('a').length, 1);
+    assert.equal(nav.findByType('a').props.href, '/admin/dropshipping/settings?connect_supplier_id=2');
+    assert.equal(nav.findAllByProps({ 'aria-disabled': 'true' }).length, 4);
+    assert.ok(JSON.stringify(rendered.toJSON()).includes('Test Supplier'));
+    assert.equal(rendered.root.findAllByType('a').find(link => link.props.children === '← Dropshipping overview').props.href, '/admin/dropshipping');
+  } finally { await act(async () => rendered.unmount()); }
+});

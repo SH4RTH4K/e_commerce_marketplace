@@ -17,7 +17,7 @@ export function setupSteps(supplier) {
   ];
 }
 
-export default function DropshippingIndex({ suppliers = [], selected_supplier_id = null }) {
+export default function DropshippingIndex({ suppliers = [], selected_supplier_id = null, unconnected_suppliers = [] }) {
   const supplier = suppliers.find(item => Number(item.id) === Number(selected_supplier_id)) || suppliers[0];
   const url = path => supplier ? `${path}?supplier_id=${supplier.id}` : path;
   const steps = supplier ? setupSteps(supplier) : [];
@@ -30,6 +30,10 @@ export default function DropshippingIndex({ suppliers = [], selected_supplier_id
 
   return <><Head title="Dropshipping" /><AdminLayout title=""><div className="space-y-5">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-2xl font-bold text-gray-900">Dropshipping</h1><p className="mt-1 text-sm text-gray-500">Connect a supplier, choose products, then review and publish.</p></div><a href="/admin/suppliers" className={secondary}>Manage supplier details</a></div>
+    {unconnected_suppliers.length > 0 && <section className="rounded-2xl border border-orange-200 bg-orange-50 p-5">
+      <h2 className="font-bold text-gray-900">Suppliers ready for API setup</h2><p className="mt-1 text-sm text-gray-600">These suppliers are saved with type Dropshipping. Add an API connection if you want to import and sync their products automatically. You can also keep managing their products manually.</p>
+      <div className="mt-4 space-y-3">{unconnected_suppliers.map(item => <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-4"><div><strong className="text-gray-900">{item.name}</strong><p className="mt-1 text-xs text-gray-500">{item.supplier_code} · API not configured</p></div><a href={`/admin/dropshipping/settings?connect_supplier_id=${item.id}`} className={`${button} bg-orange-500 text-white hover:bg-orange-600`}>Set up API connection →</a></div>)}</div>
+    </section>}
     {supplier ? <>
       <section className="rounded-2xl border border-orange-200 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Your dropshipping supplier</p><h2 className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">{supplier.name}</h2><div className="mt-2 flex flex-wrap items-center gap-2 text-xs"><span className={`rounded-full px-3 py-1 font-semibold ${supplier.is_active && supplier.last_connection_status === 'success' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-800'}`}>{!supplier.is_active ? 'Inactive' : supplier.last_connection_status === 'success' ? 'Connected' : supplier.last_connection_status === 'failed' ? 'Connection needs attention' : 'Connection not tested'}</span><a href={url('/admin/dropshipping/settings')} className="font-semibold text-orange-700 hover:underline">Connection settings</a><a href={`/admin/suppliers/${supplier.id}`} className="text-gray-600 hover:underline">Supplier details</a></div></div>
