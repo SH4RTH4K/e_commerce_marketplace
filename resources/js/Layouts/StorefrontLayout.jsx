@@ -355,10 +355,12 @@ export default function StorefrontLayout({ children, title, description, activeC
                   placeholder="What are you looking for?"
                   className="flex-1 h-full px-3 text-sm bg-transparent border-none focus:outline-none focus:ring-0 text-gray-800 placeholder-gray-400" />
                 
-                <div className="hidden lg:flex items-center gap-1 shrink-0 bg-white px-2 py-1.5 rounded-full border border-gray-100 shadow-sm">
-                  <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 rounded">⌘</kbd>
-                  <kbd className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 rounded">K</kbd>
-                </div>
+                <button type="submit" aria-label="Search products" title="Search products"
+                  className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-full text-gray-500 hover:text-white hover:bg-[#f15a24] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f15a24]/40 transition-colors">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7"/><path strokeLinecap="round" d="m20 20-3-3"/>
+                  </svg>
+                </button>
               </div>
             </form>
 
