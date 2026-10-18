@@ -27,7 +27,8 @@ const navGroups = [
         children: [
           { key: 'products',     label: 'All Products',        href: '/admin/products',        pattern: /^\/admin\/products(?:\/\d+\/edit)?\/?(?:\?.*)?$/, perm: 'products.view' },
           { key: 'product-add',  label: 'Add New Product',     href: '/admin/products/create', pattern: /^\/admin\/products\/create/, perm: 'products.create' },
-          { key: 'inventory',    label: 'Inventory / Stock',   href: '/admin/inventory',       pattern: /^\/admin\/inventory/, perm: 'products.view' },
+          { key: 'inventory',    label: 'Inventory / Stock',   href: '/admin/inventory',       pattern: /^\/admin\/inventory\/?(?:\?.*)?$/, perm: 'products.view' },
+          { key: 'inventory-history', label: 'Stock History', href: '/admin/inventory/history', pattern: /^\/admin\/inventory\/history/, perm: 'products.view' },
           { key: 'categories',   label: 'Categories',          href: '/admin/categories',      pattern: /^\/admin\/categories/, perm: 'catalog.manage' },
         ],
       },
@@ -40,8 +41,9 @@ const navGroups = [
         key: 'suppliers-group', label: 'Supplier Management', defaultOpen: true,
         icon: 'M4 7h16M6 7v10a2 2 0 002 2h8a2 2 0 002-2V7M9 7V5a3 3 0 016 0v2M9 11h6M9 15h4',
         children: [
-          { key: 'suppliers', label: 'All Suppliers', href: '/admin/suppliers', pattern: /^\/admin\/suppliers(?:\/|$)/, perm: 'dropshipping.manage', feature: 'dropshipping' },
-          { key: 'suppliers-create', label: 'Add Supplier', href: '/admin/suppliers/create', pattern: /^\/admin\/suppliers\/create/, perm: 'products.create' },
+          { key: 'suppliers', label: 'All Suppliers', href: '/admin/suppliers', pattern: /^\/admin\/suppliers(?:\/\d+(?:\/edit)?)?\/?(?:\?.*)?$/, perm: 'suppliers.view' },
+          { key: 'suppliers-create', label: 'Add Supplier', href: '/admin/suppliers/create', pattern: /^\/admin\/suppliers\/create/, perm: 'suppliers.manage' },
+          { key: 'suppliers-report', label: 'Supplier Reports', href: '/admin/suppliers/report', pattern: /^\/admin\/suppliers\/report/, perm: 'suppliers.view' },
         ],
       },
     ],
@@ -108,6 +110,7 @@ const navGroups = [
         key: 'dropshipping-group', label: 'Dropshipping', defaultOpen: true,
         icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9z',
         children: [
+          { key: 'dropshipping-dashboard', label: 'Dashboard', href: '/admin/dropshipping', pattern: /^\/admin\/dropshipping\/?(?:\?.*)?$/, perm: 'dropshipping.manage', feature: 'dropshipping' },
           { key: 'dropshipping-settings', label: 'API Settings', href: '/admin/dropshipping/settings', pattern: /^\/admin\/dropshipping\/settings/, perm: 'dropshipping.manage', feature: 'dropshipping' },
           { key: 'dropshipping-sync-runs', label: 'Sync Runs', href: '/admin/dropshipping/sync-runs', pattern: /^\/admin\/dropshipping\/sync-runs/, perm: 'dropshipping.manage', feature: 'dropshipping' },
           { key: 'dropshipping-pricing', label: 'Pricing Rules', href: '/admin/dropshipping/pricing', pattern: /^\/admin\/dropshipping\/pricing/, perm: 'dropshipping.manage', feature: 'dropshipping' },
@@ -286,6 +289,7 @@ export default function AdminLayout({ children, title }) {
   const hasPerm = (perm) => {
     if (isSuperAdmin) return true;
     if (!perm) return true;
+    if (perm === 'suppliers.view' && userPerms.includes('suppliers.manage')) return true;
     return userPerms.includes(perm);
   };
   const featureEnabled = (feature) => !feature || (feature === 'dropshipping' && dropshipping_enabled);

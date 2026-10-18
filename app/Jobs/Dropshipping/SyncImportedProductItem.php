@@ -6,6 +6,7 @@ use App\Models\DropshipSupplierProduct;
 use App\Models\DropshipSyncRun;
 use App\Services\Dropshipping\PriceStockSyncService;
 use App\Services\Dropshipping\ProductImportService;
+use App\Services\Dropshipping\ProductImportResult;
 use App\Services\Dropshipping\SyncRunService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -39,8 +40,20 @@ class SyncImportedProductItem implements ShouldQueue
         }
 
         try {
-            $importService->import($source);
-            $priceStockSync->sync($source);
+            $import = $importService->import($source);
+            if ($import->status === ProductImportResult::BLOCKED) {
+                $syncRuns->failItem($run, $itemKey, 'Supplier ownership requires review: '.$import->reason);
+                if ($this->dispatchNextItem) $this->queueNextItem($run, $syncRuns);
+                else $syncRuns->finalize($run);
+                return;
+            }
+            $result = $priceStockSync->sync($source);
+            if ($result->ownershipBlocked()) {
+                $syncRuns->failItem($run, $itemKey, 'Supplier ownership requires review: '.implode(', ', $result->warnings));
+                if ($this->dispatchNextItem) $this->queueNextItem($run, $syncRuns);
+                else $syncRuns->finalize($run);
+                return;
+            }
         } catch (Throwable $exception) {
             if (! $this->dispatchNextItem) {
                 $syncRuns->failItem($run, $itemKey, 'Imported product could not be synchronized.');

@@ -167,13 +167,7 @@ class Order extends Model
     /** Return reserved stock to products (e.g. when an order is cancelled). */
     public function restoreStock(): void
     {
-        $this->loadMissing('items');
-
-        foreach ($this->items as $item) {
-            if ($item->product_id) {
-                Product::where('id', $item->product_id)->increment('stock_quantity', $item->quantity);
-            }
-        }
+        app(\App\Services\InventoryStockService::class)->restoreOrderStock(auth()->user(), $this);
     }
 
     /** Release a coupon use when an order is cancelled/rejected. */

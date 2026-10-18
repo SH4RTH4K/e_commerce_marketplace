@@ -32,28 +32,39 @@ export function InventoryDialog({ title, children, onClose, busy = false }) {
   </div>;
 }
 
-export function StockAdjustmentDialog({ products, onClose, onSaved }) {
+export function StockAdjustmentDialog({ products, suppliers = [], onClose, onSaved }) {
   const form = useForm({
     items: products.map(product => ({ product_id: product.id, expected_stock: Number(product.stock_quantity) })),
-    operation: 'add', quantity: 1, reason: 'Restock', protect_supplier_stock: true,
+    operation: 'add', movement_type: 'stock_in', quantity: 1, reason: 'Restock', reference: '', supplier_id: 'product', protect_supplier_stock: true,
   });
   const amount = Number(form.data.quantity);
   const preview = products.map(product => ({ ...product, next: form.data.operation === 'set' ? amount : Number(product.stock_quantity) + (form.data.operation === 'remove' ? -amount : amount) }));
   const valid = form.data.quantity !== '' && Number.isInteger(amount) && amount >= (form.data.operation === 'set' ? 0 : 1)
     && preview.every(product => product.next >= 0 && product.next <= 4294967295) && form.data.reason.trim().length > 0;
-  const supplierProducts = products.some(product => product.stock_source !== 'local');
+  const supplierProducts = products.some(product => product.has_supplier_link ?? product.stock_source !== 'local');
   const submit = event => {
     event.preventDefault();
     if (!valid || form.processing) return;
+    form.transform(data => {
+      const result = { ...data };
+      if (result.supplier_id === 'product') delete result.supplier_id;
+      else if (result.supplier_id === '') result.supplier_id = null;
+      return result;
+    });
     form.post('/admin/inventory/adjust', { preserveScroll: true, onSuccess: onSaved });
   };
   return <InventoryDialog title={products.length === 1 ? 'Adjust product stock' : `Adjust ${products.length} products`} onClose={onClose} busy={form.processing}>
     <form onSubmit={submit} className="space-y-5">
       <p className="text-sm text-gray-500">Review each quantity before saving. Every adjustment is recorded with your name and reason.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <label className="text-sm font-medium text-gray-700">Adjustment type
-          <select value={form.data.operation} onChange={event => { const operation = event.target.value; form.setData(current => ({ ...current, operation, reason: operation === 'set' ? 'Inventory count correction' : operation === 'remove' ? 'Damaged or missing units' : 'Restock' })); }} disabled={form.processing} className="mt-1.5 w-full border border-gray-200 rounded-xl px-3 py-2.5">
-            <option value="add">Add units</option><option value="remove">Remove units</option><option value="set">Set exact quantity</option>
+        <label className="text-sm font-medium text-gray-700">Movement type
+          <select aria-label="Movement type" value={form.data.movement_type} onChange={event => {
+            const movement_type = event.target.value;
+            const operation = ['opening', 'stock_in', 'return_in'].includes(movement_type) ? 'add' : ['stock_out', 'damaged'].includes(movement_type) ? 'remove' : 'set';
+            const reasons = { opening: 'Opening stock', stock_in: 'Stock received', stock_out: 'Stock issued', adjustment: 'Inventory count correction', return_in: 'Customer return received', damaged: 'Damaged or lost units' };
+            form.setData(current => ({ ...current, operation, movement_type, reason: reasons[movement_type] }));
+          }} disabled={form.processing} className="mt-1.5 w-full border border-gray-200 rounded-xl px-3 py-2.5">
+            <option value="stock_in">Stock in / Receive</option><option value="stock_out">Stock out</option><option value="adjustment">Adjustment / Set quantity</option><option value="return_in">Return in</option><option value="damaged">Damaged / Lost</option>{products.every(product => Number(product.stock_quantity) === 0 && product.stock_type !== 'supplier') && <option value="opening">Opening stock</option>}
           </select>
         </label>
         <label className="text-sm font-medium text-gray-700">{form.data.operation === 'set' ? 'New quantity for each product' : 'Units per product'}
@@ -61,13 +72,22 @@ export function StockAdjustmentDialog({ products, onClose, onSaved }) {
             onChange={event => form.setData('quantity', event.target.value)} className="mt-1.5 w-full border border-gray-200 rounded-xl px-3 py-2.5" />
         </label>
       </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <label className="text-sm font-medium text-gray-700">Supplier for this movement
+          <select aria-label="Movement supplier" value={form.data.supplier_id} onChange={event => form.setData('supplier_id', event.target.value)} disabled={form.processing} className="mt-1.5 w-full border border-gray-200 rounded-xl px-3 py-2.5">
+            <option value="product">Use each product's supplier</option><option value="">Own inventory / No supplier</option>{suppliers.filter(supplier => supplier.is_active !== false).map(supplier => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
+          </select>
+          <span className="block text-xs text-gray-400 mt-1">Saved on this movement; the product's primary supplier stays unchanged.</span>
+        </label>
+        <label className="text-sm font-medium text-gray-700">Reference (optional)<input value={form.data.reference} onChange={event => form.setData('reference', event.target.value)} maxLength={120} disabled={form.processing} className="mt-1.5 w-full border border-gray-200 rounded-xl px-3 py-2.5" placeholder="Receipt, order, or stock count reference" /></label>
+      </div>
       <div className="border border-gray-100 rounded-xl max-h-52 overflow-y-auto">
         <table className="w-full text-sm"><thead className="bg-gray-50 text-gray-500"><tr><th className="p-3 text-left">Product</th><th className="p-3 text-right">Current</th><th className="p-3 text-right">After saving</th></tr></thead>
           <tbody>{preview.map(product => <tr key={product.id} className="border-t border-gray-100"><td className="p-3"><p className="font-medium text-gray-800">{product.name}</p><p className="text-xs text-gray-400">SKU: {product.sku || '—'}</p></td><td className="p-3 text-right tabular-nums">{product.stock_quantity}</td><td className={`p-3 text-right font-bold tabular-nums ${product.next < 0 ? 'text-red-600' : 'text-orange-600'}`}>{Number.isFinite(product.next) ? product.next : '—'}</td></tr>)}</tbody>
         </table>
       </div>
       {products.some(product => product.has_variants) && <p className="text-xs text-gray-500">This adjusts total product availability. Manage individual variant options in the product editor.</p>}
-      <label className="block text-sm font-medium text-gray-700">Reason / reference
+      <label className="block text-sm font-medium text-gray-700">Reason
         <textarea value={form.data.reason} onChange={event => form.setData('reason', event.target.value)} maxLength={500} required rows={2} disabled={form.processing} className="mt-1.5 w-full border border-gray-200 rounded-xl px-3 py-2.5" placeholder="Restock, stock count, damaged units, or purchase reference" />
       </label>
       {supplierProducts && <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
@@ -95,11 +115,13 @@ export function AdjustmentHistoryDialog({ product, onClose }) {
     return () => controller.abort();
   }, [product.id, page, retry]);
   return <InventoryDialog title="Adjustment history" onClose={onClose}>
-    <p className="font-semibold text-slate-900 mb-1">{product.name}</p><p className="text-xs text-gray-500 mb-4">Admin inventory adjustments are recorded here. Order reservations and supplier syncs are not included.</p>
+    <p className="font-semibold text-slate-900 mb-1">{product.name}</p><p className="text-xs text-gray-500 mb-4">Opening stock, admin movements, order reservations, and releases are recorded here. API availability updates remain in Dropshipping sync history.</p>
     {loading ? <p className="py-8 text-center text-gray-500">Loading history…</p> : error ? <div role="alert"><p className="text-red-600">{error}</p><button onClick={() => setRetry(value => value + 1)} className="mt-2 text-orange-600 font-semibold">Retry</button></div>
       : !history?.data.length ? <p className="py-8 text-center text-gray-500">No recorded adjustments yet.</p> : <div className="space-y-3">{history.data.map(entry => <article key={entry.id} className="border border-gray-100 rounded-xl p-3">
         <div className="flex justify-between gap-3"><span className="font-semibold text-gray-800">{entry.before} → {entry.after} units</span><span className={`font-semibold ${entry.change < 0 ? 'text-red-600' : 'text-green-700'}`}>{entry.change > 0 ? '+' : ''}{entry.change}</span></div>
         <p className="text-sm text-gray-700 mt-1">{entry.reason}</p>{entry.supplier_sync_paused && <p className="text-xs text-blue-600 mt-1">Supplier stock sync paused</p>}
+        <p className="text-xs text-gray-500 mt-1">{({ opening: 'Opening stock', stock_in: 'Stock in', stock_out: 'Stock out', adjustment: 'Adjustment', return_in: 'Return in', damaged: 'Damaged / Lost' })[entry.movement_type] || entry.operation} · {entry.stock_scope === 'supplier' ? 'Supplier availability' : 'Local inventory'} · Supplier: {entry.supplier || 'Own inventory / No supplier'}</p>
+        {entry.reference && <p className="text-xs text-gray-500 mt-1">Reference: {entry.reference}</p>}
         <p className="text-xs text-gray-400 mt-2">{entry.actor} · {entry.created_at} (Dhaka)</p>
       </article>)}<div className="flex justify-between items-center pt-2 text-sm"><button disabled={!history.prev_page_url} onClick={() => setPage(value => value - 1)} className="disabled:opacity-30">Previous</button><span>Page {history.current_page} of {history.last_page}</span><button disabled={!history.next_page_url} onClick={() => setPage(value => value + 1)} className="disabled:opacity-30">Next</button></div></div>}
   </InventoryDialog>;

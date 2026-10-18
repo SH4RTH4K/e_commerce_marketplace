@@ -5,6 +5,7 @@ import { fileToBase64 } from '@/lib/utils';
 import RichTextEditor from '@/Components/Admin/RichTextEditor';
 import CategoryPicker from '@/Components/Admin/CategoryPicker';
 import ProductPricingFields, { pricingConflicts, pricingValues } from '@/Components/Admin/ProductPricingFields';
+import QuickSupplierDialog from '@/Components/Admin/QuickSupplierDialog';
 
 function FormSection({ title, children, action, className = "" }) {
   return (
@@ -57,9 +58,11 @@ const COLOR_PRESETS = [
 
 const SIZE_PRESETS = ['S', 'M', 'L', 'XL', 'XXL', '3XL', '30', '32', '34', '36', '38', '40', '42'];
 
-export default function ProductForm({ product, categories, suppliers = [], pricing = { linked: false, mode: 'manual' }, returnTo = '/admin/products' }) {
+export default function ProductForm({ product, categories, suppliers = [], assignment = { locked: false, stock_source: 'Local inventory' }, canManageSuppliers = false, canViewSuppliers = false, pricing = { linked: false, mode: 'manual' }, returnTo = '/admin/products' }) {
   const isEdit = !!product.id;
   const [submitting, setSubmitting] = useState(false);
+  const [supplierOptions, setSupplierOptions] = useState(suppliers);
+  const [addingSupplier, setAddingSupplier] = useState(false);
 
   const existingVariants = product.variants || [];
   const existingCustomGroups = product.custom_variant_groups || [];
@@ -71,7 +74,8 @@ export default function ProductForm({ product, categories, suppliers = [], prici
   const { data, setData, processing, errors, setError, clearErrors } = useForm({
     category_id: product.category_id || '',
     supplier_id: product.supplier_id || '',
-    source_type: product.source_type || (product.supplier?.supplier_type === 'dropshipping' ? 'dropshipping' : 'manual'),
+    source_type: product.source_type || 'manual',
+    purchase_price: product.purchase_price ?? '',
     name: product.name || '',
     slug: product.slug || '',
     sku: product.sku || '',
@@ -370,27 +374,6 @@ export default function ProductForm({ product, categories, suppliers = [], prici
                       <CategoryPicker categories={categories} value={data.category_id} onChange={value => setData('category_id', value)} className={inputClass} />
                     </Field>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Field label="Product Source" error={errors.source_type} hint="This does not change supplier or inventory automatically.">
-                      <select value={data.source_type} onChange={e => setData('source_type', e.target.value)} className={`${inputClass} bg-white`}><option value="manual">Manual</option><option value="dropshipping">Dropshipping</option><option value="other">Other</option></select>
-                    </Field>
-                    <Field label="Supplier" error={errors.supplier_id} hint="Optional for own inventory">
-                    <select
-                      value={data.supplier_id}
-                      onChange={e => setData('supplier_id', e.target.value)}
-                      className={`${inputClass} bg-white`}
-                    >
-                      <option value="">Own inventory / no supplier</option>
-                      {suppliers.map(supplier => (
-                        <option key={supplier.id} value={supplier.id} disabled={!supplier.is_active}>
-                          {supplier.name}{supplier.is_active ? '' : ' (inactive)'}{supplier.driver_key ? ` · ${supplier.driver_key}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="mt-1.5 text-[11px] text-gray-400">Select the active supplier responsible for this product.</p>
-                    {suppliers.length === 0 && <a href="/admin/suppliers" className="mt-1.5 inline-block text-xs font-semibold text-orange-600 hover:underline">Add or manage suppliers</a>}
-                    </Field>
-                  </div>
                   <Field label="Short Highlights / Short Description" error={errors.short_description}>
                     <RichTextEditor
                       value={data.short_description}
@@ -408,6 +391,30 @@ export default function ProductForm({ product, categories, suppliers = [], prici
                     />
                   </Field>
                 </div>
+              </FormSection>
+
+              <FormSection title="Source & Supplier">
+                {assignment.conflict && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">Supplier ownership conflicts with an external mapping. Review and relink the product in Dropshipping before saving.</p>}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Field label="Product source" error={errors.source_type}>
+                    <select aria-label="Product source" value={data.source_type} disabled={assignment.locked} onChange={e => setData('source_type', e.target.value)} className={`${inputClass} bg-white disabled:bg-gray-50`}>
+                      <option value="manual">Manual</option><option value="other">Other</option>{assignment.locked && <option value="dropshipping">Dropshipping</option>}
+                    </select>
+                    <p className="mt-1.5 text-xs text-gray-500">{assignment.locked ? 'Assigned automatically by the integration.' : 'Choosing a supplier does not change the product source.'}</p>
+                  </Field>
+                  <Field label="Supplier" error={errors.supplier_id}>
+                    <select aria-label="Product supplier" value={data.supplier_id} disabled={assignment.locked} onChange={e => setData('supplier_id', e.target.value)} className={`${inputClass} bg-white disabled:bg-gray-50`}>
+                      <option value="">Own inventory / no supplier</option>
+                      {supplierOptions.filter(supplier => supplier.is_active || String(supplier.id) === String(data.supplier_id)).map(supplier => <option key={supplier.id} value={supplier.id} disabled={!supplier.is_active}>{supplier.name}{supplier.is_active ? '' : ' (inactive)'}{supplier.supplier_code ? ` / ${supplier.supplier_code}` : ''}</option>)}
+                    </select>
+                    <div className="mt-2 flex flex-wrap gap-4 text-xs font-semibold text-orange-600">
+                      {canManageSuppliers && !assignment.locked && <button type="button" onClick={() => setAddingSupplier(true)}>+ Add New Supplier</button>}
+                      {canViewSuppliers && data.supplier_id && <a href={`/admin/suppliers/${data.supplier_id}`} target="_blank" rel="noreferrer">View supplier</a>}
+                    </div>
+                  </Field>
+                </div>
+                <div className="mt-4 rounded-xl bg-gray-50 p-3 text-xs text-gray-600"><p>Stock source: {assignment.stock_source}</p>{assignment.locked && <><p className="mt-1">Integration: {assignment.integration}</p><p className="mt-1">External product ID: {assignment.external_product_id}</p><p className="mt-1">Supplier changes require the validated relink action in Dropshipping.</p></>}</div>
+                {!assignment.locked && <div className="mt-4"><Field label="Purchase / cost price" error={errors.purchase_price} hint="Optional, for internal reporting"><input type="number" min="0" step="0.01" aria-label="Purchase price" value={data.purchase_price} onChange={e => setData('purchase_price', e.target.value)} className={inputClass} /></Field></div>}
               </FormSection>
 
               {/* 2. Product Type & Pricing / Variant Management */}
@@ -976,7 +983,7 @@ export default function ProductForm({ product, categories, suppliers = [], prici
 
               {/* Submit */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                <button type="submit" disabled={processing || submitting || pricingInvalid}
+                <button type="submit" disabled={processing || submitting || pricingInvalid || assignment.conflict}
                   className="w-full py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold rounded-xl transition-colors cursor-pointer">
                   {processing || submitting ? 'Saving…' : (isEdit ? 'Update Product' : 'Create Product')}
                 </button>
@@ -990,6 +997,7 @@ export default function ProductForm({ product, categories, suppliers = [], prici
             </div>
           </div>
         </form>
+        {addingSupplier && <QuickSupplierDialog onClose={() => setAddingSupplier(false)} onCreated={supplier => { setSupplierOptions(current => [...current.filter(item => item.id !== supplier.id), supplier]); setData('supplier_id', supplier.id); setAddingSupplier(false); }} />}
       </AdminLayout>
     </>
   );

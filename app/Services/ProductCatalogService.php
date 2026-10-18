@@ -51,7 +51,7 @@ class ProductCatalogService
         if ($filters['supplier'] !== '') {
             $query->where(fn ($supplierQuery) => $supplierQuery
                 ->where('supplier_id', $filters['supplier'])
-                ->orWhereHas('supplierLinks.supplierProduct', fn ($linkQuery) => $linkQuery->where('supplier_id', $filters['supplier']))
+                ->orWhere(fn ($legacyQuery) => $legacyQuery->whereNull('supplier_id')->whereHas('supplierLinks.supplierProduct', fn ($linkQuery) => $linkQuery->where('supplier_id', $filters['supplier'])))
             );
         }
         if ($filters['type'] === 'variable') $query->has('variants');

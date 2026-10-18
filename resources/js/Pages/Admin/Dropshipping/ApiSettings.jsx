@@ -1,5 +1,5 @@
 import DropshippingSubpage from './Subpage';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 const inputClass = 'mt-1 w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:border-orange-400 focus:ring-orange-200';
@@ -14,7 +14,7 @@ function ConnectionBadge({ status }) {
   return <span className={`inline-flex px-2 py-1 rounded-full text-[11px] font-bold ${styles[status] || styles.untested}`}>{String(status || 'untested').replaceAll('_', ' ')}</span>;
 }
 
-export default function ApiSettings({ suppliers = [], available_drivers = [], driver_profiles = [] }) {
+export default function ApiSettings({ suppliers = [], unconnected_suppliers = [], available_drivers = [], driver_profiles = [] }) {
   const [profileName, setProfileName] = useState('');
   const [profileKey, setProfileKey] = useState('');
   const [customProfile, setCustomProfile] = useState(false);
@@ -28,7 +28,10 @@ export default function ApiSettings({ suppliers = [], available_drivers = [], dr
   const [mapping, setMapping] = useState(mappingExample);
   const [selectedProfileId, setSelectedProfileId] = useState('');
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
-  const [supplierType, setSupplierType] = useState('dropshipping');
+  const [linkedSupplierId, setLinkedSupplierId] = useState('');
+  const [connectionTarget, setConnectionTarget] = useState(unconnected_suppliers.length ? 'existing' : 'new');
+  const { errors = {} } = usePage().props;
+  const linkedSupplier = unconnected_suppliers.find(item => String(item.id) === linkedSupplierId);
   const selectedProfile = driver_profiles.find(profile => String(profile.id) === String(selectedProfileId));
   const selectedSupplier = suppliers.find(supplier => String(supplier.id) === String(selectedSupplierId));
   const selectedRules = selectedSupplier?.sync_rules || {};
@@ -67,8 +70,9 @@ export default function ApiSettings({ suppliers = [], available_drivers = [], dr
   };
   const updateName = event => { const name = event.target.value; setProfileName(name); if (!customProfile) setProfileKey(name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')); };
 
-  const isManual = (selectedSupplier?.supplier_type || supplierType) === 'manual';
-  return <DropshippingSubpage title="Supplier connections" description="Add manual suppliers or connect suppliers that provide a dropshipping API.">
+  const isManual = false;
+  return <DropshippingSubpage title="Supplier connections" description="Link an existing business supplier to its API connection. Manage supplier contacts and business details in Suppliers.">
+    {Object.keys(errors).length > 0 && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{Object.entries(errors).map(([key, message]) => <p key={key}>{message}</p>)}</div>}
     <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
       <div className="flex items-start gap-3 mb-5"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-900 text-sm font-bold text-white">1</span><div><h2 className="font-bold text-gray-900">Configure supplier API profile</h2><p className="text-sm text-gray-500 mt-1">Create a profile once, or select a saved profile below to edit its API settings.</p></div></div>
       <div className="mb-4"><Field label="Profile to configure" hint="Select a saved profile to edit it, or choose New profile."><select value={selectedProfileId} onChange={event => selectProfile(event.target.value)} className={`${inputClass} bg-white`}><option value="">New supplier profile</option>{driver_profiles.map(profile => <option key={profile.id} value={profile.id}>{profile.name} ({profile.key})</option>)}</select></Field></div>
@@ -83,13 +87,17 @@ export default function ApiSettings({ suppliers = [], available_drivers = [], dr
 
     <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
       <div className="flex items-start gap-3 mb-5"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500 text-sm font-bold text-white">2</span><div><h2 className="font-bold text-gray-900">Connect and test a supplier account</h2><p className="text-sm text-gray-500 mt-1">Select an existing account to edit it, or choose New connection to add another account.</p></div></div>
-      <div className="mb-4"><Field label="Account to configure"><select value={selectedSupplierId} onChange={event => { setSelectedSupplierId(event.target.value); const s = suppliers.find(item => String(item.id) === String(event.target.value)); setSupplierType(s?.supplier_type || 'manual'); }} className={`${inputClass} bg-white`}><option value="">New supplier</option>{suppliers.map(supplier => <option key={supplier.id} value={supplier.id}>{supplier.name} ({supplier.supplier_type === 'manual' ? 'Manual' : supplier.key})</option>)}</select></Field></div>
-      {!selectedSupplier && <div className="mb-4"><Field label="Supplier type" hint="Create manual suppliers from Admin ? Suppliers ? Add Supplier. This screen is for dropshipping connections."><select value={supplierType} onChange={event => setSupplierType(event.target.value)} className={`${inputClass} bg-white`}><option value="dropshipping">Dropshipping / API supplier</option></select></Field></div>}
+      <div className="mb-4"><Field label="Account to configure"><select value={selectedSupplierId} onChange={event => setSelectedSupplierId(event.target.value)} className={`${inputClass} bg-white`}><option value="">New API connection</option>{suppliers.map(supplier => <option key={supplier.id} value={supplier.id}>{supplier.name} ({supplier.supplier_type === 'manual' ? 'Manual' : supplier.key})</option>)}</select></Field></div>
+      {!selectedSupplier && <div className="mb-4 grid gap-4 md:grid-cols-2">
+        <Field label="Supplier relationship" hint="Reuse the business supplier record so products and history stay together."><select value={connectionTarget} onChange={event => setConnectionTarget(event.target.value)} className={`${inputClass} bg-white`}><option value="existing">Link an existing supplier</option><option value="new">Create a new supplier and connection</option></select></Field>
+        {connectionTarget === 'existing' && <Field label="Existing supplier"><select required value={linkedSupplierId} onChange={event => setLinkedSupplierId(event.target.value)} className={`${inputClass} bg-white`}><option value="">Select an active, unconnected supplier</option>{unconnected_suppliers.map(item => <option key={item.id} value={item.id}>{item.name} ({item.supplier_code})</option>)}</select><a href="/admin/suppliers/create" target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-semibold text-orange-600">Add supplier in a new tab</a></Field>}
+      </div>}
       {!ready && !isManual && <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Complete Step 1 first. After saving a supplier profile, this form becomes available.</div>}
       <fieldset disabled={!ready && !isManual}>
         <form key={selectedSupplier?.id || 'new'} onSubmit={saveSupplier} className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
-          <input type="hidden" name="supplier_type" value={selectedSupplier?.supplier_type || supplierType} />
-          <Field label="Supplier name" hint="Use the supplier or company name."><input name="name" required defaultValue={selectedSupplier?.name || ''} placeholder="Local supplier name" className={inputClass} /></Field>
+          {!selectedSupplier && connectionTarget === 'existing' && <input type="hidden" name="supplier_id" value={linkedSupplierId} />}
+          <input type="hidden" name="supplier_type" value="dropshipping" />
+          <Field label="Supplier name" hint={selectedSupplier || connectionTarget === 'existing' ? 'Business details are managed in Suppliers.' : 'A supplier record is created once with this connection.'}><input key={selectedSupplier?.id || linkedSupplierId || 'new-name'} name="name" required defaultValue={selectedSupplier?.name || linkedSupplier?.name || ''} readOnly={Boolean(selectedSupplier) || connectionTarget === 'existing'} placeholder="Supplier company name" className={inputClass} /></Field>
           {!isManual && <><Field label="API Base URL" hint="Use the HTTPS API address supplied by your provider."><input name="base_url" type="url" required defaultValue={selectedSupplier?.base_url || ''} placeholder="https://supplier.example/api" className={inputClass} /></Field>
           <Field label="Supplier driver"><select name="driver_key" required defaultValue={selectedSupplier?.driver_key || ''} className={`${inputClass} bg-white`}><option value="">Select saved supplier profile</option>{available_drivers.map(driver => <option key={driver} value={driver}>{driver}</option>)}</select></Field></>}
           <Field label="Business key" hint={selectedSupplier ? 'This key identifies the saved account.' : 'Optional. Leave blank to create one automatically.'}><input name="key" defaultValue={selectedSupplier?.key || ''} readOnly={Boolean(selectedSupplier)} placeholder="supplier-main" className={`${inputClass} ${selectedSupplier ? 'bg-gray-50 text-gray-500' : ''}`} /></Field>
@@ -97,7 +105,7 @@ export default function ApiSettings({ suppliers = [], available_drivers = [], dr
           <Field label="Secret key" hint={selectedSupplier ? 'Leave blank to keep the saved encrypted secret.' : 'Stored encrypted and never shown again.'}><input name="secret_key" type="password" autoComplete="new-password" placeholder={selectedSupplier ? 'Leave unchanged' : 'Paste secret key'} className={inputClass} /></Field></>}
           <Field label="Imported product status" hint="Draft is safest for review."><select name="import_status" defaultValue={selectedRules.import_status || 'draft'} className={`${inputClass} bg-white`}><option value="draft">Draft</option><option value="pending">Pending review</option><option value="private">Private</option><option value="publish">Published</option></select></Field>
           {!isManual && <div className="space-y-2 text-sm text-gray-600 pt-6"><label className="flex items-center gap-2"><input type="checkbox" name="import_images" value="1" defaultChecked={Boolean(selectedRules.import_images)} /> Download supplier images</label><label className="flex items-center gap-2"><input type="checkbox" name="import_variations" value="1" defaultChecked={Boolean(selectedRules.import_variations)} /> Import variations</label></div>}
-          <div className="md:col-span-2 flex flex-wrap items-center gap-3"><button className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 text-sm font-semibold text-white">{selectedSupplier ? 'Save changes' : 'Save connection'}</button>{selectedSupplier && <button type="button" onClick={() => router.post(`/admin/dropshipping/suppliers/${selectedSupplier.id}/test`, {}, { preserveScroll: true })} className="px-4 py-2.5 rounded-xl bg-gray-900 hover:bg-gray-800 text-sm font-semibold text-white">Test connection now</button>}<span className="text-xs text-gray-400">Connection tests return immediately. Credentials remain encrypted.</span></div>
+          <div className="md:col-span-2 flex flex-wrap items-center gap-3"><button disabled={!selectedSupplier && connectionTarget === 'existing' && !linkedSupplierId} className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 text-sm font-semibold text-white">{selectedSupplier ? 'Save connection changes' : connectionTarget === 'existing' ? 'Link supplier and save connection' : 'Create supplier and connection'}</button>{selectedSupplier && <button type="button" onClick={() => router.post(`/admin/dropshipping/suppliers/${selectedSupplier.id}/test`, {}, { preserveScroll: true })} className="px-4 py-2.5 rounded-xl bg-gray-900 hover:bg-gray-800 text-sm font-semibold text-white">Test connection now</button>}<span className="text-xs text-gray-400">Connection tests return immediately. Credentials remain encrypted.</span></div>
         </form>
       </fieldset>
       {selectedSupplier && <div className={`mt-4 rounded-xl border px-4 py-3 text-sm ${selectedSupplier.last_connection_status === 'success' ? 'border-green-200 bg-green-50 text-green-800' : selectedSupplier.last_connection_status === 'failed' ? 'border-red-200 bg-red-50 text-red-800' : 'border-gray-200 bg-gray-50 text-gray-700'}`}><div className="flex items-center gap-2"><strong>Connection status</strong><ConnectionBadge status={selectedSupplier.last_connection_status} /></div><p className="mt-1">{selectedSupplier.last_connection_message || 'This account has not been tested yet.'}</p>{selectedSupplier.last_connection_status === 'failed' && <p className="mt-1">Check the API Base URL, driver header names, API key, and secret key, then save and test again.</p>}</div>}

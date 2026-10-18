@@ -189,7 +189,7 @@ class CheckoutController extends Controller
                         throw new \RuntimeException("{$name} only has {$avail} in stock. Please update your cart.");
                     }
 
-                    OrderItem::create([
+                    $orderItem = OrderItem::create([
                         'order_id'     => $order->id,
                         'product_id'   => $item->product_id,
                         'product_name' => $item->name,
@@ -200,7 +200,7 @@ class CheckoutController extends Controller
                         'line_total'   => $item->line_total,
                     ]);
 
-                    $product->decrement('stock_quantity', $item->qty);
+                    app(\App\Services\InventoryStockService::class)->reserveOrderStock($request->user(), $product, $order, $orderItem);
                 }
 
                 if ($coupon) {

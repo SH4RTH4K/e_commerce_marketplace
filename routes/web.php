@@ -164,6 +164,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         // Inventory
         Route::get('inventory', [AdminInventoryController::class, 'index'])->middleware('permission:products.view')->name('inventory.index');
+        Route::get('inventory/history', [AdminInventoryController::class, 'movements'])->middleware('permission:products.view')->name('inventory.movements');
+        Route::get('inventory/history/export', [AdminInventoryController::class, 'exportHistory'])->middleware('permission:products.view')->name('inventory.movements.export');
         Route::get('inventory/export', [AdminInventoryController::class, 'export'])->middleware('permission:products.view')->name('inventory.export');
         Route::post('inventory/adjust', [AdminInventoryController::class, 'adjust'])->middleware('permission:products.create')->name('inventory.adjust');
         Route::get('inventory/{product:id}/history', [AdminInventoryController::class, 'history'])->middleware('permission:products.view')->name('inventory.history');
@@ -171,13 +173,14 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::patch('inventory/{product:id}/stock', [AdminInventoryController::class, 'updateStock'])->middleware('permission:products.create')->name('inventory.stock');
 
         // Supplier management is a separate admin area. Dropshipping tools remain under Integrations.
-        Route::get('suppliers', [\App\Http\Controllers\Admin\SupplierController::class, 'index'])->middleware('permission:products.view')->name('suppliers.index');
-        Route::get('suppliers/create', [\App\Http\Controllers\Admin\SupplierController::class, 'create'])->middleware('permission:products.create')->name('suppliers.create');
-        Route::post('suppliers', [\App\Http\Controllers\Admin\SupplierController::class, 'store'])->middleware('permission:products.create')->name('suppliers.store');
-        Route::get('suppliers/{supplier}/edit', [\App\Http\Controllers\Admin\SupplierController::class, 'edit'])->middleware('permission:products.create')->name('suppliers.edit');
-        Route::get('suppliers/{supplier}', [\App\Http\Controllers\Admin\SupplierController::class, 'show'])->middleware('permission:products.view')->name('suppliers.show');
-        Route::patch('suppliers/{supplier}', [\App\Http\Controllers\Admin\SupplierController::class, 'update'])->middleware('permission:products.create')->name('suppliers.update');
-        Route::patch('suppliers/{supplier}/toggle', [\App\Http\Controllers\Admin\SupplierController::class, 'toggle'])->middleware('permission:products.create')->name('suppliers.toggle');
+        Route::get('suppliers', [\App\Http\Controllers\Admin\SupplierController::class, 'index'])->middleware('permission:suppliers.view')->name('suppliers.index');
+        Route::get('suppliers/create', [\App\Http\Controllers\Admin\SupplierController::class, 'create'])->middleware('permission:suppliers.manage')->name('suppliers.create');
+        Route::get('suppliers/report', [\App\Http\Controllers\Admin\SupplierController::class, 'report'])->middleware('permission:suppliers.view')->name('suppliers.report');
+        Route::post('suppliers', [\App\Http\Controllers\Admin\SupplierController::class, 'store'])->middleware('permission:suppliers.manage')->name('suppliers.store');
+        Route::get('suppliers/{supplier}/edit', [\App\Http\Controllers\Admin\SupplierController::class, 'edit'])->middleware('permission:suppliers.manage')->name('suppliers.edit');
+        Route::get('suppliers/{supplier}', [\App\Http\Controllers\Admin\SupplierController::class, 'show'])->middleware('permission:suppliers.view')->name('suppliers.show');
+        Route::patch('suppliers/{supplier}', [\App\Http\Controllers\Admin\SupplierController::class, 'update'])->middleware('permission:suppliers.manage')->name('suppliers.update');
+        Route::patch('suppliers/{supplier}/toggle', [\App\Http\Controllers\Admin\SupplierController::class, 'toggle'])->middleware('permission:suppliers.manage')->name('suppliers.toggle');
 
         // Dropshipping integration (all supplier work is queued)
         Route::middleware(['dropshipping.enabled', 'permission:dropshipping.manage'])
@@ -208,6 +211,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                  Route::patch('driver-profiles/{profile}/toggle', [\App\Http\Controllers\Admin\DropshippingController::class, 'toggleDriverProfile'])->name('driver-profiles.toggle');
                  Route::post('suppliers', [\App\Http\Controllers\Admin\DropshippingController::class, 'store'])->name('suppliers.store');
                  Route::post('products/{supplierProduct}/import', [\App\Http\Controllers\Admin\DropshippingController::class, 'importSupplierProduct'])->name('products.import');
+                 Route::post('supplier-products/{supplierProduct}/relink', [\App\Http\Controllers\Admin\DropshippingController::class, 'relinkSupplierProduct'])->name('supplier-products.relink');
                  Route::post('products/bulk-import', [\App\Http\Controllers\Admin\DropshippingController::class, 'bulkImportSupplierProducts'])->name('products.bulk-import');
                  Route::patch('imported/{product}/publish', [\App\Http\Controllers\Admin\DropshippingController::class, 'publishImportedProduct'])->name('imported.publish');
                  Route::post('imported/bulk-publish', [\App\Http\Controllers\Admin\DropshippingController::class, 'bulkPublishImportedProducts'])->name('imported.bulk-publish');

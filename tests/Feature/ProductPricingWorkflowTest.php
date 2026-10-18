@@ -29,7 +29,8 @@ class ProductPricingWorkflowTest extends TestCase
     private function importedProduct(): array
     {
         $supplier = DropshipSupplier::create([
-            'key' => 'workflow-supplier', 'name' => 'Workflow Supplier', 'driver_key' => 'fake', 'base_url' => 'https://supplier.example',
+            'key' => 'workflow-supplier', 'name' => 'Workflow Supplier', 'driver_key' => 'fake',
+            'is_active' => true, 'base_url' => 'https://supplier.example',
             'pricing_rules' => [
                 'selling' => ['base' => 'supplier_cost', 'adjustment_type' => 'none', 'adjustment_value' => 0],
                 'minimum' => ['base' => 'supplier_cost', 'adjustment_type' => 'plus_percent', 'adjustment_value' => 20, 'cap_enabled' => true, 'rounding' => ['mode' => 'down', 'increment' => 5]],

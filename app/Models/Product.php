@@ -47,6 +47,7 @@ class Product extends Model
         'category_id',
         'supplier_id',
         'source_type',
+        'purchase_price',
         'name',
         'slug',
         'sku',
@@ -80,11 +81,13 @@ class Product extends Model
     ];
 
     protected $hidden = [
+        'purchase_price',
         'selling_price', 'minimum_price', 'maximum_price', 'pricing_mode',
         'enforce_minimum_price', 'enforce_maximum_price', 'protect_minimum_price',
     ];
 
     protected $casts = [
+        'purchase_price' => 'decimal:2',
         'regular_price'    => 'decimal:2',
         'sale_price'       => 'decimal:2',
         'selling_price'    => 'decimal:2',
@@ -110,7 +113,7 @@ class Product extends Model
 
     public function supplier(): BelongsTo
     {
-        return $this->belongsTo(DropshipSupplier::class, 'supplier_id');
+        return $this->belongsTo(DropshipSupplier::class, 'supplier_id')->withTrashed();
     }
 
     public function images(): HasMany

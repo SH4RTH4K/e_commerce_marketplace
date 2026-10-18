@@ -1,12 +1,53 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, useForm } from '@inertiajs/react';
+import { buttonClass, inputClass, labels, Status } from './Shared';
 
-const labels = { local: 'Local', wholesale: 'Wholesale', manufacturer: 'Manufacturer', dropshipping: 'Dropshipping', other: 'Other' };
-const input = 'mt-1 w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-orange-400 focus:ring-orange-200';
-function Field({ label, error, children }) { return <label className="block text-sm text-gray-700"><span className="font-medium">{label}</span>{children}{error && <span className="mt-1 block text-xs text-red-600">{error}</span>}</label>; }
+const fields = {
+  name: '', supplier_code: '', supplier_type: 'local', contact_person: '', mobile: '', whatsapp: '',
+  email: '', website: '', business_address: '', city: '', district: '', division: '', country: 'Bangladesh',
+  business_name: '', trade_license: '', tax_vat_bin: '', payment_terms: '', notes: '',
+};
+const groups = [
+  { title: 'Contact details', fields: [['contact_person', 'Contact person'], ['mobile', 'Mobile number', 'tel'], ['whatsapp', 'WhatsApp number', 'tel'], ['email', 'Email address', 'email'], ['website', 'Website', 'url']] },
+  { title: 'Business address', fields: [['business_address', 'Street / business address', 'textarea'], ['city', 'City'], ['district', 'District'], ['division', 'Division'], ['country', 'Country']] },
+  { title: 'Business information', fields: [['business_name', 'Business/company name'], ['trade_license', 'Trade license number'], ['tax_vat_bin', 'Tax / VAT / BIN'], ['payment_terms', 'Payment terms'], ['notes', 'Notes', 'textarea']] },
+];
+
+function Field({ label, error, children }) {
+  return <label className="block text-sm text-gray-700"><span className="font-medium">{label}</span>{children}{error && <span role="alert" className="mt-1 block text-xs text-red-600">{error}</span>}</label>;
+}
+
 export default function SupplierForm({ supplier, types = [] }) {
   const editing = Boolean(supplier?.id);
-  const { data, setData, post, patch, processing, errors } = useForm({ name: supplier?.name || '', supplier_type: supplier?.supplier_type === 'manual' ? 'local' : supplier?.supplier_type || 'local', contact_person: supplier?.contact_person || '', mobile: supplier?.mobile || '', whatsapp: supplier?.whatsapp || '', email: supplier?.email || '', website: supplier?.website || '', business_address: supplier?.business_address || '', city: supplier?.city || '', district: supplier?.district || '', division: supplier?.division || '', country: supplier?.country || 'Bangladesh', business_name: supplier?.business_name || '', trade_license: supplier?.trade_license || '', tax_vat_bin: supplier?.tax_vat_bin || '', payment_terms: supplier?.payment_terms || '', notes: supplier?.notes || '' });
-  const submit = event => { event.preventDefault(); editing ? patch(`/admin/suppliers/${supplier.id}`) : post('/admin/suppliers'); };
-  return <><Head title={editing ? 'Edit Supplier' : 'Add Supplier'} /><AdminLayout title=""><form onSubmit={submit} className="mx-auto max-w-4xl space-y-5"><div className="flex items-center justify-between"><div><h1 className="text-xl font-bold text-gray-900">{editing ? 'Edit Supplier' : 'Add Supplier'}</h1><p className="mt-1 text-sm text-gray-500">Supplier information stays separate from API credentials and dropshipping settings.</p></div><a href="/admin/suppliers" className="text-sm text-gray-500 hover:text-gray-800">Back to suppliers</a></div><section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"><h2 className="font-bold text-gray-900">Basic information</h2><div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2"><Field label="Supplier name" error={errors.name}><input required value={data.name} onChange={e => setData('name', e.target.value)} className={input} /></Field><Field label="Supplier type" error={errors.supplier_type}><select value={data.supplier_type} onChange={e => setData('supplier_type', e.target.value)} className={`${input} bg-white`}>{types.map(type => <option key={type} value={type}>{labels[type] || type}</option>)}</select></Field><Field label="Contact person" error={errors.contact_person}><input value={data.contact_person} onChange={e => setData('contact_person', e.target.value)} className={input} /></Field><Field label="Mobile number" error={errors.mobile}><input value={data.mobile} onChange={e => setData('mobile', e.target.value)} className={input} /></Field><Field label="WhatsApp number" error={errors.whatsapp}><input value={data.whatsapp} onChange={e => setData('whatsapp', e.target.value)} className={input} /></Field><Field label="Email" error={errors.email}><input type="email" value={data.email} onChange={e => setData('email', e.target.value)} className={input} /></Field><Field label="Website" error={errors.website}><input type="url" value={data.website} onChange={e => setData('website', e.target.value)} className={input} /></Field></div></section><section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"><h2 className="font-bold text-gray-900">Address and business information</h2><div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2"><Field label="Business address" error={errors.business_address}><textarea value={data.business_address} onChange={e => setData('business_address', e.target.value)} className={input} rows="3" /></Field><Field label="Business/company name" error={errors.business_name}><input value={data.business_name} onChange={e => setData('business_name', e.target.value)} className={input} /></Field><Field label="City"><input value={data.city} onChange={e => setData('city', e.target.value)} className={input} /></Field><Field label="District"><input value={data.district} onChange={e => setData('district', e.target.value)} className={input} /></Field><Field label="Division"><input value={data.division} onChange={e => setData('division', e.target.value)} className={input} /></Field><Field label="Country"><input value={data.country} onChange={e => setData('country', e.target.value)} className={input} /></Field><Field label="Trade license"><input value={data.trade_license} onChange={e => setData('trade_license', e.target.value)} className={input} /></Field><Field label="Tax/VAT/BIN"><input value={data.tax_vat_bin} onChange={e => setData('tax_vat_bin', e.target.value)} className={input} /></Field><Field label="Payment terms"><input value={data.payment_terms} onChange={e => setData('payment_terms', e.target.value)} className={input} /></Field><Field label="Notes"><textarea value={data.notes} onChange={e => setData('notes', e.target.value)} className={input} rows="3" /></Field></div></section><div className="flex justify-end"><button disabled={processing} className="rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{editing ? 'Save changes' : 'Create supplier'}</button></div></form></AdminLayout></>;
+  const initial = Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, supplier?.[key] ?? value]));
+  const { data, setData, post, patch, processing, errors } = useForm(initial);
+  const submit = event => {
+    event.preventDefault();
+    editing ? patch(`/admin/suppliers/${supplier.id}`) : post('/admin/suppliers');
+  };
+  return <><Head title={editing ? 'Edit Supplier' : 'Add Supplier'} /><AdminLayout title="">
+    <form onSubmit={submit} className="mx-auto max-w-4xl space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3"><div>
+        <h1 className="text-xl font-bold text-gray-900">{editing ? 'Edit Supplier' : 'Add Supplier'}</h1>
+        <p className="mt-1 text-sm text-gray-500">Keep supplier contact and business information in one place.</p>
+      </div><a href="/admin/suppliers" className={buttonClass}>Back to suppliers</a></div>
+      {supplier?.integration && <p className="rounded-xl bg-blue-50 p-4 text-sm text-blue-800">Integration: {supplier.integration}. Connection credentials are managed in Dropshipping API Settings.</p>}
+      <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between"><h2 className="font-bold text-gray-900">Basic information</h2>{editing && <Status active={supplier.is_active} />}</div>
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Field label="Supplier name *" error={errors.name}><input required maxLength={120} value={data.name} onChange={e => setData('name', e.target.value)} className={`mt-1 ${inputClass}`} /></Field>
+          <Field label="Supplier type *" error={errors.supplier_type}><select value={data.supplier_type} onChange={e => setData('supplier_type', e.target.value)} className={`mt-1 bg-white ${inputClass}`}>{types.map(type => <option key={type} value={type}>{labels[type] || type}</option>)}</select></Field>
+          <Field label="Supplier code" error={errors.supplier_code}><input maxLength={40} value={data.supplier_code} onChange={e => setData('supplier_code', e.target.value)} placeholder="Generated automatically when left blank" className={`mt-1 ${inputClass}`} />{!editing && <span className="mt-1 block text-xs text-gray-500">A unique SUP code is assigned automatically. You can enter your own code.</span>}</Field>
+        </div>
+      </section>
+      {groups.map(group => <section key={group.title} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+        <h2 className="font-bold text-gray-900">{group.title}</h2>
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">{group.fields.map(([key, label, type = 'text']) => <Field key={key} label={label} error={errors[key]}>
+          {type === 'textarea' ? <textarea value={data[key]} onChange={e => setData(key, e.target.value)} className={`mt-1 ${inputClass}`} rows={3} />
+            : <input type={type} value={data[key]} onChange={e => setData(key, e.target.value)} className={`mt-1 ${inputClass}`} />}
+        </Field>)}</div>
+      </section>)}
+      <div className="flex justify-end gap-3"><a href={editing ? `/admin/suppliers/${supplier.id}` : '/admin/suppliers'} className={buttonClass}>Cancel</a><button disabled={processing} className="rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-50">{processing ? 'Saving…' : editing ? 'Save changes' : 'Create supplier'}</button></div>
+    </form>
+  </AdminLayout></>;
 }

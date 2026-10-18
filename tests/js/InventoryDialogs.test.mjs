@@ -24,7 +24,7 @@ async function mount(products = [product]) {
   await act(async () => { renderer = create(React.createElement(context.Component, { products, onClose() {}, onSaved() { saved = true; } }), { createNodeMock: () => ({ focus() {}, querySelectorAll: () => [] }) }); });
   return {
     renderer, posts, saved: () => saved,
-    change: async (type, value) => { await act(async () => renderer.root.findByType(type).props.onChange({ target: { value } })); },
+    change: async (type, value) => { await act(async () => (type === 'select' ? renderer.root.findByProps({ 'aria-label': 'Movement type' }) : renderer.root.findByType(type)).props.onChange({ target: { value } })); },
     quantity: async value => { await act(async () => renderer.root.findByProps({ type: 'number' }).props.onChange({ target: { value } })); },
     submit: async () => { await act(async () => renderer.root.findByType('form').props.onSubmit({ preventDefault() {} })); },
     close: async () => { await act(async () => renderer.unmount()); router.post = originalPost; },
@@ -40,20 +40,36 @@ test('stock adjustment submits expected quantities and supplier protection with 
     assert.deepEqual(app.posts[0].data.items, [{ product_id: 7, expected_stock: 10 }]);
     assert.equal(app.posts[0].data.quantity, '3');
     assert.equal(app.posts[0].data.operation, 'add');
+    assert.equal(app.posts[0].data.movement_type, 'stock_in');
+    assert.equal('supplier_id' in app.posts[0].data, false);
     assert.equal(app.posts[0].data.protect_supplier_stock, true);
     await act(async () => app.posts[0].options.onSuccess({ props: {} }));
     assert.equal(app.saved(), true);
   } finally { await app.close(); }
 });
 
+test('movement form saves receipt supplier and reference without editing product assignment', async () => {
+  const app = await mount();
+  try {
+    await app.change('select', 'return_in');
+    await act(async () => app.renderer.root.findByProps({ 'aria-label': 'Movement supplier' }).props.onChange({ target: { value: '42' } }));
+    await act(async () => app.renderer.root.findByProps({ placeholder: 'Receipt, order, or stock count reference' }).props.onChange({ target: { value: 'RETURN-42' } }));
+    await app.submit();
+    assert.equal(app.posts[0].data.movement_type, 'return_in');
+    assert.equal(app.posts[0].data.operation, 'add');
+    assert.equal(app.posts[0].data.supplier_id, '42');
+    assert.equal(app.posts[0].data.reference, 'RETURN-42');
+  } finally { await app.close(); }
+});
+
 test('setting zero is allowed, but fractional quantities and over-removal disable saving', async () => {
   const app = await mount();
   try {
-    await app.change('select', 'set'); await app.quantity('0');
+    await app.change('select', 'adjustment'); await app.quantity('0');
     assert.equal(app.renderer.root.findByProps({ type: 'submit' }).props.disabled, false);
     await app.quantity('1.5');
     assert.equal(app.renderer.root.findByProps({ type: 'submit' }).props.disabled, true);
-    await app.change('select', 'remove'); await app.quantity('11');
+    await app.change('select', 'stock_out'); await app.quantity('11');
     assert.equal(app.renderer.root.findByProps({ type: 'submit' }).props.disabled, true);
     await app.submit(); assert.equal(app.posts.length, 0);
   } finally { await app.close(); }

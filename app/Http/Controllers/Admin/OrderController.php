@@ -279,7 +279,7 @@ class OrderController extends Controller
 
                 foreach ($orderItems as $itemData) {
                     $p = $itemData['product'];
-                    OrderItem::create([
+                    $orderItem = OrderItem::create([
                         'order_id'     => $order->id,
                         'product_id'   => $p->id,
                         'product_name' => $p->name,
@@ -288,7 +288,7 @@ class OrderController extends Controller
                         'quantity'     => $itemData['qty'],
                         'line_total'   => $itemData['lineTotal'],
                     ]);
-                    $p->decrement('stock_quantity', $itemData['qty']);
+                    app(\App\Services\InventoryStockService::class)->reserveOrderStock($request->user(), $p, $order, $orderItem);
                 }
 
                 return $order;
@@ -390,7 +390,7 @@ class OrderController extends Controller
 
                 $price = round($product->unitPriceForVariant(), 2);
                 $lineTotal = round($price * $item['quantity'], 2);
-                $order->items()->create([
+                $orderItem = $order->items()->create([
                     'product_id' => $product->id,
                     'product_name' => $product->name,
                     'image' => $product->primaryImage()?->path,
@@ -398,7 +398,7 @@ class OrderController extends Controller
                     'quantity' => $item['quantity'],
                     'line_total' => $lineTotal,
                 ]);
-                $product->decrement('stock_quantity', $item['quantity']);
+                app(\App\Services\InventoryStockService::class)->reserveOrderStock(auth()->user(), $product, $order, $orderItem);
                 $addedSubtotal += $lineTotal;
             }
 

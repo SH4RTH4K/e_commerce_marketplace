@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -53,6 +54,16 @@ class DropshipSupplier extends Model
     public function categories(): HasMany
     {
         return $this->hasMany(DropshipSupplierCategory::class, 'supplier_id');
+    }
+
+    public function scopeWithIntegration(Builder $query): Builder
+    {
+        return $query->whereNotNull('driver_key')->where('driver_key', '!=', '')->where('driver_key', '!=', 'manual');
+    }
+
+    public function hasIntegration(): bool
+    {
+        return filled($this->driver_key) && $this->driver_key !== 'manual';
     }
 
     public function categoryMappings(): HasMany

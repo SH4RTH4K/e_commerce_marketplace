@@ -12,6 +12,7 @@ class PriceStockSyncService
     public function __construct(
         private readonly PricingEngine $pricingEngine,
         private readonly SupplierDescriptionFormatter $descriptionFormatter,
+        private readonly SupplierAssociationService $associations,
     )
     {
     }
@@ -32,6 +33,12 @@ class PriceStockSyncService
             $product = Product::query()->lockForUpdate()->find($link->product_id);
             if ($product === null) {
                 return new PriceStockSyncResult(PriceStockSyncResult::SKIPPED);
+            }
+
+            try {
+                $this->associations->assertOwned($source, $product, $link);
+            } catch (SupplierOwnershipException $exception) {
+                return new PriceStockSyncResult(PriceStockSyncResult::SKIPPED, $product, warnings: [$exception->reason]);
             }
 
             $rules = $link->field_sync_rules ?? [];

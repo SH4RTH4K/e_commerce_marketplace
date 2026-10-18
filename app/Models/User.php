@@ -51,10 +51,17 @@ class User extends Authenticatable
                 'messages.manage'  => 'Contact Messages',
             ],
         ],
+        'suppliers' => [
+            'label' => 'Supplier Management',
+            'items' => [
+                'suppliers.view' => 'View Suppliers & Supplier Reports',
+                'suppliers.manage' => 'Create & Manage Suppliers',
+            ],
+        ],
         'dropshipping' => [
             'label' => 'Dropshipping',
             'items' => [
-                'dropshipping.manage' => 'Manage Suppliers & Product Sync',
+                'dropshipping.manage' => 'Manage Dropshipping Connections & Product Sync',
             ],
         ],
         'system' => [
@@ -108,6 +115,10 @@ class User extends Authenticatable
         }
 
         $perms = $this->permissions ?? [];
+
+        if ($permission === 'suppliers.view' && is_array($perms) && in_array('suppliers.manage', $perms, true)) {
+            return true;
+        }
 
         return is_array($perms) && in_array($permission, $perms, true);
     }

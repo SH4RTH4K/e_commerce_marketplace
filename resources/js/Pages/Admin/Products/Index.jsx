@@ -43,7 +43,7 @@ export default function ProductsIndex({ products, categories = [], suppliers = [
     const save = () => router.post('/admin/products/bulk', { ids: selectedRows.map(product => product.id), bulk_action: bulkAction, ...(bulkAction === 'move_category' ? { category_id: bulkCategory } : {}) }, { ...options, onSuccess: clearSelection });
     bulkAction === 'delete' ? window.showConfirm(`Delete ${selectedRows.length} selected products permanently?`, save) : save();
   };
-  const inventoryParams = catalogParameters({ q: initial.q, category: initial.category, supplier: initial.supplier, source: initial.source, visibility: initial.status, stock_level: initial.stock, type: initial.type });
+  const inventoryParams = catalogParameters({ q: initial.q, category: initial.category, supplier: initial.supplier, product_source: initial.source, visibility: initial.status, stock_level: initial.stock, type: initial.type });
   const inventoryHref = '/admin/inventory?' + new URLSearchParams(inventoryParams);
   const editHref = product => `/admin/products/${product.id}/edit?return_to=${encodeURIComponent(url)}`;
   const actions = product => <div className="flex flex-wrap items-center justify-end gap-2">{product.is_published && <a href={`/product/${product.url_key}`} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-orange-600">View ↗</a>}{canEdit && <a href={editHref(product)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white">Edit</a>}{canDelete && <button disabled={busy} onClick={() => removeProduct(product)} className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-600 disabled:opacity-50">Delete</button>}</div>;

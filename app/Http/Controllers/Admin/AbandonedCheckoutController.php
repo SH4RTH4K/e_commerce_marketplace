@@ -156,7 +156,7 @@ class AbandonedCheckoutController extends Controller
             ]);
 
             foreach ($itemsToCreate as $itemData) {
-                OrderItem::create([
+                $orderItem = OrderItem::create([
                     'order_id'     => $order->id,
                     'product_id'   => $itemData['product_id'],
                     'product_name' => $itemData['product_name'],
@@ -167,7 +167,7 @@ class AbandonedCheckoutController extends Controller
                 ]);
 
                 if ($itemData['product']) {
-                    $itemData['product']->decrement('stock_quantity', $itemData['quantity']);
+                    app(\App\Services\InventoryStockService::class)->reserveOrderStock(auth()->user(), $itemData['product'], $order, $orderItem);
                 }
             }
 

@@ -392,7 +392,8 @@ class AnalyticsController extends Controller
             'draft_products' => Product::where('is_published', false)->count(),
             'out_of_stock' => Product::where('stock_quantity', '<=', 0)->count(),
             'low_stock' => Product::whereBetween('stock_quantity', [1, 5])->count(),
-            'units_on_hand' => (int) Product::sum('stock_quantity'),
+            'units_on_hand' => (int) Product::where('source_type', '!=', 'dropshipping')->whereDoesntHave('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true))->sum('stock_quantity'),
+            'supplier_availability' => (int) Product::where(fn ($query) => $query->where('source_type', 'dropshipping')->orWhereHas('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true)))->sum('stock_quantity'),
         ];
 
         return Inertia::render('Admin/Analytics', [

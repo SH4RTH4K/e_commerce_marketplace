@@ -11,26 +11,26 @@ function StockBadge({ quantity }) {
   const label = quantity === 0 ? 'Out of stock' : quantity <= 5 ? 'Low stock' : 'Healthy stock';
   return <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium px-2.5 py-1 rounded-full ${quantity === 0 ? 'bg-red-50 text-red-700' : quantity <= 5 ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-700'}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{label}</span>;
 }
-export default function InventoryIndex({ products, categories = [], suppliers = [], q = '', category = '', supplier = '', stock_level = '', visibility = '', source = '', type = '', order = 'stock_asc', per_page = 20, summary = {}, matching_units = 0, can_adjust = false }) {
+export default function InventoryIndex({ products, categories = [], suppliers = [], q = '', category = '', supplier = '', stock_level = '', visibility = '', source = '', product_source = '', type = '', order = 'stock_asc', per_page = 20, summary = {}, matching_units = 0, matching_supplier_units = 0, can_adjust = false }) {
   const { props } = usePage();
   const currency = props.app?.currency_symbol || '৳';
   const price = value => value == null ? '—' : `${currency}${Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
-  const applied = { q, category: category || '', supplier: supplier || '', stock_level, visibility, source, type, order, per_page };
+  const applied = { q, category: category || '', supplier: supplier || '', stock_level, visibility, source, product_source, type, order, per_page };
   const [filters, setFilters] = useState(applied);
   const [selected, setSelected] = useState([]); const [dialog, setDialog] = useState(null); const [loading, setLoading] = useState(false);
   const rows = products.data || [];
-  useEffect(() => { setFilters(applied); setSelected([]); }, [q, category, supplier, stock_level, visibility, source, type, order, per_page, products.current_page]);
+  useEffect(() => { setFilters(applied); setSelected([]); }, [q, category, supplier, stock_level, visibility, source, product_source, type, order, per_page, products.current_page]);
   const visit = (overrides = {}) => {
     setSelected([]);
     const parameters = Object.fromEntries(Object.entries({ ...filters, ...overrides }).filter(([, value]) => value !== '' && value != null));
     router.get('/admin/inventory', parameters, { preserveState: true, preserveScroll: true, onStart: () => setLoading(true), onFinish: () => setLoading(false) });
   };
-  const filtered = !!(q || category || supplier || stock_level || visibility || source || type);
+  const filtered = !!(q || category || supplier || stock_level || visibility || source || product_source || type);
   const selectedRows = rows.filter(product => selected.includes(product.id));
   const exportUrl = '/admin/inventory/export?' + new URLSearchParams(Object.fromEntries(Object.entries(applied).filter(([, value]) => value !== '' && value != null))).toString();
   const onSaved = () => { setDialog(null); setSelected([]); };
   const cards = [
-    { label: 'All products', value: summary.total, level: '', color: 'text-slate-900', note: `${Number(summary.units || 0).toLocaleString()} units available` },
+    { label: 'All products', value: summary.total, level: '', color: 'text-slate-900', note: `${Number(summary.units || 0).toLocaleString()} local warehouse units | ${Number(summary.supplier_units || 0).toLocaleString()} supplier availability` },
     { label: 'Healthy stock', value: summary.in_stock, level: 'in', color: 'text-emerald-700', note: 'More than 5 units' },
     { label: 'Low stock', value: summary.low_stock, level: 'low', color: 'text-amber-700', note: '1–5 units · review replenishment' },
     { label: 'Out of stock', value: summary.out_stock, level: 'out', color: 'text-red-700', note: '0 units · unavailable to order' },
@@ -39,7 +39,8 @@ export default function InventoryIndex({ products, categories = [], suppliers = 
     ['category', 'Category', [['', 'All categories'], ...categories.map(item => [item.id, item.name])]],
     ['stock_level', 'Stock level', [['', 'All stock levels'], ['in', 'Healthy (>5)'], ['low', 'Low stock (1–5)'], ['out', 'Out of stock']]],
     ['visibility', 'Visibility', [['', 'All visibility'], ['published', 'Published'], ['draft', 'Draft']]],
-    ['source', 'Stock source', [['', 'All stock sources'], ['local', 'Local inventory'], ['supplier', 'Supplier synced'], ['manual', 'Supplier · manual stock']]],
+    ['source', 'Stock source', [['', 'All stock sources'], ['local', 'Local inventory'], ['supplier', 'Supplier availability (all)'], ['manual', 'Supplier · manual stock']]],
+    ['product_source', 'Product source', [['', 'All product sources'], ['manual', 'Manual'], ['dropshipping', 'Dropshipping'], ['other', 'Other']]],
     ['supplier', 'Supplier', [['', 'All suppliers'], ...suppliers.map(item => [item.id, item.name])]],
     ['type', 'Product type', [['', 'All product types'], ['simple', 'Simple'], ['variable', 'Variable']]],
   ];
@@ -50,6 +51,7 @@ export default function InventoryIndex({ products, categories = [], suppliers = 
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div><p className="text-[11px] text-orange-600 font-semibold uppercase tracking-widest mb-1">Catalog operations</p><h1 className="text-2xl font-bold text-slate-900">Inventory overview</h1><p className="text-sm text-gray-500 mt-1">Review availability, manage stock, and track manual adjustments.</p></div>
           <div className="flex flex-wrap gap-2">
+            <a href="/admin/inventory/history" className="inline-flex gap-2 items-center px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50">Stock history</a>
             <a href={exportUrl} className="inline-flex gap-2 items-center px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50"><Icon path="M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4" />Export CSV</a>
             {can_adjust && <a href="/admin/products/create" className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold"><Icon path="M12 5v14M5 12h14" />Add product</a>}
           </div>
@@ -67,7 +69,7 @@ export default function InventoryIndex({ products, categories = [], suppliers = 
               <button disabled={loading} className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl disabled:opacity-50">{loading ? 'Loading…' : 'Apply filters'}</button>
               {filtered && <button type="button" onClick={() => { setSelected([]); router.get('/admin/inventory'); }} className="px-3 py-2.5 text-gray-500 text-sm hover:text-gray-900">Reset filters</button>}
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">{selects.map(([key, label, options]) => <label key={key} className="text-xs font-medium text-gray-500">{label}<select value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value }))} className={`${inputClass} mt-1.5`}>{options.map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></label>)}</div>
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-3">{selects.map(([key, label, options]) => <label key={key} className="text-xs font-medium text-gray-500">{label}<select value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value }))} className={`${inputClass} mt-1.5`}>{options.map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></label>)}</div>
             <div className="flex flex-wrap justify-between items-center gap-3 border-t border-gray-100 pt-3">
               <p className="text-xs text-gray-400">Overview cards use all filters except stock level.</p>
               <button type="button" onClick={() => visit({ stock_level: 'out', visibility: 'published' })} className="text-xs font-semibold text-orange-600 hover:underline">Review published products with no stock →</button>
@@ -76,7 +78,7 @@ export default function InventoryIndex({ products, categories = [], suppliers = 
         </section>
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden" aria-busy={loading}>
           <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-gray-100">
-            <div><h2 className="font-semibold text-gray-900">{Number(products.total || 0).toLocaleString()} {filtered ? 'matching' : ''} products</h2><p className="text-xs text-gray-400 mt-1">{Number(matching_units).toLocaleString()} units in this view</p></div>
+            <div><h2 className="font-semibold text-gray-900">{Number(products.total || 0).toLocaleString()} {filtered ? 'matching' : ''} products</h2><p className="text-xs text-gray-400 mt-1">{Number(matching_units).toLocaleString()} local warehouse units | {Number(matching_supplier_units).toLocaleString()} supplier availability in this view</p></div>
             <div className="flex items-center gap-3"><label className="sr-only" htmlFor="inventory-sort">Sort inventory</label><select id="inventory-sort" value={filters.order} onChange={event => { setFilters(current => ({ ...current, order: event.target.value })); visit({ order: event.target.value }); }} className="border border-gray-200 rounded-lg px-2 py-2 text-xs"><option value="stock_asc">Stock: low to high</option><option value="stock_desc">Stock: high to low</option><option value="updated">Recently updated</option><option value="name_asc">Name: A–Z</option><option value="name_desc">Name: Z–A</option><option value="price_asc">Customer price: low to high</option><option value="price_desc">Customer price: high to low</option></select>
               <label className="text-xs text-gray-500">Rows <select value={filters.per_page} onChange={event => { setFilters(current => ({ ...current, per_page: event.target.value })); visit({ per_page: event.target.value }); }} className="ml-1 border border-gray-200 rounded-lg px-2 py-2"><option>20</option><option>50</option><option>100</option></select></label>
             </div>
@@ -90,7 +92,7 @@ export default function InventoryIndex({ products, categories = [], suppliers = 
                 <td className="px-4 py-4 max-w-sm"><div className="flex items-start gap-3"><img src={product.image_url} alt="" className="w-12 h-12 object-contain rounded-xl border border-gray-100 bg-gray-50 shrink-0" /><div className="min-w-0">{can_adjust ? <a href={`/admin/products/${product.id}/edit`} className="font-semibold text-slate-800 hover:text-orange-600 leading-snug line-clamp-2">{product.name}</a> : <p className="font-semibold text-slate-800 leading-snug line-clamp-2">{product.name}</p>}<p className="text-xs text-gray-400 mt-1">SKU: {product.sku || '—'} · {product.category?.name || 'Uncategorized'}</p><div className="flex gap-2 items-center mt-1.5 text-[10px]"><span className={product.is_published ? 'text-emerald-700' : 'text-gray-400'}>{product.is_published ? 'Published' : 'Draft'}</span><span className="text-gray-300">·</span><span className="text-gray-500">{product.has_variants ? `${product.variants_count} variant options` : 'Simple product'}</span></div></div></div></td>
                 <td className="px-4 py-4 align-top whitespace-nowrap"><p className="font-bold text-slate-900 tabular-nums">{price(product.price)}</p>{product.sale_price != null && Number(product.sale_price) < Number(product.regular_price) && <p className="text-xs text-gray-400 line-through">{price(product.regular_price)}</p>}<details className="mt-2 text-xs"><summary className="cursor-pointer text-gray-400 hover:text-orange-600">Price details</summary><dl className="space-y-1 mt-2 text-gray-500">{[['Regular', product.regular_price], ['Selling', product.selling_price], ['Discounted', product.sale_price], ['Minimum', product.minimum_price], ['Maximum', product.maximum_price]].map(([label, value]) => <div key={label} className="flex justify-between gap-3"><dt>{label}</dt><dd>{value == null ? (label === 'Discounted' ? 'No discount' : 'Not set') : price(value)}</dd></div>)}</dl>{product.price_details_source && <p className="mt-2 max-w-40 whitespace-normal text-[10px] text-gray-400">{product.price_details_source === 'supplier_snapshot' ? 'Includes prices from last supplier calculation.' : 'Includes estimates from current supplier rules.'}</p>}</details></td>
                 <td className="px-4 py-4 align-top"><p className="text-xl font-bold text-slate-800 tabular-nums mb-1.5">{Number(product.stock_quantity).toLocaleString()}</p><StockBadge quantity={product.stock_quantity} /></td>
-                <td className="px-4 py-4 align-top"><p className={`text-xs font-semibold ${product.stock_source === 'supplier' ? 'text-blue-700' : 'text-slate-600'}`}>{product.stock_source === 'supplier' ? 'Supplier synced' : product.stock_source === 'manual' ? 'Manual supplier stock' : 'Local inventory'}</p>{product.supplier && <p className="text-xs text-gray-400 mt-1">{product.supplier}</p>}{product.last_synced && <p className="text-[10px] text-gray-400 mt-1">Last sync: {product.last_synced}</p>}{can_adjust && product.can_resume_sync && <button onClick={() => setDialog({ type: 'resume', product })} className="text-xs text-orange-600 hover:underline mt-2">Resume supplier sync</button>}</td>
+                <td className="px-4 py-4 align-top"><p className={`text-xs font-semibold ${product.stock_source === 'supplier' ? 'text-blue-700' : 'text-slate-600'}`}>{product.stock_source === 'supplier' ? 'Supplier-managed availability' : product.stock_type === 'supplier' ? 'Supplier availability / manual override' : 'Local inventory'}</p><p className="text-xs text-gray-400 mt-1">{product.supplier || 'Own inventory / No supplier'}</p><p className="text-[10px] text-gray-400 mt-1 capitalize">Source: {product.source_type || 'manual'}</p>{product.last_synced && <p className="text-[10px] text-gray-400 mt-1">Last sync: {product.last_synced}</p>}{can_adjust && product.can_resume_sync && <button onClick={() => setDialog({ type: 'resume', product })} className="text-xs text-orange-600 hover:underline mt-2">Resume supplier sync</button>}</td>
                 <td className="px-4 py-4 align-top text-xs text-gray-400 min-w-28">{product.updated_at || '—'}</td>
                 <td className="px-4 py-4 align-top text-right"><div className="flex flex-col gap-2 items-end">{can_adjust && <button onClick={() => setDialog({ type: 'adjust', products: [product] })} aria-label={`Adjust stock for ${product.name}`} className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 whitespace-nowrap">Adjust stock</button>}<button onClick={() => setDialog({ type: 'history', product })} aria-label={`Adjustment history for ${product.name}`} className="text-xs text-gray-500 hover:text-orange-600">History</button>{product.is_published && <a href={`/product/${product.url_key || product.slug}`} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-blue-600">View product ↗</a>}</div></td>
               </tr>)}</tbody>
@@ -99,7 +101,7 @@ export default function InventoryIndex({ products, categories = [], suppliers = 
           <footer className="border-t border-gray-100 p-4 flex flex-wrap justify-between items-center gap-3"><p className="text-xs text-gray-400">{products.from ? `${products.from}–${products.to} of ${Number(products.total).toLocaleString()}` : '0 results'}</p><nav aria-label="Inventory pagination" className="flex flex-wrap gap-1">{(products.links || []).map((link, index) => <button key={index} disabled={!link.url || loading} aria-current={link.active ? 'page' : undefined} onClick={() => { setSelected([]); router.get(link.url, {}, { preserveScroll: true }); }} className={`min-w-8 px-2.5 py-1.5 rounded-lg text-xs disabled:opacity-40 ${link.active ? 'bg-orange-500 text-white font-semibold' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`} dangerouslySetInnerHTML={{ __html: link.label }} />)}</nav></footer>
         </section>
       </div>
-      {dialog?.type === 'adjust' && <StockAdjustmentDialog products={dialog.products} onClose={() => setDialog(null)} onSaved={onSaved} />}
+      {dialog?.type === 'adjust' && <StockAdjustmentDialog products={dialog.products} suppliers={suppliers} onClose={() => setDialog(null)} onSaved={onSaved} />}
       {dialog?.type === 'history' && <AdjustmentHistoryDialog product={dialog.product} onClose={() => setDialog(null)} />}
       {dialog?.type === 'resume' && <ResumeStockSyncDialog product={dialog.product} onClose={() => setDialog(null)} onSaved={onSaved} />}
     </AdminLayout>

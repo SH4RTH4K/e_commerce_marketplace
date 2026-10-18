@@ -60,6 +60,7 @@ class PriceStockSyncServiceTest extends TestCase
             'key' => 'supplier-' . uniqid(),
             'name' => 'Supplier',
             'driver_key' => 'fake',
+            'is_active' => true,
             'base_url' => 'https://supplier.example',
             'pricing_rules' => ['selling_markup' => ['type' => 'percent', 'value' => 20]],
         ]);

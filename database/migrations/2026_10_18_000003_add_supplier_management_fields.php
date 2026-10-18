@@ -30,6 +30,7 @@ return new class extends Migration
 
         Schema::table('products', function (Blueprint $table) {
             $table->string('source_type', 20)->default('manual')->after('supplier_id')->index();
+            $table->decimal('purchase_price', 12, 2)->nullable();
         });
 
         Schema::table('inventory_adjustments', function (Blueprint $table) {
@@ -42,9 +43,11 @@ return new class extends Migration
                 'supplier_code' => 'SUP-'.str_pad((string) $supplier->id, 5, '0', STR_PAD_LEFT),
             ]);
         });
-        DB::table('products')->whereExists(function ($query) {
-            $query->select(DB::raw(1))->from('dropship_product_links')->whereColumn('dropship_product_links.product_id', 'products.id');
-        })->update(['source_type' => 'dropshipping']);
+        DB::table('dropship_suppliers')->where('supplier_type', 'manual')->update(['supplier_type' => 'local']);
+        $backfill = app(\App\Services\Dropshipping\SupplierAssociationService::class)->backfill();
+        if ($backfill['conflicts'] !== []) {
+            \Illuminate\Support\Facades\Log::warning('Supplier backfill requires review. Existing assignments were preserved.', ['conflicts' => $backfill['conflicts']]);
+        }
     }
 
     public function down(): void
@@ -53,7 +56,7 @@ return new class extends Migration
             $table->dropConstrainedForeignId('supplier_id');
         });
         Schema::table('products', function (Blueprint $table) {
-            $table->dropColumn('source_type');
+            $table->dropColumn(['source_type', 'purchase_price']);
         });
         Schema::table('dropship_suppliers', function (Blueprint $table) {
             $table->dropUnique(['supplier_code']);

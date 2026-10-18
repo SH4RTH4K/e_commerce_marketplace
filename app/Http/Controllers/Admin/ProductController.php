@@ -19,6 +19,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Validation\ValidationException;
+use App\Services\InventoryStockService;
+use App\Models\SupplierAudit;
 
 class ProductController extends Controller
 {
@@ -57,6 +59,8 @@ class ProductController extends Controller
             'product'    => ['is_published' => true, 'regular_price' => 0, 'stock_quantity' => 0, 'specifications' => [], 'variants' => [], 'images' => []],
             'categories' => app(CategoryHierarchyService::class)->options(),
             'suppliers'  => $this->supplierOptions(),
+            'canManageSuppliers' => $request->user()->hasPermission('suppliers.manage'),
+            'canViewSuppliers' => $request->user()->hasPermission('suppliers.view'),
             'returnTo' => ProductCatalogService::returnUrl($request->input('return_to')),
         ]);
     }
@@ -65,22 +69,32 @@ class ProductController extends Controller
     {
         $data = $this->validateData($request);
         $this->validateSupplierAssignment($data['supplier_id'] ?? null);
+        if (($data['source_type'] ?? 'manual') === 'dropshipping') {
+            throw ValidationException::withMessages(['source_type' => 'Import or link this product through Dropshipping to assign its integration source.']);
+        }
+        $data['source_type'] ??= 'manual';
         $data = $this->sanitizeProductData($data, $request);
         $data['slug'] = ($data['slug'] ?? '') ?: $data['name'];
         $this->applyFlags($request, $data, null);
         $data['specifications'] = $this->normalizeSpecifications($request);
 
         $data = app(ProductPricingService::class)->prepare($data);
-        $product = Product::create($data);
-        $this->syncVariants($product, $request);
-        $this->storeImages($product, $request);
+        $product = DB::transaction(function () use ($data, $request) {
+            $this->validateSupplierAssignment($data['supplier_id'] ?? null, true);
+            $product = Product::create($data);
+            $this->syncVariants($product, $request);
+            $this->storeImages($product, $request);
+            app(InventoryStockService::class)->recordOpening($request->user(), $product);
+            return $product;
+        });
 
         return redirect()->route('admin.products.edit', ['product' => $product->id, ...($request->filled('return_to') ? ['return_to' => ProductCatalogService::returnUrl($request->input('return_to'))] : [])])->with('status', 'Product created.');
     }
 
     public function edit(Request $request, Product $product)
     {
-        $product->load('images', 'variants', 'supplier:id,name,key,driver_key,is_active');
+        $product->load('images', 'variants', 'supplier:id,name,key,supplier_code,supplier_type,is_active', 'supplierLinks.supplierProduct.supplier:id,name,key');
+        $assignment = $this->assignmentContext($product);
 
         // Group variants
         $variants = $product->variants->map(fn($v) => [
@@ -111,14 +125,19 @@ class ProductController extends Controller
 
         return Inertia::render('Admin/Products/Form', [
             'product'    => array_merge($product->toArray(), [
-                ...$product->only(['selling_price', 'minimum_price', 'maximum_price', 'pricing_mode', 'enforce_minimum_price', 'enforce_maximum_price', 'protect_minimum_price']),
+                'supplier_id' => $product->supplier_id ?? $assignment['supplier_id'],
+                'source_type' => $assignment['locked'] ? 'dropshipping' : ($product->source_type ?: 'manual'),
+                ...$product->only(['purchase_price', 'selling_price', 'minimum_price', 'maximum_price', 'pricing_mode', 'enforce_minimum_price', 'enforce_maximum_price', 'protect_minimum_price']),
                 'images' => $product->images->map(fn($img) => ['id' => $img->id, 'path' => $img->path, 'alt' => $img->alt, 'is_primary' => $img->is_primary])->values(),
                 'variants' => $variants,
                 'custom_variant_groups' => $customGroups,
                 'specifications' => $product->specifications ?? [],
             ]),
             'categories' => app(CategoryHierarchyService::class)->options(),
-            'suppliers'  => $this->supplierOptions(),
+            'suppliers'  => $this->supplierOptions($product->supplier_id),
+            'assignment' => $assignment,
+            'canManageSuppliers' => $request->user()->hasPermission('suppliers.manage'),
+            'canViewSuppliers' => $request->user()->hasPermission('suppliers.view'),
             'pricing' => app(ProductPricingService::class)->context($product),
             'returnTo' => ProductCatalogService::returnUrl($request->input('return_to')),
         ]);
@@ -127,23 +146,48 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $data = $this->validateData($request, $product);
-        if ((int) ($data['supplier_id'] ?? 0) !== (int) ($product->supplier_id ?? 0)) {
+        if (array_key_exists('source_type', $data) && $data['source_type'] === null) $data['source_type'] = $product->source_type ?: 'manual';
+        if (array_key_exists('supplier_id', $data) && (int) ($data['supplier_id'] ?? 0) !== (int) ($product->supplier_id ?? 0)) {
             $this->validateSupplierAssignment($data['supplier_id'] ?? null);
         }
-        $data = $this->sanitizeProductData($data, $request);
+        $data = $this->sanitizeProductData($data, $request, $product);
         $data['slug'] = ($data['slug'] ?? '') ?: $product->slug;
         $this->applyFlags($request, $data, $product);
         $data['specifications'] = $this->normalizeSpecifications($request);
 
-        DB::transaction(function () use ($product, $data) {
+        DB::transaction(function () use ($product, $data, $request) {
             $links = $product->supplierLinks()->orderBy('id')->get(['id', 'supplier_product_row_id']);
             // Match the supplier sync lock order so an edit and sync cannot
             // overwrite each other or deadlock over product/link rows.
             DropshipSupplierProduct::whereIn('id', $links->pluck('supplier_product_row_id'))->orderBy('id')->lockForUpdate()->get();
             DropshipProductLink::whereIn('id', $links->pluck('id'))->orderBy('id')->lockForUpdate()->get();
             $product = Product::whereKey($product->id)->lockForUpdate()->firstOrFail();
+            $assignment = $this->assignmentContext($product);
+            if ($assignment['conflict']) {
+                throw ValidationException::withMessages(['supplier_id' => 'Conflicting supplier ownership requires review in Dropshipping before saving.']);
+            }
+            if ($assignment['locked']) {
+                if ((array_key_exists('supplier_id', $data) && (int) ($data['supplier_id'] ?? 0) !== (int) $assignment['supplier_id'])
+                    || (isset($data['source_type']) && $data['source_type'] !== 'dropshipping')) {
+                    throw ValidationException::withMessages(['supplier_id' => 'This product belongs to an integration. Use the validated Dropshipping relink workflow to change its supplier.']);
+                }
+                $data['supplier_id'] = $assignment['supplier_id'];
+                $data['source_type'] = 'dropshipping';
+            } elseif (($data['source_type'] ?? $product->source_type) === 'dropshipping') {
+                throw ValidationException::withMessages(['source_type' => 'A Dropshipping source requires an integration product link.']);
+            }
+            $supplierChanged = array_key_exists('supplier_id', $data) && (int) ($data['supplier_id'] ?? 0) !== (int) ($product->supplier_id ?? 0);
+            if ($supplierChanged) $this->validateSupplierAssignment($data['supplier_id'], true);
+            $beforeSupplier = $product->supplier_id;
+            $beforeStock = (int) $product->stock_quantity;
             $data = app(ProductPricingService::class)->prepare($data, $product);
             $product->update($data);
+            app(InventoryStockService::class)->recordProductEdit($request->user(), $product, $beforeStock);
+            if ($supplierChanged) {
+                SupplierAudit::create(['supplier_id' => $product->supplier_id ?? $beforeSupplier, 'actor_id' => $request->user()->id, 'actor_name' => $request->user()->name,
+                    'event' => 'product_supplier_changed', 'before' => ['supplier_id' => $beforeSupplier], 'after' => ['supplier_id' => $product->supplier_id],
+                    'metadata' => ['product_id' => $product->id], 'created_at' => now()]);
+            }
             if (($data['pricing_mode'] ?? null) === 'auto') {
                 $product->supplierLinks()->update(['price_override' => null]);
             }
@@ -237,6 +281,7 @@ class ProductController extends Controller
             'category_id'                    => ['required', 'exists:categories,id'],
             'supplier_id'                    => ['nullable', 'integer', 'exists:dropship_suppliers,id'],
             'source_type'                    => ['nullable', 'string', 'in:manual,dropshipping,other'],
+            'purchase_price'                 => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
             'name'                           => ['required', 'string', 'max:180'],
             'slug'                           => ['nullable', 'string', 'max:180'],
             'sku'                            => ['nullable', 'string', 'max:60'],
@@ -252,7 +297,7 @@ class ProductController extends Controller
             'enforce_minimum_price'           => ['sometimes', 'boolean'],
             'enforce_maximum_price'           => ['sometimes', 'boolean'],
             'protect_minimum_price'           => ['sometimes', 'boolean'],
-            'stock_quantity'                 => ['nullable', 'integer', 'min:0'],
+            'stock_quantity'                 => ['nullable', 'integer', 'min:0', 'max:4294967295'],
             'unit'                           => ['nullable', 'string', 'max:40'],
             'meta_title'                     => ['nullable', 'string', 'max:180'],
             'meta_description'               => ['nullable', 'string', 'max:500'],
@@ -295,7 +340,7 @@ class ProductController extends Controller
         ]);
     }
 
-    private function sanitizeProductData(array $data, ?Request $request = null): array
+    private function sanitizeProductData(array $data, ?Request $request = null, ?Product $product = null): array
     {
         $isVariable = ($data['product_type'] ?? '') === 'variable';
 
@@ -312,12 +357,12 @@ class ProductController extends Controller
             $data['images_name']
         );
 
-        $data['sale_price'] = (isset($data['sale_price']) && trim((string) $data['sale_price']) !== '')
-            ? (float) $data['sale_price']
-            : null;
+        $data['sale_price'] = array_key_exists('sale_price', $data)
+            ? (($data['sale_price'] !== null && trim((string) $data['sale_price']) !== '') ? (float) $data['sale_price'] : null)
+            : $product?->sale_price;
 
-        $regularPrice = (float) ($data['regular_price'] ?? 0);
-        $stockQuantity = max(0, (int) ($data['stock_quantity'] ?? 0));
+        $regularPrice = (float) ($data['regular_price'] ?? $product?->regular_price ?? 0);
+        $stockQuantity = max(0, (int) ($data['stock_quantity'] ?? $product?->stock_quantity ?? 0));
 
         // For variable products: calculate total variant stock if not explicitly set
         if ($isVariable && $request) {
@@ -357,29 +402,41 @@ class ProductController extends Controller
         return $data;
     }
 
-    private function supplierOptions(): array
+    private function supplierOptions(?int $currentSupplierId = null): array
     {
-        return DropshipSupplier::query()
+        return DropshipSupplier::withTrashed()->where(fn ($query) => $query->whereNull('deleted_at')->when($currentSupplierId, fn ($query) => $query->orWhere('id', $currentSupplierId)))
             ->orderByDesc('is_active')
             ->orderBy('name')
-            ->get(['id', 'name', 'key', 'driver_key', 'supplier_type', 'is_active'])
+            ->get(['id', 'name', 'key', 'supplier_code', 'supplier_type', 'is_active', 'deleted_at'])
             ->map(fn (DropshipSupplier $supplier): array => [
                 'id' => $supplier->id,
                 'name' => $supplier->name,
                 'key' => $supplier->key,
-                'driver_key' => $supplier->driver_key,
+                'supplier_code' => $supplier->supplier_code ?: 'SUP-'.str_pad((string) $supplier->id, 5, '0', STR_PAD_LEFT),
                 'supplier_type' => $supplier->supplier_type,
-                'is_active' => $supplier->is_active,
+                'is_active' => $supplier->is_active && ! $supplier->trashed(),
             ])->values()->all();
     }
 
-    private function validateSupplierAssignment(?int $supplierId): void
+    private function validateSupplierAssignment(?int $supplierId, bool $lock = false): void
     {
         if ($supplierId === null) return;
-        $supplier = DropshipSupplier::query()->find($supplierId);
+        $supplier = DropshipSupplier::query()->when($lock, fn ($query) => $query->lockForUpdate())->find($supplierId);
         if (! $supplier || ! $supplier->is_active) {
             throw ValidationException::withMessages(['supplier_id' => 'Select an active supplier.']);
         }
+    }
+
+    private function assignmentContext(Product $product): array
+    {
+        $product->loadMissing('supplierLinks.supplierProduct.supplier:id,name,key');
+        $links = $product->supplierLinks->filter(fn ($link) => $link->supplierProduct !== null && $link->product_created_by_integration);
+        $supplierIds = $links->pluck('supplierProduct.supplier_id')->unique()->values();
+        $conflict = $links->count() > 1 || ($supplierIds->isNotEmpty() && $product->supplier_id !== null && (int) $product->supplier_id !== (int) $supplierIds->first());
+        $source = $links->first()?->supplierProduct;
+        return ['locked' => $links->isNotEmpty(), 'supplier_id' => $supplierIds->first(), 'conflict' => $conflict,
+            'integration' => $source?->supplier?->name, 'external_product_id' => $source?->supplier_product_id,
+            'stock_source' => $links->isNotEmpty() ? 'Supplier-managed availability' : 'Local inventory'];
     }
 
     private function normalizeSpecifications(Request $request): array

@@ -721,7 +721,8 @@ export default function Analytics({
                 <a href="/admin/inventory?stock_level=out" className="rounded-xl bg-red-50 p-3 hover:bg-red-100"><span className="text-red-700">Out of stock</span><strong className="block mt-1 text-lg text-red-950">{inventorySummary.out_of_stock || 0}</strong></a>
                 <a href="/admin/inventory?stock_level=low" className="rounded-xl bg-amber-50 p-3 hover:bg-amber-100"><span className="text-amber-700">Low stock</span><strong className="block mt-1 text-lg text-amber-950">{inventorySummary.low_stock || 0}</strong></a>
                 <div className="rounded-xl bg-emerald-50 p-3"><span className="text-emerald-700">Published</span><strong className="block mt-1 text-lg text-emerald-950">{inventorySummary.published_products || 0}</strong></div>
-                <div className="rounded-xl bg-gray-50 p-3"><span className="text-gray-600">Units on hand</span><strong className="block mt-1 text-lg text-gray-950">{Number(inventorySummary.units_on_hand || 0).toLocaleString()}</strong></div>
+                <div className="rounded-xl bg-gray-50 p-3"><span className="text-gray-600">Local warehouse units</span><strong className="block mt-1 text-lg text-gray-950">{Number(inventorySummary.units_on_hand || 0).toLocaleString()}</strong></div>
+                <a href="/admin/inventory?source=supplier" className="rounded-xl bg-blue-50 p-3 sm:col-span-2 hover:bg-blue-100"><span className="text-blue-700">Supplier-managed availability</span><strong className="block mt-1 text-lg text-blue-950">{Number(inventorySummary.supplier_availability || 0).toLocaleString()}</strong><span className="mt-1 block text-[10px] text-blue-600">Kept separate from local warehouse stock.</span></a>
               </div>
               <p className="text-xs text-gray-500">{inventorySummary.total_products || 0} products total · {inventorySummary.draft_products || 0} drafts</p>
             </div>

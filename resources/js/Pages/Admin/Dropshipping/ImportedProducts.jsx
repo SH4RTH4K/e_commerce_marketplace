@@ -182,7 +182,7 @@ function money(value) {
   return number.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
-export default function ImportedProducts({ products = [], categories = [], sync_runs = [], failed_sync_runs = [], sync_suppliers = [], search_filter = '', category_filter = '', status_filter = '', stock_operator = '', stock_value = '', profit_operator = '', profit_value = '', price_adjustment_filter = '', order_by = 'newest', pagination = {} }) {
+export default function ImportedProducts({ products = [], categories = [], sync_runs = [], failed_sync_runs = [], sync_suppliers = [], relink_suppliers = [], search_filter = '', category_filter = '', status_filter = '', stock_operator = '', stock_value = '', profit_operator = '', profit_value = '', price_adjustment_filter = '', order_by = 'newest', pagination = {} }) {
   const [selected, setSelected] = useState([]);
   const [search, setSearch] = useState(search_filter);
   const [category, setCategory] = useState(category_filter);
@@ -198,6 +198,14 @@ export default function ImportedProducts({ products = [], categories = [], sync_
   const [batchType, setBatchType] = useState('');
   const [batchPricing, setBatchPricing] = useState({ regular_mode: 'none', regular_value: '', discount_mode: 'keep', discount_value: '' });
   const [batchSyncing, setBatchSyncing] = useState(false);
+  const [relinkProduct, setRelinkProduct] = useState(null);
+  const [relinkErrors, setRelinkErrors] = useState({});
+  const [relinkSaving, setRelinkSaving] = useState(false);
+  const submitRelink = event => {
+    event.preventDefault();
+    setRelinkSaving(true);
+    router.post(`/admin/dropshipping/supplier-products/${relinkProduct.supplier_product_row_id}/relink`, Object.fromEntries(new FormData(event.currentTarget)), { preserveScroll: true, onError: setRelinkErrors, onSuccess: () => setRelinkProduct(null), onFinish: () => setRelinkSaving(false) });
+  };
   const [flags, setFlags] = useState({ is_featured: false, is_new_arrival: false, is_best_seller: false, is_flash_sale: false });
   const currentPage = pagination.current_page || 1;
   const lastPage = pagination.last_page || 1;
@@ -441,6 +449,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
       <button type="button" disabled={selected.length === 0} onClick={publishSelected} className="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 disabled:bg-gray-200 disabled:text-gray-400">Publish selected ({selected.length})</button>
       <button type="button" disabled={selected.length === 0} onClick={unpublishSelected} className="rounded-lg bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400">Unpublish selected</button>
     </div>
+    {relinkProduct && <div role="dialog" aria-modal="true" aria-labelledby="relink-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"><form onSubmit={submitRelink} className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"><h2 id="relink-title" className="text-lg font-bold text-gray-900">Re-link &amp; Sync</h2><p className="mt-2 text-sm text-gray-600">Change the external source for <strong>{relinkProduct.name}</strong>. Current supplier: {relinkProduct.supplier}; external ID: {relinkProduct.external_product_id}. Cancel active sync runs first.</p><div role="alert" className="my-3 space-y-1 text-sm text-red-700">{Object.entries(relinkErrors).map(([key, value]) => <p key={key}>{value}</p>)}</div><label className="mt-4 block text-sm font-semibold">Target supplier<select required name="target_supplier_id" className="mt-1 w-full rounded-xl border-gray-200 text-sm"><option value="">Select supplier</option>{relink_suppliers.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label className="mt-4 block text-sm font-semibold">External product ID<input required name="external_product_id" className="mt-1 w-full rounded-xl border-gray-200 text-sm" /><span className="mt-1 block text-xs font-normal text-gray-500">Use the supplier's exact external product ID from Supplier Products.</span></label><label className="mt-4 block text-sm font-semibold">Reason<textarea required minLength={10} maxLength={2000} name="reason" rows="3" className="mt-1 w-full rounded-xl border-gray-200 text-sm" /></label><label className="mt-4 flex items-start gap-2 text-sm text-gray-700"><input required type="checkbox" name="confirmed" value="1" className="mt-0.5" />I confirm the source and supplier change. Future syncs may update this product's supplier data. An audit record will be saved.</label><div className="mt-5 flex justify-end gap-3"><button type="button" disabled={relinkSaving} onClick={() => setRelinkProduct(null)} className="rounded-lg bg-gray-100 px-4 py-2 text-sm">Cancel</button><button disabled={relinkSaving} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{relinkSaving ? 'Saving...' : 'Confirm and sync'}</button></div></form></div>}
     {sync_suppliers.length > 0 && <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div><h2 className="font-bold text-gray-900">Synchronize imported products</h2><p className="mt-1 text-sm text-gray-500">Price and data sync runs in the queue for each supplier and updates imported products matching the current filters.</p></div>
@@ -524,7 +533,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
                 </td>
                 <td className="hidden px-2 py-4 text-xs text-gray-600 xl:table-cell">{product.stock_quantity}</td>
                 <td className="hidden px-2 py-4 xl:table-cell"><span className={`text-xs font-semibold ${product.is_published ? 'text-green-700' : 'text-amber-700'}`}>{product.is_published ? 'Published' : 'Draft'}</span></td>
-                <td className="px-3 py-4 text-right align-top"><div className="flex flex-col items-end gap-2">{product.is_published ? <button onClick={() => unpublishOne(product.id)} className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200">Unpublish</button> : <button onClick={() => publishOne(product.id)} className="rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-green-700">Publish</button>}<button onClick={() => syncOne(product.id)} className="rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-100">Sync</button></div></td>
+                <td className="px-3 py-4 text-right align-top"><div className="flex flex-col items-end gap-2">{product.is_published ? <button onClick={() => unpublishOne(product.id)} className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200">Unpublish</button> : <button onClick={() => publishOne(product.id)} className="rounded-lg bg-green-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-green-700">Publish</button>}<button onClick={() => syncOne(product.id)} className="rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-100">Sync</button>{product.supplier_product_row_id && <button type="button" onClick={() => { setRelinkProduct(product); setRelinkErrors({}); }} className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100">Re-link &amp; Sync</button>}</div></td>
               </tr>;
             })}
           </tbody>

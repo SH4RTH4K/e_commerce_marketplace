@@ -134,11 +134,11 @@ class QuickOrderController extends Controller
                     'payment_method'   => 'cod',
                     'payment_status'   => 'pending',
                     'status'           => 'pending',
-                    'internal_note'    => $validated['variant'] ? 'Variant: ' . $validated['variant'] : null,
+                    'internal_note'    => ! empty($validated['variant']) ? 'Variant: ' . $validated['variant'] : null,
                     'delivery_note'    => $validated['delivery_note'] ?? null,
                 ]);
 
-                OrderItem::create([
+                $orderItem = OrderItem::create([
                     'order_id'     => $order->id,
                     'product_id'   => $product->id,
                     'product_name' => $product->name,
@@ -149,7 +149,7 @@ class QuickOrderController extends Controller
                     'line_total'   => $price * $qty,
                 ]);
 
-                $product->decrement('stock_quantity', $qty);
+                app(\App\Services\InventoryStockService::class)->reserveOrderStock($request->user(), $product, $order, $orderItem);
 
                 if ($coupon) {
                     $coupon->incrementUsage();

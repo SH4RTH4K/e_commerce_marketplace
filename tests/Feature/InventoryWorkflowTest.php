@@ -35,7 +35,8 @@ class InventoryWorkflowTest extends TestCase
 
     private function supplierSource(Product $product): DropshipSupplierProduct
     {
-        $supplier = DropshipSupplier::create(['key' => 'test-supplier', 'name' => 'Test Supplier', 'driver_key' => 'fake', 'base_url' => 'https://supplier.example']);
+        $supplier = DropshipSupplier::create(['key' => 'test-supplier', 'name' => 'Test Supplier', 'driver_key' => 'fake', 'base_url' => 'https://supplier.example', 'is_active' => true]);
+        $product->update(['supplier_id' => $supplier->id, 'source_type' => 'dropshipping']);
         $source = DropshipSupplierProduct::create(['supplier_id' => $supplier->id, 'supplier_product_id' => 'stock-1', 'name' => $product->name, 'currency' => 'BDT', 'cost_price' => 100, 'max_price' => 300, 'stock_qty' => 20, 'is_available' => true, 'raw_payload' => [], 'fetched_at' => now()]);
         DropshipProductLink::create(['supplier_product_row_id' => $source->id, 'product_id' => $product->id, 'sync_status' => 'active', 'product_created_by_integration' => true, 'field_sync_rules' => ['stock' => true, 'price' => false]]);
         return $source;

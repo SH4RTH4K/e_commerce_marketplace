@@ -20,6 +20,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
+use App\Models\SupplierAudit;
 use App\Services\Dropshipping\CategoryMapper;
 use App\Services\Dropshipping\ProductImportService;
 use App\Services\Dropshipping\ProductImportResult;
@@ -28,6 +29,8 @@ use App\Services\Dropshipping\Support\SyncRunState;
 use App\Services\Dropshipping\SyncRunService;
 use App\Services\Dropshipping\SupplierRegistry;
 use App\Services\Dropshipping\SupplierVariantAutoMapper;
+use App\Services\Dropshipping\SupplierAssociationService;
+use App\Services\Dropshipping\SupplierOwnershipException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -40,7 +43,7 @@ class DropshippingController extends Controller
 {
     public function index(SupplierRegistry $registry)
     {
-        $suppliers = DropshipSupplier::query()->where('supplier_type', 'dropshipping')
+        $suppliers = DropshipSupplier::query()->withIntegration()
             ->withCount([
                 'products', 'syncRuns', 'categories', 'categoryMappings', 'variants',
                 'variants as mapped_variants_count' => fn ($query) => $query->whereHas('variantLink'),
@@ -96,7 +99,7 @@ class DropshippingController extends Controller
                 'failed_items' => $run->failed_items, 'started_at' => $run->started_at?->toIso8601String(),
                 'finished_at' => $run->finished_at?->toIso8601String(),
             ]),
-            'suppliers' => DropshipSupplier::query()->where('supplier_type', 'dropshipping')->orderBy('name')->get(['id', 'name', 'key']),
+            'suppliers' => DropshipSupplier::query()->withIntegration()->orderBy('name')->get(['id', 'name', 'key']),
             'filters' => ['q' => $search, 'supplier_id' => $supplierId],
         ]);
     }
@@ -201,7 +204,7 @@ class DropshippingController extends Controller
                 'per_page' => $products->perPage(),
                 'total' => $products->total(),
             ],
-            'suppliers' => DropshipSupplier::query()
+            'suppliers' => DropshipSupplier::query()->withIntegration()
                 ->withCount(['products', 'variants'])
                 ->latest('id')
                 ->get(['id', 'name', 'key', 'is_active', 'last_connection_status']),
@@ -320,6 +323,8 @@ class DropshippingController extends Controller
                     'id' => $product->id,
                     'name' => $product->name,
                     'sku' => $product->sku,
+                    'supplier_product_row_id' => $supplierProduct?->id,
+                    'external_product_id' => $supplierProduct?->supplier_product_id,
                     'image_url' => $primaryImage?->url(),
                     'image_alt' => $primaryImage?->alt ?: $product->name,
                     'image_count' => $product->images->count(),
@@ -354,6 +359,7 @@ class DropshippingController extends Controller
 
         return Inertia::render('Admin/Dropshipping/ImportedProducts', [
             'products' => $productRows,
+            'relink_suppliers' => DropshipSupplier::query()->withIntegration()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'sync_runs' => DropshipSyncRun::query()
                 ->with('supplier:id,name,key')
                 ->where('type', 'imported_product_sync')
@@ -396,7 +402,7 @@ class DropshippingController extends Controller
                     'error_summary' => $run->error_summary,
                 ])
                 ->values(),
-            'sync_suppliers' => DropshipSupplier::query()
+            'sync_suppliers' => DropshipSupplier::query()->withIntegration()
                 ->withCount([
                     'products as imported_products_count' => fn ($query) => $query->whereHas('productLink', fn ($linkQuery) => $linkQuery
                         ->where('product_created_by_integration', true)
@@ -470,7 +476,7 @@ class DropshippingController extends Controller
     public function storageUsage()
     {
         return Inertia::render('Admin/Dropshipping/StorageUsage', [
-            'suppliers' => DropshipSupplier::query()->withCount(['products', 'categories'])->get(['id', 'name', 'key']),
+            'suppliers' => DropshipSupplier::query()->withIntegration()->withCount(['products', 'categories'])->get(['id', 'name', 'key']),
             'products' => DropshipSupplierProduct::query()->count(),
             'variants' => DropshipSupplierVariant::query()->count(),
             'categories' => DropshipSupplierCategory::query()->count(),
@@ -521,7 +527,7 @@ class DropshippingController extends Controller
         return Inertia::render('Admin/Dropshipping/CategoryMapping', [
             'mappings' => $mappings,
             'local_categories' => Category::query()->orderBy('name')->get(['id', 'name']),
-            'suppliers' => DropshipSupplier::query()
+            'suppliers' => DropshipSupplier::query()->withIntegration()
                 ->withCount(['categories', 'categoryMappings'])
                 ->latest('id')
                 ->get(['id', 'name', 'key', 'driver_key', 'is_active', 'last_connection_status'])
@@ -629,7 +635,7 @@ class DropshippingController extends Controller
             ],
             'counts' => $this->variationMappingCounts($supplierId),
             'local_variants' => ProductVariant::query()->with('product:id,name')->whereIn('product_id', $productIds)->latest('id')->get(['id', 'product_id', 'type', 'value']),
-            'suppliers' => DropshipSupplier::query()
+            'suppliers' => DropshipSupplier::query()->withIntegration()
                 ->withCount(['variants', 'products'])
                 ->latest('id')
                 ->get(['id', 'name', 'key', 'is_active', 'last_connection_status']),
@@ -701,7 +707,7 @@ class DropshippingController extends Controller
 
     public function pricingRules()
     {
-        $suppliers = DropshipSupplier::query()->latest('id')->get(['id', 'name', 'key', 'driver_key', 'pricing_rules', 'price_field_mapping']);
+        $suppliers = DropshipSupplier::query()->withIntegration()->latest('id')->get(['id', 'name', 'key', 'driver_key', 'pricing_rules', 'price_field_mapping']);
         $profiles = DropshipDriverProfile::query()->get(['key', 'field_mapping']);
 
         return Inertia::render('Admin/Dropshipping/PricingRules', [
@@ -839,12 +845,67 @@ class DropshippingController extends Controller
         $result = $imports->import($supplierProduct);
 
         if ($result->status === ProductImportResult::BLOCKED) {
-            return back()->withErrors(['product' => 'Product import blocked: ' . ($result->reason ?? 'review required')]);
+            return back()->withErrors(['product' => 'Product import blocked: '.str_replace('_', ' ', $result->reason ?? 'review required').'. Review the supplier connection and product mapping before retrying. Imported products can be repaired with Re-link & Sync.']);
         }
 
         return back()->with('status', $result->status === ProductImportResult::ALREADY_LINKED
             ? 'Product is already linked.'
             : 'Product imported as a draft.');
+    }
+
+    public function relinkSupplierProduct(Request $request, DropshipSupplierProduct $supplierProduct, SupplierAssociationService $associations, SyncRunService $syncRuns)
+    {
+        $data = $request->validate([
+            'target_supplier_id' => ['required', 'integer', 'exists:dropship_suppliers,id'],
+            'external_product_id' => ['required', 'string', 'max:255'],
+            'reason' => ['required', 'string', 'min:10', 'max:2000'],
+            'confirmed' => ['accepted'],
+        ]);
+
+        $source = DB::transaction(function () use ($supplierProduct, $data, $request, $associations): DropshipSupplierProduct {
+            $current = DropshipSupplierProduct::query()->lockForUpdate()->findOrFail($supplierProduct->id);
+            $currentLink = $current->productLink()->lockForUpdate()->first();
+            $product = $currentLink?->product_id ? Product::query()->lockForUpdate()->find($currentLink->product_id) : null;
+            if ($product === null || ! $currentLink->product_created_by_integration || $product->source_type !== 'dropshipping') {
+                throw ValidationException::withMessages(['product' => 'Only an existing imported dropshipping product can be relinked. Manual product inventory is protected.']);
+            }
+            if ($product->supplierLinks()->whereKeyNot($currentLink->id)->exists()) {
+                throw ValidationException::withMessages(['product' => 'This product has multiple external mappings. Resolve the conflict before relinking.']);
+            }
+            $target = DropshipSupplierProduct::query()->with('supplier')->where('supplier_id', $data['target_supplier_id'])
+                ->where('supplier_product_id', $data['external_product_id'])->lockForUpdate()->first();
+            if ($target === null) {
+                throw ValidationException::withMessages(['external_product_id' => 'No mirrored product matches this supplier and external product ID. Synchronize the supplier catalog first.']);
+            }
+            try { $associations->resolve($target); }
+            catch (SupplierOwnershipException $exception) { throw ValidationException::withMessages(['target_supplier_id' => $exception->getMessage()]); }
+            if (DropshipSyncRun::query()->whereIn('supplier_id', [$current->supplier_id, $target->supplier_id])->whereIn('status', ['queued', 'running'])->exists()) {
+                throw ValidationException::withMessages(['product' => 'Cancel or finish active supplier sync runs before relinking.']);
+            }
+            $targetLink = $target->productLink()->lockForUpdate()->first();
+            if ($targetLink?->product_id !== null && (int) $targetLink->product_id !== (int) $product->id) {
+                throw ValidationException::withMessages(['external_product_id' => 'That external product is already linked to another local product.']);
+            }
+            $before = ['product_id' => $product->id, 'supplier_id' => $product->supplier_id, 'source_row_id' => $current->id, 'external_product_id' => $current->supplier_product_id];
+            if ($target->id !== $current->id) {
+                $currentLink->forceFill(['product_id' => null, 'sync_status' => 'disabled'])->save();
+                // External rows remain for history; stale variation mappings must no longer target this product.
+                DB::table('dropship_variant_links')->whereIn('supplier_variant_row_id', $current->variants()->select('id'))->delete();
+                $targetLink ??= new DropshipProductLink(['supplier_product_row_id' => $target->id]);
+            }
+            $targetLink->forceFill(['product_id' => $product->id, 'sync_status' => 'active', 'product_created_by_integration' => true,
+                'field_sync_rules' => $currentLink->field_sync_rules, 'price_override' => $currentLink->price_override])->save();
+            $product->forceFill(['supplier_id' => $target->supplier_id])->saveQuietly();
+            SupplierAudit::create(['supplier_id' => $target->supplier_id, 'actor_id' => $request->user()?->id, 'actor_name' => $request->user()?->name, 'event' => 'product_relinked',
+                'before' => $before, 'after' => ['product_id' => $product->id, 'supplier_id' => $target->supplier_id, 'source_row_id' => $target->id, 'external_product_id' => $target->supplier_product_id],
+                'metadata' => ['reason' => $data['reason'], 'confirmed' => true]]);
+
+            return $target;
+        });
+
+        $run = $syncRuns->createRun($source->supplier, 'imported_product_sync', $request->user(), ['supplier_product_ids' => [$source->id]]);
+        StartImportedProductSync::dispatch($run->id);
+        return back()->with('status', 'Product relinked with an audit record. Synchronization queued.');
     }
 
     public function publishImportedProduct(Request $request, Product $product)
@@ -1190,10 +1251,13 @@ class DropshippingController extends Controller
     public function apiSettings(SupplierRegistry $registry)
     {
         return Inertia::render('Admin/Dropshipping/ApiSettings', [
-            'suppliers' => DropshipSupplier::query()->where('supplier_type', 'dropshipping')->latest('id')->get([
+            'suppliers' => DropshipSupplier::query()->withIntegration()->latest('id')->get([
                 'id', 'key', 'name', 'supplier_type', 'driver_key', 'base_url', 'sync_rules', 'is_active',
                 'last_connection_status', 'last_connection_message', 'last_connection_tested_at',
             ]),
+            'unconnected_suppliers' => DropshipSupplier::query()->where('is_active', true)
+                ->where(fn ($query) => $query->whereNull('driver_key')->orWhereIn('driver_key', ['', 'manual']))
+                ->orderBy('name')->get(['id', 'name', 'supplier_code', 'supplier_type']),
             'available_drivers' => $registry->driverKeys(),
             'driver_profiles' => DropshipDriverProfile::query()->latest('id')->get([
                 'id', 'key', 'name', 'auth_key_header', 'auth_secret_header', 'products_path',
@@ -1316,11 +1380,11 @@ class DropshippingController extends Controller
     public function store(Request $request, SupplierRegistry $registry)
     {
         $data = $request->validate([
+            'supplier_id' => ['nullable', 'integer', 'exists:dropship_suppliers,id'],
             'key' => ['nullable', 'string', 'max:80', 'regex:/^[a-z0-9][a-z0-9_-]*$/', 'unique:dropship_suppliers,key'],
-            'name' => ['required', 'string', 'max:120'],
-            'supplier_type' => ['required', 'in:manual,dropshipping'],
-            'driver_key' => ['nullable', 'string', 'max:80'],
-            'base_url' => ['nullable', 'url:https', 'max:255'],
+            'name' => ['required_without:supplier_id', 'nullable', 'string', 'max:120'],
+            'driver_key' => ['required', 'string', 'max:80'],
+            'base_url' => ['required', 'url:https', 'max:255'],
             'category_endpoint' => ['nullable', 'string', 'max:255'],
             'api_key' => ['nullable', 'string', 'max:1000'],
             'secret_key' => ['nullable', 'string', 'max:1000'],
@@ -1328,36 +1392,46 @@ class DropshippingController extends Controller
             'import_images' => ['nullable', 'boolean'],
             'import_variations' => ['nullable', 'boolean'],
         ]);
-        if ($data['supplier_type'] === 'dropshipping' && (! $data['driver_key'] || ! $data['base_url'])) {
-            throw ValidationException::withMessages(['base_url' => 'API URL and supplier driver are required for dropshipping suppliers.']);
-        }
-        if ($data['supplier_type'] === 'dropshipping' && ! $registry->hasDriver($data['driver_key'])) {
+        if (! $registry->hasDriver($data['driver_key'])) {
             throw ValidationException::withMessages(['driver_key' => 'This supplier driver is not registered by the application.']);
         }
-        $data['key'] = $this->uniqueSupplierKey($data['key'] ?? null, $data['name'], $data['driver_key'] ?? 'manual');
+        DB::transaction(function () use ($request, $data): void {
+            $supplier = isset($data['supplier_id']) ? DropshipSupplier::query()->lockForUpdate()->find($data['supplier_id']) : null;
+            if (isset($data['supplier_id']) && ($supplier === null || ! $supplier->is_active || app(SupplierAssociationService::class)->hasIntegration($supplier))) {
+                throw ValidationException::withMessages(['supplier_id' => 'Choose an active supplier without an existing API connection. Edit an existing connection instead of creating another one.']);
+            }
+            $before = $supplier ? ['driver_key' => $supplier->driver_key] : null;
+            $fields = [
+                'driver_key' => $data['driver_key'],
+                'base_url' => $data['base_url'],
+                'api_key' => $data['api_key'] ?? null,
+                'secret_key' => $data['secret_key'] ?? null,
+                'sync_rules' => [
+                    'category_endpoint' => $data['category_endpoint'] ?? null,
+                    'import_status' => $data['import_status'] ?? 'draft',
+                    'import_images' => (bool) ($data['import_images'] ?? false),
+                    'import_variations' => (bool) ($data['import_variations'] ?? false),
+                ],
+            ];
+            if ($supplier) {
+                $supplier->forceFill([...$fields, 'updated_by' => $request->user()?->id])->save();
+            } else {
+                $supplier = DropshipSupplier::create([
+                    ...$fields, 'name' => $data['name'], 'supplier_type' => 'dropshipping',
+                    'key' => $this->uniqueSupplierKey($data['key'] ?? null, $data['name'], $data['driver_key']),
+                    'is_active' => false,
+                ]);
+                $supplier->forceFill(['supplier_code' => 'SUP-'.str_pad((string) $supplier->id, 5, '0', STR_PAD_LEFT), 'created_by' => $request->user()?->id, 'updated_by' => $request->user()?->id])->saveQuietly();
+            }
+            SupplierAudit::create(['supplier_id' => $supplier->id, 'actor_id' => $request->user()?->id, 'actor_name' => $request->user()?->name, 'event' => 'integration_connected', 'before' => $before, 'after' => ['driver_key' => $supplier->driver_key], 'metadata' => ['integration_key' => $supplier->key]]);
+        });
 
-        DropshipSupplier::create([
-            'key' => $data['key'],
-            'name' => $data['name'],
-            'supplier_type' => $data['supplier_type'],
-            'driver_key' => $data['supplier_type'] === 'manual' ? null : $data['driver_key'],
-            'base_url' => $data['supplier_type'] === 'manual' ? null : $data['base_url'],
-            'api_key' => $data['api_key'] ?? null,
-            'secret_key' => $data['secret_key'] ?? null,
-            'sync_rules' => [
-                'category_endpoint' => $data['category_endpoint'] ?? null,
-                'import_status' => $data['import_status'] ?? 'draft',
-                'import_images' => (bool) ($data['import_images'] ?? false),
-                'import_variations' => (bool) ($data['import_variations'] ?? false),
-            ],
-            'is_active' => $data['supplier_type'] === 'manual',
-        ]);
-
-        return back()->with('status', 'Supplier saved.');
+        return back()->with('status', 'Supplier connection saved. Test the connection before importing products.');
     }
 
     public function update(Request $request, DropshipSupplier $supplier, SupplierRegistry $registry)
     {
+        abort_unless(app(SupplierAssociationService::class)->hasIntegration($supplier), 422, 'Connect this supplier using New connection first.');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'driver_key' => ['required', 'string', 'max:80'],
@@ -1378,19 +1452,32 @@ class DropshippingController extends Controller
                 unset($data[$credential]);
             }
         }
-        $syncRules = is_array($supplier->sync_rules) ? $supplier->sync_rules : [];
-        $syncRules['category_endpoint'] = $data['category_endpoint'] ?? null;
-        $syncRules['import_status'] = $data['import_status'] ?? ($syncRules['import_status'] ?? 'draft');
-        $syncRules['import_images'] = (bool) ($data['import_images'] ?? ($syncRules['import_images'] ?? false));
-        $syncRules['import_variations'] = (bool) ($data['import_variations'] ?? ($syncRules['import_variations'] ?? false));
+        DB::transaction(function () use ($request, $supplier, $data): void {
+            $supplier = DropshipSupplier::query()->lockForUpdate()->findOrFail($supplier->id);
+            if ($data['driver_key'] !== $supplier->driver_key && (
+                $supplier->products()->exists() || $supplier->categories()->exists() || $supplier->categoryMappings()->exists()
+                || $supplier->syncRuns()->whereIn('status', ['queued', 'running', 'paused'])->exists()
+            )) {
+                throw ValidationException::withMessages(['driver_key' => 'This integration already has supplier catalog data or an unfinished sync. Keep its provider profile. Configure the new provider separately and use Re-link & Sync for a validated product transfer.']);
+            }
+            $before = ['driver_key' => $supplier->driver_key];
+            $syncRules = is_array($supplier->sync_rules) ? $supplier->sync_rules : [];
+            $syncRules['category_endpoint'] = $data['category_endpoint'] ?? null;
+            $syncRules['import_status'] = $data['import_status'] ?? ($syncRules['import_status'] ?? 'draft');
+            $syncRules['import_images'] = (bool) ($data['import_images'] ?? ($syncRules['import_images'] ?? false));
+            $syncRules['import_variations'] = (bool) ($data['import_variations'] ?? ($syncRules['import_variations'] ?? false));
 
-        $supplier->forceFill([
-            'name' => $data['name'],
-            'driver_key' => $data['driver_key'],
-            'base_url' => $data['base_url'],
-            'sync_rules' => $syncRules,
-            ...array_intersect_key($data, array_flip(['api_key', 'secret_key'])),
-        ])->save();
+            $supplier->forceFill([
+                'driver_key' => $data['driver_key'],
+                'base_url' => $data['base_url'],
+                'sync_rules' => $syncRules,
+                'updated_by' => $request->user()?->id,
+                ...array_intersect_key($data, array_flip(['api_key', 'secret_key'])),
+            ])->save();
+            SupplierAudit::create(['supplier_id' => $supplier->id, 'actor_id' => $request->user()?->id, 'actor_name' => $request->user()?->name,
+                'event' => 'integration_updated', 'before' => $before, 'after' => ['driver_key' => $supplier->driver_key],
+                'metadata' => ['integration_key' => $supplier->key]]);
+        });
 
         return back()->with('status', 'Supplier updated.');
     }

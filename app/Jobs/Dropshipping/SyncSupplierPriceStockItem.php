@@ -36,7 +36,12 @@ class SyncSupplierPriceStockItem implements ShouldQueue
         }
 
         try {
-            $priceStockSync->sync($source);
+            $result = $priceStockSync->sync($source);
+            if ($result->ownershipBlocked()) {
+                $syncRuns->failItem($run, $itemKey, 'Supplier ownership requires review: '.implode(', ', $result->warnings));
+                $syncRuns->finalize($run);
+                return;
+            }
         } catch (Throwable $exception) {
             $syncRuns->requeueItem($run, $itemKey);
 

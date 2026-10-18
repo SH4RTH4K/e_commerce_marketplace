@@ -159,7 +159,7 @@ class LandingPageController extends Controller
                 ]);
 
                 // Create Order Item
-                OrderItem::create([
+                $orderItem = OrderItem::create([
                     'order_id'     => $order->id,
                     'product_id'   => $product->id,
                     'product_name' => $orderItemName,
@@ -170,9 +170,7 @@ class LandingPageController extends Controller
                     'line_total'   => $lineTotal,
                 ]);
 
-                if ($product->stock_quantity > 0) {
-                    $product->decrement('stock_quantity', min($qty, $product->stock_quantity));
-                }
+                app(\App\Services\InventoryStockService::class)->reserveOrderStock($request->user(), $product, $order, $orderItem, allowPartial: true);
 
                 return $order;
             });

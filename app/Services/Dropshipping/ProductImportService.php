@@ -17,6 +17,7 @@ class ProductImportService
         private readonly PricingEngine $pricingEngine,
         private readonly SupplierVariantAutoMapper $variantMapper,
         private readonly SupplierDescriptionFormatter $descriptionFormatter,
+        private readonly SupplierAssociationService $associations,
     ) {
     }
 
@@ -28,13 +29,24 @@ class ProductImportService
                 ->lockForUpdate()
                 ->findOrFail($supplierProduct->getKey());
 
-            $link = $source->productLink()->with('product')->first();
-            if ($link?->product) {
-                if ($link->product->supplier_id === null) {
-                    $link->product->forceFill(['supplier_id' => $source->supplier_id, 'source_type' => 'dropshipping'])->saveQuietly();
+            try {
+                $this->associations->resolve($source);
+            } catch (SupplierOwnershipException $exception) {
+                return new ProductImportResult(ProductImportResult::BLOCKED, reason: $exception->reason);
+            }
+            $link = $source->productLink()->lockForUpdate()->first();
+            $product = $link?->product_id ? Product::query()->lockForUpdate()->find($link->product_id) : null;
+            if ($product) {
+                if ($link->sync_status !== 'active') {
+                    return new ProductImportResult(ProductImportResult::BLOCKED, reason: 'supplier_sync_disabled');
                 }
-                $this->syncProductContent($source, $link->product);
-                return new ProductImportResult(ProductImportResult::ALREADY_LINKED, $link->product);
+                try {
+                    $this->associations->assertOwned($source, $product, $link);
+                } catch (SupplierOwnershipException $exception) {
+                    return new ProductImportResult(ProductImportResult::BLOCKED, reason: $exception->reason);
+                }
+                $this->syncProductContent($source, $product);
+                return new ProductImportResult(ProductImportResult::ALREADY_LINKED, $product);
             }
 
             if ($source->currency !== 'BDT') {
