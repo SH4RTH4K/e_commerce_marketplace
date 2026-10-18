@@ -14,10 +14,10 @@ function Chevron({ expanded }) {
 }
 
 export function CategoryBranchLinks({ categories = [], activeId, level = 0 }) {
-  return categories.map(category => <div key={category.id}>
+  return categories.map(category => <div key={category.id} className={`storefront-category-branch storefront-category-branch-level-${level}`}>
     <Link href={`/category/${category.slug}`} aria-current={String(category.id) === String(activeId) ? 'page' : undefined}
       className="storefront-category-branch-link" style={{ paddingLeft: `${16 + level * 18}px` }}>
-      {level > 0 && <span aria-hidden="true" className="mr-2 text-gray-400">↳</span>}{category.name}
+      {level > 0 && <span aria-hidden="true" className="storefront-category-branch-marker" />}{category.name}
     </Link>
     <CategoryBranchLinks categories={categoryChildren(category)} activeId={activeId} level={level + 1} />
   </div>);
