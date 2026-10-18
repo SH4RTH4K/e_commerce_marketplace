@@ -383,7 +383,7 @@ export default function ProductForm({ product, categories, suppliers = [], prici
                       ))}
                     </select>
                     <p className="mt-1.5 text-[11px] text-gray-400">Choose a configured supplier for ownership and reporting. Dropshipping imports keep their sync link automatically.</p>
-                    {suppliers.length === 0 && <a href="/admin/dropshipping" className="mt-1.5 inline-block text-xs font-semibold text-orange-600 hover:underline">Add or manage suppliers</a>}
+                    {suppliers.length === 0 && <a href="/admin/suppliers" className="mt-1.5 inline-block text-xs font-semibold text-orange-600 hover:underline">Add or manage suppliers</a>}
                   </Field>
                   <Field label="Short Highlights / Short Description" error={errors.short_description}>
                     <RichTextEditor

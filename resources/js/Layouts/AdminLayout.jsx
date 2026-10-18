@@ -40,7 +40,7 @@ const navGroups = [
         key: 'suppliers-group', label: 'Supplier Management', defaultOpen: true,
         icon: 'M4 7h16M6 7v10a2 2 0 002 2h8a2 2 0 002-2V7M9 7V5a3 3 0 016 0v2M9 11h6M9 15h4',
         children: [
-          { key: 'suppliers', label: 'All Suppliers', href: '/admin/dropshipping', pattern: /^\/admin\/dropshipping\/?$/, perm: 'dropshipping.manage', feature: 'dropshipping' },
+          { key: 'suppliers', label: 'All Suppliers', href: '/admin/suppliers', pattern: /^\/admin\/suppliers(?:\/|$)/, perm: 'dropshipping.manage', feature: 'dropshipping' },
         ],
       },
     ],
