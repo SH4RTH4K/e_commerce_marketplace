@@ -24,7 +24,7 @@ class ProductImportService
     {
         return DB::transaction(function () use ($supplierProduct): ProductImportResult {
             $source = DropshipSupplierProduct::query()
-                ->with('supplier')
+                ->with(['supplier', 'variants'])
                 ->lockForUpdate()
                 ->findOrFail($supplierProduct->getKey());
 
@@ -55,7 +55,9 @@ class ProductImportService
             $product = Product::create([
                 'category_id' => $category->getKey(),
                 'name' => Str::limit(trim($source->name), 255, ''),
-                'sku' => $source->product_code ?: $source->supplier_product_id,
+                'sku' => $source->product_code
+                    ?: $source->variants->pluck('sku')->filter()->first()
+                    ?: $source->supplier_product_id,
                 'description' => $this->descriptionFormatter->format($source),
                 'regular_price' => $price->regularSellingPrice ?? $price->finalPrice ?? $source->max_price ?? $source->cost_price ?? 0,
                 'sale_price' => $this->salePrice($price),
@@ -119,7 +121,9 @@ class ProductImportService
     {
         $payload = is_array($source->raw_payload) ? $source->raw_payload : [];
         $updates = [];
-        $sourceSku = trim((string) ($source->product_code ?: $source->supplier_product_id));
+        $sourceSku = trim((string) ($source->product_code
+            ?: $source->variants->pluck('sku')->filter()->first()
+            ?: $source->supplier_product_id));
         if ($sourceSku !== '' && $product->sku !== $sourceSku) {
             $updates['sku'] = $sourceSku;
         }

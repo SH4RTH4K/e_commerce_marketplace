@@ -117,7 +117,8 @@ class DropshippingController extends Controller
             ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search) {
                 $searchQuery->where('name', 'like', "%{$search}%")
                     ->orWhere('supplier_product_id', 'like', "%{$search}%")
-                    ->orWhere('product_code', 'like', "%{$search}%");
+                    ->orWhere('product_code', 'like', "%{$search}%")
+                    ->orWhereHas('variants', fn ($variantQuery) => $variantQuery->where('sku', 'like', "%{$search}%"));
             }))
             ->when($stockFilter === 'positive', fn ($query) => $query->where('stock_qty', '>', 0))
             ->when($categoryFilter !== '', fn ($query) => $query->where('supplier_category_key', $categoryFilter))
@@ -140,7 +141,7 @@ class DropshippingController extends Controller
         };
 
         $products = $productQuery
-            ->with(['supplier:id,name,key,pricing_rules', 'productLink.product:id,name,is_published'])
+            ->with(['supplier:id,name,key,pricing_rules', 'productLink.product:id,name,is_published', 'variants:id,supplier_product_row_id,sku'])
             ->paginate($perPage)
             ->withQueryString();
 
@@ -157,6 +158,7 @@ class DropshippingController extends Controller
                     'supplier' => $product->supplier ? ['name' => $product->supplier->name, 'key' => $product->supplier->key] : null,
                     'supplier_product_id' => $product->supplier_product_id,
                     'product_code' => $product->product_code ?: $product->supplier_product_id,
+                    'variant_skus' => $product->variants->pluck('sku')->filter()->values()->all(),
                     'name' => $product->name,
                     'category' => $product->supplier_category_key,
                     'currency' => $product->currency,

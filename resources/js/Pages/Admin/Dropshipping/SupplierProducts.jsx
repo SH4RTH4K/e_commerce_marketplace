@@ -717,7 +717,12 @@ export default function SupplierProducts({
                                             </p>
                                         </td>
                                         <td className="px-5 py-4 text-xs font-mono text-gray-600">
-                                            {product.product_code || "—"}
+                                            {product.product_code || "?"}
+                                            {product.variant_skus?.length > 0 && (
+                                                <p className="mt-1 text-[10px] font-sans text-gray-400" title="Supplier variant SKUs">
+                                                    Variants: {product.variant_skus.slice(0, 4).join(", ")}{product.variant_skus.length > 4 ? "?" : ""}
+                                                </p>
+                                            )}
                                         </td>
                                         <td className="px-5 py-4 text-xs capitalize text-gray-600">
                                             {product.category

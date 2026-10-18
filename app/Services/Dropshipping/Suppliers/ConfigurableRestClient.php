@@ -110,13 +110,26 @@ final class ConfigurableRestClient implements SupplierClient
             }
             $products[] = $this->productFromPayload($item, $fields, $mapping, $profile->default_currency, $supplier->price_field_mapping ?? []);
         }
-        $current = $this->integerAt($payload, $mapping['pagination']['current_page'] ?? null) ?? $page;
-        $last = $this->integerAt($payload, $mapping['pagination']['last_page'] ?? null);
-        $next = $this->integerAt($payload, $mapping['pagination']['next_page'] ?? null);
-        $pageSize = $this->integerAt($payload, $mapping['pagination']['page_size'] ?? null)
-            ?? (is_numeric($mapping['pagination']['page_size'] ?? null) ? (int) $mapping['pagination']['page_size'] : 200);
+        $pagination = is_array($mapping['pagination'] ?? null) ? $mapping['pagination'] : [];
+        $current = $this->integerAt($payload, $pagination['current_page'] ?? null)
+            ?? $this->firstIntegerAt($payload, ['meta.current_page', 'pagination.current_page', 'current_page'])
+            ?? $page;
+        $last = $this->integerAt($payload, $pagination['last_page'] ?? null)
+            ?? $this->firstIntegerAt($payload, ['meta.last_page', 'meta.total_pages', 'pagination.last_page', 'last_page']);
+        $next = $this->integerAt($payload, $pagination['next_page'] ?? null)
+            ?? $this->firstIntegerAt($payload, ['meta.next_page', 'pagination.next_page', 'next_page']);
+        $pageSize = $this->integerAt($payload, $pagination['page_size'] ?? null)
+            ?? $this->firstIntegerAt($payload, ['meta.per_page', 'meta.page_size', 'pagination.per_page', 'per_page', 'page_size'])
+            ?? (is_numeric($pagination['page_size'] ?? null) ? (int) $pagination['page_size'] : null);
+        $total = $this->firstIntegerAt($payload, ['meta.total', 'pagination.total', 'total']);
+        // When a supplier omits per-page metadata, the returned page size is
+        // the safest basis for calculating the remaining pages.
+        $pageSize = $pageSize ?: (count($products) > 0 ? count($products) : 200);
         if ($last === null && $next === null && count($products) >= $pageSize) {
             $next = $page + 1;
+        }
+        if ($last === null && $next === null && $total !== null && $pageSize > 0 && count($products) > 0) {
+            $last = (int) ceil($total / $pageSize);
         }
 
         return new SupplierProductPage($products, $current, $last, $next);
@@ -248,4 +261,12 @@ final class ConfigurableRestClient implements SupplierClient
         return $attributes;
     }
     private function integerAt(array $payload, mixed $path): ?int { $v = is_string($path) ? $this->valueAt($payload, $path) : null; return is_numeric($v) ? (int) $v : null; }
+    private function firstIntegerAt(array $payload, array $paths): ?int
+    {
+        foreach ($paths as $path) {
+            $value = $this->integerAt($payload, $path);
+            if ($value !== null) return $value;
+        }
+        return null;
+    }
 }
