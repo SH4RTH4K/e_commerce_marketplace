@@ -13,13 +13,18 @@ class StorefrontImageController extends Controller
     public function __invoke(string $kind, int $id, int $width, StorefrontImageService $images)
     {
         abort_unless(in_array($width, [160, 320, 640, 960, 1280], true), 404);
-        $source = match ($kind) {
-            'product' => ProductImage::whereHas('product', fn ($query) => $query->published())->findOrFail($id)->path,
-            'banner' => Banner::active()->findOrFail($id)->image,
-            'category' => $this->categoryImage($id),
-            'logo' => $id === 0 ? setting('logo', '') : null,
-            default => null,
-        };
+        $productImage = null;
+        if ($kind === 'product') {
+            $productImage = ProductImage::whereHas('product', fn ($query) => $query->published())->findOrFail($id);
+            $source = $productImage->path;
+        } else {
+            $source = match ($kind) {
+                'banner' => Banner::active()->findOrFail($id)->image,
+                'category' => $this->categoryImage($id),
+                'logo' => $id === 0 ? setting('logo', '') : null,
+                default => null,
+            };
+        }
         abort_unless(is_string($source) && $source !== '', 404);
         try {
             $url = $images->optimized($source, $width);
@@ -27,6 +32,27 @@ class StorefrontImageController extends Controller
             // cached for a year without serving stale images after updates.
             return redirect($url)->header('Cache-Control', 'public, max-age=31536000, immutable');
         } catch (\Throwable $exception) {
+            // If a supplier image is invalid, serve another image from the same
+            // product automatically. This keeps cards and product pages usable
+            // even when a supplier URL returns HTML, times out, or changes.
+            if ($productImage) {
+                $fallbackImages = ProductImage::query()
+                    ->where('product_id', $productImage->product_id)
+                    ->where('id', '!=', $productImage->getKey())
+                    ->orderByDesc('is_primary')
+                    ->orderBy('position')
+                    ->get();
+
+                foreach ($fallbackImages as $fallbackImage) {
+                    try {
+                        $fallbackUrl = $images->optimized((string) $fallbackImage->path, $width);
+                        return redirect($fallbackUrl)->header('Cache-Control', 'public, max-age=31536000, immutable');
+                    } catch (\Throwable $fallbackException) {
+                        continue;
+                    }
+                }
+            }
+
             // A supplier failure or unsupported format must not remove imagery.
             return redirect(image_url($source))->header('Cache-Control', 'public, max-age=60');
         }
