@@ -36,7 +36,7 @@ class StorefrontSeoService
         $seo = [
             'canonical' => isset($pages[$name]) ? route($name) : $request->url(),
             'robots' => $this->isPrivate($request) ? 'noindex, nofollow' : 'index, follow',
-            'image' => logo_url(),
+            'image' => seo_image_url(),
         ];
         if (isset($pages[$name])) {
             $seo['title'] = $pages[$name][0].' | '.site_name();
@@ -53,7 +53,7 @@ class StorefrontSeoService
     {
         $organization = [
             '@type' => 'OnlineStore', '@id' => route('home').'#organization',
-            'name' => site_name(), 'url' => route('home'), 'logo' => logo_url(),
+            'name' => site_name(), 'url' => route('home'), 'logo' => seo_image_url(),
             'hasMerchantReturnPolicy' => [
                 '@type' => 'MerchantReturnPolicy', 'merchantReturnLink' => route('refund'),
             ],

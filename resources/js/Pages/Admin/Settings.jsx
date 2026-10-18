@@ -301,7 +301,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     contact_phone: settings.contact_phone || '', contact_email: settings.contact_email || '', contact_address: settings.contact_address || '',
     contact_hours: settings.contact_hours || '', contact_title: settings.contact_title || '', contact_intro: settings.contact_intro || '',
     facebook_url: settings.facebook_url || '', instagram_url: settings.instagram_url || '', twitter_url: settings.twitter_url || '', youtube_url: settings.youtube_url || '', search_placeholder: settings.search_placeholder || '',
-    logo_file: null, favicon_file: null, remove_logo: false, remove_favicon: false,
+    logo_file: null, favicon_file: null, seo_image_file: null, remove_logo: false, remove_favicon: false, remove_seo_image: false,
     
     // Chat
     chat_enabled: settings.chat_enabled === '1' || settings.chat_enabled === true,
@@ -507,7 +507,7 @@ export default function Settings({ settings, templateStatus = {} }) {
         preserveScroll: true,
         onSuccess: () => {
           if (section === 'mail') setData('mail_password', '');
-          if (section === 'brand') { setData('logo_file', null); setData('favicon_file', null); setData('remove_logo', false); setData('remove_favicon', false); }
+          if (section === 'brand') { setData('logo_file', null); setData('favicon_file', null); setData('seo_image_file', null); setData('remove_logo', false); setData('remove_favicon', false); setData('remove_seo_image', false); }
         },
         onError: (errs) => setError(errs),
         onFinish: () => setProcessing(false),
@@ -672,6 +672,11 @@ export default function Settings({ settings, templateStatus = {} }) {
                         </div>
                       )}
                     </div>
+                  </div>
+                  <div className="border-t border-gray-200 pt-4">
+                    <Field label="SEO / Social preview image" error={errors.seo_image_file}><input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => setData('seo_image_file', e.target.files[0])} className={inputClass} /></Field>
+                    <p className="text-xs text-gray-400 mt-1">This image appears in HTML previews, Google/Open Graph and social sharing. Leave it empty to use the site logo.</p>
+                    {settings.seo_image_url && !data.remove_seo_image && <div className="mt-2 flex items-center gap-3"><img src={settings.seo_image_url} alt="SEO preview" className="h-16 w-28 object-contain border border-gray-200 rounded p-1 bg-gray-50" /><label className="flex items-center gap-1.5 text-xs text-red-500 cursor-pointer"><input type="checkbox" onChange={e => setData('remove_seo_image', e.target.checked)} className={checkboxClass} /> Use logo instead</label></div>}
                   </div>
                 </div>
 

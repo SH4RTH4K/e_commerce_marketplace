@@ -205,7 +205,7 @@ class ShopController extends Controller
                 'keywords' => $category?->meta_keywords,
                 'robots' => $term || count(array_diff(array_keys($request->query()), ['page', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid'])) > 0 ? 'noindex,follow' : 'index,follow',
                 'canonical' => $request->url().($products->currentPage() > 1 ? '?page='.$products->currentPage() : ''),
-                'image' => $category?->image ? $category->imageUrl() : logo_url(),
+                'image' => $category?->image ? $category->imageUrl() : seo_image_url(),
             ],
         ]);
     }

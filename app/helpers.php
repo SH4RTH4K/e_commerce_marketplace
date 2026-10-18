@@ -391,6 +391,17 @@ if (! function_exists('has_custom_logo')) {
     }
 }
 
+if (! function_exists('seo_image_url')) {
+    /** Image selected by the admin for HTML, Open Graph and social previews. */
+    function seo_image_url(): string
+    {
+        $image = trim((string) setting('seo_share_image', ''));
+        return $image !== '' && branding_asset_is_usable($image)
+            ? branding_asset_url($image) . branding_cache_buster($image)
+            : logo_url();
+    }
+}
+
 if (! function_exists('tracking_gtm_id')) {
     /** Valid Google Tag Manager container ID (GTM-XXXX), or null when unset/invalid. */
     function tracking_gtm_id(): ?string

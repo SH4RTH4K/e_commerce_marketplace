@@ -57,6 +57,9 @@ class SettingController extends Controller
             'seo_https_redirect_enabled' => app()->environment('production') ? '1' : '0',
             'seo_canonical_host' => $this->defaultCanonicalHost(),
         ];
+        $settings['seo_image_url'] = seo_image_url();
+        $settings['has_seo_image'] = trim((string) ($settings['seo_share_image'] ?? '')) !== ''
+            && branding_asset_is_usable((string) $settings['seo_share_image']);
 
         return Inertia::render('Admin/Settings', [
             'settings' => $settings,
@@ -97,6 +100,8 @@ class SettingController extends Controller
             $payload['favicon_url'] = favicon_url();
             $payload['has_logo'] = has_custom_logo();
             $payload['has_favicon'] = (bool) ($request->boolean('remove_favicon') ? false : setting('favicon'));
+            $payload['seo_image_url'] = seo_image_url();
+            $payload['has_seo_image'] = trim((string) setting('seo_share_image', '')) !== '';
         }
 
         if ($section === 'tracking') {
@@ -175,8 +180,10 @@ class SettingController extends Controller
                 // Use mimes for reliable MIME-type validation of uploaded branding assets.
                 'logo_file'       => ['nullable', 'file', 'mimes:png,jpg,jpeg,svg,webp', 'max:4096'],
                 'favicon_file'    => ['nullable', 'file', 'mimes:png,jpg,jpeg,svg,webp,ico', 'max:2048'],
+                'seo_image_file'  => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:8192'],
                 'remove_logo'     => ['nullable', 'boolean'],
                 'remove_favicon'  => ['nullable', 'boolean'],
+                'remove_seo_image' => ['nullable', 'boolean'],
             ],
             'chat' => [
                 'chat_enabled'    => ['nullable', 'boolean'],
@@ -556,6 +563,7 @@ Setting::put('show_cards_in_footer', $request->boolean('show_cards_in_footer') ?
         if ($section === 'brand') {
             $this->handleImage($request, 'logo_file', 'logo', 'remove_logo');
             $this->handleImage($request, 'favicon_file', 'favicon', 'remove_favicon');
+            $this->handleImage($request, 'seo_image_file', 'seo_share_image', 'remove_seo_image');
         }
     }
 
