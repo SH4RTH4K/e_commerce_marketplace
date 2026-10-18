@@ -202,7 +202,8 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
   const buyTextColor = settings.product_page_buy_text_color || '#ffffff';
   const productButtonClass = 'storefront-product-button w-full rounded-xl text-[11px] sm:text-[13px] font-bold py-2.5 sm:py-3 transition-all hover:brightness-95 active:scale-[0.99] flex items-center justify-center gap-1.5 shadow-sm text-center cursor-pointer disabled:cursor-not-allowed disabled:opacity-50';
 
-  const [activeImage, setActiveImage] = useState(product.images?.[0]?.path);
+  const initialImage = product.images?.find(image => image.is_primary) || product.images?.[0];
+  const [activeImage, setActiveImage] = useState(initialImage?.path);
   const [activeTab, setActiveTab] = useState('desc');
   const productDescription = hasDescriptionContent(product.description)
     ? product.description
