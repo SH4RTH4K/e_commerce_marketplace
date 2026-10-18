@@ -41,12 +41,12 @@ export default function DropshippingIndex({ suppliers = [], runs = [], available
 
   return (
     <>
-      <Head title="Dropshipping Suppliers" />
+      <Head title="Supplier Management" />
       <AdminLayout title="">
         <div className="space-y-5">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Dropshipping Suppliers</h1>
-            <p className="text-sm text-gray-400 mt-0.5">Local supplier mirror and queued synchronization status.</p>
+            <h1 className="text-xl font-bold text-gray-900">Supplier Management</h1>
+            <p className="text-sm text-gray-400 mt-0.5">Manage your suppliers and connect dropshipping accounts when needed.</p>
           </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">

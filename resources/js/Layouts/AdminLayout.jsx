@@ -29,7 +29,18 @@ const navGroups = [
           { key: 'product-add',  label: 'Add New Product',     href: '/admin/products/create', pattern: /^\/admin\/products\/create/, perm: 'products.create' },
           { key: 'inventory',    label: 'Inventory / Stock',   href: '/admin/inventory',       pattern: /^\/admin\/inventory/, perm: 'products.view' },
           { key: 'categories',   label: 'Categories',          href: '/admin/categories',      pattern: /^\/admin\/categories/, perm: 'catalog.manage' },
-          { key: 'suppliers',    label: 'Suppliers',            href: '/admin/dropshipping',    pattern: /^\/admin\/dropshipping/, perm: 'dropshipping.manage', feature: 'dropshipping' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'SUPPLIERS',
+    collapsible: [
+      {
+        key: 'suppliers-group', label: 'Supplier Management', defaultOpen: true,
+        icon: 'M4 7h16M6 7v10a2 2 0 002 2h8a2 2 0 002-2V7M9 7V5a3 3 0 016 0v2M9 11h6M9 15h4',
+        children: [
+          { key: 'suppliers', label: 'All Suppliers', href: '/admin/dropshipping', pattern: /^\/admin\/dropshipping\/?$/, perm: 'dropshipping.manage', feature: 'dropshipping' },
         ],
       },
     ],
@@ -96,7 +107,6 @@ const navGroups = [
         key: 'dropshipping-group', label: 'Dropshipping', defaultOpen: true,
         icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9z',
         children: [
-          { key: 'dropshipping', label: 'Dropshipping Dashboard', href: '/admin/dropshipping', pattern: /^\/admin\/dropshipping\/?$/, perm: 'dropshipping.manage', feature: 'dropshipping' },
           { key: 'dropshipping-settings', label: 'API Settings', href: '/admin/dropshipping/settings', pattern: /^\/admin\/dropshipping\/settings/, perm: 'dropshipping.manage', feature: 'dropshipping' },
           { key: 'dropshipping-pricing', label: 'Pricing Rules', href: '/admin/dropshipping/pricing', pattern: /^\/admin\/dropshipping\/pricing/, perm: 'dropshipping.manage', feature: 'dropshipping' },
           { key: 'dropshipping-categories', label: 'Category Mapping', href: '/admin/dropshipping/categories', pattern: /^\/admin\/dropshipping\/categories/, perm: 'dropshipping.manage', feature: 'dropshipping' },
