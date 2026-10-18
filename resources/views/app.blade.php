@@ -59,7 +59,7 @@
             ->take(24);
     @endphp
     <title data-inertia="">{{ $pageMetaTitle }}</title>
-    <script>document.documentElement.classList.add('js')</script>
+    {{-- Keep the server-rendered fallback visible until the React storefront has mounted. --}}
     <style>.js .seo-crawler-fallback { display: none; }</style>
     <meta name="site-name" content="{{ site_name() }}" />
     <meta name="seo-default-title" content="{{ $pageMetaTitle }}" />
@@ -104,6 +104,7 @@
     @if($fallbackH1Enabled && $fallbackH1 !== '')
         {{-- Render meaningful content for visitors and crawlers without JavaScript. --}}
         <main class="seo-crawler-fallback" data-seo-crawler-fallback>
+            <p style="margin:0 0 1.25rem"><img src="{{ logo_url() }}" alt="{{ site_name() }}" width="180" height="64" style="display:block;max-width:180px;height:64px;object-fit:contain;object-position:left center" /></p>
             <h1 data-seo-fallback-h1>{{ $pageProps['product']['name'] ?? $pageProps['activeCategory']['name'] ?? $pageProps['heading'] ?? $fallbackH1 }}</h1>
             @if($pageMetaDescription)<p>{{ $pageMetaDescription }}</p>@endif
             <nav aria-label="Additional store links"><a href="{{ route('about') }}">About TAQI LIFE</a> · <a href="{{ route('blog') }}">Shopping guides</a></nav>

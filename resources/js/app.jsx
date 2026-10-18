@@ -33,6 +33,9 @@ createInertiaApp({
     },
     setup({ el, App, props }) {
         createRoot(el).render(<App {...props} />);
+        // Hide the server-rendered SEO fallback only after the application mounted.
+        // If JavaScript fails, crawlers and visitors still receive useful branded HTML.
+        document.documentElement.classList.add('js');
     },
     progress: {
         color: '#f15a24',
