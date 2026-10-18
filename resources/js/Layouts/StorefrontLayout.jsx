@@ -73,6 +73,7 @@ export default function StorefrontLayout({ children, title, description, activeC
   const [cartOpen, setCartOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
   const [navigationLoading, setNavigationLoading] = useState(false);
   const [navigationLabel, setNavigationLabel] = useState('Loading page…');
   const chatRef = useRef(null);
@@ -90,6 +91,18 @@ export default function StorefrontLayout({ children, title, description, activeC
     const removeCancel = router.on('cancel', onFinish);
     return () => { removeStart(); removeFinish(); removeError(); removeCancel(); };
   }, []);
+
+  useEffect(() => {
+    const updateBackToTopVisibility = () => setShowBackToTop(window.scrollY > 480);
+    updateBackToTopVisibility();
+    window.addEventListener('scroll', updateBackToTopVisibility, { passive: true });
+    return () => window.removeEventListener('scroll', updateBackToTopVisibility);
+  }, []);
+
+  const scrollToTop = () => {
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+  };
 
   const chatSettings = app?.settings || {};
   const headerLogoHeight = Math.min(160, Math.max(24, Number(chatSettings.header_logo_height) || 48));
@@ -845,6 +858,21 @@ export default function StorefrontLayout({ children, title, description, activeC
       )}
 
       {/* ── Marketing & Notice Visitor Popup ── */}
+      {showBackToTop && (
+        <button
+          type="button"
+          onClick={scrollToTop}
+          aria-label="Back to top"
+          title="Back to top"
+          className="fixed bottom-[142px] right-4 z-[998] flex h-11 w-11 items-center justify-center rounded-full border-2 border-white bg-white text-[#f2541c] shadow-[0_8px_24px_rgba(15,23,42,0.2)] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#fff7f2] hover:shadow-[0_12px_28px_rgba(15,23,42,0.26)] focus-visible:ring-4 focus-visible:ring-[#f2541c]/30 active:scale-95 md:bottom-24 md:right-6 md:h-12 md:w-12"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m5 12 7-7 7 7" />
+            <path d="M12 19V6" />
+          </svg>
+        </button>
+      )}
+
       <VisitorPopupModal popup={popup} />
     </div>
     </>
