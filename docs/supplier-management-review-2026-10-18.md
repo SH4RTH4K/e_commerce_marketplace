@@ -2,6 +2,8 @@
 
 Deployment status: **local only; user confirmation required before pushing or deploying**.
 
+Local follow-up, 19 October 2026: the existing local MySQL database has now been upgraded and its Mohasagor supplier, 3,101 catalog records and 1,363 store products verified. The setup UX has also been simplified. See [the local follow-up report](supplier-local-setup-2026-10-19.md) for the current local status and validation. Live deployment remains pending confirmation. The original review below records the earlier isolated test stage.
+
 The first implementation report overstated completeness. This second review found missing independent permissions, incomplete supplier retrieval, inadequate imported-product ownership protection, missing audit/report flows, incomplete inventory attribution, and no supplier-specific acceptance tests. These have been implemented and exercised locally.
 
 ## Business workflow

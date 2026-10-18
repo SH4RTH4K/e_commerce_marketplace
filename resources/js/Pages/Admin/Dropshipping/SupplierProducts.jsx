@@ -345,6 +345,7 @@ function SupplierSyncCard({ supplier, onSync }) {
 export default function SupplierProducts({
     products = [],
     suppliers = [],
+    selected_supplier_id = null,
     categories = [],
     stock_filter = "all",
     stock_operator = "",
@@ -357,6 +358,7 @@ export default function SupplierProducts({
     pagination = {},
 }) {
     const [selected, setSelected] = useState([]);
+    const [supplierId, setSupplierId] = useState(String(selected_supplier_id || '0'));
     const [search, setSearch] = useState(search_filter);
     const [operator, setOperator] = useState(stock_operator);
     const [value, setValue] = useState(stock_value);
@@ -387,6 +389,7 @@ export default function SupplierProducts({
         );
     const buildQuery = (page) => {
         const params = new URLSearchParams();
+        params.set('supplier_id', supplierId);
         if (page > 1) params.set("page", page);
         if (search.trim()) params.set("q", search.trim());
         if (stock_filter === "positive") params.set("stock", "positive");
@@ -419,7 +422,7 @@ export default function SupplierProducts({
         setPageSize("100");
         setSelected([]);
         router.get(
-            "/admin/dropshipping/products?per_page=100",
+            `/admin/dropshipping/products?per_page=100&supplier_id=${supplierId}`,
             {},
             { preserveState: true, preserveScroll: true },
         );
@@ -439,7 +442,7 @@ export default function SupplierProducts({
             { preserveScroll: true, onSuccess: () => setSelected([]) },
         );
     const totalProducts = suppliers.reduce(
-        (total, supplier) => total + Number(supplier.products_count || 0),
+        (total, supplier) => total + (!selected_supplier_id || Number(supplier.id) === Number(selected_supplier_id) ? Number(supplier.products_count || 0) : 0),
         0,
     );
 
@@ -461,14 +464,14 @@ export default function SupplierProducts({
                             </p>
                         </div>
                         <a
-                            href="/admin/dropshipping/settings"
+                            href={`/admin/dropshipping/settings${selected_supplier_id ? `?supplier_id=${selected_supplier_id}` : ''}`}
                             className="text-sm font-semibold text-orange-600 underline"
                         >
                             API settings
                         </a>
                     </div>
                     <div className="mt-4 space-y-3">
-                        {suppliers.map((supplier) => (
+                        {suppliers.filter(supplier => !selected_supplier_id || Number(supplier.id) === Number(selected_supplier_id)).map((supplier) => (
                             <SupplierSyncCard
                                 key={supplier.id}
                                 supplier={supplier}
@@ -483,6 +486,7 @@ export default function SupplierProducts({
                 className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm"
             >
                 <div className="flex flex-col gap-3 xl:flex-row xl:flex-wrap xl:items-end">
+                    <label className="min-w-[220px] flex-1 text-sm font-semibold text-gray-600">Supplier<select aria-label="Filter by supplier" value={supplierId} onChange={event => { setSupplierId(event.target.value); setCategory(''); setSelected([]); }} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="0">All suppliers</option>{suppliers.map(supplier => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
                     <label className="min-w-[240px] flex-1 text-sm font-semibold text-gray-600">
                         Search products
                         <input

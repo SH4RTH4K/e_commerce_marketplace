@@ -41,12 +41,14 @@ use Throwable;
 
 class DropshippingController extends Controller
 {
-    public function index(SupplierRegistry $registry)
+    public function index(Request $request, SupplierRegistry $registry)
     {
         $suppliers = DropshipSupplier::query()->withIntegration()
             ->withCount([
                 'products', 'syncRuns', 'categories', 'categoryMappings', 'variants',
                 'variants as mapped_variants_count' => fn ($query) => $query->whereHas('variantLink'),
+                'products as imported_products_count' => fn ($query) => $query->whereHas('productLink', fn ($link) => $link->where('product_created_by_integration', true)->whereHas('product')),
+                'products as published_products_count' => fn ($query) => $query->whereHas('productLink', fn ($link) => $link->where('product_created_by_integration', true)->whereHas('product', fn ($product) => $product->where('is_published', true))),
             ])
             ->latest('id')
             ->get()
@@ -70,6 +72,8 @@ class DropshippingController extends Controller
                 'variants_count' => $supplier->variants_count,
                 'mapped_variants_count' => $supplier->mapped_variants_count,
                 'products_count' => $supplier->products_count,
+                'imported_products_count' => $supplier->imported_products_count,
+                'published_products_count' => $supplier->published_products_count,
                 'sync_runs_count' => $supplier->sync_runs_count,
             ])
             ->values();
@@ -77,7 +81,22 @@ class DropshippingController extends Controller
         return Inertia::render('Admin/Dropshipping/Index', [
             'suppliers' => $suppliers,
             'available_drivers' => $registry->driverKeys(),
+            'selected_supplier_id' => $this->selectedSupplierId($request),
         ]);
+    }
+
+    private function selectedSupplierId(Request $request, bool $allowAll = false): ?int
+    {
+        $value = $request->query('supplier_id');
+        if ($allowAll && (string) $value === '0') return null;
+        if ($value !== null && $value !== '') {
+            $data = $request->validate(['supplier_id' => ['integer', 'min:1']]);
+            $supplier = DropshipSupplier::query()->withIntegration()->find($data['supplier_id']);
+            if (! $supplier) throw ValidationException::withMessages(['supplier_id' => 'Select a configured dropshipping supplier.']);
+            return $supplier->id;
+        }
+        $suppliers = DropshipSupplier::query()->withIntegration()->orderByDesc('is_active')->orderBy('id')->pluck('id');
+        return $allowAll && $suppliers->count() !== 1 ? null : $suppliers->first();
     }
 
     public function syncRuns(Request $request)
@@ -106,6 +125,7 @@ class DropshippingController extends Controller
 
     public function supplierProducts(Request $request, PricingEngine $pricing)
     {
+        $supplierId = $this->selectedSupplierId($request, true);
         $stockFilter = $request->string('stock')->toString();
         $stockOperator = $request->string('stock_operator')->toString();
         $stockValue = $request->input('stock_value');
@@ -122,6 +142,7 @@ class DropshippingController extends Controller
         $orderBy = $this->dropshippingProductOrder($request->string('order_by')->toString());
         
         $productQuery = DropshipSupplierProduct::query()
+            ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
             ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search) {
                 $searchQuery->where('name', 'like', "%{$search}%")
                     ->orWhere('supplier_product_id', 'like', "%{$search}%")
@@ -188,6 +209,7 @@ class DropshippingController extends Controller
             })->values();
 
         return Inertia::render('Admin/Dropshipping/SupplierProducts', [
+            'selected_supplier_id' => $supplierId,
             'products' => $productRows,
             'stock_filter' => $stockFilter === 'positive' ? 'positive' : 'all',
             'stock_operator' => in_array($stockOperator, ['gt', 'lt', 'eq'], true) ? $stockOperator : '',
@@ -197,7 +219,7 @@ class DropshippingController extends Controller
             'status_filter' => in_array($importStatusFilter, ['imported', 'not_imported'], true) ? $importStatusFilter : '',
             'import_status_filter' => in_array($importStatusFilter, ['imported', 'not_imported']) ? $importStatusFilter : '',
             'order_by' => $orderBy,
-            'categories' => DropshipSupplierProduct::query()->whereNotNull('supplier_category_key')->distinct()->orderBy('supplier_category_key')->pluck('supplier_category_key')->values(),
+            'categories' => DropshipSupplierProduct::query()->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))->whereNotNull('supplier_category_key')->distinct()->orderBy('supplier_category_key')->pluck('supplier_category_key')->values(),
             'pagination' => [
                 'current_page' => $products->currentPage(),
                 'last_page' => $products->lastPage(),
@@ -234,6 +256,7 @@ class DropshippingController extends Controller
 
     public function importedProducts(Request $request)
     {
+        $supplierId = $this->selectedSupplierId($request, true);
         $categoryFilter = $request->string('category')->toString();
         $statusFilter = $request->string('status')->toString();
         $search = trim($request->string('q')->toString());
@@ -249,7 +272,9 @@ class DropshippingController extends Controller
         $orderBy = $this->dropshippingProductOrder($request->string('order_by')->toString());
         
         $productQuery = Product::query()
-            ->whereHas('supplierLinks.supplierProduct', fn ($query) => $query->when($categoryFilter !== '', fn ($categoryQuery) => $categoryQuery->where('supplier_category_key', $categoryFilter)))
+            ->whereHas('supplierLinks.supplierProduct', fn ($query) => $query
+                ->when($supplierId, fn ($supplierQuery) => $supplierQuery->where('supplier_id', $supplierId))
+                ->when($categoryFilter !== '', fn ($categoryQuery) => $categoryQuery->where('supplier_category_key', $categoryFilter)))
             ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search) {
                 $searchQuery->where('name', 'like', "%{$search}%")
                     ->orWhere('sku', 'like', "%{$search}%");
@@ -358,9 +383,12 @@ class DropshippingController extends Controller
             ->all();
 
         return Inertia::render('Admin/Dropshipping/ImportedProducts', [
+            'selected_supplier_id' => $supplierId,
+            'suppliers' => DropshipSupplier::query()->withIntegration()->orderBy('name')->get(['id', 'name', 'key']),
             'products' => $productRows,
             'relink_suppliers' => DropshipSupplier::query()->withIntegration()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'sync_runs' => DropshipSyncRun::query()
+                ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
                 ->with('supplier:id,name,key')
                 ->where('type', 'imported_product_sync')
                 ->whereIn('status', [SyncRunState::QUEUED, SyncRunState::RUNNING])
@@ -384,6 +412,7 @@ class DropshippingController extends Controller
                 ])
                 ->values(),
             'failed_sync_runs' => DropshipSyncRun::query()
+                ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
                 ->with('supplier:id,name,key')
                 ->where('type', 'imported_product_sync')
                 ->whereIn('status', [SyncRunState::FAILED, SyncRunState::COMPLETED_WITH_ERRORS])
@@ -403,6 +432,7 @@ class DropshippingController extends Controller
                 ])
                 ->values(),
             'sync_suppliers' => DropshipSupplier::query()->withIntegration()
+                ->when($supplierId, fn ($query) => $query->whereKey($supplierId))
                 ->withCount([
                     'products as imported_products_count' => fn ($query) => $query->whereHas('productLink', fn ($linkQuery) => $linkQuery
                         ->where('product_created_by_integration', true)
@@ -429,6 +459,7 @@ class DropshippingController extends Controller
             'price_adjustment_filter' => in_array($priceAdjustmentFilter, ['custom', 'fixed', 'percent', 'regular', 'untracked_discount', 'none'], true) ? $priceAdjustmentFilter : '',
             'order_by' => $orderBy,
             'categories' => DropshipSupplierProduct::query()
+                ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
                 ->whereNotNull('supplier_category_key')
                 ->distinct()
                 ->orderBy('supplier_category_key')
@@ -501,10 +532,12 @@ class DropshippingController extends Controller
         return Inertia::render('Admin/Dropshipping/DatabaseMigration', ['tables' => $tables]);
     }
 
-    public function categoryMapping()
+    public function categoryMapping(Request $request)
     {
+        $supplierId = $this->selectedSupplierId($request, true);
         $profiles = DropshipDriverProfile::query()->get(['key', 'categories_path']);
         $mappings = DropshipSupplierCategory::query()
+            ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
             ->with(['supplier:id,name,key', 'supplier.categoryMappings.category:id,name'])
             ->latest('id')
             ->limit(100)
@@ -525,6 +558,7 @@ class DropshippingController extends Controller
             ->values();
 
         return Inertia::render('Admin/Dropshipping/CategoryMapping', [
+            'selected_supplier_id' => $supplierId,
             'mappings' => $mappings,
             'local_categories' => Category::query()->orderBy('name')->get(['id', 'name']),
             'suppliers' => DropshipSupplier::query()->withIntegration()
@@ -705,12 +739,14 @@ class DropshippingController extends Controller
         ];
     }
 
-    public function pricingRules()
+    public function pricingRules(Request $request)
     {
-        $suppliers = DropshipSupplier::query()->withIntegration()->latest('id')->get(['id', 'name', 'key', 'driver_key', 'pricing_rules', 'price_field_mapping']);
+        $supplierId = $this->selectedSupplierId($request, true);
+        $suppliers = DropshipSupplier::query()->withIntegration()->when($supplierId, fn ($query) => $query->whereKey($supplierId))->latest('id')->get(['id', 'name', 'key', 'driver_key', 'pricing_rules', 'price_field_mapping']);
         $profiles = DropshipDriverProfile::query()->get(['key', 'field_mapping']);
 
         return Inertia::render('Admin/Dropshipping/PricingRules', [
+            'selected_supplier_id' => $supplierId,
             'suppliers' => $suppliers->map(function (DropshipSupplier $supplier) use ($profiles): array {
                 $profile = $profiles->firstWhere('key', $supplier->driver_key);
                 $fields = is_array($profile?->field_mapping['fields'] ?? null) ? $profile->field_mapping['fields'] : [];
@@ -1248,13 +1284,19 @@ class DropshippingController extends Controller
         return back()->with('status', 'Variation mapping saved.');
     }
 
-    public function apiSettings(SupplierRegistry $registry)
+    public function apiSettings(Request $request, SupplierRegistry $registry)
     {
         return Inertia::render('Admin/Dropshipping/ApiSettings', [
+            'selected_supplier_id' => $this->selectedSupplierId($request),
             'suppliers' => DropshipSupplier::query()->withIntegration()->latest('id')->get([
                 'id', 'key', 'name', 'supplier_type', 'driver_key', 'base_url', 'sync_rules', 'is_active',
-                'last_connection_status', 'last_connection_message', 'last_connection_tested_at',
-            ]),
+                'last_connection_status', 'last_connection_message', 'last_connection_tested_at', 'api_key', 'secret_key',
+            ])->map(function (DropshipSupplier $supplier): array {
+                return [...$supplier->toArray(),
+                    'has_api_key' => filled($supplier->getRawOriginal('api_key')),
+                    'has_secret_key' => filled($supplier->getRawOriginal('secret_key')),
+                ];
+            }),
             'unconnected_suppliers' => DropshipSupplier::query()->where('is_active', true)
                 ->where(fn ($query) => $query->whereNull('driver_key')->orWhereIn('driver_key', ['', 'manual']))
                 ->orderBy('name')->get(['id', 'name', 'supplier_code', 'supplier_type']),
@@ -1462,7 +1504,7 @@ class DropshippingController extends Controller
             }
             $before = ['driver_key' => $supplier->driver_key];
             $syncRules = is_array($supplier->sync_rules) ? $supplier->sync_rules : [];
-            $syncRules['category_endpoint'] = $data['category_endpoint'] ?? null;
+            if (array_key_exists('category_endpoint', $data)) $syncRules['category_endpoint'] = $data['category_endpoint'];
             $syncRules['import_status'] = $data['import_status'] ?? ($syncRules['import_status'] ?? 'draft');
             $syncRules['import_images'] = (bool) ($data['import_images'] ?? ($syncRules['import_images'] ?? false));
             $syncRules['import_variations'] = (bool) ($data['import_variations'] ?? ($syncRules['import_variations'] ?? false));
@@ -1482,9 +1524,18 @@ class DropshippingController extends Controller
         return back()->with('status', 'Supplier updated.');
     }
 
-    public function toggle(DropshipSupplier $supplier)
+    public function toggle(Request $request, DropshipSupplier $supplier)
     {
-        $supplier->forceFill(['is_active' => ! $supplier->is_active])->save();
+        abort_unless($supplier->hasIntegration(), 422, 'Manage ordinary supplier status in Supplier Management.');
+        DB::transaction(function () use ($supplier, $request): void {
+            $supplier = DropshipSupplier::query()->lockForUpdate()->findOrFail($supplier->id);
+            $before = (bool) $supplier->is_active;
+            $supplier->forceFill(['is_active' => ! $before, 'updated_by' => $request->user()?->id])->save();
+            SupplierAudit::create(['supplier_id' => $supplier->id, 'actor_id' => $request->user()?->id, 'actor_name' => $request->user()?->name,
+                'event' => $before ? 'deactivated' : 'activated', 'before' => ['is_active' => $before], 'after' => ['is_active' => ! $before],
+                'metadata' => ['integration_key' => $supplier->key]]);
+        });
+        $supplier->refresh();
 
         return back()->with('status', $supplier->is_active ? 'Supplier activated.' : 'Supplier disabled.');
     }

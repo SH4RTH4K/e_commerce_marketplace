@@ -182,8 +182,9 @@ function money(value) {
   return number.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
-export default function ImportedProducts({ products = [], categories = [], sync_runs = [], failed_sync_runs = [], sync_suppliers = [], relink_suppliers = [], search_filter = '', category_filter = '', status_filter = '', stock_operator = '', stock_value = '', profit_operator = '', profit_value = '', price_adjustment_filter = '', order_by = 'newest', pagination = {} }) {
+export default function ImportedProducts({ products = [], suppliers = [], selected_supplier_id = null, categories = [], sync_runs = [], failed_sync_runs = [], sync_suppliers = [], relink_suppliers = [], search_filter = '', category_filter = '', status_filter = '', stock_operator = '', stock_value = '', profit_operator = '', profit_value = '', price_adjustment_filter = '', order_by = 'newest', pagination = {} }) {
   const [selected, setSelected] = useState([]);
+  const [supplierId, setSupplierId] = useState(String(selected_supplier_id || '0'));
   const [search, setSearch] = useState(search_filter);
   const [category, setCategory] = useState(category_filter);
   const [status, setStatus] = useState(status_filter);
@@ -419,6 +420,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
 
   const filterParams = () => {
     const params = new URLSearchParams();
+    params.set('supplier_id', supplierId);
     if (search.trim()) params.append('q', search.trim());
     if (category) params.append('category', category);
     if (status) params.append('status', status);
@@ -441,7 +443,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
   const publishOne = id => router.patch(`/admin/dropshipping/imported/${id}/publish`, { ...flags, ...(prices[id] || {}) }, { preserveScroll: true });
   const unpublishOne = id => router.post('/admin/dropshipping/imported/bulk-unpublish', { ids: [id] }, { preserveScroll: true });
   const filterList = () => { setSelected([]); router.get(`/admin/dropshipping/imported${filterParams()}`, {}, { preserveScroll: true, preserveState: true }); };
-  const clearFilter = () => { setSearch(''); setCategory(''); setStatus(''); setStockOperator(''); setStockValue(''); setProfitOperator(''); setProfitValue(''); setPriceAdjustment(''); setOrderBy('newest'); setPageSize('100'); setSelected([]); router.get('/admin/dropshipping/imported?per_page=100', {}, { preserveScroll: true, preserveState: true }); };
+  const clearFilter = () => { setSearch(''); setCategory(''); setStatus(''); setStockOperator(''); setStockValue(''); setProfitOperator(''); setProfitValue(''); setPriceAdjustment(''); setOrderBy('newest'); setPageSize('100'); setSelected([]); router.get(`/admin/dropshipping/imported?per_page=100&supplier_id=${supplierId}`, {}, { preserveScroll: true, preserveState: true }); };
   const goToPage = page => { setSelected([]); router.get(`/admin/dropshipping/imported?page=${page}${filterParams().replace('?', '&')}`, {}, { preserveScroll: true, preserveState: true }); };
 
   return <DropshippingSubpage title="Imported Products" description="Review integration-created local products before publishing them to the storefront.">
@@ -462,6 +464,7 @@ export default function ImportedProducts({ products = [], categories = [], sync_
     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><strong>Review process:</strong> open the image preview, confirm price, stock, and mapped variants, then publish or leave the product as a draft. Use Unpublish when the image or listing no longer meets the storefront standard.</div>
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 xl:flex-row xl:flex-wrap xl:items-end">
+        <label className="min-w-[220px] flex-1 text-sm font-semibold text-gray-600">Supplier<select aria-label="Filter by supplier" value={supplierId} onChange={event => { setSupplierId(event.target.value); setCategory(''); setSelected([]); }} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="0">All suppliers</option>{suppliers.map(supplier => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
         <label className="min-w-[240px] flex-1 text-sm font-semibold text-gray-600">Search products<input type="search" value={search} onChange={event => setSearch(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') filterList(); }} placeholder="Search by name or SKU" className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm" /></label>
         <label className="flex-1 text-sm font-semibold text-gray-600">Category<select value={category} onChange={event => setCategory(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="">All categories</option>{categories.map(item => <option key={item} value={item}>{item}</option>)}</select></label>
         <label className="w-40 text-sm font-semibold text-gray-600">Status<select value={status} onChange={event => setStatus(event.target.value)} className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"><option value="">All statuses</option><option value="published">Published</option><option value="draft">Draft (Unpublished)</option></select></label>

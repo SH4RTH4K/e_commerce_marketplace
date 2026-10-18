@@ -103,6 +103,7 @@ class SupplierController extends Controller
             'supplier' => $this->details($supplier), 'products' => $products, 'history' => $history, 'audits' => $audits,
             'metrics' => $this->metrics($supplier), 'canManage' => $request->user()->hasPermission('suppliers.manage'),
             'canViewProducts' => $request->user()->hasPermission('products.view'),
+            'canManageDropshipping' => config('dropshipping.enabled') && $request->user()->hasPermission('dropshipping.manage'),
         ]);
     }
 
