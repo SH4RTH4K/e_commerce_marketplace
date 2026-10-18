@@ -16,6 +16,7 @@ class ProductCatalogService
             'supplier' => ['nullable', 'integer', 'min:1'], 'status' => ['nullable', 'string'],
             'stock' => ['nullable', 'string'], 'stock_level' => ['nullable', 'string'],
             'type' => ['nullable', 'string'], 'sort' => ['nullable', 'string'], 'per_page' => ['nullable', 'integer'],
+            'source' => ['nullable', 'string'],
         ]);
         $term = preg_replace('/\s+/u', ' ', trim($data['q'] ?? '')) ?? trim($data['q'] ?? '');
         $status = match ($data['status'] ?? '') { 'active' => 'published', 'inactive' => 'draft', default => $data['status'] ?? '' };
@@ -26,6 +27,7 @@ class ProductCatalogService
             'status' => in_array($status, ['published', 'draft'], true) ? $status : '',
             'stock' => in_array($stock, ['out', 'low', 'in'], true) ? $stock : '',
             'type' => in_array($data['type'] ?? '', ['simple', 'variable'], true) ? $data['type'] : '',
+            'source' => in_array($data['source'] ?? '', ['manual', 'dropshipping', 'other'], true) ? $data['source'] : '',
             'sort' => in_array($data['sort'] ?? '', ['relevance', 'newest', 'updated', 'name', 'price_asc', 'price_desc', 'stock_asc', 'stock_desc'], true) ? $data['sort'] : ($term !== '' ? 'relevance' : 'newest'),
             'per_page' => in_array((int) ($data['per_page'] ?? 15), [15, 30, 50, 100], true) ? (int) ($data['per_page'] ?? 15) : 15,
         ];
@@ -54,6 +56,7 @@ class ProductCatalogService
         }
         if ($filters['type'] === 'variable') $query->has('variants');
         if ($filters['type'] === 'simple') $query->doesntHave('variants');
+        if ($filters['source'] !== '') $query->where('source_type', $filters['source']);
         match ($filters['stock']) {
             'out' => $query->where('stock_quantity', 0), 'low' => $query->whereBetween('stock_quantity', [1, 5]),
             'in' => $query->where('stock_quantity', '>', 5), default => null,

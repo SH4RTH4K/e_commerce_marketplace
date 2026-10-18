@@ -46,6 +46,7 @@ class Product extends Model
     protected $fillable = [
         'category_id',
         'supplier_id',
+        'source_type',
         'name',
         'slug',
         'sku',

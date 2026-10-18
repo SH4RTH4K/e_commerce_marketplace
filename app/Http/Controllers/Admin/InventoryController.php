@@ -66,6 +66,7 @@ class InventoryController extends Controller
             'before' => $adjustment->stock_before, 'after' => $adjustment->stock_after, 'change' => $adjustment->change,
             'reason' => $adjustment->reason, 'actor' => $adjustment->user?->name ?? 'Former staff member',
             'supplier_sync_paused' => $adjustment->supplier_sync_paused,
+            'supplier' => $adjustment->supplier?->name,
             'created_at' => $adjustment->created_at->setTimezone('Asia/Dhaka')->format('d M Y, h:i A'),
         ]))->header('Cache-Control', 'private, no-store');
     }

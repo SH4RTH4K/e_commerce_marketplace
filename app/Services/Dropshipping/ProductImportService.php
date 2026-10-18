@@ -30,6 +30,9 @@ class ProductImportService
 
             $link = $source->productLink()->with('product')->first();
             if ($link?->product) {
+                if ($link->product->supplier_id === null) {
+                    $link->product->forceFill(['supplier_id' => $source->supplier_id, 'source_type' => 'dropshipping'])->saveQuietly();
+                }
                 $this->syncProductContent($source, $link->product);
                 return new ProductImportResult(ProductImportResult::ALREADY_LINKED, $link->product);
             }
@@ -54,6 +57,8 @@ class ProductImportService
 
             $product = Product::create([
                 'category_id' => $category->getKey(),
+                'supplier_id' => $source->supplier->getKey(),
+                'source_type' => 'dropshipping',
                 'name' => Str::limit(trim($source->name), 255, ''),
                 'sku' => $source->product_code
                     ?: $source->variants->pluck('sku')->filter()->first()

@@ -15,6 +15,9 @@ class DropshipSupplier extends Model
         'key',
         'name',
         'supplier_type',
+        'supplier_code', 'contact_person', 'mobile', 'whatsapp', 'email', 'website',
+        'business_address', 'city', 'district', 'division', 'country', 'business_name',
+        'trade_license', 'tax_vat_bin', 'payment_terms', 'notes',
         'driver_key',
         'base_url',
         'api_key',
@@ -60,6 +63,11 @@ class DropshipSupplier extends Model
     public function products(): HasMany
     {
         return $this->hasMany(DropshipSupplierProduct::class, 'supplier_id');
+    }
+
+    public function localProducts(): HasMany
+    {
+        return $this->hasMany(Product::class, 'supplier_id');
     }
 
     public function variants(): HasManyThrough

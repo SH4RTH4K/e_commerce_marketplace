@@ -71,6 +71,7 @@ export default function ProductForm({ product, categories, suppliers = [], prici
   const { data, setData, processing, errors, setError, clearErrors } = useForm({
     category_id: product.category_id || '',
     supplier_id: product.supplier_id || '',
+    source_type: product.source_type || (product.supplier?.supplier_type === 'dropshipping' ? 'dropshipping' : 'manual'),
     name: product.name || '',
     slug: product.slug || '',
     sku: product.sku || '',
@@ -369,7 +370,11 @@ export default function ProductForm({ product, categories, suppliers = [], prici
                       <CategoryPicker categories={categories} value={data.category_id} onChange={value => setData('category_id', value)} className={inputClass} />
                     </Field>
                   </div>
-                  <Field label="Supplier" error={errors.supplier_id} hint="Optional for manual products">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Field label="Product Source" error={errors.source_type} hint="This does not change supplier or inventory automatically.">
+                      <select value={data.source_type} onChange={e => setData('source_type', e.target.value)} className={`${inputClass} bg-white`}><option value="manual">Manual</option><option value="dropshipping">Dropshipping</option><option value="other">Other</option></select>
+                    </Field>
+                    <Field label="Supplier" error={errors.supplier_id} hint="Optional for own inventory">
                     <select
                       value={data.supplier_id}
                       onChange={e => setData('supplier_id', e.target.value)}
@@ -382,9 +387,10 @@ export default function ProductForm({ product, categories, suppliers = [], prici
                         </option>
                       ))}
                     </select>
-                    <p className="mt-1.5 text-[11px] text-gray-400">Choose a configured supplier for ownership and reporting. Dropshipping imports keep their sync link automatically.</p>
+                    <p className="mt-1.5 text-[11px] text-gray-400">Select the active supplier responsible for this product.</p>
                     {suppliers.length === 0 && <a href="/admin/suppliers" className="mt-1.5 inline-block text-xs font-semibold text-orange-600 hover:underline">Add or manage suppliers</a>}
-                  </Field>
+                    </Field>
+                  </div>
                   <Field label="Short Highlights / Short Description" error={errors.short_description}>
                     <RichTextEditor
                       value={data.short_description}

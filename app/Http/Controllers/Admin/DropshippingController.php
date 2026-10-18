@@ -40,7 +40,7 @@ class DropshippingController extends Controller
 {
     public function index(SupplierRegistry $registry)
     {
-        $suppliers = DropshipSupplier::query()
+        $suppliers = DropshipSupplier::query()->where('supplier_type', 'dropshipping')
             ->withCount([
                 'products', 'syncRuns', 'categories', 'categoryMappings', 'variants',
                 'variants as mapped_variants_count' => fn ($query) => $query->whereHas('variantLink'),
@@ -1190,7 +1190,7 @@ class DropshippingController extends Controller
     public function apiSettings(SupplierRegistry $registry)
     {
         return Inertia::render('Admin/Dropshipping/ApiSettings', [
-            'suppliers' => DropshipSupplier::query()->latest('id')->get([
+            'suppliers' => DropshipSupplier::query()->where('supplier_type', 'dropshipping')->latest('id')->get([
                 'id', 'key', 'name', 'supplier_type', 'driver_key', 'base_url', 'sync_rules', 'is_active',
                 'last_connection_status', 'last_connection_message', 'last_connection_tested_at',
             ]),

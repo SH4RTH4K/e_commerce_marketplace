@@ -171,9 +171,13 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::patch('inventory/{product:id}/stock', [AdminInventoryController::class, 'updateStock'])->middleware('permission:products.create')->name('inventory.stock');
 
         // Supplier management is a separate admin area. Dropshipping tools remain under Integrations.
-        Route::middleware(['dropshipping.enabled', 'permission:dropshipping.manage'])
-            ->get('suppliers', [\App\Http\Controllers\Admin\DropshippingController::class, 'index'])
-            ->name('suppliers.index');
+        Route::get('suppliers', [\App\Http\Controllers\Admin\SupplierController::class, 'index'])->middleware('permission:products.view')->name('suppliers.index');
+        Route::get('suppliers/create', [\App\Http\Controllers\Admin\SupplierController::class, 'create'])->middleware('permission:products.create')->name('suppliers.create');
+        Route::post('suppliers', [\App\Http\Controllers\Admin\SupplierController::class, 'store'])->middleware('permission:products.create')->name('suppliers.store');
+        Route::get('suppliers/{supplier}/edit', [\App\Http\Controllers\Admin\SupplierController::class, 'edit'])->middleware('permission:products.create')->name('suppliers.edit');
+        Route::get('suppliers/{supplier}', [\App\Http\Controllers\Admin\SupplierController::class, 'show'])->middleware('permission:products.view')->name('suppliers.show');
+        Route::patch('suppliers/{supplier}', [\App\Http\Controllers\Admin\SupplierController::class, 'update'])->middleware('permission:products.create')->name('suppliers.update');
+        Route::patch('suppliers/{supplier}/toggle', [\App\Http\Controllers\Admin\SupplierController::class, 'toggle'])->middleware('permission:products.create')->name('suppliers.toggle');
 
         // Dropshipping integration (all supplier work is queued)
         Route::middleware(['dropshipping.enabled', 'permission:dropshipping.manage'])

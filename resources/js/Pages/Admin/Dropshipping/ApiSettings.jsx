@@ -28,7 +28,7 @@ export default function ApiSettings({ suppliers = [], available_drivers = [], dr
   const [mapping, setMapping] = useState(mappingExample);
   const [selectedProfileId, setSelectedProfileId] = useState('');
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
-  const [supplierType, setSupplierType] = useState('manual');
+  const [supplierType, setSupplierType] = useState('dropshipping');
   const selectedProfile = driver_profiles.find(profile => String(profile.id) === String(selectedProfileId));
   const selectedSupplier = suppliers.find(supplier => String(supplier.id) === String(selectedSupplierId));
   const selectedRules = selectedSupplier?.sync_rules || {};
@@ -84,7 +84,7 @@ export default function ApiSettings({ suppliers = [], available_drivers = [], dr
     <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
       <div className="flex items-start gap-3 mb-5"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-500 text-sm font-bold text-white">2</span><div><h2 className="font-bold text-gray-900">Connect and test a supplier account</h2><p className="text-sm text-gray-500 mt-1">Select an existing account to edit it, or choose New connection to add another account.</p></div></div>
       <div className="mb-4"><Field label="Account to configure"><select value={selectedSupplierId} onChange={event => { setSelectedSupplierId(event.target.value); const s = suppliers.find(item => String(item.id) === String(event.target.value)); setSupplierType(s?.supplier_type || 'manual'); }} className={`${inputClass} bg-white`}><option value="">New supplier</option>{suppliers.map(supplier => <option key={supplier.id} value={supplier.id}>{supplier.name} ({supplier.supplier_type === 'manual' ? 'Manual' : supplier.key})</option>)}</select></Field></div>
-      {!selectedSupplier && <div className="mb-4"><Field label="Supplier type" hint="Manual suppliers are used for products you enter yourself. Dropshipping suppliers can sync products and stock through an API."><select value={supplierType} onChange={event => setSupplierType(event.target.value)} className={`${inputClass} bg-white`}><option value="manual">Manual supplier</option><option value="dropshipping">Dropshipping / API supplier</option></select></Field></div>}
+      {!selectedSupplier && <div className="mb-4"><Field label="Supplier type" hint="Create manual suppliers from Admin ? Suppliers ? Add Supplier. This screen is for dropshipping connections."><select value={supplierType} onChange={event => setSupplierType(event.target.value)} className={`${inputClass} bg-white`}><option value="dropshipping">Dropshipping / API supplier</option></select></Field></div>}
       {!ready && !isManual && <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">Complete Step 1 first. After saving a supplier profile, this form becomes available.</div>}
       <fieldset disabled={!ready && !isManual}>
         <form key={selectedSupplier?.id || 'new'} onSubmit={saveSupplier} className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">

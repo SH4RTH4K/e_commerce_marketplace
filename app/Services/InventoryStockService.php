@@ -73,6 +73,7 @@ class InventoryStockService
             'product_name' => $product->name, 'sku' => $product->sku,
             'operation' => $operation, 'stock_before' => $before, 'stock_after' => $after,
             'change' => $after - $before, 'reason' => $reason, 'supplier_sync_paused' => $paused,
+            'supplier_id' => $product->supplier_id,
         ]);
     }
 }

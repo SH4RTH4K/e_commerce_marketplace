@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
@@ -39,6 +40,7 @@ class ProductController extends Controller
                     'variants_count' => (int) $product->variants_count, 'image_url' => $product->imageUrl(),
                     'category' => $product->category ? ['name' => $product->category->name] : null,
                     'supplier' => $product->supplier?->name ?: $product->supplierLinks->first()?->supplierProduct?->supplier?->name,
+                    'source_type' => $product->source_type ?: ($product->supplierLinks->isNotEmpty() ? 'dropshipping' : 'manual'),
                     'updated_at' => $product->updated_at?->setTimezone('Asia/Dhaka')->format('d M Y, h:i A'),
                 ]),
             'categories' => app(CategoryHierarchyService::class)->options(),
@@ -62,6 +64,7 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $data = $this->validateData($request);
+        $this->validateSupplierAssignment($data['supplier_id'] ?? null);
         $data = $this->sanitizeProductData($data, $request);
         $data['slug'] = ($data['slug'] ?? '') ?: $data['name'];
         $this->applyFlags($request, $data, null);
@@ -124,6 +127,9 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $data = $this->validateData($request, $product);
+        if ((int) ($data['supplier_id'] ?? 0) !== (int) ($product->supplier_id ?? 0)) {
+            $this->validateSupplierAssignment($data['supplier_id'] ?? null);
+        }
         $data = $this->sanitizeProductData($data, $request);
         $data['slug'] = ($data['slug'] ?? '') ?: $product->slug;
         $this->applyFlags($request, $data, $product);
@@ -230,6 +236,7 @@ class ProductController extends Controller
             'product_type'                   => ['nullable', 'string', 'in:simple,variable'],
             'category_id'                    => ['required', 'exists:categories,id'],
             'supplier_id'                    => ['nullable', 'integer', 'exists:dropship_suppliers,id'],
+            'source_type'                    => ['nullable', 'string', 'in:manual,dropshipping,other'],
             'name'                           => ['required', 'string', 'max:180'],
             'slug'                           => ['nullable', 'string', 'max:180'],
             'sku'                            => ['nullable', 'string', 'max:60'],
@@ -364,6 +371,15 @@ class ProductController extends Controller
                 'supplier_type' => $supplier->supplier_type,
                 'is_active' => $supplier->is_active,
             ])->values()->all();
+    }
+
+    private function validateSupplierAssignment(?int $supplierId): void
+    {
+        if ($supplierId === null) return;
+        $supplier = DropshipSupplier::query()->find($supplierId);
+        if (! $supplier || ! $supplier->is_active) {
+            throw ValidationException::withMessages(['supplier_id' => 'Select an active supplier.']);
+        }
     }
 
     private function normalizeSpecifications(Request $request): array
