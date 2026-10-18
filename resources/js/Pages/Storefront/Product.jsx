@@ -228,12 +228,14 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
 
   const [qty, setQty] = useState(1);
   const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const [showQuickOrder, setShowQuickOrder] = useState(false);
   const failedImagePaths = useRef(new Set());
 
   const selectImage = path => {
     setActiveImage(path);
     setImageError(false);
+    setImageLoaded(false);
   };
 
   const handleMainImageError = () => {
@@ -243,11 +245,24 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
     if (nextImage) {
       setActiveImage(nextImage.path);
       setImageError(false);
+      setImageLoaded(false);
       return;
     }
 
     setImageError(true);
   };
+
+  // Supplier image URLs can stall or return an HTML response instead of an image.
+  // Move to another gallery image instead of leaving the primary image blank.
+  useEffect(() => {
+    if (!activeImage || imageLoaded || imageError) return undefined;
+
+    const timer = window.setTimeout(() => {
+      if (!imageLoaded) handleMainImageError();
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, [activeImage, imageLoaded, imageError]);
 
   const getVariantString = () => {
     if (variantGroups && variantGroups.length > 0) {
@@ -454,7 +469,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
                 ))}
               </div>
               <div className="template-1-gallery-main">
-                {mainImageUrl && !imageError ? <img src={mainImageUrl} width="960" height="960" fetchPriority="high" decoding="async" onError={handleMainImageError} alt={product.name} /> : <span>No image available</span>}
+                {mainImageUrl && !imageError ? <img src={mainImageUrl} width="960" height="960" fetchPriority="high" decoding="async" onLoad={() => setImageLoaded(true)} onError={handleMainImageError} alt={product.name} /> : <span>No image available</span>}
                 {mainImageUrl && !imageError && <button type="button" onClick={() => window.open(mainImageUrl, '_blank', 'noopener,noreferrer')} aria-label="View larger image">&#8599;</button>}
               </div>
             </div>
@@ -624,6 +639,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
                 <img 
                   src={mainImageUrl} 
                   width="960" height="960" fetchPriority="high" decoding="async"
+                  onLoad={() => setImageLoaded(true)}
                   onError={handleMainImageError}
                   className="w-full h-full object-contain object-center transform group-hover:scale-105 transition-transform duration-500" 
                   alt={product.name} 
