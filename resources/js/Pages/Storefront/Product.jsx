@@ -414,7 +414,8 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
     ) });
   };
 
-  const inStock = Number(product.stock_quantity) > 0;
+  const stockQuantity = Math.max(0, Number(product.stock_quantity) || 0);
+  const inStock = stockQuantity > 0;
   const activeImageRecord = (product.images || []).find(image => image.path === activeImage);
   const mainImageUrl = activeImageRecord?.id ? `/media/product/${activeImageRecord.id}/960` : imageUrl(activeImage, product.name);
   const rating = Math.max(0, Math.min(5, Math.round(parseFloat(product.rating) || 0)));
@@ -469,6 +470,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
                 </span>
               )}
               <p className="mt-2 text-sm text-gray-500">SKU: <span className="font-mono font-semibold text-gray-700">{product.sku || '—'}</span></p>
+              {inStock && <p className="mt-2 text-sm font-semibold text-green-700">In Stock: {stockQuantity.toLocaleString()}</p>}
               <div className="template-1-product-rating" aria-label={`${rating} out of 5 stars`}>{'★'.repeat(rating)}<span>{'★'.repeat(5 - rating)}</span> <small>({product.reviews_count || 0})</small></div>
               <div className="template-1-product-description" dangerouslySetInnerHTML={{ __html: descriptionMarkup }} />
 
@@ -522,7 +524,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
                   </button>
                 </div>
               </div>
-              {!inStock && <p className="template-1-stock-note">Out of stock</p>}
+              {!inStock && <p className="template-1-stock-note">Out of Stock</p>}
             </div>
           </div>
 
@@ -640,7 +642,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
               {inStock ? (
                 <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full border border-green-100">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                  In Stock
+                  In Stock: {stockQuantity.toLocaleString()}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 bg-red-50 text-red-600 text-xs font-bold px-2.5 py-1 rounded-full border border-red-100">

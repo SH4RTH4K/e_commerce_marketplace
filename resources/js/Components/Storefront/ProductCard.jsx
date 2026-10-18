@@ -152,6 +152,9 @@ export default function ProductCard({ product, highlightDiscount = true }) {
               {product.name}
             </Link>
             <p className="mt-1 text-[10px] font-medium text-gray-400">SKU: <span className="font-mono text-gray-500">{product.sku || '—'}</span></p>
+            <p className={`mt-1 text-[10px] font-semibold ${inStock ? 'text-green-600' : 'text-red-600'}`}>
+              {inStock ? `In Stock: ${stock.toLocaleString()}` : 'Out of Stock'}
+            </p>
           </div>
           
           <div className="flex flex-col items-end shrink-0 leading-tight mt-0.5">
