@@ -82,6 +82,7 @@
         <script data-inertia="structured-data" type="application/ld+json">{!! json_encode($page['props']['structuredData'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
     @endif
     <link rel="icon" href="{{ favicon_url() }}" />
+    <link rel="apple-touch-icon" href="{{ favicon_url() }}" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
