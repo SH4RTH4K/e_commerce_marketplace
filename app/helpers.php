@@ -398,7 +398,7 @@ if (! function_exists('seo_image_url')) {
         $image = trim((string) setting('seo_share_image', ''));
         return $image !== '' && branding_asset_is_usable($image)
             ? branding_asset_url($image) . branding_cache_buster($image)
-            : logo_url();
+            : asset('theme/seo-preview.png') . '?v=1';
     }
 }
 
