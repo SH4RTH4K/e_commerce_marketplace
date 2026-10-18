@@ -23,7 +23,9 @@ class StorefrontImageController extends Controller
         abort_unless(is_string($source) && $source !== '', 404);
         try {
             $url = $images->optimized($source, $width);
-            return redirect($url)->header('Cache-Control', 'public, max-age=3600');
+            // Optimized paths include a content/version hash, so they can be
+            // cached for a year without serving stale images after updates.
+            return redirect($url)->header('Cache-Control', 'public, max-age=31536000, immutable');
         } catch (\Throwable $exception) {
             // A supplier failure or unsupported format must not remove imagery.
             return redirect(image_url($source))->header('Cache-Control', 'public, max-age=60');
