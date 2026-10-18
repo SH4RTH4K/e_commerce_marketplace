@@ -14,6 +14,7 @@ class DropshipSupplier extends Model
     protected $fillable = [
         'key',
         'name',
+        'supplier_type',
         'driver_key',
         'base_url',
         'api_key',

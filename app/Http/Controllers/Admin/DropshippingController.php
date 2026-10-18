@@ -51,6 +51,7 @@ class DropshippingController extends Controller
                 'id' => $supplier->id,
                 'key' => $supplier->key,
                 'name' => $supplier->name,
+                'supplier_type' => $supplier->supplier_type,
                 'driver_key' => $supplier->driver_key,
                 'base_url' => $supplier->base_url,
                 'is_active' => $supplier->is_active,
@@ -1186,7 +1187,7 @@ class DropshippingController extends Controller
     {
         return Inertia::render('Admin/Dropshipping/ApiSettings', [
             'suppliers' => DropshipSupplier::query()->latest('id')->get([
-                'id', 'key', 'name', 'driver_key', 'base_url', 'sync_rules', 'is_active',
+                'id', 'key', 'name', 'supplier_type', 'driver_key', 'base_url', 'sync_rules', 'is_active',
                 'last_connection_status', 'last_connection_message', 'last_connection_tested_at',
             ]),
             'available_drivers' => $registry->driverKeys(),
@@ -1313,8 +1314,9 @@ class DropshippingController extends Controller
         $data = $request->validate([
             'key' => ['nullable', 'string', 'max:80', 'regex:/^[a-z0-9][a-z0-9_-]*$/', 'unique:dropship_suppliers,key'],
             'name' => ['required', 'string', 'max:120'],
-            'driver_key' => ['required', 'string', 'max:80'],
-            'base_url' => ['required', 'url:https', 'max:255'],
+            'supplier_type' => ['required', 'in:manual,dropshipping'],
+            'driver_key' => ['nullable', 'string', 'max:80'],
+            'base_url' => ['nullable', 'url:https', 'max:255'],
             'category_endpoint' => ['nullable', 'string', 'max:255'],
             'api_key' => ['nullable', 'string', 'max:1000'],
             'secret_key' => ['nullable', 'string', 'max:1000'],
@@ -1322,16 +1324,20 @@ class DropshippingController extends Controller
             'import_images' => ['nullable', 'boolean'],
             'import_variations' => ['nullable', 'boolean'],
         ]);
-        if (! $registry->hasDriver($data['driver_key'])) {
+        if ($data['supplier_type'] === 'dropshipping' && (! $data['driver_key'] || ! $data['base_url'])) {
+            throw ValidationException::withMessages(['base_url' => 'API URL and supplier driver are required for dropshipping suppliers.']);
+        }
+        if ($data['supplier_type'] === 'dropshipping' && ! $registry->hasDriver($data['driver_key'])) {
             throw ValidationException::withMessages(['driver_key' => 'This supplier driver is not registered by the application.']);
         }
-        $data['key'] = $this->uniqueSupplierKey($data['key'] ?? null, $data['name'], $data['driver_key']);
+        $data['key'] = $this->uniqueSupplierKey($data['key'] ?? null, $data['name'], $data['driver_key'] ?? 'manual');
 
         DropshipSupplier::create([
             'key' => $data['key'],
             'name' => $data['name'],
-            'driver_key' => $data['driver_key'],
-            'base_url' => $data['base_url'],
+            'supplier_type' => $data['supplier_type'],
+            'driver_key' => $data['supplier_type'] === 'manual' ? null : $data['driver_key'],
+            'base_url' => $data['supplier_type'] === 'manual' ? null : $data['base_url'],
             'api_key' => $data['api_key'] ?? null,
             'secret_key' => $data['secret_key'] ?? null,
             'sync_rules' => [
@@ -1340,7 +1346,7 @@ class DropshippingController extends Controller
                 'import_images' => (bool) ($data['import_images'] ?? false),
                 'import_variations' => (bool) ($data['import_variations'] ?? false),
             ],
-            'is_active' => false,
+            'is_active' => $data['supplier_type'] === 'manual',
         ]);
 
         return back()->with('status', 'Supplier saved.');

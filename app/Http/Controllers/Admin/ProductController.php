@@ -355,12 +355,13 @@ class ProductController extends Controller
         return DropshipSupplier::query()
             ->orderByDesc('is_active')
             ->orderBy('name')
-            ->get(['id', 'name', 'key', 'driver_key', 'is_active'])
+            ->get(['id', 'name', 'key', 'driver_key', 'supplier_type', 'is_active'])
             ->map(fn (DropshipSupplier $supplier): array => [
                 'id' => $supplier->id,
                 'name' => $supplier->name,
                 'key' => $supplier->key,
                 'driver_key' => $supplier->driver_key,
+                'supplier_type' => $supplier->supplier_type,
                 'is_active' => $supplier->is_active,
             ])->values()->all();
     }
