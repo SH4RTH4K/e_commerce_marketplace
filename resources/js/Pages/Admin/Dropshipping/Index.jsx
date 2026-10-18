@@ -20,7 +20,7 @@ function post(url) {
   router.post(url, {}, { preserveScroll: true });
 }
 
-export default function DropshippingIndex({ suppliers = [], runs = [], available_drivers = [] }) {
+export default function DropshippingIndex({ suppliers = [], available_drivers = [] }) {
   const [editingSupplierId, setEditingSupplierId] = useState(null);
   const primarySupplier = suppliers[0];
   const connectionReady = primarySupplier?.last_connection_status === 'success';
@@ -98,16 +98,6 @@ export default function DropshippingIndex({ suppliers = [], runs = [], available
             </div>
           </div>
 
-          <div id="recent-sync-runs" className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100"><h2 className="font-bold text-gray-900">Recent sync runs</h2></div>
-            <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-gray-50 text-[10px] uppercase tracking-wider text-gray-400">
-              <th className="px-5 py-3 text-left">Run</th><th className="px-5 py-3 text-left">Supplier</th><th className="px-5 py-3 text-left">Status</th><th className="px-5 py-3 text-left">Progress</th><th className="px-5 py-3 text-right">Action</th>
-            </tr></thead><tbody className="divide-y divide-gray-50">
-              {runs.length === 0 ? <tr><td colSpan="5" className="px-5 py-12 text-center text-sm text-gray-400">No sync runs yet.</td></tr> : runs.map(run => (
-                <tr key={run.id}><td className="px-5 py-3 text-xs font-mono text-gray-500">#{run.id} · {run.type}</td><td className="px-5 py-3 text-sm text-gray-700">{run.supplier?.name || '—'}</td><td className="px-5 py-3"><Status value={run.status} /></td><td className="px-5 py-3 text-xs text-gray-500">{run.processed_items || 0} / {run.total_items ?? '—'} items</td><td className="px-5 py-3 text-right">{['queued', 'running'].includes(run.status) && <button onClick={() => post(`/admin/dropshipping/runs/${run.id}/cancel`)} className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-xs font-semibold text-red-700">Cancel</button>}</td></tr>
-              ))}
-            </tbody></table></div>
-          </div>
         </div>
       </AdminLayout>
     </>

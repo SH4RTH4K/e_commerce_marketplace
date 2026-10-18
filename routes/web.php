@@ -198,6 +198,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
                  Route::patch('suppliers/{supplier}/price-mapping', [\App\Http\Controllers\Admin\DropshippingController::class, 'updatePriceMapping'])->name('suppliers.price-mapping');
                  Route::post('suppliers/{supplier}/pricing/preview', [\App\Http\Controllers\Admin\DropshippingController::class, 'previewPricing'])->name('suppliers.pricing.preview');
                  Route::get('settings', [\App\Http\Controllers\Admin\DropshippingController::class, 'apiSettings'])->name('settings');
+                 Route::get('sync-runs', [\App\Http\Controllers\Admin\DropshippingController::class, 'syncRuns'])->name('sync-runs');
                  Route::post('driver-profiles', [\App\Http\Controllers\Admin\DropshippingController::class, 'storeDriverProfile'])->name('driver-profiles.store');
                  Route::patch('driver-profiles/{profile}', [\App\Http\Controllers\Admin\DropshippingController::class, 'updateDriverProfile'])->name('driver-profiles.update');
                  Route::patch('driver-profiles/{profile}/toggle', [\App\Http\Controllers\Admin\DropshippingController::class, 'toggleDriverProfile'])->name('driver-profiles.toggle');

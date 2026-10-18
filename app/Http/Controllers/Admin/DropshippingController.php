@@ -71,29 +71,33 @@ class DropshippingController extends Controller
             ])
             ->values();
 
-        $runs = DropshipSyncRun::query()
-            ->with('supplier:id,name,key')
-            ->latest('id')
-            ->limit(30)
-            ->get()
-            ->map(fn (DropshipSyncRun $run): array => [
-                'id' => $run->id,
-                'supplier' => $run->supplier ? ['name' => $run->supplier->name, 'key' => $run->supplier->key] : null,
-                'type' => $run->type,
-                'status' => $run->status,
-                'total_items' => $run->total_items,
-                'processed_items' => $run->processed_items,
-                'success_items' => $run->success_items,
-                'failed_items' => $run->failed_items,
-                'started_at' => $run->started_at?->toIso8601String(),
-                'finished_at' => $run->finished_at?->toIso8601String(),
-            ])
-            ->values();
-
         return Inertia::render('Admin/Dropshipping/Index', [
             'suppliers' => $suppliers,
-            'runs' => $runs,
             'available_drivers' => $registry->driverKeys(),
+        ]);
+    }
+
+    public function syncRuns(Request $request)
+    {
+        $search = trim($request->string('q')->toString());
+        $supplierId = $request->integer('supplier_id') ?: null;
+        $runs = DropshipSyncRun::query()
+            ->with('supplier:id,name,key')
+            ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
+            ->when($search !== '', fn ($query) => $query->whereHas('supplier', fn ($supplierQuery) => $supplierQuery->where('name', 'like', "%{$search}%")->orWhere('key', 'like', "%{$search}%")))
+            ->latest('id')->paginate(50)->withQueryString();
+
+        return Inertia::render('Admin/Dropshipping/SyncRuns', [
+            'runs' => $runs->through(fn (DropshipSyncRun $run): array => [
+                'id' => $run->id, 'supplier_id' => $run->supplier_id,
+                'supplier' => $run->supplier ? ['name' => $run->supplier->name, 'key' => $run->supplier->key] : null,
+                'type' => $run->type, 'status' => $run->status, 'total_items' => $run->total_items,
+                'processed_items' => $run->processed_items, 'success_items' => $run->success_items,
+                'failed_items' => $run->failed_items, 'started_at' => $run->started_at?->toIso8601String(),
+                'finished_at' => $run->finished_at?->toIso8601String(),
+            ]),
+            'suppliers' => DropshipSupplier::query()->where('supplier_type', 'dropshipping')->orderBy('name')->get(['id', 'name', 'key']),
+            'filters' => ['q' => $search, 'supplier_id' => $supplierId],
         ]);
     }
 

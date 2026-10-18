@@ -108,6 +108,7 @@ const navGroups = [
         icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9z',
         children: [
           { key: 'dropshipping-settings', label: 'API Settings', href: '/admin/dropshipping/settings', pattern: /^\/admin\/dropshipping\/settings/, perm: 'dropshipping.manage', feature: 'dropshipping' },
+          { key: 'dropshipping-sync-runs', label: 'Sync Runs', href: '/admin/dropshipping/sync-runs', pattern: /^\/admin\/dropshipping\/sync-runs/, perm: 'dropshipping.manage', feature: 'dropshipping' },
           { key: 'dropshipping-pricing', label: 'Pricing Rules', href: '/admin/dropshipping/pricing', pattern: /^\/admin\/dropshipping\/pricing/, perm: 'dropshipping.manage', feature: 'dropshipping' },
           { key: 'dropshipping-categories', label: 'Category Mapping', href: '/admin/dropshipping/categories', pattern: /^\/admin\/dropshipping\/categories/, perm: 'dropshipping.manage', feature: 'dropshipping' },
           { key: 'dropshipping-variations', label: 'Variation Mapping', href: '/admin/dropshipping/variations', pattern: /^\/admin\/dropshipping\/variations/, perm: 'dropshipping.manage', feature: 'dropshipping' },
