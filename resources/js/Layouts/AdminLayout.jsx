@@ -29,6 +29,7 @@ const navGroups = [
           { key: 'product-add',  label: 'Add New Product',     href: '/admin/products/create', pattern: /^\/admin\/products\/create/, perm: 'products.create' },
           { key: 'inventory',    label: 'Inventory / Stock',   href: '/admin/inventory',       pattern: /^\/admin\/inventory/, perm: 'products.view' },
           { key: 'categories',   label: 'Categories',          href: '/admin/categories',      pattern: /^\/admin\/categories/, perm: 'catalog.manage' },
+          { key: 'suppliers',    label: 'Suppliers',            href: '/admin/dropshipping',    pattern: /^\/admin\/dropshipping/, perm: 'dropshipping.manage', feature: 'dropshipping' },
         ],
       },
     ],
@@ -95,7 +96,6 @@ const navGroups = [
         key: 'dropshipping-group', label: 'Dropshipping', defaultOpen: true,
         icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9z',
         children: [
-          { key: 'suppliers', label: 'Suppliers', href: '/admin/dropshipping', pattern: /^\/admin\/dropshipping\/?$/, perm: 'dropshipping.manage', feature: 'dropshipping' },
           { key: 'dropshipping', label: 'Dropshipping Dashboard', href: '/admin/dropshipping', pattern: /^\/admin\/dropshipping\/?$/, perm: 'dropshipping.manage', feature: 'dropshipping' },
           { key: 'dropshipping-settings', label: 'API Settings', href: '/admin/dropshipping/settings', pattern: /^\/admin\/dropshipping\/settings/, perm: 'dropshipping.manage', feature: 'dropshipping' },
           { key: 'dropshipping-pricing', label: 'Pricing Rules', href: '/admin/dropshipping/pricing', pattern: /^\/admin\/dropshipping\/pricing/, perm: 'dropshipping.manage', feature: 'dropshipping' },
