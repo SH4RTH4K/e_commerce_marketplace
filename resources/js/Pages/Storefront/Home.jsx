@@ -209,7 +209,6 @@ export default function HomePage({
   app 
 }) {
   const ctaDefault = app?.settings?.default_cta_text || 'Shop now';
-  const viewMore = app?.settings?.home_view_more_label || 'View all';
   const isTemplateOne = app?.settings?.storefront_template === 'template-1';
   const isTemplateTwo = app?.settings?.storefront_template === 'template-2';
   const heroOverlayColor = app?.settings?.template_1_hero_overlay_color || '#ffffff';
@@ -546,7 +545,7 @@ export default function HomePage({
               </div>
             )}
             <Link href="/shop?flash=1" className="inline-flex h-10 items-center justify-center rounded-xl bg-[#f2541c] px-4 text-sm font-bold text-white transition-colors hover:bg-[#d6431a]">
-              {viewMore}
+              View flash sale
             </Link>
           </div>
         </div>
@@ -770,7 +769,7 @@ export default function HomePage({
                   <div className="template-1-hero-copy" style={{ textAlign: textPositionStyle(banner.text_position, heroTextPosition).textAlign }}>
                     <p>{banner.subtitle}</p>
                     <h2>{banner.title}</h2>
-                    <Link href={banner.link || '/shop'}>{banner.button || 'Shop Now'}</Link>
+                    <Link href={banner.link || '/shop'}>{banner.button || 'Explore collection'}</Link>
                   </div>
                 </div>
               </div>
@@ -844,7 +843,7 @@ export default function HomePage({
                       <strong>{banner.title}</strong>
                       <em>{banner.subtitle}</em>
                     </span>
-                    <b>Shop Now</b>
+                    <b>Explore category</b>
                   </span>
                 </Link>
               ))}
@@ -922,7 +921,7 @@ export default function HomePage({
         <section className="template-1-products storefront-section template-1-container">
           <div className="template-1-section-head">
             <h2>Product Overview</h2>
-            <Link href="/shop">View all</Link>
+            <Link href="/shop">See product overview</Link>
           </div>
 
           <div className="template-1-filter-row template-1-overview-tabs" role="tablist" aria-label="Product overview views">
@@ -1004,7 +1003,7 @@ export default function HomePage({
                      <div>
                        <h2 className="text-3xl sm:text-4xl font-extrabold mb-4">Welcome to {app?.name || 'our store'}</h2>
                        <p className="mb-6 opacity-90">Discover our amazing products</p>
-                       <Link href="/shop" className="inline-block bg-[#f15a24] text-white px-8 py-3 rounded-full font-bold">Shop Now</Link>
+                       <Link href="/shop" className="inline-block bg-[#f15a24] text-white px-8 py-3 rounded-full font-bold">Browse products</Link>
                      </div>
                    </div>
                  )}
@@ -1197,7 +1196,7 @@ export default function HomePage({
           <div className="flex items-center justify-between gap-4 mb-6 border-b border-gray-100 pb-4">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">{section.name}</h2>
             <Link href={`/category/${section.slug}`} className="text-sm font-bold text-[#f15a24] hover:underline flex items-center gap-1">
-              {viewMore} <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+              Browse {section.name.length > 28 ? `${section.name.slice(0, 25).trim()}…` : section.name} <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
             </Link>
           </div>
           {(() => {
@@ -1237,7 +1236,7 @@ export default function HomePage({
               <p className="text-gray-500 text-sm mt-1">Discover trending products</p>
             </div>
             <Link href="/shop?featured=1" className="text-sm font-bold text-[#f15a24] hover:underline flex items-center gap-1 mb-1">
-              {viewMore} <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+              See featured products <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
             </Link>
           </div>
           <div className={`grid ${productGridClass} gap-3 sm:gap-4 lg:gap-5`}>
@@ -1299,7 +1298,7 @@ export default function HomePage({
               <p className="text-gray-500 text-sm mt-1">Fresh off the press</p>
             </div>
             <Link href="/shop?new=1" className="text-sm font-bold text-[#f15a24] hover:underline flex items-center gap-1 mb-1">
-              {viewMore} <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+              See new arrivals <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
             </Link>
           </div>
           <div className={`grid ${productGridClass} gap-3 sm:gap-4 lg:gap-5`}>
@@ -1320,7 +1319,7 @@ export default function HomePage({
               <p className="text-gray-500 text-sm mt-1">Our most popular items</p>
             </div>
             <Link href="/shop?best=1" className="text-sm font-bold text-[#f15a24] hover:underline flex items-center gap-1 mb-1">
-              {viewMore} <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+              See best sellers <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
             </Link>
           </div>
           <div className={`grid ${productGridClass} gap-3 sm:gap-4 lg:gap-5`}>

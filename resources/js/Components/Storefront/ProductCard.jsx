@@ -62,6 +62,9 @@ export default function ProductCard({ product, highlightDiscount = true }) {
   const discount = hasDiscount ? Math.round((discountAmount / regularPrice) * 100) : 0;
 
   const primaryImage = product.images?.find(img => img.is_primary) || product.images?.[0];
+  const productLinkLabel = String(product.name || '').length > 72
+    ? `${String(product.name).slice(0, 69).trim()}…`
+    : product.name;
   const imageSrc = primaryImage?.id ? `/media/product/${primaryImage.id}/640?v=${encodeURIComponent(primaryImage.updated_at || '')}` : imageUrl(primaryImage?.path, product.name);
   const imageSrcSet = primaryImage?.id
     ? `/media/product/${primaryImage.id}/320?v=${encodeURIComponent(primaryImage.updated_at || '')} 320w, /media/product/${primaryImage.id}/640?v=${encodeURIComponent(primaryImage.updated_at || '')} 640w`
@@ -152,7 +155,7 @@ export default function ProductCard({ product, highlightDiscount = true }) {
               className="storefront-product-title block text-[13px] sm:text-[14px] hover:opacity-80 font-bold transition-colors leading-tight line-clamp-2 pr-2"
               style={{ color: cardText }}
             >
-              {product.name}
+              {productLinkLabel}
             </Link>
             <p className="mt-1 text-[10px] font-medium text-gray-400">SKU: <span className="font-mono text-gray-500">{product.sku || '—'}</span></p>
             <p className={`mt-1 text-[10px] font-semibold ${inStock ? 'text-green-600' : 'text-red-600'}`}>
