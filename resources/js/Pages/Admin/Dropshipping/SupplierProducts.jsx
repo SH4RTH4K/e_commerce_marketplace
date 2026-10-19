@@ -494,7 +494,7 @@ export default function SupplierProducts({
                             type="search"
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
-                            placeholder="Search by name or SKU"
+                            placeholder="Name, SKU, supplier ID or code"
                             className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"
                         />
                     </label>
