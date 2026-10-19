@@ -107,7 +107,10 @@ class DropshippingController extends Controller
         $search = trim($request->string('q')->toString());
         $supplierId = $request->integer('supplier_id') ?: null;
         $runs = DropshipSyncRun::query()
-            ->with('supplier:id,name,key')
+            ->with([
+                'supplier:id,name,key',
+                'items' => fn ($query) => $query->where('status', 'failed')->select(['id', 'sync_run_id', 'item_key', 'status', 'error_summary'])->limit(10),
+            ])
             ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
             ->when($search !== '', fn ($query) => $query->whereHas('supplier', fn ($supplierQuery) => $supplierQuery->where('name', 'like', "%{$search}%")->orWhere('key', 'like', "%{$search}%")))
             ->latest('id')->paginate(50)->withQueryString();
@@ -118,7 +121,14 @@ class DropshippingController extends Controller
                 'supplier' => $run->supplier ? ['name' => $run->supplier->name, 'key' => $run->supplier->key] : null,
                 'type' => $run->type, 'status' => $run->status, 'total_items' => $run->total_items,
                 'processed_items' => $run->processed_items, 'success_items' => $run->success_items,
-                'failed_items' => $run->failed_items, 'started_at' => $run->started_at?->toIso8601String(),
+                'failed_items' => $run->failed_items,
+                'error_summary' => $run->error_summary ?: $run->items->first(fn ($item) => !empty($item->error_summary))?->error_summary,
+                'failed_items_list' => $run->items->map(fn ($item) => [
+                    'id' => $item->id,
+                    'key' => $item->item_key,
+                    'error' => $item->error_summary,
+                ])->values()->all(),
+                'started_at' => $run->started_at?->toIso8601String(),
                 'finished_at' => $run->finished_at?->toIso8601String(),
             ]),
             'suppliers' => DropshipSupplier::query()->withIntegration()->orderBy('name')->get(['id', 'name', 'key']),
@@ -1649,6 +1659,36 @@ class DropshippingController extends Controller
         abort_unless($syncRuns->cancel($run), 409, 'This sync run is no longer cancellable.');
 
         return back()->with('status', 'Sync run cancellation requested.');
+    }
+
+    public function runDetails(DropshipSyncRun $run)
+    {
+        $run->load([
+            'supplier:id,name,key',
+            'items' => fn ($query) => $query->latest('id')->limit(100),
+        ]);
+
+        return response()->json([
+            'id' => $run->id,
+            'supplier' => $run->supplier ? ['name' => $run->supplier->name, 'key' => $run->supplier->key] : null,
+            'type' => $run->type,
+            'status' => $run->status,
+            'total_items' => $run->total_items,
+            'processed_items' => $run->processed_items,
+            'success_items' => $run->success_items,
+            'failed_items' => $run->failed_items,
+            'error_summary' => $run->error_summary ?: $run->items->first(fn ($item) => !empty($item->error_summary))?->error_summary,
+            'started_at' => $run->started_at?->toIso8601String(),
+            'finished_at' => $run->finished_at?->toIso8601String(),
+            'items' => $run->items->map(fn ($item) => [
+                'id' => $item->id,
+                'key' => $item->item_key,
+                'status' => $item->status,
+                'error' => $item->error_summary,
+                'started_at' => $item->started_at?->toIso8601String(),
+                'finished_at' => $item->finished_at?->toIso8601String(),
+            ])->values(),
+        ]);
     }
 
     public function workImportedProductQueue(Request $request, DropshipSyncRun $run, SyncRunService $syncRuns)
