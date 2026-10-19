@@ -99,7 +99,7 @@ class DropshippingController extends Controller
             return $supplier->id;
         }
         $suppliers = DropshipSupplier::query()->withIntegration()->orderByDesc('is_active')->orderBy('id')->pluck('id');
-        return $allowAll && $suppliers->count() !== 1 ? null : $suppliers->first();
+        return $allowAll ? null : $suppliers->first();
     }
 
     public function syncRuns(Request $request)
