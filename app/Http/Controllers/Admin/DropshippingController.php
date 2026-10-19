@@ -173,7 +173,7 @@ class DropshippingController extends Controller
         };
 
         $products = $productQuery
-            ->with(['supplier:id,name,key,pricing_rules', 'productLink.product:id,name,is_published', 'variants:id,supplier_product_row_id,sku'])
+            ->with(['supplier:id,name,key,pricing_rules', 'productLink.product:id,name,sku,is_published', 'variants:id,supplier_product_row_id,sku'])
             ->paginate($perPage)
             ->withQueryString();
 
@@ -206,6 +206,7 @@ class DropshippingController extends Controller
                     'linked_product' => $product->productLink?->product ? [
                         'id' => $product->productLink->product->id,
                         'name' => $product->productLink->product->name,
+                        'sku' => $product->productLink->product->sku,
                         'is_published' => $product->productLink->product->is_published,
                     ] : null,
                     'fetched_at' => $product->fetched_at?->toIso8601String(),

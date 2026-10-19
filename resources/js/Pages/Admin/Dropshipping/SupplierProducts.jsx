@@ -675,7 +675,7 @@ export default function SupplierProducts({
                                 </th>
                                 <th className="px-5 py-3 text-left">Product</th>
                                 <th className="px-5 py-3 text-left">
-                                    Supplier code
+                                    TAQI LIFE code
                                 </th>
                                 <th className="px-5 py-3 text-left">
                                     Category
@@ -738,9 +738,12 @@ export default function SupplierProducts({
                                             <p className="text-[10px] text-gray-400 font-mono">
                                                 Supplier ID: {product.supplier_product_id}
                                             </p>
+                                            <p className="text-[10px] text-indigo-600 font-mono">
+                                                TAQI LIFE code: {product.linked_product?.sku || "Not imported"}
+                                            </p>
                                         </td>
                                         <td className="px-5 py-4 text-xs font-mono text-gray-600">
-                                            {product.product_code || "?"}
+                                            {product.linked_product?.sku || "Not imported"}
                                             {product.variant_skus?.length > 0 && (
                                                 <p className="mt-1 text-[10px] font-sans text-gray-400" title="Supplier variant SKUs">
                                                     Variants: {product.variant_skus.slice(0, 4).join(", ")}{product.variant_skus.length > 4 ? "?" : ""}
