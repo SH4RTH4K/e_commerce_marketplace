@@ -39,6 +39,21 @@ class ProductCatalogWorkflowTest extends TestCase
         $this->get('/admin/products?q=FLIP-7')->assertOk()->assertInertia(fn (Assert $page) => $page->has('products.data', 1));
     }
 
+    public function test_supplier_code_is_exposed_and_searchable_in_the_product_catalog(): void
+    {
+        $supplier = DropshipSupplier::create(['key' => 'catalog-code-supplier', 'name' => 'Code Supplier', 'supplier_code' => 'CSUP', 'driver_key' => 'fake', 'base_url' => 'https://supplier.example']);
+        $product = $this->product(['name' => 'Supplier Linked Product']);
+        $source = DropshipSupplierProduct::create(['supplier_id' => $supplier->id, 'supplier_product_id' => '9900', 'product_code' => 'SUP-12900', 'name' => $product->name, 'currency' => 'BDT', 'cost_price' => 100, 'stock_qty' => 3, 'fetched_at' => now(), 'raw_payload' => []]);
+        DropshipProductLink::create(['supplier_product_row_id' => $source->id, 'product_id' => $product->id, 'sync_status' => 'active', 'field_sync_rules' => []]);
+
+        $this->get('/admin/products?q=SUP-12900')->assertOk()->assertInertia(fn (Assert $page) => $page
+            ->has('products.data', 1)
+            ->where('products.data.0.id', $product->id)
+            ->where('products.data.0.supplier_code', 'SUP-12900')
+            ->where('products.data.0.supplier_product_id', '9900')
+            ->where('products.data.0.supplier_account_code', 'CSUP'));
+    }
+
     public function test_smart_search_ranks_exact_sku_before_partial_name_matches(): void
     {
         $exact = $this->product(['sku' => 'ABC-7']); $this->product(['name' => 'New ABC-7 Accessories']);

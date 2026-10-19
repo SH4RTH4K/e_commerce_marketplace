@@ -41,7 +41,12 @@ class ProductCatalogService
             foreach (preg_split('/\s+/u', $filters['q'], 20) ?: [$filters['q']] as $word) {
                 $pattern = '%'.$this->escapeLike($word).'%';
                 $query->where(fn ($match) => $match->whereRaw("name LIKE ? ESCAPE '!'", [$pattern])
-                    ->orWhereRaw("sku LIKE ? ESCAPE '!'", [$pattern])->orWhereRaw("brand LIKE ? ESCAPE '!'", [$pattern]));
+                    ->orWhereRaw("sku LIKE ? ESCAPE '!'", [$pattern])->orWhereRaw("brand LIKE ? ESCAPE '!'", [$pattern])
+                    ->orWhereHas('supplier', fn ($supplier) => $supplier->whereRaw("name LIKE ? ESCAPE '!'", [$pattern])->orWhereRaw("supplier_code LIKE ? ESCAPE '!'", [$pattern]))
+                    ->orWhereHas('supplierLinks.supplierProduct', fn ($source) => $source
+                        ->whereRaw("product_code LIKE ? ESCAPE '!'", [$pattern])
+                        ->orWhereRaw("supplier_product_id LIKE ? ESCAPE '!'", [$pattern]))
+                );
             }
         }
         if ($filters['category'] !== '') {

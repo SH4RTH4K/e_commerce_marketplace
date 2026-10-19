@@ -32,7 +32,7 @@ class ProductController extends Controller
         $catalog->visibility($query, $filters['status']);
         $catalog->sort($query, $filters);
         return Inertia::render('Admin/Products/Index', [
-            'products' => $query->with('category', 'images', 'supplier:id,name', 'supplierLinks.supplierProduct.supplier')->withCount('variants')
+            'products' => $query->with('category', 'images', 'supplier:id,name,supplier_code', 'supplierLinks.supplierProduct.supplier')->withCount('variants')
                 ->paginate($filters['per_page'])->appends($catalog->parameters($filters))->through(fn ($product) => [
                     'id' => $product->id, 'name' => $product->name, 'sku' => $product->sku, 'brand' => $product->brand,
                     'url_key' => $product->url_key, 'is_published' => $product->is_published,
@@ -42,6 +42,9 @@ class ProductController extends Controller
                     'variants_count' => (int) $product->variants_count, 'image_url' => $product->imageUrl(),
                     'category' => $product->category ? ['name' => $product->category->name] : null,
                     'supplier' => $product->supplier?->name ?: $product->supplierLinks->first()?->supplierProduct?->supplier?->name,
+                    'supplier_code' => $product->supplierLinks->first()?->supplierProduct?->product_code ?: $product->supplierLinks->first()?->supplierProduct?->supplier_product_id,
+                    'supplier_product_id' => $product->supplierLinks->first()?->supplierProduct?->supplier_product_id,
+                    'supplier_account_code' => $product->supplier?->supplier_code ?: $product->supplierLinks->first()?->supplierProduct?->supplier?->supplier_code,
                     'source_type' => $product->source_type ?: ($product->supplierLinks->isNotEmpty() ? 'dropshipping' : 'manual'),
                     'updated_at' => $product->updated_at?->setTimezone('Asia/Dhaka')->format('d M Y, h:i A'),
                 ]),
