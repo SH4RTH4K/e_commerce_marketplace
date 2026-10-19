@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import ProductCard from '@/Components/Storefront/ProductCard';
+import ProductRating from '@/Components/Storefront/ProductRating';
 import CodOrderModal from '@/Components/Storefront/CodOrderModal';
 import { money, imageUrl, whatsappNumber } from '@/lib/utils';
 import { trackViewItem, trackAddToCart } from '@/lib/tracking';
@@ -434,7 +435,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
   const inStock = stockQuantity > 0;
   const activeImageRecord = (product.images || []).find(image => image.path === activeImage);
   const mainImageUrl = activeImageRecord?.id ? `/media/product/${activeImageRecord.id}/960` : imageUrl(activeImage, product.name);
-  const rating = Math.max(0, Math.min(5, Math.round(parseFloat(product.rating) || 0)));
+  const reviewCount = reviews?.total ?? product.reviews_count ?? 0;
 
   // Track product view once on mount
   useEffect(() => {
@@ -487,7 +488,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
               )}
               <p className="mt-2 text-sm text-gray-500">SKU: <span className="font-mono font-semibold text-gray-700">{product.sku || '—'}</span></p>
               {inStock && <p className="mt-2 text-sm font-semibold text-green-700">In Stock: {stockQuantity.toLocaleString()}</p>}
-              <div className="template-1-product-rating" aria-label={`${rating} out of 5 stars`}>{'★'.repeat(rating)}<span>{'★'.repeat(5 - rating)}</span> <small>({product.reviews_count || 0})</small></div>
+              <ProductRating rating={product.rating} reviewCount={reviewCount} className="template-1-product-rating" />
               <div className="template-1-product-description" dangerouslySetInnerHTML={{ __html: descriptionMarkup }} />
 
               {(variantGroups || []).map(group => (
@@ -677,12 +678,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
             <h1 className="text-2xl sm:text-[28px] font-semibold text-gray-800 tracking-tight leading-tight mb-2">{product.name}</h1>
             
             <div className="flex flex-wrap items-center gap-4 mb-2">
-              <div className="flex items-center gap-1">
-                <div className="flex text-amber-400 text-lg">
-                  {'★'.repeat(rating)}<span className="text-gray-200">{'★'.repeat(5 - rating)}</span>
-                </div>
-                <span className="text-sm text-gray-500 ml-1 font-medium">({product.reviews_count || 0})</span>
-              </div>
+              <ProductRating rating={product.rating} reviewCount={reviewCount} />
               <>
                 <span className="text-gray-300 hidden sm:inline">|</span>
                 <span className="text-sm text-gray-500">SKU: <span className="font-semibold text-gray-900">{product.sku || '—'}</span></span>

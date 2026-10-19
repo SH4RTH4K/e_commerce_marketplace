@@ -110,8 +110,19 @@
         {{-- Render meaningful content for visitors and crawlers without JavaScript. --}}
         <main class="seo-crawler-fallback" data-seo-crawler-fallback>
             <p style="margin:0 0 1.25rem"><img src="{{ seo_image_url() }}" alt="{{ site_name() }}" width="180" height="64" style="display:block;max-width:180px;height:64px;object-fit:contain;object-position:left center" /></p>
-            <h1 data-seo-fallback-h1>{{ $pageProps['product']['name'] ?? $pageProps['activeCategory']['name'] ?? ($pageComponent === 'Storefront/Home' ? $fallbackHomeH1 : ($pageProps['heading'] ?? $fallbackH1)) }}</h1>
+            <h1 data-seo-fallback-h1>{{ $pageProps['product']['name'] ?? $pageProps['activeCategory']['name'] ?? $pageProps['guide']['title'] ?? ($pageComponent === 'Storefront/Home' ? $fallbackHomeH1 : ($pageProps['heading'] ?? $fallbackH1)) }}</h1>
             @if($pageMetaDescription)<p>{{ $pageMetaDescription }}</p>@endif
+            @if($pageComponent === 'Storefront/BlogDetail' && !empty($pageProps['guide']))
+                @foreach($pageProps['guide']['sections'] as $section)
+                    <section><h2>{{ $section['heading'] }}</h2><p>{{ $section['text'] }}</p></section>
+                @endforeach
+                @if(!empty($pageProps['guideCategory']))
+                    <a href="{{ $pageProps['guideCategory']['url'] }}">Browse {{ $pageProps['guideCategory']['name'] }}</a>
+                @endif
+                @foreach($pageProps['guideProducts'] ?? [] as $guideProduct)
+                    <p><a href="{{ $guideProduct['url'] }}">{{ $guideProduct['name'] }}</a></p>
+                @endforeach
+            @endif
             <nav aria-label="Additional store links"><a href="{{ route('about') }}">About TAQI LIFE</a> · <a href="{{ route('blog') }}">Shopping guides</a></nav>
             <nav aria-label="Store links"><a href="{{ route('home') }}">Homepage</a> · <a href="{{ route('shop') }}">Browse the shop</a> · <a href="{{ route('contact') }}">Contact support</a></nav>
             @php

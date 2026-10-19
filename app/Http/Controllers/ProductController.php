@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Inertia\Inertia;
 use App\Models\Feature;
 use App\Models\Product;
 use App\Models\ProductReview;
 use App\Services\CategoryHierarchyService;
+use App\Services\ProductOfferService;
+use App\Services\StorefrontSeoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 class ProductController extends Controller
 {
@@ -32,6 +34,7 @@ class ProductController extends Controller
         $product->unsetRelation('supplierLinks');
 
         $related = Product::published()
+            ->orderByRaw('CASE WHEN stock_quantity > 0 THEN 0 ELSE 1 END')
             ->with('images', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([
@@ -49,11 +52,11 @@ class ProductController extends Controller
                 $relatedProduct->unsetRelation('supplierLinks');
             });
 
-        $sizes   = $product->variants->where('type', 'Size')->values();
-        $colors  = $product->variants->where('type', 'Color')->values();
+        $sizes = $product->variants->where('type', 'Size')->values();
+        $colors = $product->variants->where('type', 'Color')->values();
         $weights = $product->variants->where('type', 'Weight')->values();
-        $variantGroups = $product->variants->groupBy('type')->map(fn($items, $type) => [
-            'name'    => $type,
+        $variantGroups = $product->variants->groupBy('type')->map(fn ($items, $type) => [
+            'name' => $type,
             'options' => $items->values(),
         ])->values();
         $features = Feature::where('is_active', true)->orderBy('position')->take(4)->get();
@@ -74,7 +77,7 @@ class ProductController extends Controller
 
         $categoryPath = $product->category ? app(CategoryHierarchyService::class)->path($product->category) : [];
         try {
-            $initialVariants = app(\App\Services\ProductOfferService::class)->selected($product, $request->query('variant'))['selection'];
+            $initialVariants = app(ProductOfferService::class)->selected($product, $request->query('variant'))['selection'];
         } catch (\InvalidArgumentException|\TypeError $exception) {
             abort(404);
         }
@@ -92,7 +95,7 @@ class ProductController extends Controller
         ), [
             'initialVariants' => $initialVariants,
             'categoryPath' => array_map(fn ($item) => collect($item)->only(['id', 'name', 'slug'])->all(), $categoryPath),
-            'structuredData' => app(\App\Services\StorefrontSeoService::class)->product($product, $categoryPath),
+            'structuredData' => app(StorefrontSeoService::class)->product($product, $categoryPath),
             'seo' => [
                 'title' => $product->meta_title ?: $product->name,
                 'description' => Str::limit(trim(strip_tags((string) ($product->meta_description ?: $product->short_description ?: $product->description))), 300),

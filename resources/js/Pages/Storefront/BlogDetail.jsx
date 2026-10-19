@@ -1,7 +1,7 @@
 ﻿import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link } from '@inertiajs/react';
 
-export default function BlogDetailPage({ guide, guides = [], seo }) {
+export default function BlogDetailPage({ guide, guides = [], guideCategory, guideProducts = [], seo }) {
   return (
     <StorefrontLayout>
       <Head title={seo?.title} />
@@ -19,6 +19,20 @@ export default function BlogDetailPage({ guide, guides = [], seo }) {
                 <p className="mt-3 leading-relaxed text-gray-700">{section.text}</p>
               </section>
             ))}
+            {guideCategory && (
+              <section className="mt-8 border-t border-gray-100 pt-6">
+                <h2 className="text-lg font-bold text-gray-900">Compare Bluetooth speakers</h2>
+                <Link href={guideCategory.url} className="mt-3 inline-block font-semibold text-gray-900 underline">Browse {guideCategory.name}</Link>
+                {guideProducts.length > 0 && (
+                  <>
+                    <h3 className="mt-5 font-semibold text-gray-900">Currently available models</h3>
+                    <ul className="mt-3 flex flex-col gap-3">
+                      {guideProducts.map(product => <li key={product.url}><Link href={product.url} className="text-sm text-gray-700 underline">{product.name}</Link></li>)}
+                    </ul>
+                  </>
+                )}
+              </section>
+            )}
             <div className="mt-8 flex flex-wrap gap-4 border-t border-gray-100 pt-6 text-sm font-semibold text-gray-900">
               <Link href="/shop" className="underline">Browse products</Link>
               <Link href="/shipping" className="underline">Delivery information</Link>

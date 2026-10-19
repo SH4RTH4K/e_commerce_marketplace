@@ -7,6 +7,28 @@ class ShoppingGuideService
     public function all(): array
     {
         return [
+            'bluetooth-speaker-buying-guide-bangladesh' => [
+                'title' => 'How to choose a Bluetooth speaker in Bangladesh',
+                'summary' => 'Compare portable speakers by total price, size, battery life, connections and warranty before choosing a model for home or travel.',
+                'category_slug' => 'bluetooth-speaker',
+                'sections' => [
+                    ['heading' => 'Set a budget for the complete order', 'text' => 'Compare the current price of each exact model, then include the delivery charge shown at checkout. A low price alone does not confirm the brand, features or warranty. Check the seller description and ask support to confirm anything unclear before paying. Prices and availability can change; use the live product page rather than an old social media post.'],
+                    ['heading' => 'Choose for your room, desk or travel bag', 'text' => 'For a desk or small room, compare the speaker size, controls and charging connection. For travel, consider weight, a carrying strap and the stated battery life. More watts do not by themselves guarantee better sound. Ask whether photos show the exact supplied model, and use an actual listening demonstration when one is available.'],
+                    ['heading' => 'Check battery and connectivity details', 'text' => 'Check how the speaker charges, whether a charging cable or adapter is included, and whether it supports the connection you need. Bluetooth, AUX, USB playback and memory-card support vary by model. Advertised battery life depends on volume and lighting settings; ask for the conditions behind a runtime claim. Do not assume two speakers can pair together unless that exact model supports it.'],
+                    ['heading' => 'Confirm the item, warranty and return conditions', 'text' => 'Confirm the brand and model supplied, box contents and any written warranty before ordering. Similar-looking speakers can have different electronics and specifications. Read the shipping and return policies, keep your order details and check the delivery for a wrong item, missing parts or damage. Contact support promptly with the product name or SKU if something does not match.'],
+                ],
+            ],
+            'bluetooth-speaker-battery-waterproof-guide' => [
+                'title' => 'Bluetooth speaker battery life and water resistance: what to check',
+                'summary' => 'Understand speaker runtime, charging, water-resistance ratings and warranty questions before buying a portable Bluetooth speaker.',
+                'category_slug' => 'bluetooth-speaker',
+                'sections' => [
+                    ['heading' => 'Compare runtime under similar conditions', 'text' => 'Battery capacity and claimed hours are different measurements. Runtime varies with volume, bass, lighting and battery condition. Compare claims made at similar settings, and ask how long the supplied model is expected to play at your normal listening volume. A larger capacity does not automatically mean a longer runtime when speaker power and other features differ.'],
+                    ['heading' => 'Check the charging connection and accessories', 'text' => 'Look for the input voltage, connector type and stated charging time for your exact speaker. Confirm whether the box contains a cable, a charger, both or neither. Use the charging method specified for that item. USB playback and USB charging are separate functions, so check the listing carefully if you need music playback from a pen drive.'],
+                    ['heading' => 'Treat water-resistance claims as model-specific', 'text' => 'A waterproof-looking case or product photo does not establish a protection rating. Look for a documented rating for the actual supplied model and read its instructions and exclusions. Do not infer that another version has the same rating, or assume that water damage is covered by the warranty. Ask support before exposing an item to water when the rating is unclear.'],
+                    ['heading' => 'Ask these questions before checkout', 'text' => 'Is this the exact brand and version shown? What is included in the box? What warranty, if any, is supplied in writing, and who handles a claim? Which delivery and return conditions apply? Confirm these details on the product page or with support, then keep the order confirmation. The available products below link to current stock and pricing.'],
+                ],
+            ],
             'clothing-size-guide' => [
                 'title' => 'How to choose clothing sizes when shopping online',
                 'summary' => 'Compare garment measurements, size options and product details before ordering clothing from '.site_name().'.',

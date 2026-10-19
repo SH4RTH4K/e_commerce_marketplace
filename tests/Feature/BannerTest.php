@@ -29,6 +29,7 @@ class BannerTest extends TestCase
             'name' => 'Featured Product',
             'slug' => 'featured-product',
             'is_published' => true,
+            'stock_quantity' => 5,
         ]);
         Banner::create([
             'title' => 'Featured Product Banner',

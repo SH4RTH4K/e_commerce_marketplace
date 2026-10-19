@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Setting;
+use App\Services\CartService;
 use App\Services\StorefrontSeoService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -24,6 +26,7 @@ class MerchantSeoTest extends TestCase
     private function product(array $data = []): Product
     {
         $category = Category::firstOrCreate(['slug' => 'clothing'], ['name' => 'Clothing', 'is_active' => true]);
+
         return Product::create(array_merge(['name' => 'Shirt & jacket', 'category_id' => $category->id, 'regular_price' => 1000, 'sale_price' => 800, 'stock_quantity' => 3, 'sku' => 'S1', 'is_published' => true], $data));
     }
 
@@ -44,7 +47,7 @@ class MerchantSeoTest extends TestCase
             ->where('initialVariants.Size', 'L')->where('initialVariants.Color', 'White')
             ->where('seo.canonical', route('product.show', $product)));
         $this->post('/cart/add', ['product_id' => $product->id, 'variant' => 'Size: L, Color: White', 'qty' => 1])->assertRedirect();
-        $this->assertSame(925.0, app(\App\Services\CartService::class)->subtotal());
+        $this->assertSame(925.0, app(CartService::class)->subtotal());
         foreach (['999999', $small->id.'.'.$large->id, $small->id.'.'.$black->id.'.'.$white->id] as $invalid) {
             $this->get(route('product.show', $product).'?variant='.$invalid)->assertNotFound();
         }
@@ -87,10 +90,10 @@ class MerchantSeoTest extends TestCase
         $product = $this->product();
         $product->reviews()->create(['author_name' => 'Customer A', 'rating' => 4, 'body' => 'Useful product', 'status' => 'approved']);
         $product->reviews()->create(['author_name' => 'Customer B', 'rating' => 1, 'body' => 'Pending review', 'status' => 'pending']);
-        \Illuminate\Support\Facades\DB::enableQueryLog();
+        DB::enableQueryLog();
         $schema = app(StorefrontSeoService::class)->product($product->load('images', 'variants'), []);
-        $reviewQueries = array_filter(\Illuminate\Support\Facades\DB::getQueryLog(), fn ($query) => str_contains($query['query'], 'COUNT(*) AS review_count'));
-        \Illuminate\Support\Facades\DB::disableQueryLog();
+        $reviewQueries = array_filter(DB::getQueryLog(), fn ($query) => str_contains($query['query'], 'COUNT(*) AS review_count'));
+        DB::disableQueryLog();
         $this->assertCount(1, $reviewQueries);
         $this->assertStringNotContainsString('order by', strtolower(array_values($reviewQueries)[0]['query']), 'Review aggregation must work with MySQL ONLY_FULL_GROUP_BY.');
         $this->assertSame(1, $schema['@graph'][0]['aggregateRating']['reviewCount']);
@@ -103,7 +106,7 @@ class MerchantSeoTest extends TestCase
 
     public function test_guides_are_discoverable_and_unknown_article_is_not_a_duplicate(): void
     {
-        $this->get('/blog')->assertOk()->assertInertia(fn (Assert $page) => $page->has('guides', 3));
+        $this->get('/blog')->assertOk()->assertInertia(fn (Assert $page) => $page->has('guides', 5));
         $this->get('/blog/clothing-size-guide')->assertOk()->assertInertia(fn (Assert $page) => $page
             ->where('structuredData.@type', 'BlogPosting')->has('guide.sections', 4));
         $this->get('/blog/unknown')->assertNotFound();

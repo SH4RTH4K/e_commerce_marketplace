@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Inertia\Inertia;
 use App\Models\Banner;
 use App\Models\Category;
 use App\Models\Coupon;
@@ -10,6 +9,7 @@ use App\Models\Feature;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Inertia\Inertia;
 use Throwable;
 
 class HomeController extends Controller
@@ -30,6 +30,7 @@ class HomeController extends Controller
         ];
         $withImages = fn ($q) => $q
             ->published()
+            ->orderByRaw('CASE WHEN stock_quantity > 0 THEN 0 ELSE 1 END')
             ->with('images', 'category', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([
@@ -46,7 +47,9 @@ class HomeController extends Controller
 
         $banners = fn (string $placement) => Banner::active()
             ->placement($placement)
-            ->with('product:id,name,slug,is_published')
+            ->where(fn ($query) => $query->whereNull('product_id')
+                ->orWhereHas('product', fn ($products) => $products->published()->where('stock_quantity', '>', 0)))
+            ->with('product:id,name,slug,sku,is_published')
             ->orderBy('position')
             ->orderBy('id');
 
@@ -145,22 +148,22 @@ class HomeController extends Controller
             : collect();
 
         return Inertia::render('Storefront/Home', [
-            'heroBanners'     => $bannerPayload('hero'),
+            'heroBanners' => $bannerPayload('hero'),
             'heroSideBanners' => $bannerPayload('hero_side'),
-            'middleBanners'   => $bannerPayload('middle'),
-            'features'        => Feature::where('is_active', true)->orderBy('position')->get(),
+            'middleBanners' => $bannerPayload('middle'),
+            'features' => Feature::where('is_active', true)->orderBy('position')->get(),
             'featuredCategories' => $categories,
-            'coupons'         => Coupon::query()
+            'coupons' => Coupon::query()
                 ->where('is_active', true)
                 ->orderByDesc('created_at')
                 ->get()
                 ->filter(fn (Coupon $c) => $c->isCurrentlyActive())
                 ->values()
                 ->take(4),
-            'flashProducts'   => $flashProducts,
-            'trending'        => $trending,
-            'bestSellers'     => $bestSellers,
-            'newArrivals'     => $newArrivals,
+            'flashProducts' => $flashProducts,
+            'trending' => $trending,
+            'bestSellers' => $bestSellers,
+            'newArrivals' => $newArrivals,
             'templateTwoCategorySections' => $templateTwoCategorySections,
             'homeOverviewHasMore' => [
                 'all' => Product::published()
@@ -183,6 +186,7 @@ class HomeController extends Controller
         ]);
 
         $query = Product::published()
+            ->orderByRaw('CASE WHEN stock_quantity > 0 THEN 0 ELSE 1 END')
             ->with('images', 'category', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([
@@ -239,6 +243,7 @@ class HomeController extends Controller
 
         $limit = 10;
         $products = Product::published()
+            ->orderByRaw('CASE WHEN stock_quantity > 0 THEN 0 ELSE 1 END')
             ->with('images', 'category', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([
@@ -282,6 +287,7 @@ class HomeController extends Controller
 
         $limit = min(48, max(1, (int) setting('homepage_flash_sale_limit', '10')));
         $products = Product::published()
+            ->orderByRaw('CASE WHEN stock_quantity > 0 THEN 0 ELSE 1 END')
             ->with('images', 'category', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([
