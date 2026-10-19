@@ -64,7 +64,9 @@ class StartSupplierCatalogSync implements ShouldQueue
     {
         $run = DropshipSyncRun::query()->find($this->syncRunId);
         if ($run !== null) {
-            app(SyncRunService::class)->failRun($run, 'Catalog sync could not be started.');
+            $errorMsg = trim($exception->getMessage());
+            $errorSummary = $errorMsg !== '' ? $errorMsg : 'Catalog sync could not be started.';
+            app(SyncRunService::class)->failRun($run, $errorSummary);
         }
     }
 }

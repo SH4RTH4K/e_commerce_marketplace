@@ -101,7 +101,11 @@ class SyncSupplierCatalogPage implements ShouldQueue
             return;
         }
 
-        app(SyncRunService::class)->failPendingItem($run, 'page:' . $this->page, 'Catalog page could not be refreshed.');
+        $errorMsg = trim($exception->getMessage());
+        $errorSummary = $errorMsg !== '' ? $errorMsg : 'Catalog page could not be refreshed.';
+
+        app(SyncRunService::class)->failPendingItem($run, 'page:' . $this->page, $errorSummary);
+        $run->update(['error_summary' => $errorSummary]);
         app(SyncRunService::class)->finalize($run);
     }
 

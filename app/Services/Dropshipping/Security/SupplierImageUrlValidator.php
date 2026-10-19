@@ -21,15 +21,28 @@ class SupplierImageUrlValidator
     public function __construct(?Closure $resolver = null)
     {
         $this->resolver = $resolver ?? static function (string $host): array {
-            $records = dns_get_record($host, DNS_A | DNS_AAAA);
-            if (! is_array($records)) {
-                return [];
+            $records = @dns_get_record($host, DNS_A | DNS_AAAA);
+            if (is_array($records) && $records !== []) {
+                $ips = array_values(array_unique(array_filter(array_map(
+                    static fn (array $record): ?string => $record['ip'] ?? $record['ipv6'] ?? null,
+                    $records,
+                ))));
+                if ($ips !== []) {
+                    return $ips;
+                }
             }
 
-            return array_values(array_unique(array_filter(array_map(
-                static fn (array $record): ?string => $record['ip'] ?? $record['ipv6'] ?? null,
-                $records,
-            ))));
+            $fallback = @gethostbynamel($host);
+            if (is_array($fallback) && $fallback !== []) {
+                return array_values(array_unique($fallback));
+            }
+
+            $single = @gethostbyname($host);
+            if ($single && $single !== $host) {
+                return [$single];
+            }
+
+            return [];
         };
     }
 

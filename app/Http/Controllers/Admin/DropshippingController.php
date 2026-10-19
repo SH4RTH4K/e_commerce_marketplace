@@ -1825,17 +1825,28 @@ class DropshippingController extends Controller
             ->orderBy('id')
             ->first(['id', 'item_key', 'status']);
 
-        if ($item === null) {
-            StartSupplierCatalogSync::dispatchSync($run->id);
-        } elseif (preg_match('/^page:(\d+)$/', $item->item_key, $matches)) {
-            if ($item->status === SyncRunState::ITEM_RUNNING) {
-                $item->forceFill([
-                    'status' => SyncRunState::ITEM_QUEUED,
-                    'started_at' => null,
-                ])->save();
-            }
+        try {
+            if ($item === null) {
+                StartSupplierCatalogSync::dispatchSync($run->id);
+            } elseif (preg_match('/^page:(\d+)$/', $item->item_key, $matches)) {
+                if ($item->status === SyncRunState::ITEM_RUNNING) {
+                    $item->forceFill([
+                        'status' => SyncRunState::ITEM_QUEUED,
+                        'started_at' => null,
+                    ])->save();
+                }
 
-            SyncSupplierCatalogPage::dispatchSync($run->id, (int) $matches[1]);
+                SyncSupplierCatalogPage::dispatchSync($run->id, (int) $matches[1]);
+            }
+        } catch (\Throwable $exception) {
+            report($exception);
+            $errorMsg = trim($exception->getMessage());
+            $errorSummary = $errorMsg !== '' ? $errorMsg : 'Catalog sync failed.';
+            if ($item !== null) {
+                app(SyncRunService::class)->failPendingItem($run, $item->item_key, $errorSummary);
+            }
+            $run->update(['error_summary' => $errorSummary]);
+            app(SyncRunService::class)->finalize($run);
         }
 
         return response()->json([

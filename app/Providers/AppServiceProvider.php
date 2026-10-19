@@ -26,6 +26,44 @@ class AppServiceProvider extends ServiceProvider
             // Profiles are data-only: they select the fixed generic REST client,
             // never an administrator-provided PHP class or executable callback.
             try {
+                if (\Illuminate\Support\Facades\Schema::hasTable('dropship_driver_profiles')) {
+                    DropshipDriverProfile::firstOrCreate(
+                        ['key' => 'mohasagor'],
+                        [
+                            'name' => 'Mohasagor Bangladesh',
+                            'auth_key_header' => 'api-key',
+                            'auth_secret_header' => 'secret-key',
+                            'products_path' => 'product',
+                            'categories_path' => null,
+                            'collection_path' => null,
+                            'pagination_param' => 'page',
+                            'default_currency' => 'BDT',
+                            'field_mapping' => [
+                                'collection_path' => '',
+                                'fields' => [
+                                    'id' => 'id',
+                                    'name' => 'name',
+                                    'product_code' => 'product_code',
+                                    'currency' => 'currency',
+                                    'cost_price' => 'regular_price',
+                                    'max_price' => 'sale_price',
+                                    'category_key' => 'category',
+                                    'stock_quantity' => 'stock',
+                                ],
+                                'variant_collection' => 'product_variants',
+                                'variant_fields' => [
+                                    'id' => 'id',
+                                    'attributes' => [
+                                        'type' => 'attribute',
+                                        'value' => 'variant',
+                                    ],
+                                ],
+                            ],
+                            'is_active' => true,
+                        ]
+                    );
+                }
+
                 DropshipDriverProfile::query()
                     ->where('is_active', true)
                     ->pluck('key')

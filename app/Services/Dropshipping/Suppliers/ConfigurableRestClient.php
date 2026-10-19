@@ -92,7 +92,9 @@ final class ConfigurableRestClient implements SupplierClient
         }
         $payload = $response->json();
         if (! is_array($payload)) {
-            throw new LogicException('Supplier catalog response must be a JSON object or array.');
+            $snippet = trim(strip_tags((string) $response->body()));
+            $snippet = strlen($snippet) > 100 ? substr($snippet, 0, 100) . '...' : $snippet;
+            throw new LogicException('Supplier returned non-JSON response' . ($snippet !== '' ? " ({$snippet})" : '') . '. Verify supplier API base URL and credentials.');
         }
         $collectionPath = $profile->collection_path ?: (is_string($mapping['collection_path'] ?? null) ? $mapping['collection_path'] : '');
         $items = $this->valueAt($payload, $collectionPath);
@@ -211,7 +213,10 @@ final class ConfigurableRestClient implements SupplierClient
         if ($path === '' || str_starts_with($path, '/') || str_contains($path, '..') || preg_match('/[?#]/', $path)) {
             throw new LogicException('Driver endpoint paths must be relative and cannot contain traversal or query syntax.');
         }
-        $headers = [];
+        $headers = [
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept' => 'application/json',
+        ];
         if (trim((string) $supplier->api_key) !== '') $headers[$this->profile()->auth_key_header] = (string) $supplier->api_key;
         if (trim((string) $supplier->secret_key) !== '') $headers[$this->profile()->auth_secret_header] = (string) $supplier->secret_key;
         return Http::acceptJson()
@@ -219,7 +224,7 @@ final class ConfigurableRestClient implements SupplierClient
             // Use Composer's maintained CA bundle without disabling TLS
             // verification, so supplier HTTPS certificates are still checked.
             ->withOptions(['verify' => \Composer\CaBundle\CaBundle::getBundledCaBundlePath()])
-            ->timeout(20)
+            ->timeout(30)
             ->withHeaders($headers)
             ->get($base . '/' . ltrim($path, '/'), $query);
     }
