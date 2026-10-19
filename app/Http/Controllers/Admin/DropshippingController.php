@@ -150,6 +150,7 @@ class DropshippingController extends Controller
                 $searchQuery->where('name', 'like', "%{$search}%")
                     ->orWhere('supplier_product_id', 'like', "%{$search}%")
                     ->orWhere('product_code', 'like', "%{$search}%")
+                    ->orWhereHas('productLink.product', fn ($productQuery) => $productQuery->where('sku', 'like', "%{$search}%"))
                     ->orWhereHas('variants', fn ($variantQuery) => $variantQuery->where('sku', 'like', "%{$search}%"));
             }))
             ->when($stockFilter === 'positive', fn ($query) => $query->where('stock_qty', '>', 0))

@@ -738,8 +738,8 @@ export default function SupplierProducts({
                                             <p className="text-[10px] text-gray-400 font-mono">
                                                 Supplier ID: {product.supplier_product_id}
                                             </p>
-                                            <p className="text-[10px] text-indigo-600 font-mono">
-                                                TAQI LIFE code: {product.linked_product?.sku || "Not imported"}
+                                            <p className="text-[10px] text-gray-400 font-mono">
+                                                Supplier code: {product.product_code || "Not available"}
                                             </p>
                                         </td>
                                         <td className="px-5 py-4 text-xs font-mono text-gray-600">
