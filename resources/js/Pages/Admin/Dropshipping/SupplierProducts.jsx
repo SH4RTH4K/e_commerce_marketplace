@@ -675,7 +675,7 @@ export default function SupplierProducts({
                                 </th>
                                 <th className="px-5 py-3 text-left">Product</th>
                                 <th className="px-5 py-3 text-left">
-                                    SKU
+                                    Supplier code
                                 </th>
                                 <th className="px-5 py-3 text-left">
                                     Category
@@ -735,8 +735,8 @@ export default function SupplierProducts({
                                             <p className="font-semibold text-gray-800">
                                                 {product.name}
                                             </p>
-                                            <p className="text-xs text-gray-400 font-mono">
-                                                {product.supplier_product_id}
+                                            <p className="text-[10px] text-gray-400 font-mono">
+                                                Supplier ID: {product.supplier_product_id}
                                             </p>
                                         </td>
                                         <td className="px-5 py-4 text-xs font-mono text-gray-600">
