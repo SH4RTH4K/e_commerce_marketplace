@@ -48,7 +48,11 @@ class ShopController extends Controller
             $query->where(function ($q) use ($term) {
                 $q->where('name', 'like', "%{$term}%")
                     ->orWhere('brand', 'like', "%{$term}%")
-                    ->orWhere('short_description', 'like', "%{$term}%");
+                    ->orWhere('short_description', 'like', "%{$term}%")
+                    ->orWhere('sku', 'like', "%{$term}%")
+                    ->orWhereHas('supplierLinks.supplierProduct', fn ($supplierProductQuery) => $supplierProductQuery
+                        ->where('supplier_product_id', 'like', "%{$term}%")
+                        ->orWhere('product_code', 'like', "%{$term}%"));
             });
         }
 

@@ -74,6 +74,31 @@ class StorefrontCatalogPerformanceTest extends TestCase
             ->where('product.description', $product->description));
     }
 
+    public function test_storefront_search_matches_local_sku_and_supplier_identifiers(): void
+    {
+        $category = $this->category();
+        $product = $this->product($category, ['name' => 'Searchable Hoodie', 'sku' => '003365']);
+        $supplier = DropshipSupplier::create(['key' => 'search-supplier', 'name' => 'Search supplier', 'driver_key' => 'manual']);
+        $source = DropshipSupplierProduct::create([
+            'supplier_id' => $supplier->id,
+            'supplier_product_id' => '8434',
+            'product_code' => '11434',
+            'name' => $product->name,
+            'currency' => 'BDT',
+            'cost_price' => 100,
+            'stock_qty' => 3,
+            'fetched_at' => now(),
+            'raw_payload' => [],
+        ]);
+        DropshipProductLink::create(['supplier_product_row_id' => $source->id, 'product_id' => $product->id, 'sync_status' => 'active']);
+
+        foreach (['003365', '8434', '11434'] as $term) {
+            $this->get('/category/shirt?q='.$term)->assertOk()->assertInertia(fn (Assert $page) => $page
+                ->where('products.total', 1)
+                ->where('products.data.0.id', $product->id));
+        }
+    }
+
     public function test_serializing_many_cards_reuses_variant_existence_instead_of_querying_each_product(): void
     {
         $category = $this->category();
