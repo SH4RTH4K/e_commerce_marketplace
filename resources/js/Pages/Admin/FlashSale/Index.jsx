@@ -75,7 +75,7 @@ export default function FlashSaleIndex({ flashProducts = [], available, categori
   const supplierName = (product) => supplierProduct(product)?.supplier?.name || '';
   const supplierCode = (product) => {
     const source = supplierProduct(product);
-    return source?.product_code || source?.supplier_product_id || product.sku || '';
+    return product.sku || source?.product_code || source?.supplier_product_id || '';
   };
 
   const productMeta = (product) => {

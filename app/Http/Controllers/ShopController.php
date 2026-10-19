@@ -156,8 +156,8 @@ class ShopController extends Controller
         abort_if($products->currentPage() > $products->lastPage(), 404);
         $products->getCollection()->each(static function (Product $product): void {
             $supplierProduct = $product->supplierLinks->first()?->supplierProduct;
-            $product->sku = $supplierProduct?->product_code
-                ?: $product->sku
+            $product->sku = $product->sku
+                ?: $supplierProduct?->product_code
                 ?: $supplierProduct?->supplier_product_id;
             $product->unsetRelation('supplierLinks');
         });

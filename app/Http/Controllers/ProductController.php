@@ -17,11 +17,10 @@ class ProductController extends Controller
         abort_unless($product->is_published, 404);
 
         $product->load('images', 'variants', 'category', 'supplierLinks.supplierProduct');
-        // Supplier product codes are the SKU for imported products. Set the
-        // display value on the existing SKU attribute so it is always included
-        // in the serialized storefront product payload.
-        $product->sku = $product->supplierLinks->first()?->supplierProduct?->product_code
-            ?: $product->sku
+        // Store SKUs belong to this store. Supplier codes only fill a missing
+        // legacy SKU and remain available on the supplier mapping for sync.
+        $product->sku = $product->sku
+            ?: $product->supplierLinks->first()?->supplierProduct?->product_code
             ?: $product->supplierLinks->first()?->supplierProduct?->supplier_product_id;
 
         $canonical = route('product.show', $product);
@@ -44,8 +43,8 @@ class ProductController extends Controller
             ->get()
             ->each(static function (Product $relatedProduct): void {
                 $supplierProduct = $relatedProduct->supplierLinks->first()?->supplierProduct;
-                $relatedProduct->sku = $supplierProduct?->product_code
-                    ?: $relatedProduct->sku
+                $relatedProduct->sku = $relatedProduct->sku
+                    ?: $supplierProduct?->product_code
                     ?: $supplierProduct?->supplier_product_id;
                 $relatedProduct->unsetRelation('supplierLinks');
             });

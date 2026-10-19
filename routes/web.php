@@ -162,6 +162,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('analytics', [\App\Http\Controllers\Admin\AnalyticsController::class, 'index'])->name('analytics.index');
 
+        // SKU setup belongs to the whole catalogue, independently of supplier integrations.
+        Route::middleware('permission:settings.manage')->prefix('sku-configuration')->name('sku-configuration.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\SkuConfigurationController::class, 'index'])->name('index');
+            Route::patch('/', [\App\Http\Controllers\Admin\SkuConfigurationController::class, 'update'])->name('update');
+            Route::post('preview', [\App\Http\Controllers\Admin\SkuConfigurationController::class, 'preview'])->name('preview');
+            Route::post('apply', [\App\Http\Controllers\Admin\SkuConfigurationController::class, 'apply'])->name('apply');
+        });
+        Route::redirect('dropshipping/sku-configuration', '/admin/sku-configuration')->middleware('permission:settings.manage');
+
         // Inventory
         Route::get('inventory', [AdminInventoryController::class, 'index'])->middleware('permission:products.view')->name('inventory.index');
         Route::get('inventory/history', [AdminInventoryController::class, 'movements'])->middleware('permission:products.view')->name('inventory.movements');

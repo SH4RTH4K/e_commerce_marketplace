@@ -1,6 +1,7 @@
 import DropshippingSubpage from "./Subpage";
 import { router } from "@inertiajs/react";
 import { useState, useEffect, useRef } from "react";
+import { imageUrl } from "@/lib/utils";
 
 function Status({ value }) {
     const styles = {
@@ -669,6 +670,9 @@ export default function SupplierProducts({
                                         onChange={toggleAll}
                                     />
                                 </th>
+                                <th className="hidden px-5 py-3 text-left sm:table-cell">
+                                    Image
+                                </th>
                                 <th className="px-5 py-3 text-left">Product</th>
                                 <th className="px-5 py-3 text-left">
                                     SKU
@@ -691,7 +695,7 @@ export default function SupplierProducts({
                             {products.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan="9"
+                                        colSpan="10"
                                         className="px-5 py-12 text-center text-sm text-gray-400"
                                     >
                                         No products found.
@@ -710,6 +714,21 @@ export default function SupplierProducts({
                                                 onChange={() =>
                                                     toggle(product.id)
                                                 }
+                                            />
+                                        </td>
+                                        <td className="hidden px-5 py-4 sm:table-cell">
+                                            <img
+                                                src={imageUrl(product.image_url, product.name)}
+                                                alt=""
+                                                loading="lazy"
+                                                decoding="async"
+                                                width="48"
+                                                height="48"
+                                                onError={(event) => {
+                                                    event.currentTarget.onerror = null;
+                                                    event.currentTarget.src = imageUrl(null, product.name);
+                                                }}
+                                                className="h-12 w-12 rounded-xl border border-gray-100 bg-gray-50 object-contain"
                                             />
                                         </td>
                                         <td className="px-5 py-4">

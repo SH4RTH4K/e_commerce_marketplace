@@ -26,7 +26,7 @@ class MerchantFeedController extends Controller
             foreach (Product::published()->with(['images', 'variants', 'category', 'supplierLinks.supplierProduct'])->lazyById(100) as $product) {
                 $image = $product->primaryImage();
                 if (! $image) continue; // Merchant listings require a real image.
-                $product->sku = $product->supplierLinks->first()?->supplierProduct?->product_code ?: $product->sku;
+                $product->sku = $product->sku ?: $product->supplierLinks->first()?->supplierProduct?->product_code;
                 $path = $product->category ? $hierarchy->path($product->category) : [];
                 // Use the existing English SEO copy when the source catalogue
                 // name/description is Bengali. Keep all stored content intact.

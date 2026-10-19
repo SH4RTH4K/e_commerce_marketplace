@@ -362,8 +362,8 @@ export default function ProductForm({ product, categories, suppliers = [], assig
                     <Field label="Slug (URL)" error={errors.slug} hint="Automatically shortened. Existing links keep working after changes.">
                       <input value={data.slug} onChange={e => setData('slug', e.target.value)} className={inputClass} placeholder="auto-generated" />
                     </Field>
-                    <Field label="SKU" error={errors.sku} hint="Stock Keeping Unit">
-                      <input value={data.sku} onChange={e => setData('sku', e.target.value)} className={inputClass} placeholder="e.g. SHT-BLK-01" />
+                    <Field label="SKU" error={errors.sku} hint="Leave blank on new products to use enabled SKU Configuration rules. Enter a code to override automatic generation.">
+                      <input value={data.sku} onChange={e => setData('sku', e.target.value)} className={inputClass} placeholder="Automatic when configured" />
                     </Field>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -33,6 +33,12 @@ class Product extends Model
                     'slug' => $product->getRawOriginal('slug'),
                 ]);
             }
+            if ($product->exists && ($product->isDirty('sku') || $product->isDirty('slug'))) {
+                $slug = (string) $product->getRawOriginal('slug');
+                $sku = trim((string) $product->getRawOriginal('sku'));
+                $previous = $slug !== '' && $sku !== '' && !str_ends_with($slug, '-'.$sku) ? $slug.'-'.$sku : $slug;
+                if ($previous !== '') DB::table('product_slug_aliases')->insertOrIgnore(['product_id' => $product->id, 'slug' => $previous]);
+            }
         });
 
         static::saved(function (Product $product) {
@@ -87,6 +93,8 @@ class Product extends Model
     ];
 
     protected $casts = [
+        'sku_managed' => 'boolean',
+        'sku_sequence' => 'integer',
         'purchase_price' => 'decimal:2',
         'regular_price'    => 'decimal:2',
         'sale_price'       => 'decimal:2',
@@ -320,14 +328,12 @@ class Product extends Model
             return $exact;
         }
 
-        $suffixPosition = strrpos($value, '-');
-        if ($suffixPosition !== false) {
-            $baseSlug = substr($value, 0, $suffixPosition);
-            $withSku = $this->where('slug', $baseSlug)->first();
-
-            if ($withSku && hash_equals($withSku->url_key, $value)) {
-                return $withSku;
-            }
+        // A configured SKU may itself contain several hyphens.
+        $parts = explode('-', $value);
+        $candidates = [];
+        while (count($parts) > 1) { array_pop($parts); $candidates[] = implode('-', $parts); }
+        foreach ($this->whereIn('slug', $candidates)->get() as $withSku) {
+            if (hash_equals($withSku->url_key, $value)) return $withSku;
         }
 
         return $this->whereIn('id', DB::table('product_slug_aliases')->select('product_id')->where('slug', $value))->first()

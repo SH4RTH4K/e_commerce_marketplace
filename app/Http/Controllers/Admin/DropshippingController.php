@@ -189,6 +189,7 @@ class DropshippingController extends Controller
                     'id' => $product->id,
                     'supplier' => $product->supplier ? ['name' => $product->supplier->name, 'key' => $product->supplier->key] : null,
                     'supplier_product_id' => $product->supplier_product_id,
+                    'image_url' => $this->supplierProductImageUrl($product->raw_payload ?? []),
                     'product_code' => $product->product_code ?: $product->supplier_product_id,
                     'variant_skus' => $product->variants->pluck('sku')->filter()->values()->all(),
                     'name' => $product->name,
@@ -236,6 +237,44 @@ class DropshippingController extends Controller
         ]);
     }
 
+    /**
+     * Return the first usable image exposed by a supplier payload.
+     * Supplier integrations use slightly different field names and nesting.
+     */
+    private function supplierProductImageUrl(array $payload): ?string
+    {
+        $candidates = [
+            $payload['thumbnail_img'] ?? null,
+            $payload['thumbnail'] ?? null,
+            $payload['image_url'] ?? null,
+            $payload['image'] ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && trim($candidate) !== '') {
+                return trim($candidate);
+            }
+        }
+
+        foreach (['product_images', 'images'] as $field) {
+            $images = $payload[$field] ?? [];
+            if (!is_array($images)) {
+                continue;
+            }
+
+            foreach ($images as $item) {
+                $candidate = is_array($item)
+                    ? ($item['product_image'] ?? $item['image_url'] ?? $item['url'] ?? $item['image'] ?? null)
+                    : $item;
+                if (is_string($candidate) && trim($candidate) !== '') {
+                    return trim($candidate);
+                }
+            }
+        }
+
+        return null;
+    }
+
     public function bulkImportSupplierProducts(Request $request, ProductImportService $imports)
     {
         $data = $request->validate([
@@ -280,7 +319,11 @@ class DropshippingController extends Controller
                 ->when($categoryFilter !== '', fn ($categoryQuery) => $categoryQuery->where('supplier_category_key', $categoryFilter)))
             ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search) {
                 $searchQuery->where('name', 'like', "%{$search}%")
-                    ->orWhere('sku', 'like', "%{$search}%");
+                    ->orWhere('sku', 'like', "%{$search}%")
+                    ->orWhereHas('supplierLinks.supplierProduct', fn ($supplierProductQuery) => $supplierProductQuery
+                        ->where('supplier_product_id', 'like', "%{$search}%")
+                        ->orWhere('product_code', 'like', "%{$search}%")
+                        ->orWhereHas('variants', fn ($variantQuery) => $variantQuery->where('sku', 'like', "%{$search}%")));
             }))
             ->when($statusFilter === 'published', fn ($query) => $query->where('is_published', true))
             ->when($statusFilter === 'draft', fn ($query) => $query->where('is_published', false))

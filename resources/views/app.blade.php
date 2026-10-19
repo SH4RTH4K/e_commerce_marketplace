@@ -157,9 +157,9 @@
                 <ul>@foreach($pageProps['products']['data'] as $product)
                     <li><a href="{{ route('product.show', $product['url_key'] ?? $product['slug']) }}">{{ $product['name'] }}</a></li>
                 @endforeach</ul>
-                @if(!empty($pageProps['products']['prev_page_url']))<a href="{{ $pageProps['products']['prev_page_url'] }}">Previous page</a>@endif
-                @if(!empty($pageProps['products']['next_page_url']))<a href="{{ $pageProps['products']['next_page_url'] }}">Next page</a>@endif
             @endif
+            @if(!empty($pageProps['products']['prev_page_url']))<a href="{{ $pageProps['products']['prev_page_url'] }}">Previous page</a>@endif
+            @if(!empty($pageProps['products']['next_page_url']))<a href="{{ $pageProps['products']['next_page_url'] }}">Next page</a>@endif
         </main>
     @endif
     @inertia

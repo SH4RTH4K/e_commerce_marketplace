@@ -109,6 +109,7 @@ class ProductImportService
                 'last_stock_synced_at' => now(),
             ]);
             $link->save();
+            app(\App\Services\SkuConfigurationService::class)->assignNew($product, imported: true);
             $this->syncProductContent($source, $product);
             $this->variantMapper->sync($source->load('variants', 'productLink'));
 
@@ -141,7 +142,7 @@ class ProductImportService
         $sourceSku = trim((string) ($source->product_code
             ?: $source->variants->pluck('sku')->filter()->first()
             ?: $source->supplier_product_id));
-        if ($sourceSku !== '' && $product->sku !== $sourceSku) {
+        if (!$product->sku_managed && $sourceSku !== '' && $product->sku !== $sourceSku) {
             $updates['sku'] = $sourceSku;
         }
         $description = $this->descriptionFormatter->format($source);

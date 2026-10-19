@@ -30,6 +30,7 @@ const navGroups = [
           { key: 'inventory',    label: 'Inventory / Stock',   href: '/admin/inventory',       pattern: /^\/admin\/inventory\/?(?:\?.*)?$/, perm: 'products.view' },
           { key: 'inventory-history', label: 'Stock History', href: '/admin/inventory/history', pattern: /^\/admin\/inventory\/history/, perm: 'products.view' },
           { key: 'categories',   label: 'Categories',          href: '/admin/categories',      pattern: /^\/admin\/categories/, perm: 'catalog.manage' },
+          { key: 'sku-configuration', label: 'SKU Configuration', href: '/admin/sku-configuration', pattern: /^\/admin\/sku-configuration/, perm: 'settings.manage' },
         ],
       },
     ],

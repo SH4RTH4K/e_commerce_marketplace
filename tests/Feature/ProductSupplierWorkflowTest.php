@@ -39,7 +39,7 @@ class ProductSupplierWorkflowTest extends TestCase
     {
         foreach (['local', 'dropshipping'] as $type) {
             $supplier = $this->supplier(['supplier_type' => $type]);
-            $this->post('/admin/products', $this->payload(['supplier_id' => $supplier->id, 'purchase_price' => 90]))->assertSessionHasNoErrors();
+            $this->post('/admin/products', $this->payload(['supplier_id' => $supplier->id, 'purchase_price' => 90, 'sku' => 'LOCAL-'.$type]))->assertSessionHasNoErrors();
             $product = Product::latest('id')->firstOrFail();
             $this->assertSame($supplier->id, $product->supplier_id);
             $this->assertSame('manual', $product->source_type);

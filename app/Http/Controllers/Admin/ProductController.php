@@ -82,6 +82,7 @@ class ProductController extends Controller
         $product = DB::transaction(function () use ($data, $request) {
             $this->validateSupplierAssignment($data['supplier_id'] ?? null, true);
             $product = Product::create($data);
+            app(\App\Services\SkuConfigurationService::class)->assignNew($product);
             $this->syncVariants($product, $request);
             $this->storeImages($product, $request);
             app(InventoryStockService::class)->recordOpening($request->user(), $product);
@@ -180,6 +181,10 @@ class ProductController extends Controller
             if ($supplierChanged) $this->validateSupplierAssignment($data['supplier_id'], true);
             $beforeSupplier = $product->supplier_id;
             $beforeStock = (int) $product->stock_quantity;
+            if (array_key_exists('sku', $data) && $data['sku'] !== $product->sku) {
+                // Explicit admin edits also opt out of supplier SKU replacement.
+                $product->forceFill(['sku_managed' => true]);
+            }
             $data = app(ProductPricingService::class)->prepare($data, $product);
             $product->update($data);
             app(InventoryStockService::class)->recordProductEdit($request->user(), $product, $beforeStock);
@@ -284,7 +289,7 @@ class ProductController extends Controller
             'purchase_price'                 => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
             'name'                           => ['required', 'string', 'max:180'],
             'slug'                           => ['nullable', 'string', 'max:180'],
-            'sku'                            => ['nullable', 'string', 'max:60'],
+            'sku'                            => ['nullable', 'string', 'max:60', \Illuminate\Validation\Rule::unique('products', 'sku')->ignore($product?->id)],
             'brand'                          => ['nullable', 'string', 'max:80'],
             'short_description'              => ['nullable', 'string'],
             'description'                    => ['nullable', 'string'],
