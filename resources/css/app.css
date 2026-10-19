@@ -25,6 +25,39 @@
     scrollbar-width: none;  /* Firefox */
 }
 
+/* Navigation stays within the content area so branding and menus remain usable. */
+.storefront-page-transition { position: relative; }
+.storefront-navigation-status { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 10px 16px; border-bottom: 1px solid #e6e9ee; background: #fff; color: #687282; font-size: 13px; }
+.storefront-loading-spinner { display: inline-block; width: 14px; height: 14px; flex-shrink: 0; border: 2px solid #e6e9ee; border-top-color: #f2541c; border-radius: 50%; animation: storefront-spin .8s linear infinite; }
+.storefront-category-loading { width: 100%; max-width: 1440px; margin: 0 auto; padding: 28px 24px 48px; }
+.storefront-loading-breadcrumb { display: flex; gap: 12px; margin-bottom: 24px; color: #687282; font-size: 13px; }
+.storefront-loading-breadcrumb span { color: #b2b9c4; }
+.storefront-loading-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 28px; }
+.storefront-loading-heading h1 { margin: 0; color: #1e2430; font-size: 28px; line-height: 1.25; font-weight: 700; }
+.storefront-loading-caption { display: inline-flex; align-items: center; gap: 8px; color: #687282; font-size: 13px; }
+.storefront-loading-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
+.storefront-loading-filters { display: none; padding: 22px; border: 1px solid #e6e9ee; border-radius: 12px; background: #fff; align-self: start; }
+.storefront-skeleton { position: relative; overflow: hidden; border-radius: 5px; background: #e9edf1; }
+.storefront-skeleton::after { position: absolute; inset: 0; content: ''; background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / .65) 50%, transparent 80%); transform: translateX(-100%); animation: storefront-shimmer 1.8s ease-in-out infinite; }
+.storefront-skeleton-label { width: 55%; height: 12px; margin-bottom: 26px; }
+.storefront-skeleton-filter { width: 85%; height: 10px; margin-bottom: 20px; }
+.storefront-skeleton-filter + .storefront-skeleton-label { margin-top: 36px; }
+.storefront-loading-toolbar { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+.storefront-loading-toolbar > div { width: 130px; height: 14px; }
+.storefront-loading-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.storefront-loading-card { overflow: hidden; border: 1px solid #e6e9ee; border-radius: 12px; background: #fff; }
+.storefront-skeleton-image { aspect-ratio: 1; border-radius: 0; }
+.storefront-loading-card-details { padding: 16px; }
+.storefront-skeleton-name { height: 12px; width: 85%; margin-bottom: 14px; }
+.storefront-skeleton-price { height: 14px; width: 42%; }
+@keyframes storefront-spin { to { transform: rotate(360deg); } }
+@keyframes storefront-shimmer { to { transform: translateX(100%); } }
+@media (min-width: 640px) { .storefront-loading-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; } }
+@media (min-width: 768px) { .storefront-loading-grid { grid-template-columns: repeat(var(--storefront-loading-tablet-columns), minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .storefront-loading-layout { grid-template-columns: 220px minmax(0, 1fr); } .storefront-loading-filters { display: block; } .storefront-category-loading { padding: 32px 32px 56px; } .storefront-loading-grid { grid-template-columns: repeat(var(--storefront-loading-columns), minmax(0, 1fr)); } }
+@media (max-width: 639px) { .storefront-category-loading { padding: 22px 16px 36px; } .storefront-loading-heading h1 { font-size: 24px; } .storefront-loading-breadcrumb { margin-bottom: 20px; } .storefront-loading-card-details { padding: 12px; } }
+@media (prefers-reduced-motion: reduce) { .storefront-skeleton::after, .storefront-loading-spinner { animation: none; } }
+
 /* Template 2 — marketplace styling inspired by the supplied Taqi Life reference.
    It intentionally skins the existing storefront components, keeping routes,
    data and interactions shared with the other templates. */

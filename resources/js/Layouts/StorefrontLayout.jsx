@@ -8,6 +8,7 @@ import ParticleText from '@/Components/Storefront/ParticleText';
 import TrueFocus from '@/Components/Storefront/TrueFocus';
 import { imageUrl, whatsappNumber } from '@/lib/utils';
 import { DesktopCategoryItem, MobileCategoryLinks } from '@/Components/Storefront/CategoryNavigation';
+import PageTransition from '@/Components/Storefront/PageTransition';
 
 function CartIcon({ count = 0, onClick }) {
   return (
@@ -74,23 +75,7 @@ export default function StorefrontLayout({ children, title, description, activeC
   const [isScrolled, setIsScrolled] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
-  const [navigationLoading, setNavigationLoading] = useState(false);
-  const [navigationLabel, setNavigationLabel] = useState('Loading page…');
   const chatRef = useRef(null);
-
-  useEffect(() => {
-    const onStart = event => {
-      const url = String(event.detail?.visit?.url || '');
-      setNavigationLabel(url.includes('/category/') ? 'Loading category…' : 'Loading page…');
-      setNavigationLoading(true);
-    };
-    const onFinish = () => setNavigationLoading(false);
-    const removeStart = router.on('start', onStart);
-    const removeFinish = router.on('finish', onFinish);
-    const removeError = router.on('error', onFinish);
-    const removeCancel = router.on('cancel', onFinish);
-    return () => { removeStart(); removeFinish(); removeError(); removeCancel(); };
-  }, []);
 
   useEffect(() => {
     const updateBackToTopVisibility = () => setShowBackToTop(window.scrollY > 480);
@@ -240,14 +225,6 @@ export default function StorefrontLayout({ children, title, description, activeC
 
   return (
     <>
-    {navigationLoading && (
-      <div className="fixed inset-x-0 top-0 z-[100] flex justify-center px-4 pt-3 pointer-events-none" role="status" aria-live="polite">
-        <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-slate-900/20">
-          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true" />
-          {navigationLabel}
-        </div>
-      </div>
-    )}
     <div className={`storefront-theme-root storefront-template-${storefrontTemplate}`} style={typographyStyle}>
       <Head>
         {props.structuredData && <script head-key="structured-data" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(props.structuredData).replace(/</g, '\\u003c') }} />}
@@ -560,7 +537,10 @@ export default function StorefrontLayout({ children, title, description, activeC
 
       {/* Main content - pad bottom on mobile for sticky nav */}
       <main className={`storefront-main-area min-h-screen pb-[70px] md:pb-0 ${isTemplateOne ? 'template-1-storefront' : 'bg-[#f8f9fa]'}`}>
-        {children}
+        <PageTransition categories={categoryList} columns={chatSettings[isTemplateOne ? 'template_1_product_per_row' : 'template_2_product_per_row']}
+          onNavigate={() => { setMenuOpen(false); setSearchOpen(false); }}>
+          {children}
+        </PageTransition>
       </main>
 
       {/* Footer */}

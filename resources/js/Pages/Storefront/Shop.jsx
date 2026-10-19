@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import ProductCard from '@/Components/Storefront/ProductCard';
-import { CategoryTrail } from '@/Components/Storefront/CategoryNavigation';
+import { CategoryLink, CategoryTrail } from '@/Components/Storefront/CategoryNavigation';
 
 function categoryChildren(category) {
   if (!category?.children) return [];
@@ -22,14 +22,14 @@ function TemplateOneCategoryLinks({ categories = [], activeCategory, level = 0 }
 
     return (
       <Fragment key={category.id}>
-        <Link
+        <CategoryLink
           href={`/category/${category.slug}`}
           className={activeCategory?.id === category.id ? 'is-active' : ''}
           style={level > 0 ? { paddingLeft: `${14 + level * 14}px` } : undefined}
         >
           <span>{category.name}</span>
           <span>{category.products_count}</span>
-        </Link>
+        </CategoryLink>
         {children.length > 0 && <TemplateOneCategoryLinks categories={children} activeCategory={activeCategory} level={level + 1} />}
       </Fragment>
     );
@@ -50,7 +50,7 @@ function TemplateTwoCategoryLinks({ categories = [], activeCategory, level = 0 }
     return (
       <Fragment key={category.id}>
         <li>
-          <Link
+          <CategoryLink
             href={`/category/${category.slug}`}
             className={`flex items-center justify-between group ${linkClass}`}
             style={level > 0 ? { paddingLeft: `${level * 14}px` } : undefined}
@@ -59,7 +59,7 @@ function TemplateTwoCategoryLinks({ categories = [], activeCategory, level = 0 }
             <span className={`text-xs px-2 py-0.5 rounded-full ${exactActive ? 'bg-[#f15a24]/10 text-[#f15a24]' : 'bg-gray-100 text-gray-500 group-hover:bg-[#f15a24]/10 group-hover:text-[#f15a24]'}`}>
               {category.products_count}
             </span>
-          </Link>
+          </CategoryLink>
         </li>
         {children.length > 0 && <TemplateTwoCategoryLinks categories={children} activeCategory={activeCategory} level={level + 1} />}
       </Fragment>

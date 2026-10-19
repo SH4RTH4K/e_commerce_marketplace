@@ -20,7 +20,21 @@ class ShopController extends Controller
         $categoryIds = $category?->selfAndDescendantIds(true);
 
         $query = Product::published()
-            ->with('images', 'category', 'supplierLinks.supplierProduct')
+            // Listing cards do not need full descriptions, specifications, or
+            // supplier payloads. Keep those on the individual product page.
+            ->select([
+                'id', 'category_id', 'name', 'slug', 'sku', 'brand',
+                'regular_price', 'sale_price', 'stock_quantity', 'unit',
+                'rating', 'reviews_count', 'is_featured', 'is_new_arrival',
+                'is_best_seller', 'is_flash_sale', 'is_free_shipping',
+                'created_at', 'updated_at',
+            ])
+            ->with([
+                'images:id,product_id,path,is_primary,position,updated_at',
+                'category:id,name,slug',
+                'supplierLinks:id,product_id,supplier_product_row_id',
+                'supplierLinks.supplierProduct:id,product_code,supplier_product_id',
+            ])
             ->withExists('variants')
             ->withExists([
                 'variants as variants_in_stock_exists' => fn ($variantQuery) => $variantQuery->where('stock', '>', 0),
@@ -148,12 +162,16 @@ class ShopController extends Controller
             $product->unsetRelation('supplierLinks');
         });
 
-        $priceCeiling = (int) Product::published()
-            ->selectRaw('MAX(COALESCE(sale_price, regular_price)) as max_price')
-            ->value('max_price');
-        $priceCeiling = max(5000, (int) (ceil(max($priceCeiling, 5000) / 50) * 50));
+        // Resolve sidebar data only when requested. Inertia's Load More
+        // requests only products, so it should not rebuild every filter.
+        $stats = null;
+        $catalogueStats = static function () use (&$stats) {
+            return $stats ??= Product::published()
+                ->selectRaw('COUNT(*) as total, MAX(COALESCE(sale_price, regular_price)) as max_price')
+                ->first();
+        };
 
-        $brands = Product::published()
+        $brands = fn () => Product::published()
             ->when($categoryIds, fn ($q) => $q->whereIn('category_id', $categoryIds))
             ->whereNotNull('brand')
             ->where('brand', '!=', '')
@@ -161,7 +179,7 @@ class ShopController extends Controller
             ->distinct()
             ->pluck('brand');
 
-        $variantFilters = ProductVariant::query()
+        $variantFilters = fn () => ProductVariant::query()
             ->selectRaw('type, value, COUNT(DISTINCT product_id) as products_count')
             ->whereHas('product', function ($productQuery) use ($categoryIds) {
                 $productQuery->published()
@@ -186,20 +204,20 @@ class ShopController extends Controller
             ->values();
 
         return Inertia::render('Storefront/Shop', [
-            'structuredData' => $category ? app(\App\Services\StorefrontSeoService::class)->breadcrumbs($categoryPath) : null,
+            'structuredData' => fn () => $category ? app(\App\Services\StorefrontSeoService::class)->breadcrumbs($categoryPath) : null,
             'products'         => $products,
             'activeCategory'   => $category,
             'categoryPath' => array_map(fn ($item) => collect($item)->only(['id', 'name', 'slug'])->all(), $categoryPath),
-            'browseCategories' => $category ? $category->children()->where('is_active', true)->where('show_in_menu', true)->get(['id', 'name', 'slug']) : [],
-            'filterCategories' => Category::storefrontFilterTree(),
-            'allProductsCount' => Product::published()->count(),
+            'browseCategories' => fn () => $category ? $category->children()->where('is_active', true)->where('show_in_menu', true)->get(['id', 'name', 'slug']) : [],
+            'filterCategories' => fn () => Category::storefrontFilterTree(),
+            'allProductsCount' => fn () => (int) $catalogueStats()->total,
             'brands'           => $brands,
             'variantFilters'   => $variantFilters,
             'sort'             => $sort,
             'minRating'        => $request->input('min_rating'),
             'q'                => $term,
-            'priceCeiling'     => $priceCeiling,
-            'seo'              => [
+            'priceCeiling'     => fn () => max(5000, (int) (ceil(max((int) $catalogueStats()->max_price, 5000) / 50) * 50)),
+            'seo'              => fn () => [
                 'title' => $category?->meta_title ?: ($category?->name ?: ($term ? "Search: {$term}" : 'Shop All Products')),
                 'description' => $category?->meta_description,
                 'keywords' => $category?->meta_keywords,

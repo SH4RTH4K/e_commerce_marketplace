@@ -393,6 +393,9 @@ class Product extends Model
         if ($this->relationLoaded('variants')) {
             return $this->variants->isNotEmpty();
         }
+        if (array_key_exists('variants_exists', $this->attributes)) {
+            return (bool) $this->attributes['variants_exists'];
+        }
         return $this->variants()->exists();
     }
 

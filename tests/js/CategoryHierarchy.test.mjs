@@ -88,3 +88,14 @@ test('mobile menu progressively expands levels and opens the current branch auto
     assert.equal(app.renderer.root.findAllByType('a')[2].props['aria-current'], 'page');
   } finally { await app.close(); }
 });
+
+test('category links prefetch on hover with short-lived data and dismiss the dropdown on selection', async () => {
+  const app = await mount('DesktopCategoryItem', { category, activeId: null });
+  try {
+    await act(async () => app.renderer.root.findByType('button').props.onClick());
+    const link = app.renderer.root.findAllByType('a').find(anchor => anchor.props.href === '/category/earbuds');
+    assert.equal(link.props.prefetch, 'hover'); assert.equal(link.props.cacheFor, '10s');
+    await act(async () => link.props.onClick());
+    assert.equal(app.renderer.root.findByType('button').props['aria-expanded'], false);
+  } finally { await app.close(); }
+});
