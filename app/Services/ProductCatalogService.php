@@ -2,27 +2,26 @@
 
 namespace App\Services;
 
-use App\Models\Product;
+use App\Http\Requests\IndexProductRequest;
 use App\Models\Category;
+use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\Request;
 
 class ProductCatalogService
 {
-    public function filters(Request $request): array
+    public function filters(IndexProductRequest $request): array
     {
-        $data = $request->validate([
-            'q' => ['nullable', 'string', 'max:200'], 'category' => ['nullable', 'integer', 'min:1'],
-            'supplier' => ['nullable', 'integer', 'min:1'], 'status' => ['nullable', 'string'],
-            'stock' => ['nullable', 'string'], 'stock_level' => ['nullable', 'string'],
-            'type' => ['nullable', 'string'], 'sort' => ['nullable', 'string'], 'per_page' => ['nullable', 'integer'],
-            'source' => ['nullable', 'string'],
-        ]);
+        $data = $request->validated();
         $term = preg_replace('/\s+/u', ' ', trim($data['q'] ?? '')) ?? trim($data['q'] ?? '');
-        $status = match ($data['status'] ?? '') { 'active' => 'published', 'inactive' => 'draft', default => $data['status'] ?? '' };
+        $status = match ($data['status'] ?? '') {
+            'active' => 'published', 'inactive' => 'draft', default => $data['status'] ?? ''
+        };
         $stock = $data['stock'] ?? $data['stock_level'] ?? '';
+
         return [
             'q' => $term, 'category' => isset($data['category']) ? (int) $data['category'] : '',
+            'category_scope' => isset($data['category']) && ($data['category_scope'] ?? '') === 'direct' ? 'direct' : 'all',
+            'exclude_category' => isset($data['exclude_category']) ? (int) $data['exclude_category'] : '',
             'supplier' => isset($data['supplier']) ? (int) $data['supplier'] : '',
             'status' => in_array($status, ['published', 'draft'], true) ? $status : '',
             'stock' => in_array($stock, ['out', 'low', 'in'], true) ? $stock : '',
@@ -50,8 +49,19 @@ class ProductCatalogService
             }
         }
         if ($filters['category'] !== '') {
-            $category = Category::find($filters['category']);
-            $query->whereIn('category_id', $category?->selfAndDescendantIds() ?? []);
+            if (($filters['category_scope'] ?? 'all') === 'direct') {
+                $query->where('category_id', $filters['category']);
+            } else {
+                $category = Category::find($filters['category']);
+                $query->whereIn('category_id', $category?->selfAndDescendantIds() ?? []);
+            }
+        }
+        if (($filters['exclude_category'] ?? '') !== '') {
+            $excludedCategory = Category::find($filters['exclude_category']);
+            $excludedIds = $excludedCategory?->selfAndDescendantIds() ?? [(int) $filters['exclude_category']];
+            $query->where(fn (Builder $categoryQuery) => $categoryQuery
+                ->whereNull('category_id')
+                ->orWhereNotIn('category_id', $excludedIds));
         }
         if ($filters['supplier'] !== '') {
             $query->where(fn ($supplierQuery) => $supplierQuery
@@ -59,19 +69,29 @@ class ProductCatalogService
                 ->orWhere(fn ($legacyQuery) => $legacyQuery->whereNull('supplier_id')->whereHas('supplierLinks.supplierProduct', fn ($linkQuery) => $linkQuery->where('supplier_id', $filters['supplier'])))
             );
         }
-        if ($filters['type'] === 'variable') $query->has('variants');
-        if ($filters['type'] === 'simple') $query->doesntHave('variants');
-        if ($filters['source'] !== '') $query->where('source_type', $filters['source']);
+        if ($filters['type'] === 'variable') {
+            $query->has('variants');
+        }
+        if ($filters['type'] === 'simple') {
+            $query->doesntHave('variants');
+        }
+        if ($filters['source'] !== '') {
+            $query->where('source_type', $filters['source']);
+        }
         match ($filters['stock']) {
             'out' => $query->where('stock_quantity', 0), 'low' => $query->whereBetween('stock_quantity', [1, 5]),
             'in' => $query->where('stock_quantity', '>', 5), default => null,
         };
+
         return $query;
     }
 
     public function visibility(Builder $query, string $status): Builder
     {
-        if ($status !== '') $query->where('is_published', $status === 'published');
+        if ($status !== '') {
+            $query->where('is_published', $status === 'published');
+        }
+
         return $query;
     }
 
@@ -85,12 +105,13 @@ class ProductCatalogService
             'relevance' => $filters['q'] !== '' ? $query->orderByRaw("CASE WHEN LOWER(sku) = ? THEN 0 WHEN LOWER(name) = ? THEN 1 WHEN LOWER(sku) LIKE ? ESCAPE '!' THEN 2 WHEN LOWER(name) LIKE ? ESCAPE '!' THEN 3 ELSE 4 END", [mb_strtolower($filters['q']), mb_strtolower($filters['q']), $this->escapeLike(mb_strtolower($filters['q'])).'%', $this->escapeLike(mb_strtolower($filters['q'])).'%']) : $query->latest('created_at'),
             default => $query->latest('created_at'),
         };
+
         return $query->orderByDesc('id');
     }
 
     public function parameters(array $filters): array
     {
-        return array_filter($filters, fn ($value) => $value !== '' && $value !== null);
+        return array_filter($filters, fn ($value, $key) => $value !== '' && $value !== null && ! ($key === 'category_scope' && $value === 'all'), ARRAY_FILTER_USE_BOTH);
     }
 
     public static function returnUrl(mixed $url): string

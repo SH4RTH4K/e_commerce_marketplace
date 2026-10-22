@@ -3,34 +3,38 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Category;
+use App\Http\Requests\IndexProductRequest;
+use App\Models\DropshipProductLink;
+use App\Models\DropshipSupplier;
+use App\Models\DropshipSupplierProduct;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
-use App\Models\DropshipProductLink;
-use App\Models\DropshipSupplierProduct;
-use App\Support\PublicUploader;
-use App\Services\ProductPricingService;
-use App\Services\ProductCatalogService;
+use App\Models\SupplierAudit;
 use App\Services\CategoryHierarchyService;
-use App\Models\DropshipSupplier;
+use App\Services\InventoryStockService;
+use App\Services\ProductCatalogService;
+use App\Services\ProductPricingService;
+use App\Services\SkuConfigurationService;
+use App\Support\PublicUploader;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use App\Services\InventoryStockService;
-use App\Models\SupplierAudit;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class ProductController extends Controller
 {
-    public function index(Request $request, ProductCatalogService $catalog)
+    public function index(IndexProductRequest $request, ProductCatalogService $catalog): Response
     {
         $filters = $catalog->filters($request);
         $query = $catalog->query($filters);
         $totals = (clone $query)->selectRaw('COUNT(*) AS total, SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END) AS published, SUM(CASE WHEN is_published = 0 THEN 1 ELSE 0 END) AS draft')->first();
         $catalog->visibility($query, $filters['status']);
         $catalog->sort($query, $filters);
+
         return Inertia::render('Admin/Products/Index', [
             'products' => $query->with('category', 'images', 'supplier:id,name,supplier_code', 'supplierLinks.supplierProduct.supplier')->withCount('variants')
                 ->paginate($filters['per_page'])->appends($catalog->parameters($filters))->through(fn ($product) => [
@@ -59,9 +63,9 @@ class ProductController extends Controller
     public function create(Request $request)
     {
         return Inertia::render('Admin/Products/Form', [
-            'product'    => ['is_published' => true, 'regular_price' => 0, 'stock_quantity' => 0, 'specifications' => [], 'variants' => [], 'images' => []],
+            'product' => ['is_published' => true, 'regular_price' => 0, 'stock_quantity' => 0, 'specifications' => [], 'variants' => [], 'images' => []],
             'categories' => app(CategoryHierarchyService::class)->options(),
-            'suppliers'  => $this->supplierOptions(),
+            'suppliers' => $this->supplierOptions(),
             'canManageSuppliers' => $request->user()->hasPermission('suppliers.manage'),
             'canViewSuppliers' => $request->user()->hasPermission('suppliers.view'),
             'returnTo' => ProductCatalogService::returnUrl($request->input('return_to')),
@@ -85,10 +89,11 @@ class ProductController extends Controller
         $product = DB::transaction(function () use ($data, $request) {
             $this->validateSupplierAssignment($data['supplier_id'] ?? null, true);
             $product = Product::create($data);
-            app(\App\Services\SkuConfigurationService::class)->assignNew($product);
+            app(SkuConfigurationService::class)->assignNew($product);
             $this->syncVariants($product, $request);
             $this->storeImages($product, $request);
             app(InventoryStockService::class)->recordOpening($request->user(), $product);
+
             return $product;
         });
 
@@ -101,44 +106,44 @@ class ProductController extends Controller
         $assignment = $this->assignmentContext($product);
 
         // Group variants
-        $variants = $product->variants->map(fn($v) => [
-            'id'          => $v->id,
-            'type'        => $v->type,
-            'value'       => $v->value,
-            'color_code'  => $v->color_code,
+        $variants = $product->variants->map(fn ($v) => [
+            'id' => $v->id,
+            'type' => $v->type,
+            'value' => $v->value,
+            'color_code' => $v->color_code,
             'price_delta' => $v->price_delta,
-            'stock'       => $v->stock,
-            'image_path'  => $v->image_path,
+            'stock' => $v->stock,
+            'image_path' => $v->image_path,
         ])->values();
 
         // Custom variant groups (any type other than Size, Color, Weight)
         $customGroups = $product->variants
             ->whereNotIn('type', ['Size', 'Color', 'Weight'])
             ->groupBy('type')
-            ->map(fn($items, $type) => [
-                'name'    => $type,
-                'options' => $items->map(fn($v) => [
-                    'id'          => $v->id,
-                    'value'       => $v->value,
+            ->map(fn ($items, $type) => [
+                'name' => $type,
+                'options' => $items->map(fn ($v) => [
+                    'id' => $v->id,
+                    'value' => $v->value,
                     'price_delta' => $v->price_delta,
-                    'stock'       => $v->stock,
-                    'image_path'  => $v->image_path,
+                    'stock' => $v->stock,
+                    'image_path' => $v->image_path,
                 ])->values(),
             ])
             ->values();
 
         return Inertia::render('Admin/Products/Form', [
-            'product'    => array_merge($product->toArray(), [
+            'product' => array_merge($product->toArray(), [
                 'supplier_id' => $product->supplier_id ?? $assignment['supplier_id'],
                 'source_type' => $assignment['locked'] ? 'dropshipping' : ($product->source_type ?: 'manual'),
                 ...$product->only(['purchase_price', 'selling_price', 'minimum_price', 'maximum_price', 'pricing_mode', 'enforce_minimum_price', 'enforce_maximum_price', 'protect_minimum_price']),
-                'images' => $product->images->map(fn($img) => ['id' => $img->id, 'path' => $img->path, 'alt' => $img->alt, 'is_primary' => $img->is_primary])->values(),
+                'images' => $product->images->map(fn ($img) => ['id' => $img->id, 'path' => $img->path, 'alt' => $img->alt, 'is_primary' => $img->is_primary])->values(),
                 'variants' => $variants,
                 'custom_variant_groups' => $customGroups,
                 'specifications' => $product->specifications ?? [],
             ]),
             'categories' => app(CategoryHierarchyService::class)->options(),
-            'suppliers'  => $this->supplierOptions($product->supplier_id),
+            'suppliers' => $this->supplierOptions($product->supplier_id),
             'assignment' => $assignment,
             'canManageSuppliers' => $request->user()->hasPermission('suppliers.manage'),
             'canViewSuppliers' => $request->user()->hasPermission('suppliers.view'),
@@ -150,7 +155,9 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $data = $this->validateData($request, $product);
-        if (array_key_exists('source_type', $data) && $data['source_type'] === null) $data['source_type'] = $product->source_type ?: 'manual';
+        if (array_key_exists('source_type', $data) && $data['source_type'] === null) {
+            $data['source_type'] = $product->source_type ?: 'manual';
+        }
         if (array_key_exists('supplier_id', $data) && (int) ($data['supplier_id'] ?? 0) !== (int) ($product->supplier_id ?? 0)) {
             $this->validateSupplierAssignment($data['supplier_id'] ?? null);
         }
@@ -181,7 +188,9 @@ class ProductController extends Controller
                 throw ValidationException::withMessages(['source_type' => 'A Dropshipping source requires an integration product link.']);
             }
             $supplierChanged = array_key_exists('supplier_id', $data) && (int) ($data['supplier_id'] ?? 0) !== (int) ($product->supplier_id ?? 0);
-            if ($supplierChanged) $this->validateSupplierAssignment($data['supplier_id'], true);
+            if ($supplierChanged) {
+                $this->validateSupplierAssignment($data['supplier_id'], true);
+            }
             $beforeSupplier = $product->supplier_id;
             $beforeStock = (int) $product->stock_quantity;
             if (array_key_exists('sku', $data) && $data['sku'] !== $product->sku) {
@@ -231,8 +240,8 @@ class ProductController extends Controller
     {
         abort_unless($request->user()->hasPermission('products.create') || $request->user()->hasPermission('products.delete'), 403);
         $data = $request->validate([
-            'ids'         => ['required', 'array', 'min:1', 'max:100'],
-            'ids.*'       => ['integer', 'distinct', 'exists:products,id'],
+            'ids' => ['required', 'array', 'min:1', 'max:100'],
+            'ids.*' => ['integer', 'distinct', 'exists:products,id'],
             'bulk_action' => ['required', 'in:activate,deactivate,delete,move_category'],
             'category_id' => ['required_if:bulk_action,move_category', 'nullable', 'integer', 'exists:categories,id'],
         ]);
@@ -285,66 +294,66 @@ class ProductController extends Controller
     private function validateData(Request $request, ?Product $product = null): array
     {
         return $request->validate([
-            'product_type'                   => ['nullable', 'string', 'in:simple,variable'],
-            'category_id'                    => ['required', 'exists:categories,id'],
-            'supplier_id'                    => ['nullable', 'integer', 'exists:dropship_suppliers,id'],
-            'source_type'                    => ['nullable', 'string', 'in:manual,dropshipping,other'],
-            'purchase_price'                 => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
-            'name'                           => ['required', 'string', 'max:180'],
-            'slug'                           => ['nullable', 'string', 'max:180'],
-            'sku'                            => ['nullable', 'string', 'max:60', \Illuminate\Validation\Rule::unique('products', 'sku')->ignore($product?->id)],
-            'brand'                          => ['nullable', 'string', 'max:80'],
-            'short_description'              => ['nullable', 'string'],
-            'description'                    => ['nullable', 'string'],
-            'regular_price'                  => ['nullable', 'numeric', 'min:0'],
-            'sale_price'                     => ['nullable', 'numeric', 'min:0'],
-            'selling_price'                  => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
-            'minimum_price'                  => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
-            'maximum_price'                  => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
-            'pricing_mode'                   => ['sometimes', 'required', 'in:auto,manual'],
-            'enforce_minimum_price'           => ['sometimes', 'boolean'],
-            'enforce_maximum_price'           => ['sometimes', 'boolean'],
-            'protect_minimum_price'           => ['sometimes', 'boolean'],
-            'stock_quantity'                 => ['nullable', 'integer', 'min:0', 'max:4294967295'],
-            'unit'                           => ['nullable', 'string', 'max:40'],
-            'meta_title'                     => ['nullable', 'string', 'max:180'],
-            'meta_description'               => ['nullable', 'string', 'max:500'],
-            'meta_keywords'                  => ['nullable', 'string', 'max:500'],
-            'size_variants'                  => ['nullable', 'array'],
-            'size_variants.*.value'          => ['nullable', 'string', 'max:60'],
-            'size_variants.*.price_delta'    => ['nullable', 'numeric'],
-            'size_variants.*.stock'          => ['nullable', 'integer', 'min:0'],
-            'size_variants.*.image_path'     => ['nullable', 'string', 'max:500'],
-            'size_variants.*.image_b64'      => ['nullable', 'string'],
-            'size_variants.*.image_name'     => ['nullable', 'string', 'max:255'],
-            'color_variants'                 => ['nullable', 'array'],
-            'color_variants.*.value'         => ['nullable', 'string', 'max:60'],
-            'color_variants.*.color_code'    => ['nullable', 'string', 'max:30'],
-            'color_variants.*.price_delta'   => ['nullable', 'numeric'],
-            'color_variants.*.stock'         => ['nullable', 'integer', 'min:0'],
-            'color_variants.*.image_path'    => ['nullable', 'string', 'max:500'],
-            'color_variants.*.image_b64'     => ['nullable', 'string'],
-            'color_variants.*.image_name'    => ['nullable', 'string', 'max:255'],
-            'weight_variants'                => ['nullable', 'array'],
-            'weight_variants.*.value'        => ['nullable', 'string', 'max:60'],
-            'weight_variants.*.price_delta'  => ['nullable', 'numeric'],
-            'weight_variants.*.stock'        => ['nullable', 'integer', 'min:0'],
-            'weight_variants.*.image_path'   => ['nullable', 'string', 'max:500'],
-            'weight_variants.*.image_b64'    => ['nullable', 'string'],
-            'weight_variants.*.image_name'   => ['nullable', 'string', 'max:255'],
-            'custom_variant_groups'          => ['nullable', 'array'],
-            'custom_variant_groups.*.name'   => ['nullable', 'string', 'max:60'],
-            'custom_variant_groups.*.options'=> ['nullable', 'array'],
-            'custom_variant_groups.*.options.*.value'       => ['nullable', 'string', 'max:60'],
+            'product_type' => ['nullable', 'string', 'in:simple,variable'],
+            'category_id' => ['required', 'exists:categories,id'],
+            'supplier_id' => ['nullable', 'integer', 'exists:dropship_suppliers,id'],
+            'source_type' => ['nullable', 'string', 'in:manual,dropshipping,other'],
+            'purchase_price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
+            'name' => ['required', 'string', 'max:180'],
+            'slug' => ['nullable', 'string', 'max:180'],
+            'sku' => ['nullable', 'string', 'max:60', Rule::unique('products', 'sku')->ignore($product?->id)],
+            'brand' => ['nullable', 'string', 'max:80'],
+            'short_description' => ['nullable', 'string'],
+            'description' => ['nullable', 'string'],
+            'regular_price' => ['nullable', 'numeric', 'min:0'],
+            'sale_price' => ['nullable', 'numeric', 'min:0'],
+            'selling_price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
+            'minimum_price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
+            'maximum_price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
+            'pricing_mode' => ['sometimes', 'required', 'in:auto,manual'],
+            'enforce_minimum_price' => ['sometimes', 'boolean'],
+            'enforce_maximum_price' => ['sometimes', 'boolean'],
+            'protect_minimum_price' => ['sometimes', 'boolean'],
+            'stock_quantity' => ['nullable', 'integer', 'min:0', 'max:4294967295'],
+            'unit' => ['nullable', 'string', 'max:40'],
+            'meta_title' => ['nullable', 'string', 'max:180'],
+            'meta_description' => ['nullable', 'string', 'max:500'],
+            'meta_keywords' => ['nullable', 'string', 'max:500'],
+            'size_variants' => ['nullable', 'array'],
+            'size_variants.*.value' => ['nullable', 'string', 'max:60'],
+            'size_variants.*.price_delta' => ['nullable', 'numeric'],
+            'size_variants.*.stock' => ['nullable', 'integer', 'min:0'],
+            'size_variants.*.image_path' => ['nullable', 'string', 'max:500'],
+            'size_variants.*.image_b64' => ['nullable', 'string'],
+            'size_variants.*.image_name' => ['nullable', 'string', 'max:255'],
+            'color_variants' => ['nullable', 'array'],
+            'color_variants.*.value' => ['nullable', 'string', 'max:60'],
+            'color_variants.*.color_code' => ['nullable', 'string', 'max:30'],
+            'color_variants.*.price_delta' => ['nullable', 'numeric'],
+            'color_variants.*.stock' => ['nullable', 'integer', 'min:0'],
+            'color_variants.*.image_path' => ['nullable', 'string', 'max:500'],
+            'color_variants.*.image_b64' => ['nullable', 'string'],
+            'color_variants.*.image_name' => ['nullable', 'string', 'max:255'],
+            'weight_variants' => ['nullable', 'array'],
+            'weight_variants.*.value' => ['nullable', 'string', 'max:60'],
+            'weight_variants.*.price_delta' => ['nullable', 'numeric'],
+            'weight_variants.*.stock' => ['nullable', 'integer', 'min:0'],
+            'weight_variants.*.image_path' => ['nullable', 'string', 'max:500'],
+            'weight_variants.*.image_b64' => ['nullable', 'string'],
+            'weight_variants.*.image_name' => ['nullable', 'string', 'max:255'],
+            'custom_variant_groups' => ['nullable', 'array'],
+            'custom_variant_groups.*.name' => ['nullable', 'string', 'max:60'],
+            'custom_variant_groups.*.options' => ['nullable', 'array'],
+            'custom_variant_groups.*.options.*.value' => ['nullable', 'string', 'max:60'],
             'custom_variant_groups.*.options.*.price_delta' => ['nullable', 'numeric'],
-            'custom_variant_groups.*.options.*.stock'       => ['nullable', 'integer', 'min:0'],
-            'custom_variant_groups.*.options.*.image_path'  => ['nullable', 'string', 'max:500'],
-            'custom_variant_groups.*.options.*.image_b64'   => ['nullable', 'string'],
-            'custom_variant_groups.*.options.*.image_name'  => ['nullable', 'string', 'max:255'],
-            'spec_labels'                    => ['nullable', 'array'],
-            'spec_labels.*'                  => ['nullable', 'string', 'max:120'],
-            'spec_values'                    => ['nullable', 'array'],
-            'spec_values.*'                  => ['nullable', 'string', 'max:255'],
+            'custom_variant_groups.*.options.*.stock' => ['nullable', 'integer', 'min:0'],
+            'custom_variant_groups.*.options.*.image_path' => ['nullable', 'string', 'max:500'],
+            'custom_variant_groups.*.options.*.image_b64' => ['nullable', 'string'],
+            'custom_variant_groups.*.options.*.image_name' => ['nullable', 'string', 'max:255'],
+            'spec_labels' => ['nullable', 'array'],
+            'spec_labels.*' => ['nullable', 'string', 'max:120'],
+            'spec_values' => ['nullable', 'array'],
+            'spec_values.*' => ['nullable', 'string', 'max:255'],
         ]);
     }
 
@@ -428,7 +437,9 @@ class ProductController extends Controller
 
     private function validateSupplierAssignment(?int $supplierId, bool $lock = false): void
     {
-        if ($supplierId === null) return;
+        if ($supplierId === null) {
+            return;
+        }
         $supplier = DropshipSupplier::query()->when($lock, fn ($query) => $query->lockForUpdate())->find($supplierId);
         if (! $supplier || ! $supplier->is_active) {
             throw ValidationException::withMessages(['supplier_id' => 'Select an active supplier.']);
@@ -442,6 +453,7 @@ class ProductController extends Controller
         $supplierIds = $links->pluck('supplierProduct.supplier_id')->unique()->values();
         $conflict = $links->count() > 1 || ($supplierIds->isNotEmpty() && $product->supplier_id !== null && (int) $product->supplier_id !== (int) $supplierIds->first());
         $source = $links->first()?->supplierProduct;
+
         return ['locked' => $links->isNotEmpty(), 'supplier_id' => $supplierIds->first(), 'conflict' => $conflict,
             'integration' => $source?->supplier?->name, 'external_product_id' => $source?->supplier_product_id,
             'stock_source' => $links->isNotEmpty() ? 'Supplier-managed availability' : 'Local inventory'];
@@ -473,11 +485,11 @@ class ProductController extends Controller
 
     private function applyFlags(Request $request, array &$data, ?Product $product = null): void
     {
-        $data['is_published']     = $request->boolean('is_published');
-        $data['is_featured']      = $request->boolean('is_featured');
-        $data['is_new_arrival']   = $request->boolean('is_new_arrival');
-        $data['is_best_seller']   = $request->boolean('is_best_seller');
-        $data['is_flash_sale']    = $request->boolean('is_flash_sale');
+        $data['is_published'] = $request->boolean('is_published');
+        $data['is_featured'] = $request->boolean('is_featured');
+        $data['is_new_arrival'] = $request->boolean('is_new_arrival');
+        $data['is_best_seller'] = $request->boolean('is_best_seller');
+        $data['is_flash_sale'] = $request->boolean('is_flash_sale');
         $data['is_free_shipping'] = $request->boolean('is_free_shipping');
 
         if ($data['is_flash_sale']) {
@@ -506,11 +518,13 @@ class ProductController extends Controller
         $colors = collect($request->input('color_variants', []));
         foreach ($colors as $i => $row) {
             $val = trim((string) ($row['value'] ?? ''));
-            if ($val === '') continue;
+            if ($val === '') {
+                continue;
+            }
 
             $imagePath = ! empty($row['image_path']) ? trim((string) $row['image_path']) : null;
             if (! empty($row['image_b64'])) {
-                $name = (string) ($row['image_name'] ?? ('color_' . $i . '.jpg'));
+                $name = (string) ($row['image_name'] ?? ('color_'.$i.'.jpg'));
                 $decoded = PublicUploader::decodeBase64Payload((string) $row['image_b64'], $name, 'variant_image');
                 if ($decoded) {
                     $imagePath = PublicUploader::storeBytes($decoded[0], 'products/variants', $decoded[1], 'variant_image');
@@ -520,14 +534,14 @@ class ProductController extends Controller
             $colorCode = ! empty($row['color_code']) ? trim((string) $row['color_code']) : null;
 
             ProductVariant::create([
-                'product_id'  => $product->id,
-                'type'        => 'Color',
-                'value'       => $val,
-                'color_code'  => $colorCode,
+                'product_id' => $product->id,
+                'type' => 'Color',
+                'value' => $val,
+                'color_code' => $colorCode,
                 'price_delta' => (float) ($row['price_delta'] ?? 0),
-                'stock'       => max(0, (int) ($row['stock'] ?? 0)),
-                'image_path'  => $imagePath,
-                'position'    => $pos++,
+                'stock' => max(0, (int) ($row['stock'] ?? 0)),
+                'image_path' => $imagePath,
+                'position' => $pos++,
             ]);
         }
 
@@ -535,11 +549,13 @@ class ProductController extends Controller
         $sizes = collect($request->input('size_variants', []));
         foreach ($sizes as $i => $row) {
             $val = trim((string) ($row['value'] ?? ''));
-            if ($val === '') continue;
+            if ($val === '') {
+                continue;
+            }
 
             $imagePath = ! empty($row['image_path']) ? trim((string) $row['image_path']) : null;
             if (! empty($row['image_b64'])) {
-                $name = (string) ($row['image_name'] ?? ('size_' . $i . '.jpg'));
+                $name = (string) ($row['image_name'] ?? ('size_'.$i.'.jpg'));
                 $decoded = PublicUploader::decodeBase64Payload((string) $row['image_b64'], $name, 'variant_image');
                 if ($decoded) {
                     $imagePath = PublicUploader::storeBytes($decoded[0], 'products/variants', $decoded[1], 'variant_image');
@@ -547,14 +563,14 @@ class ProductController extends Controller
             }
 
             ProductVariant::create([
-                'product_id'  => $product->id,
-                'type'        => 'Size',
-                'value'       => $val,
-                'color_code'  => null,
+                'product_id' => $product->id,
+                'type' => 'Size',
+                'value' => $val,
+                'color_code' => null,
                 'price_delta' => (float) ($row['price_delta'] ?? 0),
-                'stock'       => max(0, (int) ($row['stock'] ?? 0)),
-                'image_path'  => $imagePath,
-                'position'    => $pos++,
+                'stock' => max(0, (int) ($row['stock'] ?? 0)),
+                'image_path' => $imagePath,
+                'position' => $pos++,
             ]);
         }
 
@@ -562,11 +578,13 @@ class ProductController extends Controller
         $weights = collect($request->input('weight_variants', []));
         foreach ($weights as $i => $row) {
             $val = trim((string) ($row['value'] ?? ''));
-            if ($val === '') continue;
+            if ($val === '') {
+                continue;
+            }
 
             $imagePath = ! empty($row['image_path']) ? trim((string) $row['image_path']) : null;
             if (! empty($row['image_b64'])) {
-                $name = (string) ($row['image_name'] ?? ('weight_' . $i . '.jpg'));
+                $name = (string) ($row['image_name'] ?? ('weight_'.$i.'.jpg'));
                 $decoded = PublicUploader::decodeBase64Payload((string) $row['image_b64'], $name, 'variant_image');
                 if ($decoded) {
                     $imagePath = PublicUploader::storeBytes($decoded[0], 'products/variants', $decoded[1], 'variant_image');
@@ -574,14 +592,14 @@ class ProductController extends Controller
             }
 
             ProductVariant::create([
-                'product_id'  => $product->id,
-                'type'        => 'Weight',
-                'value'       => $val,
-                'color_code'  => null,
+                'product_id' => $product->id,
+                'type' => 'Weight',
+                'value' => $val,
+                'color_code' => null,
                 'price_delta' => (float) ($row['price_delta'] ?? 0),
-                'stock'       => max(0, (int) ($row['stock'] ?? 0)),
-                'image_path'  => $imagePath,
-                'position'    => $pos++,
+                'stock' => max(0, (int) ($row['stock'] ?? 0)),
+                'image_path' => $imagePath,
+                'position' => $pos++,
             ]);
         }
 
@@ -589,12 +607,16 @@ class ProductController extends Controller
         $customGroups = collect($request->input('custom_variant_groups', []));
         foreach ($customGroups as $gIndex => $group) {
             $groupName = trim((string) ($group['name'] ?? ''));
-            if ($groupName === '') continue;
+            if ($groupName === '') {
+                continue;
+            }
 
             $options = collect($group['options'] ?? []);
             foreach ($options as $optIndex => $opt) {
                 $val = trim((string) ($opt['value'] ?? ''));
-                if ($val === '') continue;
+                if ($val === '') {
+                    continue;
+                }
 
                 $imagePath = ! empty($opt['image_path']) ? trim((string) $opt['image_path']) : null;
                 if (! empty($opt['image_b64'])) {
@@ -606,14 +628,14 @@ class ProductController extends Controller
                 }
 
                 ProductVariant::create([
-                    'product_id'  => $product->id,
-                    'type'        => $groupName,
-                    'value'       => $val,
-                    'color_code'  => null,
+                    'product_id' => $product->id,
+                    'type' => $groupName,
+                    'value' => $val,
+                    'color_code' => null,
                     'price_delta' => (float) ($opt['price_delta'] ?? 0),
-                    'stock'       => max(0, (int) ($opt['stock'] ?? 0)),
-                    'image_path'  => $imagePath,
-                    'position'    => $pos++,
+                    'stock' => max(0, (int) ($opt['stock'] ?? 0)),
+                    'image_path' => $imagePath,
+                    'position' => $pos++,
                 ]);
             }
         }
@@ -632,10 +654,10 @@ class ProductController extends Controller
         foreach ($paths as $path) {
             ProductImage::create([
                 'product_id' => $product->id,
-                'path'       => $path,
-                'alt'        => $product->name,
+                'path' => $path,
+                'alt' => $product->name,
                 'is_primary' => ! $hasPrimary,
-                'position'   => ++$position,
+                'position' => ++$position,
             ]);
             $hasPrimary = true;
         }

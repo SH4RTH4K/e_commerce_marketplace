@@ -93,3 +93,89 @@ test('read-only catalog shows zero customer prices without edit or publication c
     assert.equal(app.renderer.root.findAllByType('img').every(image => image.props.src === '/storage/products/sample.jpg'), true);
   } finally { await app.close(); }
 });
+
+test('shirt search excludes the sorted T-Shirt category without changing the search text', async () => {
+  const app = await mount({ categories: [{ id: 2, name: 'Clothing', label: 'Clothing' }, { id: 3, name: 'T-Shirt', label: 'Clothing / T-Shirt', parent_id: 2 }] });
+  try {
+    const exclusion = app.renderer.root.findByProps({ 'aria-label': 'Exclude category' });
+    assert.equal(exclusion.findByProps({ value: 3 }).children[0], 'Clothing / T-Shirt');
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Search products' }), 'Shirt');
+    await app.change(exclusion, '3');
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Category scope' }), 'direct');
+    await app.submit();
+    assert.deepEqual(app.calls[0].data, { q: 'Shirt', category: 2, exclude_category: '3', category_scope: 'direct', status: 'published', sort: 'relevance', per_page: 15 });
+    assert.equal(app.renderer.root.findAllByType('p').some(paragraph => paragraph.children.includes('You have unapplied changes. Apply filters to update results.')), true);
+  } finally { await app.close(); }
+});
+
+test('clearing the source category resets direct scope and leaves text search available', async () => {
+  const app = await mount({ filters: { ...defaults.filters, category_scope: 'direct' } });
+  try {
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Category' }), '');
+    const scope = app.renderer.root.findByProps({ 'aria-label': 'Category scope' });
+    assert.equal(scope.props.value, 'all');
+    assert.equal(scope.props.disabled, true);
+    await app.submit();
+    assert.deepEqual(app.calls[0].data, { q: 'Speaker', status: 'published', sort: 'relevance', per_page: 15 });
+  } finally { await app.close(); }
+});
+
+test('default category scope does not mark an unfiltered catalog active', async () => {
+  const app = await mount({ filters: {} });
+  try {
+    assert.equal(app.renderer.root.findByProps({ 'aria-label': 'Category scope' }).props.disabled, true);
+    assert.equal(app.renderer.root.findAllByType('button').some(button => button.children[0] === 'Reset filters'), false);
+  } finally { await app.close(); }
+});
+
+test('applied category exclusions and scope survive sorting rows and visibility and reset together', async () => {
+  const app = await mount({ filters: { ...defaults.filters, exclude_category: 3, category_scope: 'direct' } });
+  try {
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Exclude category' }), '9');
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Sort products' }), 'name');
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Products per page' }), '30');
+    await app.click(app.renderer.root.findAllByType('button').find(button => button.findAllByType('p').some(paragraph => paragraph.children[0] === 'Draft')));
+    for (const call of app.calls) {
+      assert.equal(call.data.exclude_category, 3);
+      assert.equal(call.data.category_scope, 'direct');
+      assert.equal(call.data.category, 2);
+    }
+    assert.equal(app.calls[0].data.sort, 'name');
+    assert.equal(app.calls[1].data.per_page, '30');
+    assert.equal(app.calls[2].data.status, 'draft');
+    const inventory = app.renderer.root.findAllByType('a').find(link => link.children[0] === 'Inventory');
+    assert.equal(inventory.props.href.includes('exclude_category'), false);
+    assert.equal(inventory.props.href.includes('category_scope'), false);
+    await app.click(app.renderer.root.findAllByType('button').find(button => button.children[0] === 'Reset filters'));
+    assert.deepEqual(app.calls[3].data, { sort: 'relevance', per_page: 15 });
+  } finally { await app.close(); }
+});
+
+test('server changes to category exclusion or scope refresh controls and clear stale selections', async () => {
+  const app = await mount();
+  try {
+    await app.select(7);
+    await app.update({ filters: { ...defaults.filters, exclude_category: 3 } });
+    assert.equal(app.renderer.root.findByProps({ 'aria-label': 'Exclude category' }).props.value, 3);
+    assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Product bulk action' }).length, 0);
+    await app.select(7);
+    await app.update({ filters: { ...defaults.filters, exclude_category: 3, category_scope: 'direct' } });
+    assert.equal(app.renderer.root.findByProps({ 'aria-label': 'Category scope' }).props.value, 'direct');
+    assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Product bulk action' }).length, 0);
+    await app.select(7);
+    await app.submit();
+    assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Product bulk action' }).length, 0);
+  } finally { await app.close(); }
+});
+
+test('pagination follows filtered server links and clears the current bulk selection', async () => {
+  const nextPage = '/admin/products?q=Shirt&category=2&exclude_category=3&category_scope=direct&page=2';
+  const app = await mount({ filters: { ...defaults.filters, q: 'Shirt', exclude_category: 3, category_scope: 'direct' }, products: { ...defaults.products, links: [{ url: nextPage, label: 'Next', active: false }] } });
+  try {
+    await app.select(7);
+    await app.click(app.renderer.root.findByProps({ 'aria-label': 'Product pagination' }).findByType('button'));
+    assert.equal(app.calls[0].url, nextPage);
+    assert.deepEqual(app.calls[0].data, {});
+    assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Product bulk action' }).length, 0);
+  } finally { await app.close(); }
+});
