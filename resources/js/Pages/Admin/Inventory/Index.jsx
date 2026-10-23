@@ -11,11 +11,11 @@ function StockBadge({ quantity }) {
   const label = quantity === 0 ? 'Out of stock' : quantity <= 5 ? 'Low stock' : 'Healthy stock';
   return <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium px-2.5 py-1 rounded-full ${quantity === 0 ? 'bg-red-50 text-red-700' : quantity <= 5 ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-700'}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{label}</span>;
 }
-export default function InventoryIndex({ products, categories = [], suppliers = [], q = '', category = '', supplier = '', stock_level = '', visibility = '', source = '', product_source = '', type = '', order = 'stock_asc', per_page = 20, summary = {}, matching_units = 0, matching_supplier_units = 0, can_adjust = false }) {
+export default function InventoryIndex({ products, categories = [], suppliers = [], q = '', category = '', supplier = '', stock_level = '', sourcing = '', visibility = '', source = '', product_source = '', type = '', order = 'stock_asc', per_page = 20, summary = {}, matching_units = 0, matching_supplier_units = 0, can_adjust = false }) {
   const { props } = usePage();
   const currency = props.app?.currency_symbol || '৳';
   const price = value => value == null ? '—' : `${currency}${Number(value).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
-  const applied = { q, category: category || '', supplier: supplier || '', stock_level, visibility, source, product_source, type, order, per_page };
+  const applied = { q, category: category || '', supplier: supplier || '', stock_level, sourcing, visibility, source, product_source, type, order, per_page };
   const [filters, setFilters] = useState(applied);
   const [selected, setSelected] = useState([]); const [dialog, setDialog] = useState(null); const [loading, setLoading] = useState(false);
   const [sourcingAction, setSourcingAction] = useState('');
@@ -23,7 +23,7 @@ export default function InventoryIndex({ products, categories = [], suppliers = 
   const sourcingPending = useRef(false);
   const rows = products.data || [];
   const resultIds = rows.map(product => product.id).join(',');
-  useEffect(() => { setFilters(applied); setSelected([]); setSourcingErrors([]); }, [q, category, supplier, stock_level, visibility, source, product_source, type, order, per_page, products.current_page]);
+  useEffect(() => { setFilters(applied); setSelected([]); setSourcingErrors([]); }, [q, category, supplier, stock_level, sourcing, visibility, source, product_source, type, order, per_page, products.current_page]);
   useEffect(() => { setSelected([]); setSourcingErrors([]); }, [resultIds]);
   const visit = (overrides = {}) => {
     if (sourcingPending.current) return;
@@ -31,7 +31,7 @@ export default function InventoryIndex({ products, categories = [], suppliers = 
     const parameters = Object.fromEntries(Object.entries({ ...filters, ...overrides }).filter(([, value]) => value !== '' && value != null));
     router.get('/admin/inventory', parameters, { preserveState: true, preserveScroll: true, onStart: () => setLoading(true), onFinish: () => setLoading(false) });
   };
-  const filtered = !!(q || category || supplier || stock_level || visibility || source || product_source || type);
+  const filtered = !!(q || category || supplier || stock_level || sourcing || visibility || source || product_source || type);
   const selectedRows = rows.filter(product => selected.includes(product.id));
   const updateSourcing = action => {
     if (!can_adjust || loading || sourcingPending.current || !selectedRows.length) return;
@@ -57,6 +57,7 @@ export default function InventoryIndex({ products, categories = [], suppliers = 
   const selects = [
     ['category', 'Category', [['', 'All categories'], ...categories.map(item => [item.id, item.name])]],
     ['stock_level', 'Stock level', [['', 'All stock levels'], ['in', 'Healthy (>5)'], ['low', 'Low stock (1–5)'], ['out', 'Out of stock']]],
+    ['sourcing', 'Sourcing status', [['', 'All products'], ['enabled', 'Sourcing enabled'], ['disabled', 'Sourcing disabled']]],
     ['visibility', 'Visibility', [['', 'All visibility'], ['published', 'Published'], ['draft', 'Draft']]],
     ['source', 'Stock source', [['', 'All stock sources'], ['local', 'Local inventory'], ['supplier', 'Supplier availability (all)'], ['manual', 'Supplier · manual stock']]],
     ['product_source', 'Product source', [['', 'All product sources'], ['manual', 'Manual'], ['dropshipping', 'Dropshipping'], ['other', 'Other']]],
@@ -88,7 +89,7 @@ export default function InventoryIndex({ products, categories = [], suppliers = 
               <button disabled={loading || !!sourcingAction} className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl disabled:opacity-50">{loading ? 'Loading…' : 'Apply filters'}</button>
               {filtered && <button type="button" disabled={!!sourcingAction} onClick={() => { if (sourcingPending.current) return; setSelected([]); router.get('/admin/inventory'); }} className="px-3 py-2.5 text-gray-500 text-sm hover:text-gray-900">Reset filters</button>}
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-3">{selects.map(([key, label, options]) => <label key={key} className="text-xs font-medium text-gray-500">{label}<select value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value }))} className={`${inputClass} mt-1.5`}>{options.map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></label>)}</div>
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">{selects.map(([key, label, options]) => <label key={key} className="text-xs font-medium text-gray-500">{label}<select value={filters[key]} onChange={event => setFilters(current => ({ ...current, [key]: event.target.value }))} className={`${inputClass} mt-1.5`}>{options.map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></label>)}</div>
             <div className="flex flex-wrap justify-between items-center gap-3 border-t border-gray-100 pt-3">
               <p className="text-xs text-gray-400">Overview cards use all filters except stock level.</p>
               <button type="button" onClick={() => visit({ stock_level: 'out', visibility: 'published' })} className="text-xs font-semibold text-orange-600 hover:underline">Review published products with no stock →</button>

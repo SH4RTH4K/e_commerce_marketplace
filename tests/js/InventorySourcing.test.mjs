@@ -18,7 +18,7 @@ const defaults = { products: { data: [clock, speaker], total: 2, current_page: 1
 async function mount(props = {}) {
   const calls = [];
   const originals = { get: router.get, post: router.post };
-  for (const method of Object.keys(originals)) router[method] = (url, data, options) => calls.push({ method, url, data: JSON.parse(JSON.stringify(data)), options });
+  for (const method of Object.keys(originals)) router[method] = (url, data, options) => calls.push({ method, url, data: data == null ? data : JSON.parse(JSON.stringify(data)), options });
   const context = vm.createContext({ React, useEffect, useRef, useState, router, URLSearchParams,
     Head: () => null, AdminLayout: ({ children }) => React.createElement('main', {}, children),
     usePage: () => ({ props: { app: { currency_symbol: '৳' } } }),
@@ -31,6 +31,8 @@ async function mount(props = {}) {
   await act(async () => { renderer = create(React.createElement(context.Component, currentProps)); });
   return { renderer, calls,
     button: label => renderer.root.findAllByType('button').find(button => button.children[0] === label),
+    filter: label => renderer.root.findAllByType('label').find(element => element.children[0] === label).findByType('select'),
+    change: async (element, value) => { await act(async () => element.props.onChange({ target: { value } })); },
     click: async element => { await act(async () => element.props.onClick()); },
     select: async (name, checked = true) => { await act(async () => renderer.root.findByProps({ 'aria-label': `Select ${name}` }).props.onChange({ target: { checked } })); },
     update: async props => { currentProps = { ...currentProps, ...props }; await act(async () => renderer.update(React.createElement(context.Component, currentProps))); },
@@ -56,7 +58,7 @@ test('inventory enables sourcing for selected IDs and preserves the filtered vie
 });
 
 test('inventory disables sourcing for a page selection and clears selection only after success', async () => {
-  const app = await mount();
+  const app = await mount({ sourcing: 'enabled' });
   try {
     await app.select('this page');
     await app.click(app.button('Disable sourcing'));
@@ -67,6 +69,10 @@ test('inventory disables sourcing for a page selection and clears selection only
     await act(async () => { app.calls[1].options.onSuccess(); app.calls[1].options.onFinish(); });
     assert.equal(app.renderer.root.findByProps({ 'aria-label': 'Select Clock' }).props.checked, false);
     assert.equal(app.button('Disable sourcing'), undefined);
+    assert.equal(app.filter('Sourcing status').props.value, 'enabled');
+    await app.update({ products: { ...defaults.products, data: [], total: 0 } });
+    assert.equal(app.filter('Sourcing status').props.value, 'enabled');
+    assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Select Clock' }).length, 0);
   } finally { await app.close(); }
 });
 
@@ -121,8 +127,65 @@ test('inventory clears stale sourcing selections when results, filters or pages 
     await app.update({ stock_level: 'in' });
     assert.equal(app.button('Enable sourcing'), undefined);
     await app.select('Clock');
+    await app.update({ sourcing: 'enabled' });
+    assert.equal(app.button('Enable sourcing'), undefined);
+    await app.select('Clock');
     await app.update({ products: { ...defaults.products, data: [clock], current_page: 2 } });
     assert.equal(app.button('Enable sourcing'), undefined);
+  } finally { await app.close(); }
+});
+
+test('inventory applies sourcing status together with text and actual-stock filters', async () => {
+  const app = await mount();
+  try {
+    await app.change(app.renderer.root.findByProps({ type: 'search' }), 'Digital clock');
+    await app.change(app.filter('Sourcing status'), 'disabled');
+    assert.equal(app.calls.length, 0);
+
+    await act(async () => app.renderer.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+
+    assert.equal(app.calls[0].method, 'get');
+    assert.equal(app.calls[0].url, '/admin/inventory');
+    assert.deepEqual(app.calls[0].data, { q: 'Digital clock', supplier: '4', stock_level: 'out', sourcing: 'disabled', order: 'stock_asc', per_page: 20 });
+  } finally { await app.close(); }
+});
+
+test('inventory restores a bookmarked sourcing filter and reset removes it', async () => {
+  const app = await mount({ q: '', stock_level: '', supplier: '', sourcing: 'enabled' });
+  try {
+    assert.equal(app.filter('Sourcing status').props.value, 'enabled');
+    assert.deepEqual(app.filter('Sourcing status').findAllByType('option').map(option => [option.props.value, option.children[0]]), [
+      ['', 'All products'], ['enabled', 'Sourcing enabled'], ['disabled', 'Sourcing disabled'],
+    ]);
+
+    await app.click(app.button('Reset filters'));
+
+    assert.equal(app.calls[0].url, '/admin/inventory');
+    assert.equal(app.calls[0].data, undefined);
+    await app.update({ sourcing: '' });
+    assert.equal(app.filter('Sourcing status').props.value, '');
+    assert.equal(app.button('Reset filters'), undefined);
+  } finally { await app.close(); }
+});
+
+test('inventory preserves sourcing in sorting, row count, pagination and CSV export', async () => {
+  const nextPage = '/admin/inventory?q=Clock&stock_level=out&supplier=4&sourcing=enabled&page=2';
+  const app = await mount({ sourcing: 'enabled', products: { ...defaults.products, links: [{ label: 'Next', url: nextPage, active: false }] } });
+  try {
+    const exportLink = app.renderer.root.findAllByType('a').find(element => element.props.href.startsWith('/admin/inventory/export?'));
+    const exportQuery = new URL(exportLink.props.href, 'https://example.test').searchParams;
+    assert.equal(exportQuery.get('sourcing'), 'enabled');
+    assert.equal(exportQuery.get('q'), 'Clock');
+    assert.equal(exportQuery.get('stock_level'), 'out');
+
+    await app.change(app.renderer.root.findByProps({ id: 'inventory-sort' }), 'updated');
+    assert.equal(app.calls[0].data.sourcing, 'enabled');
+    assert.equal(app.calls[0].data.order, 'updated');
+    await app.change(app.filter('Rows '), '100');
+    assert.equal(app.calls[1].data.sourcing, 'enabled');
+    assert.equal(app.calls[1].data.per_page, '100');
+    await app.click(app.renderer.root.findByProps({ 'aria-label': 'Inventory pagination' }).findByType('button'));
+    assert.equal(app.calls[2].url, nextPage);
   } finally { await app.close(); }
 });
 

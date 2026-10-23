@@ -31,6 +31,7 @@ class IndexProductRequest extends FormRequest
             'sort' => ['nullable', 'string'],
             'per_page' => ['nullable', 'integer'],
             'source' => ['nullable', 'string'],
+            'sourcing' => ['nullable', 'string', 'in:enabled,disabled'],
         ];
     }
 }

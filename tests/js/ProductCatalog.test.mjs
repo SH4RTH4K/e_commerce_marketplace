@@ -227,3 +227,48 @@ test('pagination follows filtered server links and clears the current bulk selec
     assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Product bulk action' }).length, 0);
   } finally { await app.close(); }
 });
+
+test('sourcing filter combines with search and stock and remains unapplied until submitted', async () => {
+  const app = await mount();
+  try {
+    const sourcing = app.renderer.root.findByProps({ 'aria-label': 'Sourcing status' });
+    assert.equal(sourcing.findByProps({ value: 'enabled' }).children[0], 'Sourcing enabled');
+    assert.equal(sourcing.findByProps({ value: 'disabled' }).children[0], 'Sourcing disabled');
+    await app.change(sourcing, 'enabled');
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Stock level' }), 'out');
+    assert.equal(app.calls.length, 0);
+    await app.submit();
+    assert.deepEqual(app.calls[0].data, { q: 'Speaker', category: 2, status: 'published', stock: 'out', sourcing: 'enabled', sort: 'relevance', per_page: 15 });
+  } finally { await app.close(); }
+});
+
+test('applied sourcing filter survives sorting rows visibility pagination and inventory links', async () => {
+  const next = '/admin/products?sourcing=enabled&page=2';
+  const app = await mount({ filters: { ...defaults.filters, sourcing: 'enabled' }, products: { ...defaults.products, links: [{ url: next, label: 'Next', active: false }] } });
+  try {
+    assert.equal(app.renderer.root.findByProps({ 'aria-label': 'Sourcing status' }).props.value, 'enabled');
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Sourcing status' }), 'disabled');
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Sort products' }), 'name');
+    await app.change(app.renderer.root.findByProps({ 'aria-label': 'Products per page' }), '100');
+    await app.click(app.renderer.root.findAllByType('button').find(button => button.findAllByType('p').some(paragraph => paragraph.children[0] === 'Draft')));
+    for (const call of app.calls) assert.equal(call.data.sourcing, 'enabled');
+    const inventory = app.renderer.root.findAllByType('a').find(link => link.children[0] === 'Inventory');
+    assert.equal(new URL(inventory.props.href, 'https://store.example').searchParams.get('sourcing'), 'enabled');
+    await app.select(7);
+    await app.click(app.renderer.root.findByProps({ 'aria-label': 'Product pagination' }).findByType('button'));
+    assert.equal(app.calls[3].url, next);
+    assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Product bulk action' }).length, 0);
+  } finally { await app.close(); }
+});
+
+test('server sourcing changes clear stale selections and reset clears the sourcing-only filter', async () => {
+  const app = await mount({ filters: { sourcing: 'enabled' } });
+  try {
+    await app.select(7);
+    await app.update({ filters: { sourcing: 'disabled' } });
+    assert.equal(app.renderer.root.findByProps({ 'aria-label': 'Sourcing status' }).props.value, 'disabled');
+    assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Product bulk action' }).length, 0);
+    await app.click(app.renderer.root.findAllByType('button').find(button => button.children[0] === 'Reset filters'));
+    assert.deepEqual(app.calls[0].data, { sort: 'newest', per_page: 15 });
+  } finally { await app.close(); }
+});

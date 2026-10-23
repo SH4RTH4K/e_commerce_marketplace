@@ -27,6 +27,7 @@ class ProductCatalogService
             'stock' => in_array($stock, ['out', 'low', 'in'], true) ? $stock : '',
             'type' => in_array($data['type'] ?? '', ['simple', 'variable'], true) ? $data['type'] : '',
             'source' => in_array($data['source'] ?? '', ['manual', 'dropshipping', 'other'], true) ? $data['source'] : '',
+            'sourcing' => $data['sourcing'] ?? '',
             'sort' => in_array($data['sort'] ?? '', ['relevance', 'newest', 'updated', 'name', 'price_asc', 'price_desc', 'stock_asc', 'stock_desc'], true) ? $data['sort'] : ($term !== '' ? 'relevance' : 'newest'),
             'per_page' => in_array((int) ($data['per_page'] ?? 15), [15, 30, 50, 100], true) ? (int) ($data['per_page'] ?? 15) : 15,
         ];
@@ -77,6 +78,9 @@ class ProductCatalogService
         }
         if ($filters['source'] !== '') {
             $query->where('source_type', $filters['source']);
+        }
+        if (($filters['sourcing'] ?? '') !== '') {
+            $query->where('allow_backorder', $filters['sourcing'] === 'enabled');
         }
         match ($filters['stock']) {
             'out' => $query->whereRaw('(stock_quantity + sourced_stock_quantity) = 0'), 'low' => $query->whereRaw('(stock_quantity + sourced_stock_quantity) BETWEEN 1 AND 5'),

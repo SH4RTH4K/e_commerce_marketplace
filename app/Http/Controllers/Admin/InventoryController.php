@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\IndexInventoryRequest;
 use App\Models\Category;
 use App\Models\DropshipSupplier;
 use App\Models\InventoryAdjustment;
@@ -12,10 +13,12 @@ use App\Services\ProductPricingService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InventoryController extends Controller
 {
-    public function index(Request $request)
+    public function index(IndexInventoryRequest $request): Response
     {
         [$query, $filters] = $this->filteredQuery($request, false);
         $totals = (clone $query)->selectRaw('COUNT(*) AS total, SUM(CASE WHEN (stock_quantity + sourced_stock_quantity) > 5 THEN 1 ELSE 0 END) AS in_stock, SUM(CASE WHEN (stock_quantity + sourced_stock_quantity) BETWEEN 1 AND 5 THEN 1 ELSE 0 END) AS low_stock, SUM(CASE WHEN (stock_quantity + sourced_stock_quantity) = 0 THEN 1 ELSE 0 END) AS out_stock')->first();
@@ -162,7 +165,7 @@ class InventoryController extends Controller
         ];
     }
 
-    public function export(Request $request)
+    public function export(IndexInventoryRequest $request): StreamedResponse
     {
         [$query, $filters] = $this->filteredQuery($request);
         $this->applySort($query, $filters['order']);
@@ -181,7 +184,7 @@ class InventoryController extends Controller
         }, 'inventory-'.now('Asia/Dhaka')->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv; charset=UTF-8', 'Cache-Control' => 'private, no-store']);
     }
 
-    private function filteredQuery(Request $request, bool $includeStock = true): array
+    private function filteredQuery(IndexInventoryRequest $request, bool $includeStock = true): array
     {
         $filters = [
             'q' => mb_substr(trim((string) $request->input('q', '')), 0, 200),
@@ -189,6 +192,7 @@ class InventoryController extends Controller
             'stock_level' => $request->input('stock_level', $request->input('stock', '')),
             'visibility' => $request->input('visibility', ''), 'source' => $request->input('source', ''),
             'product_source' => $request->input('product_source', ''),
+            'sourcing' => $request->validated('sourcing') ?? '',
             'type' => $request->input('type', ''), 'order' => $request->input('order', 'stock_asc'),
             'per_page' => in_array($request->integer('per_page', 20), [20, 50, 100], true) ? $request->integer('per_page', 20) : 20,
         ];
@@ -212,6 +216,9 @@ class InventoryController extends Controller
         }
         if ($filters['product_source']) {
             $query->where('source_type', $filters['product_source']);
+        }
+        if ($filters['sourcing'] !== '') {
+            $query->where('allow_backorder', $filters['sourcing'] === 'enabled');
         }
         if ($filters['visibility']) {
             $query->where('is_published', $filters['visibility'] === 'published');
