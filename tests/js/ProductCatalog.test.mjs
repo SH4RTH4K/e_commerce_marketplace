@@ -106,6 +106,42 @@ test('catalog keeps actual inventory visible with a sourcing override and separa
   } finally { await app.close(); }
 });
 
+for (const action of ['enable_sourcing', 'disable_sourcing']) {
+  test(`${action} submits only selected products and clears selection after success`, async () => {
+    const app = await mount({ products: { ...defaults.products, data: [product, { ...product, id: 8 }, { ...product, id: 9 }] } });
+    try {
+      await app.select(7);
+      await app.select(8);
+      const menu = app.renderer.root.findByProps({ 'aria-label': 'Product bulk action' });
+      assert.equal(menu.findByProps({ value: action }).children[0], action === 'enable_sourcing' ? 'Enable sourcing' : 'Disable sourcing');
+      await app.change(menu, action);
+      const apply = app.renderer.root.findAllByType('button').find(button => button.children[0] === 'Apply to selected');
+      await app.click(apply);
+
+      assert.equal(app.calls[0].method, 'post');
+      assert.equal(app.calls[0].url, '/admin/products/bulk');
+      assert.deepEqual(app.calls[0].data, { ids: [7, 8], bulk_action: action });
+      await act(async () => app.calls[0].options.onStart());
+      assert.equal(app.renderer.root.findByProps({ 'aria-label': 'Product bulk action' }).props.disabled, true);
+      assert.equal(app.renderer.root.findAllByType('button').find(button => button.children[0] === 'Apply to selected').props.disabled, true);
+      await app.click(app.renderer.root.findAllByType('button').find(button => button.children[0] === 'Apply to selected'));
+      assert.equal(app.calls.length, 1);
+      await act(async () => { app.calls[0].options.onSuccess(); app.calls[0].options.onFinish(); });
+      assert.equal(app.renderer.root.findAllByProps({ 'aria-label': 'Product bulk action' }).length, 0);
+    } finally { await app.close(); }
+  });
+}
+
+test('delete-only staff cannot select sourcing bulk actions', async () => {
+  const app = await mount({ canEdit: false, canDelete: true });
+  try {
+    await app.select(7);
+    const menu = app.renderer.root.findByProps({ 'aria-label': 'Product bulk action' });
+    assert.equal(menu.findAllByType('option').some(option => ['enable_sourcing', 'disable_sourcing'].includes(option.props.value)), false);
+    assert.equal(menu.findByProps({ value: 'delete' }).children[0], 'Delete');
+  } finally { await app.close(); }
+});
+
 test('shirt search excludes the sorted T-Shirt category without changing the search text', async () => {
   const app = await mount({ categories: [{ id: 2, name: 'Clothing', label: 'Clothing' }, { id: 3, name: 'T-Shirt', label: 'Clothing / T-Shirt', parent_id: 2 }] });
   try {

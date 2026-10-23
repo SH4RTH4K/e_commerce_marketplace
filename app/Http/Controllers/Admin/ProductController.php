@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\BulkProductRequest;
 use App\Http\Requests\IndexProductRequest;
 use App\Http\Requests\SaveProductRequest;
 use App\Models\DropshipProductLink;
@@ -18,6 +19,7 @@ use App\Services\ProductCatalogService;
 use App\Services\ProductPricingService;
 use App\Services\SkuConfigurationService;
 use App\Support\PublicUploader;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -240,17 +242,9 @@ class ProductController extends Controller
         );
     }
 
-    public function bulk(Request $request)
+    public function bulk(BulkProductRequest $request): RedirectResponse
     {
-        abort_unless($request->user()->hasPermission('products.create') || $request->user()->hasPermission('products.delete'), 403);
-        $data = $request->validate([
-            'ids' => ['required', 'array', 'min:1', 'max:100'],
-            'ids.*' => ['integer', 'distinct', 'exists:products,id'],
-            'bulk_action' => ['required', 'in:activate,deactivate,delete,move_category'],
-            'category_id' => ['required_if:bulk_action,move_category', 'nullable', 'integer', 'exists:categories,id'],
-        ]);
-
-        abort_unless($request->user()->hasPermission($data['bulk_action'] === 'delete' ? 'products.delete' : 'products.create'), 403);
+        $data = $request->validated();
         $ids = $data['ids'];
         $count = count($ids);
 
@@ -274,6 +268,17 @@ class ProductController extends Controller
             return back()->with('status', "{$count} product(s) moved to the selected category.");
         }
 
+        if (in_array($data['bulk_action'], ['enable_sourcing', 'disable_sourcing'], true)) {
+            $enabled = $data['bulk_action'] === 'enable_sourcing';
+            Product::whereIn('id', $ids)->update(['allow_backorder' => $enabled]);
+            Cache::forget('sitemap_urls_v2');
+
+            return back()->with('status', $enabled
+                ? "Source-on-order enabled for {$count} product(s). Actual inventory is unchanged."
+                : "Source-on-order disabled for {$count} product(s). Actual inventory is unchanged.");
+        }
+
+        abort_unless($data['bulk_action'] === 'delete', 422);
         Product::whereIn('id', $ids)->delete();
         Cache::forget('sitemap_urls_v2');
 
