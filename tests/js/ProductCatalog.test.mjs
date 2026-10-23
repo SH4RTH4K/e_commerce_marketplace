@@ -94,6 +94,18 @@ test('read-only catalog shows zero customer prices without edit or publication c
   } finally { await app.close(); }
 });
 
+test('catalog keeps actual inventory visible with a sourcing override and separate received stock', async () => {
+  const app = await mount({ products: { ...defaults.products, data: [{ ...product, stock_quantity: 0, sourced_stock_quantity: 3, available_stock_quantity: 3, supplier_stock_quantity: 0, allow_backorder: true }] } });
+  try {
+    const html = JSON.stringify(app.renderer.toJSON());
+    assert.match(html, /Current stock/);
+    assert.match(html, /Locally received/);
+    assert.match(html, /Supplier availability/);
+    assert.match(html, /Sourcing enabled/);
+    assert.ok(app.renderer.root.findAllByType('p').some(node => node.children.includes('3')));
+  } finally { await app.close(); }
+});
+
 test('shirt search excludes the sorted T-Shirt category without changing the search text', async () => {
   const app = await mount({ categories: [{ id: 2, name: 'Clothing', label: 'Clothing' }, { id: 3, name: 'T-Shirt', label: 'Clothing / T-Shirt', parent_id: 2 }] });
   try {

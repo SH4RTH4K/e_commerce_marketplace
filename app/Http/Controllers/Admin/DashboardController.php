@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 
@@ -25,15 +26,15 @@ class DashboardController extends Controller
         });
 
         return Inertia::render('Admin/Dashboard', [
-            'ordersCount'    => Order::count(),
-            'pendingCount'   => Order::where('payment_status', 'pending')->count(),
-            'revenue'        => $revenue,
-            'productsCount'  => Product::count(),
-            'pendingOrders'  => Order::where('payment_status', 'pending')->latest()->take(6)->get()->map(fn($o) => [
+            'ordersCount' => Order::count(),
+            'pendingCount' => Order::where('payment_status', 'pending')->count(),
+            'revenue' => $revenue,
+            'productsCount' => Product::count(),
+            'pendingOrders' => Order::where('payment_status', 'pending')->latest()->take(6)->get()->map(fn ($o) => [
                 'id' => $o->id, 'order_number' => $o->order_number, 'customer_name' => $o->customer_name,
                 'total' => $o->total, 'payment_method' => $o->payment_method,
             ]),
-            'recentOrders'   => Order::latest()->take(8)->get()->map(fn($o) => [
+            'recentOrders' => Order::latest()->take(8)->get()->map(fn ($o) => [
                 'id' => $o->id, 'order_number' => $o->order_number, 'customer_name' => $o->customer_name,
                 'total' => $o->total, 'status' => $o->status, 'payment_status' => $o->payment_status,
                 'payment_method' => $o->payment_method,
@@ -41,15 +42,15 @@ class DashboardController extends Controller
                 'created_at_formatted' => $o->created_at->format('d M'),
                 'created_at' => $o->created_at,
             ]),
-            'series'         => $series,
-            'seriesMax'      => max(1, $series->max('value')),
-            'stats'          => [
-                'confirmed'  => Order::where('status', 'confirmed')->count(),
-                'pending'    => Order::where('status', 'pending')->count(),
-                'shipped'    => Order::where('status', 'shipped')->count(),
-                'cancelled'  => Order::where('status', 'cancelled')->count(),
-                'low_stock'  => Product::where('stock_quantity', '<=', 5)->where('stock_quantity', '>', 0)->count(),
-                'users'      => \App\Models\User::count(),
+            'series' => $series,
+            'seriesMax' => max(1, $series->max('value')),
+            'stats' => [
+                'confirmed' => Order::where('status', 'confirmed')->count(),
+                'pending' => Order::where('status', 'pending')->count(),
+                'shipped' => Order::where('status', 'shipped')->count(),
+                'cancelled' => Order::where('status', 'cancelled')->count(),
+                'low_stock' => Product::whereRaw('(stock_quantity + sourced_stock_quantity) BETWEEN 1 AND 5')->count(),
+                'users' => User::count(),
             ],
         ]);
     }

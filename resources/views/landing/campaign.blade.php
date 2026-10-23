@@ -344,6 +344,7 @@
       </div>
 
       <form id="landing-order-form" method="POST" action="{{ route('landing.order', $page->slug) }}" class="space-y-6">
+        @include('landing.partials.sourcing-notice')
         @csrf
 
         {{-- Anti-Bot Honeypots (Invisible to humans, traps bots) --}}

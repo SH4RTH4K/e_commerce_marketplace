@@ -112,6 +112,12 @@
             <p style="margin:0 0 1.25rem"><img src="{{ seo_image_url() }}" alt="{{ site_name() }}" width="180" height="64" style="display:block;max-width:180px;height:64px;object-fit:contain;object-position:left center" /></p>
             <h1 data-seo-fallback-h1>{{ $pageProps['product']['name'] ?? $pageProps['activeCategory']['name'] ?? $pageProps['guide']['title'] ?? ($pageComponent === 'Storefront/Home' ? $fallbackHomeH1 : ($pageProps['heading'] ?? $fallbackH1)) }}</h1>
             @if($pageMetaDescription)<p>{{ $pageMetaDescription }}</p>@endif
+            @if($pageComponent === 'Storefront/Product' && !empty($pageProps['product']['availability_label']))
+                <p>{{ $pageProps['product']['availability_label'] }}</p>
+                @if(!empty($pageProps['product']['allow_backorder']) && (int) ($pageProps['product']['available_stock_quantity'] ?? 0) === 0)
+                    <p>We source this item after receiving your order. We will confirm availability and delivery timing before dispatch.</p>
+                @endif
+            @endif
             @if($pageComponent === 'Storefront/BlogDetail' && !empty($pageProps['guide']))
                 @foreach($pageProps['guide']['sections'] as $section)
                     <section><h2>{{ $section['heading'] }}</h2><p>{{ $section['text'] }}</p></section>
@@ -120,7 +126,7 @@
                     <a href="{{ $pageProps['guideCategory']['url'] }}">Browse {{ $pageProps['guideCategory']['name'] }}</a>
                 @endif
                 @foreach($pageProps['guideProducts'] ?? [] as $guideProduct)
-                    <p><a href="{{ $guideProduct['url'] }}">{{ $guideProduct['name'] }}</a></p>
+                    <p><a href="{{ $guideProduct['url'] }}">{{ $guideProduct['name'] }}</a> &mdash; {{ $guideProduct['availability_label'] ?? 'In Stock' }}</p>
                 @endforeach
             @endif
             <nav aria-label="Additional store links"><a href="{{ route('about') }}">About TAQI LIFE</a> · <a href="{{ route('blog') }}">Shopping guides</a></nav>

@@ -34,7 +34,7 @@ class ProductController extends Controller
         $product->unsetRelation('supplierLinks');
 
         $related = Product::published()
-            ->orderByRaw('CASE WHEN stock_quantity > 0 THEN 0 ELSE 1 END')
+            ->orderByRaw('CASE WHEN stock_quantity > 0 OR sourced_stock_quantity > 0 THEN 0 WHEN allow_backorder = 1 THEN 1 ELSE 2 END')
             ->with('images', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([

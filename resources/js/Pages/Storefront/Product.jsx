@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
+import ProductAvailability from '@/Components/Storefront/ProductAvailability';
+import { productAvailability } from '@/lib/productAvailability';
 import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import ProductCard from '@/Components/Storefront/ProductCard';
 import ProductRating from '@/Components/Storefront/ProductRating';
@@ -431,8 +433,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
     ) });
   };
 
-  const stockQuantity = Math.max(0, Number(product.stock_quantity) || 0);
-  const inStock = stockQuantity > 0;
+  const { canOrder: inStock } = productAvailability(product);
   const activeImageRecord = (product.images || []).find(image => image.path === activeImage);
   const mainImageUrl = activeImageRecord?.id ? `/media/product/${activeImageRecord.id}/960` : imageUrl(activeImage, product.name);
   const reviewCount = reviews?.total ?? product.reviews_count ?? 0;
@@ -487,7 +488,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
                 </span>
               )}
               <p className="mt-2 text-sm text-gray-500">SKU: <span className="font-mono font-semibold text-gray-700">{product.sku || '—'}</span></p>
-              {inStock && <p className="mt-2 text-sm font-semibold text-green-700">In Stock: {stockQuantity.toLocaleString()}</p>}
+              <ProductAvailability product={product} quantity={qty} showMessage className="mt-2" />
               <ProductRating rating={product.rating} reviewCount={reviewCount} className="template-1-product-rating" />
               <div className="template-1-product-description" dangerouslySetInnerHTML={{ __html: descriptionMarkup }} />
 
@@ -541,7 +542,6 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
                   </button>
                 </div>
               </div>
-              {!inStock && <p className="template-1-stock-note">Out of Stock</p>}
             </div>
           </div>
 
@@ -657,17 +657,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
           {/* Info */}
           <div className="flex flex-col min-w-0">
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              {inStock ? (
-                <span className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full border border-green-100">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                  In Stock: {stockQuantity.toLocaleString()}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 bg-red-50 text-red-600 text-xs font-bold px-2.5 py-1 rounded-full border border-red-100">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                  Out of Stock
-                </span>
-              )}
+              <ProductAvailability product={product} quantity={qty} showMessage />
               {product.is_free_shipping && (
                 <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200 shadow-2xs">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>

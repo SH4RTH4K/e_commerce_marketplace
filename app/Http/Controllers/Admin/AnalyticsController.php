@@ -48,7 +48,7 @@ class AnalyticsController extends Controller
                 $end = Carbon::now()->endOfDay();
                 $prevStart = Carbon::now()->subMonth()->startOfMonth();
                 $prevEnd = Carbon::now()->subMonth()->endOfMonth();
-                $rangeLabel = 'This Month (' . $now->format('F Y') . ')';
+                $rangeLabel = 'This Month ('.$now->format('F Y').')';
                 break;
 
             case 'last_month':
@@ -56,7 +56,7 @@ class AnalyticsController extends Controller
                 $end = Carbon::now()->subMonth()->endOfMonth();
                 $prevStart = Carbon::now()->subMonths(2)->startOfMonth();
                 $prevEnd = Carbon::now()->subMonths(2)->endOfMonth();
-                $rangeLabel = 'Last Month (' . Carbon::now()->subMonth()->format('F Y') . ')';
+                $rangeLabel = 'Last Month ('.Carbon::now()->subMonth()->format('F Y').')';
                 break;
 
             case 'ytd':
@@ -64,7 +64,7 @@ class AnalyticsController extends Controller
                 $end = Carbon::now()->endOfDay();
                 $prevStart = Carbon::now()->subYear()->startOfYear();
                 $prevEnd = Carbon::now()->subYear()->endOfYear();
-                $rangeLabel = 'Year to Date (' . $now->format('Y') . ')';
+                $rangeLabel = 'Year to Date ('.$now->format('Y').')';
                 break;
 
             case 'all':
@@ -81,7 +81,7 @@ class AnalyticsController extends Controller
                 $diffDays = $start->diffInDays($end) + 1;
                 $prevStart = (clone $start)->subDays($diffDays);
                 $prevEnd = (clone $start)->subSecond();
-                $rangeLabel = $start->format('d M Y') . ' - ' . $end->format('d M Y');
+                $rangeLabel = $start->format('d M Y').' - '.$end->format('d M Y');
                 break;
 
             case '30d':
@@ -100,7 +100,7 @@ class AnalyticsController extends Controller
         $totalOrders = (clone $currentOrdersQuery)->count();
         $grossRevenue = (float) (clone $currentOrdersQuery)->sum('total');
         $deliveredRevenue = (float) (clone $currentOrdersQuery)->where('status', 'delivered')->sum('total');
-        
+
         $deliveredCount = (clone $currentOrdersQuery)->where('status', 'delivered')->count();
         $shippedCount = (clone $currentOrdersQuery)->where('status', 'shipped')->count();
         $confirmedCount = (clone $currentOrdersQuery)->where('status', 'confirmed')->count();
@@ -127,13 +127,13 @@ class AnalyticsController extends Controller
             $prevDelivered = (clone $prevOrdersQuery)->where('status', 'delivered')->count();
             $prevAov = $prevTotalOrders > 0 ? $prevRevenue / $prevTotalOrders : 0;
 
-            $calcGrowth = fn($curr, $prev) => $prev > 0 ? round((($curr - $prev) / $prev) * 100, 1) : ($curr > 0 ? 100 : 0);
+            $calcGrowth = fn ($curr, $prev) => $prev > 0 ? round((($curr - $prev) / $prev) * 100, 1) : ($curr > 0 ? 100 : 0);
 
             $growth = [
-                'revenue'   => $calcGrowth($grossRevenue, $prevRevenue),
-                'orders'    => $calcGrowth($totalOrders, $prevTotalOrders),
+                'revenue' => $calcGrowth($grossRevenue, $prevRevenue),
+                'orders' => $calcGrowth($totalOrders, $prevTotalOrders),
                 'delivered' => $calcGrowth($deliveredCount, $prevDelivered),
-                'aov'       => $calcGrowth($aov, $prevAov),
+                'aov' => $calcGrowth($aov, $prevAov),
             ];
         }
 
@@ -156,20 +156,20 @@ class AnalyticsController extends Controller
         $lastMonthCancelled = (clone $lastMonthOrders)->where('status', 'cancelled')->count();
 
         $monthComparison = [
-            'this_month_name'      => Carbon::now()->format('F'),
-            'last_month_name'      => Carbon::now()->subMonth()->format('F'),
-            'this_month_revenue'   => $thisMonthRev,
-            'last_month_revenue'   => $lastMonthRev,
+            'this_month_name' => Carbon::now()->format('F'),
+            'last_month_name' => Carbon::now()->subMonth()->format('F'),
+            'this_month_revenue' => $thisMonthRev,
+            'last_month_revenue' => $lastMonthRev,
             'revenue_diff_percent' => $lastMonthRev > 0 ? round((($thisMonthRev - $lastMonthRev) / $lastMonthRev) * 100, 1) : ($thisMonthRev > 0 ? 100 : 0),
-            'this_month_orders'    => $thisMonthCount,
-            'last_month_orders'    => $lastMonthCount,
-            'orders_diff_percent'  => $lastMonthCount > 0 ? round((($thisMonthCount - $lastMonthCount) / $lastMonthCount) * 100, 1) : ($thisMonthCount > 0 ? 100 : 0),
+            'this_month_orders' => $thisMonthCount,
+            'last_month_orders' => $lastMonthCount,
+            'orders_diff_percent' => $lastMonthCount > 0 ? round((($thisMonthCount - $lastMonthCount) / $lastMonthCount) * 100, 1) : ($thisMonthCount > 0 ? 100 : 0),
             'this_month_delivered' => $thisMonthDelivered,
             'last_month_delivered' => $lastMonthDelivered,
             'this_month_cancelled' => $thisMonthCancelled,
             'last_month_cancelled' => $lastMonthCancelled,
-            'this_month_aov'       => $thisMonthCount > 0 ? round($thisMonthRev / $thisMonthCount, 2) : 0,
-            'last_month_aov'       => $lastMonthCount > 0 ? round($lastMonthRev / $lastMonthCount, 2) : 0,
+            'this_month_aov' => $thisMonthCount > 0 ? round($thisMonthRev / $thisMonthCount, 2) : 0,
+            'last_month_aov' => $lastMonthCount > 0 ? round($lastMonthRev / $lastMonthCount, 2) : 0,
         ];
 
         // ── 5. Time Series Chart Data ──
@@ -183,10 +183,10 @@ class AnalyticsController extends Controller
                 $hEnd = (clone $hStart)->endOfHour();
                 $hOrders = Order::whereBetween('created_at', [$hStart, $hEnd]);
                 $chartData[] = [
-                    'label'     => $hStart->format('ga'),
+                    'label' => $hStart->format('ga'),
                     'full_date' => $hStart->format('d M, g:i A'),
-                    'revenue'   => (float) (clone $hOrders)->sum('total'),
-                    'orders'    => (clone $hOrders)->count(),
+                    'revenue' => (float) (clone $hOrders)->sum('total'),
+                    'orders' => (clone $hOrders)->count(),
                     'delivered' => (clone $hOrders)->where('status', 'delivered')->count(),
                 ];
             }
@@ -198,10 +198,10 @@ class AnalyticsController extends Controller
                 $dEnd = $date->copy()->endOfDay();
                 $dOrders = Order::whereBetween('created_at', [$dStart, $dEnd]);
                 $chartData[] = [
-                    'label'     => $date->format('d M'),
+                    'label' => $date->format('d M'),
                     'full_date' => $date->format('D, d M Y'),
-                    'revenue'   => (float) (clone $dOrders)->sum('total'),
-                    'orders'    => (clone $dOrders)->count(),
+                    'revenue' => (float) (clone $dOrders)->sum('total'),
+                    'orders' => (clone $dOrders)->count(),
                     'delivered' => (clone $dOrders)->where('status', 'delivered')->count(),
                     'cancelled' => (clone $dOrders)->where('status', 'cancelled')->count(),
                 ];
@@ -216,10 +216,10 @@ class AnalyticsController extends Controller
 
             foreach ($ordersGrouped as $row) {
                 $chartData[] = [
-                    'label'     => $row->label,
+                    'label' => $row->label,
                     'full_date' => $row->label,
-                    'revenue'   => (float) $row->revenue,
-                    'orders'    => (int) $row->orders,
+                    'revenue' => (float) $row->revenue,
+                    'orders' => (int) $row->orders,
                     'delivered' => (int) $row->delivered,
                 ];
             }
@@ -227,9 +227,9 @@ class AnalyticsController extends Controller
 
         // ── 6. Top Selling Products Leaderboard ──
         $topProducts = OrderItem::whereHas('order', function ($q) use ($start, $end) {
-                $q->whereBetween('created_at', [$start, $end])
-                  ->where('status', '!=', 'cancelled');
-            })
+            $q->whereBetween('created_at', [$start, $end])
+                ->where('status', '!=', 'cancelled');
+        })
             ->select('product_id', 'product_name', DB::raw('SUM(quantity) as units_sold'), DB::raw('SUM(line_total) as total_revenue'))
             ->groupBy('product_id', 'product_name')
             ->orderByDesc('total_revenue')
@@ -237,39 +237,41 @@ class AnalyticsController extends Controller
             ->get()
             ->map(function ($item) {
                 $product = Product::with('images', 'category')->find($item->product_id);
+
                 return [
-                    'id'            => $item->product_id,
-                    'name'          => $item->product_name ?: ($product?->name ?? 'Deleted Product'),
-                    'sku'           => $product?->sku ?? 'N/A',
-                    'category'      => $product?->category?->name ?? 'General',
-                    'image'         => $product?->images->first()?->url() ?? $product?->thumbnail_url ?? null,
-                    'units_sold'    => (int) $item->units_sold,
+                    'id' => $item->product_id,
+                    'name' => $item->product_name ?: ($product?->name ?? 'Deleted Product'),
+                    'sku' => $product?->sku ?? 'N/A',
+                    'category' => $product?->category?->name ?? 'General',
+                    'image' => $product?->images->first()?->url() ?? $product?->thumbnail_url ?? null,
+                    'units_sold' => (int) $item->units_sold,
                     'total_revenue' => (float) $item->total_revenue,
-                    'stock'         => $product?->stock_quantity ?? 0,
+                    'stock' => $product?->availableStockQuantity() ?? 0,
                 ];
             });
 
         // ── 7. Category Revenue Share ──
         $categoryBreakdown = Category::all()->map(function ($cat) use ($start, $end) {
-            $catRevenue = (float) OrderItem::whereHas('product', fn($q) => $q->where('category_id', $cat->id))
-                ->whereHas('order', fn($q) => $q->whereBetween('created_at', [$start, $end])->where('status', '!=', 'cancelled'))
+            $catRevenue = (float) OrderItem::whereHas('product', fn ($q) => $q->where('category_id', $cat->id))
+                ->whereHas('order', fn ($q) => $q->whereBetween('created_at', [$start, $end])->where('status', '!=', 'cancelled'))
                 ->sum('line_total');
 
-            $catSold = (int) OrderItem::whereHas('product', fn($q) => $q->where('category_id', $cat->id))
-                ->whereHas('order', fn($q) => $q->whereBetween('created_at', [$start, $end])->where('status', '!=', 'cancelled'))
+            $catSold = (int) OrderItem::whereHas('product', fn ($q) => $q->where('category_id', $cat->id))
+                ->whereHas('order', fn ($q) => $q->whereBetween('created_at', [$start, $end])->where('status', '!=', 'cancelled'))
                 ->sum('quantity');
 
             return [
-                'id'       => $cat->id,
-                'name'     => $cat->name,
-                'revenue'  => $catRevenue,
+                'id' => $cat->id,
+                'name' => $cat->name,
+                'revenue' => $catRevenue,
                 'quantity' => $catSold,
             ];
-        })->filter(fn($c) => $c['revenue'] > 0)->sortByDesc('revenue')->values();
+        })->filter(fn ($c) => $c['revenue'] > 0)->sortByDesc('revenue')->values();
 
         $catTotalRevenue = $categoryBreakdown->sum('revenue');
         $categoryBreakdown = $categoryBreakdown->map(function ($c) use ($catTotalRevenue) {
             $c['share_percent'] = $catTotalRevenue > 0 ? round(($c['revenue'] / $catTotalRevenue) * 100, 1) : 0;
+
             return $c;
         });
 
@@ -280,16 +282,17 @@ class AnalyticsController extends Controller
             ->get()
             ->map(function ($pm) use ($totalOrders) {
                 $labels = [
-                    'cod'    => 'Cash on Delivery',
-                    'bkash'  => 'bKash',
-                    'nagad'  => 'Nagad',
+                    'cod' => 'Cash on Delivery',
+                    'bkash' => 'bKash',
+                    'nagad' => 'Nagad',
                     'rocket' => 'Rocket',
                 ];
+
                 return [
-                    'method'        => $pm->payment_method ?: 'cod',
-                    'label'         => $labels[$pm->payment_method] ?? strtoupper($pm->payment_method),
-                    'count'         => (int) $pm->count,
-                    'revenue'       => (float) $pm->revenue,
+                    'method' => $pm->payment_method ?: 'cod',
+                    'label' => $labels[$pm->payment_method] ?? strtoupper($pm->payment_method),
+                    'count' => (int) $pm->count,
+                    'revenue' => (float) $pm->revenue,
                     'share_percent' => $totalOrders > 0 ? round(($pm->count / $totalOrders) * 100, 1) : 0,
                 ];
             });
@@ -309,12 +312,13 @@ class AnalyticsController extends Controller
             ->map(function ($c) {
                 $shipped = (int) $c->total_shipped;
                 $del = (int) $c->delivered;
+
                 return [
-                    'provider'      => ucfirst($c->courier_provider),
+                    'provider' => ucfirst($c->courier_provider),
                     'total_shipped' => $shipped,
-                    'delivered'     => $del,
-                    'returned'      => (int) $c->returned,
-                    'success_rate'  => $shipped > 0 ? round(($del / $shipped) * 100, 1) : 0,
+                    'delivered' => $del,
+                    'returned' => (int) $c->returned,
+                    'success_rate' => $shipped > 0 ? round(($del / $shipped) * 100, 1) : 0,
                 ];
             });
 
@@ -323,7 +327,7 @@ class AnalyticsController extends Controller
         $approvedReviews = ProductReview::approved()->count();
         $pendingReviews = ProductReview::pending()->count();
         $avgRating = (float) (ProductReview::approved()->avg('rating') ?? 0);
-        
+
         $starCounts = [
             5 => ProductReview::approved()->where('rating', 5)->count(),
             4 => ProductReview::approved()->where('rating', 4)->count(),
@@ -390,61 +394,61 @@ class AnalyticsController extends Controller
             'total_products' => Product::count(),
             'published_products' => Product::where('is_published', true)->count(),
             'draft_products' => Product::where('is_published', false)->count(),
-            'out_of_stock' => Product::where('stock_quantity', '<=', 0)->count(),
-            'low_stock' => Product::whereBetween('stock_quantity', [1, 5])->count(),
-            'units_on_hand' => (int) Product::where('source_type', '!=', 'dropshipping')->whereDoesntHave('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true))->sum('stock_quantity'),
+            'out_of_stock' => Product::whereRaw('(stock_quantity + sourced_stock_quantity) <= 0')->count(),
+            'low_stock' => Product::whereRaw('(stock_quantity + sourced_stock_quantity) BETWEEN 1 AND 5')->count(),
+            'units_on_hand' => (int) Product::where('source_type', '!=', 'dropshipping')->whereDoesntHave('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true))->sum('stock_quantity') + (int) Product::sum('sourced_stock_quantity'),
             'supplier_availability' => (int) Product::where(fn ($query) => $query->where('source_type', 'dropshipping')->orWhereHas('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true)))->sum('stock_quantity'),
         ];
 
         return Inertia::render('Admin/Analytics', [
-            'range'                => $range,
-            'rangeLabel'           => $rangeLabel,
-            'startDate'            => $start->format('Y-m-d'),
-            'endDate'              => $end->format('Y-m-d'),
-            'metrics'              => [
-                'gross_revenue'         => $grossRevenue,
-                'delivered_revenue'     => $deliveredRevenue,
-                'total_orders'          => $totalOrders,
-                'delivered_orders'      => $deliveredCount,
-                'shipped_orders'        => $shippedCount,
-                'confirmed_orders'      => $confirmedCount,
-                'pending_orders'        => $pendingCount,
-                'cancelled_orders'      => $cancelledCount,
-                'aov'                   => $aov,
+            'range' => $range,
+            'rangeLabel' => $rangeLabel,
+            'startDate' => $start->format('Y-m-d'),
+            'endDate' => $end->format('Y-m-d'),
+            'metrics' => [
+                'gross_revenue' => $grossRevenue,
+                'delivered_revenue' => $deliveredRevenue,
+                'total_orders' => $totalOrders,
+                'delivered_orders' => $deliveredCount,
+                'shipped_orders' => $shippedCount,
+                'confirmed_orders' => $confirmedCount,
+                'pending_orders' => $pendingCount,
+                'cancelled_orders' => $cancelledCount,
+                'aov' => $aov,
                 'delivery_success_rate' => $deliverySuccessRate,
-                'cancellation_rate'     => $cancellationRate,
+                'cancellation_rate' => $cancellationRate,
             ],
-            'growth'               => $growth,
-            'monthComparison'      => $monthComparison,
-            'chartData'            => $chartData,
-            'topProducts'          => $topProducts,
-            'categoryBreakdown'    => $categoryBreakdown,
-            'paymentMethods'       => $paymentMethods,
-            'courierStats'         => $courierStats,
-            'reviewsSummary'       => [
-                'total'           => $totalReviews,
-                'approved'        => $approvedReviews,
-                'pending'         => $pendingReviews,
-                'average_rating'  => round($avgRating, 1),
-                'stars'           => $starCounts,
+            'growth' => $growth,
+            'monthComparison' => $monthComparison,
+            'chartData' => $chartData,
+            'topProducts' => $topProducts,
+            'categoryBreakdown' => $categoryBreakdown,
+            'paymentMethods' => $paymentMethods,
+            'courierStats' => $courierStats,
+            'reviewsSummary' => [
+                'total' => $totalReviews,
+                'approved' => $approvedReviews,
+                'pending' => $pendingReviews,
+                'average_rating' => round($avgRating, 1),
+                'stars' => $starCounts,
             ],
-            'customerSummary'      => [
-                'new_customers'      => $newCustomersCount,
-                'total_customers'    => $totalCustomersCount,
-                'abandoned_carts'    => $abandonedCount,
-                'recovered_carts'    => $recoveredAbandoned,
-                'recovery_rate'      => $abandonedCount > 0 ? round(($recoveredAbandoned / $abandonedCount) * 100, 1) : 0,
-                'recovered_revenue'  => $recoveredRevenue,
+            'customerSummary' => [
+                'new_customers' => $newCustomersCount,
+                'total_customers' => $totalCustomersCount,
+                'abandoned_carts' => $abandonedCount,
+                'recovered_carts' => $recoveredAbandoned,
+                'recovery_rate' => $abandonedCount > 0 ? round(($recoveredAbandoned / $abandonedCount) * 100, 1) : 0,
+                'recovered_revenue' => $recoveredRevenue,
             ],
-            'paymentHealth'         => $paymentHealth,
-            'customerInsights'      => [
+            'paymentHealth' => $paymentHealth,
+            'customerInsights' => [
                 'unique_buyers' => $uniqueBuyers,
                 'repeat_buyers' => $repeatBuyers->count(),
                 'repeat_buyer_rate' => $uniqueBuyers > 0 ? round(($repeatBuyers->count() / $uniqueBuyers) * 100, 1) : 0,
                 'repeat_order_rate' => $totalOrders > 0 ? round(($repeatOrderCount / $totalOrders) * 100, 1) : 0,
                 'top_cities' => $topCities,
             ],
-            'inventorySummary'      => $inventorySummary,
+            'inventorySummary' => $inventorySummary,
         ]);
     }
 }

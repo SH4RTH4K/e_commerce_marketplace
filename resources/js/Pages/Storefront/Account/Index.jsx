@@ -193,7 +193,7 @@ export default function AccountIndex({ user, orders }) {
                             <p className="font-bold text-sm text-gray-900 truncate">#{o.order_number}</p>
                             <p className="text-[10px] text-gray-400">{new Date(o.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</p>
                           </div>
-                          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase shrink-0 ${o.status==='delivered'?'bg-green-100 text-green-700':o.status==='cancelled'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}`}>{o.status}</span>
+                          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase shrink-0 ${o.status==='delivered'?'bg-green-100 text-green-700':o.status==='cancelled'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}`}>{o.awaiting_sourcing ? 'Awaiting sourcing' : o.status}</span>
                           <span className="font-bold text-sm text-gray-900 shrink-0">{money(o.total)}</span>
                           <div className="flex items-center gap-1.5 shrink-0">
                             <a href={`/order/${o.order_number}/invoice`} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-gray-900" title="Invoice">
@@ -335,7 +335,7 @@ export default function AccountIndex({ user, orders }) {
                               <p className="text-[10px] text-gray-400">{new Date(order.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} · {order.items?.length||0} item(s)</p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase ${order.status==='delivered'?'bg-green-100 text-green-700':order.status==='cancelled'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}`}>{order.status}</span>
+                              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase ${order.status==='delivered'?'bg-green-100 text-green-700':order.status==='cancelled'?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}`}>{order.awaiting_sourcing ? 'Awaiting sourcing' : order.status}</span>
                               <span className="font-bold text-sm text-gray-900">{money(order.total)}</span>
                             </div>
                           </div>

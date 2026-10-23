@@ -251,6 +251,7 @@
         <p class="text-[var(--muted)] text-sm max-w-lg mx-auto">{{ $c['order_subtext'] ?? '' }}</p>
       </div>
       <form id="order-form" method="POST" action="{{ route('landing.order', $page->slug) }}" class="order-panel reveal max-w-xl mx-auto grid gap-5 bg-white p-6 rounded-3xl border border-line shadow-xl">
+        @include('landing.partials.sourcing-notice')
         @csrf
         <div class="order-product flex items-center gap-3 p-3 bg-violet-50/50 rounded-2xl border border-violet-100">
           <img src="{{ $thumb }}" alt="" class="w-16 h-16 object-cover rounded-xl border border-line" loading="lazy" />

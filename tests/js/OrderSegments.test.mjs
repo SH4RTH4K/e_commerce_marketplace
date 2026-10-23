@@ -57,6 +57,18 @@ test('changing a status segment preserves applied filters and resets pagination'
   } finally { await app.close(); }
 });
 
+test('sourcing queue preserves search filters and hides courier shipment links until stock is ready', async () => {
+  const app = await mount({ q: 'Clock', counts: { awaiting_sourcing: 1 }, orders: { ...defaults.orders, data: [{ ...order, awaiting_sourcing: true }] } });
+  try {
+    const segments = app.renderer.root.findByProps({ 'aria-label': 'Order status segments' });
+    await app.click(segments.findAllByType('button').find(button => button.children[0] === 'Awaiting sourcing'));
+    assert.equal(app.gets[0].data.status, 'awaiting_sourcing');
+    assert.equal(app.gets[0].data.q, 'Clock');
+    assert.equal(app.renderer.root.findAllByType('a').some(link => String(link.props.href).includes('ship=1')), false);
+    assert.match(JSON.stringify(app.renderer.toJSON()), /Awaiting sourcing/);
+  } finally { await app.close(); }
+});
+
 test('bulk selections clear when a segment is opened or different results arrive', async () => {
   const app = await mount();
   try {

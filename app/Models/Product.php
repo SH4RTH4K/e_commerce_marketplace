@@ -9,11 +9,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use App\Models\DropshipSupplier;
 
 class Product extends Model
 {
-    protected $appends = ['url_key'];
+    protected $appends = ['url_key', 'available_stock_quantity', 'can_order', 'availability_label', 'hide_stock_quantity'];
 
     protected static function booted(): void
     {
@@ -36,8 +35,10 @@ class Product extends Model
             if ($product->exists && ($product->isDirty('sku') || $product->isDirty('slug'))) {
                 $slug = (string) $product->getRawOriginal('slug');
                 $sku = trim((string) $product->getRawOriginal('sku'));
-                $previous = $slug !== '' && $sku !== '' && !str_ends_with($slug, '-'.$sku) ? $slug.'-'.$sku : $slug;
-                if ($previous !== '') DB::table('product_slug_aliases')->insertOrIgnore(['product_id' => $product->id, 'slug' => $previous]);
+                $previous = $slug !== '' && $sku !== '' && ! str_ends_with($slug, '-'.$sku) ? $slug.'-'.$sku : $slug;
+                if ($previous !== '') {
+                    DB::table('product_slug_aliases')->insertOrIgnore(['product_id' => $product->id, 'slug' => $previous]);
+                }
             }
         });
 
@@ -70,6 +71,8 @@ class Product extends Model
         'enforce_maximum_price',
         'protect_minimum_price',
         'stock_quantity',
+        'allow_backorder',
+        'sourced_stock_quantity',
         'unit',
         'is_published',
         'is_featured',
@@ -93,25 +96,27 @@ class Product extends Model
     ];
 
     protected $casts = [
+        'allow_backorder' => 'boolean',
+        'sourced_stock_quantity' => 'integer',
         'sku_managed' => 'boolean',
         'sku_sequence' => 'integer',
         'purchase_price' => 'decimal:2',
-        'regular_price'    => 'decimal:2',
-        'sale_price'       => 'decimal:2',
-        'selling_price'    => 'decimal:2',
-        'minimum_price'    => 'decimal:2',
-        'maximum_price'    => 'decimal:2',
+        'regular_price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
+        'selling_price' => 'decimal:2',
+        'minimum_price' => 'decimal:2',
+        'maximum_price' => 'decimal:2',
         'enforce_minimum_price' => 'boolean',
         'enforce_maximum_price' => 'boolean',
         'protect_minimum_price' => 'boolean',
-        'rating'           => 'decimal:2',
-        'is_published'     => 'boolean',
-        'is_featured'      => 'boolean',
-        'is_new_arrival'   => 'boolean',
-        'is_best_seller'   => 'boolean',
-        'is_flash_sale'    => 'boolean',
+        'rating' => 'decimal:2',
+        'is_published' => 'boolean',
+        'is_featured' => 'boolean',
+        'is_new_arrival' => 'boolean',
+        'is_best_seller' => 'boolean',
+        'is_flash_sale' => 'boolean',
         'is_free_shipping' => 'boolean',
-        'specifications'   => 'array',
+        'specifications' => 'array',
     ];
 
     public function category(): BelongsTo
@@ -157,8 +162,8 @@ class Product extends Model
         $avg = $count > 0 ? round((float) (clone $approved)->avg('rating'), 2) : 0;
 
         $this->forceFill([
-            'rating'         => $avg,
-            'reviews_count'  => $count,
+            'rating' => $avg,
+            'reviews_count' => $count,
         ])->saveQuietly();
     }
 
@@ -166,6 +171,44 @@ class Product extends Model
     public function scopePublished(Builder $q): Builder
     {
         return $q->where('is_published', true);
+    }
+
+    public function availableStockQuantity(): int
+    {
+        return max(0, (int) $this->stock_quantity) + max(0, (int) $this->sourced_stock_quantity);
+    }
+
+    public function canOrderQuantity(int $quantity): bool
+    {
+        return $quantity > 0 && ($this->allow_backorder || $quantity <= $this->availableStockQuantity());
+    }
+
+    public function getAvailableStockQuantityAttribute(): int
+    {
+        return $this->availableStockQuantity();
+    }
+
+    public function getCanOrderAttribute(): bool
+    {
+        return $this->canOrderQuantity(1);
+    }
+
+    public function getHideStockQuantityAttribute(): bool
+    {
+        return (bool) $this->allow_backorder;
+    }
+
+    public function getAvailabilityLabelAttribute(): string
+    {
+        return $this->availableStockQuantity() > 0 ? 'In Stock' : ($this->allow_backorder ? 'Available to order' : 'Out of Stock');
+    }
+
+    public function scopeOrderable(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $available) => $available
+            ->where('stock_quantity', '>', 0)
+            ->orWhere('sourced_stock_quantity', '>', 0)
+            ->orWhere('allow_backorder', true));
     }
 
     /* --------- pricing helpers --------- */
@@ -184,9 +227,9 @@ class Product extends Model
         if (! $this->on_sale || (float) $this->regular_price <= 0) {
             return 0;
         }
+
         return (int) round(100 - ($this->price / (float) $this->regular_price * 100));
     }
-
 
     /**
      * Parse a cart/storefront variant label ("Size: M, Color: Black" or "Red, XL") into type => value or indexed values.
@@ -209,7 +252,7 @@ class Product extends Model
             } else {
                 $trimmed = trim($part);
                 if ($trimmed !== '') {
-                    $pairs['__val_' . count($pairs)] = $trimmed;
+                    $pairs['__val_'.count($pairs)] = $trimmed;
                 }
             }
         }
@@ -331,9 +374,14 @@ class Product extends Model
         // A configured SKU may itself contain several hyphens.
         $parts = explode('-', $value);
         $candidates = [];
-        while (count($parts) > 1) { array_pop($parts); $candidates[] = implode('-', $parts); }
+        while (count($parts) > 1) {
+            array_pop($parts);
+            $candidates[] = implode('-', $parts);
+        }
         foreach ($this->whereIn('slug', $candidates)->get() as $withSku) {
-            if (hash_equals($withSku->url_key, $value)) return $withSku;
+            if (hash_equals($withSku->url_key, $value)) {
+                return $withSku;
+            }
         }
 
         return $this->whereIn('id', DB::table('product_slug_aliases')->select('product_id')->where('slug', $value))->first()
@@ -382,7 +430,7 @@ class Product extends Model
         return collect($this->specificationRows())
             ->map(function (array $row) {
                 if ($row['label'] !== '' && $row['value'] !== '') {
-                    return $row['label'] . ': ' . $row['value'];
+                    return $row['label'].': '.$row['value'];
                 }
 
                 return $row['label'] !== '' ? $row['label'] : $row['value'];
@@ -402,6 +450,7 @@ class Product extends Model
         if (array_key_exists('variants_exists', $this->attributes)) {
             return (bool) $this->attributes['variants_exists'];
         }
+
         return $this->variants()->exists();
     }
 

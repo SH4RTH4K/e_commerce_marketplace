@@ -79,8 +79,8 @@ class ProductCatalogService
             $query->where('source_type', $filters['source']);
         }
         match ($filters['stock']) {
-            'out' => $query->where('stock_quantity', 0), 'low' => $query->whereBetween('stock_quantity', [1, 5]),
-            'in' => $query->where('stock_quantity', '>', 5), default => null,
+            'out' => $query->whereRaw('(stock_quantity + sourced_stock_quantity) = 0'), 'low' => $query->whereRaw('(stock_quantity + sourced_stock_quantity) BETWEEN 1 AND 5'),
+            'in' => $query->whereRaw('(stock_quantity + sourced_stock_quantity) > 5'), default => null,
         };
 
         return $query;
@@ -101,7 +101,7 @@ class ProductCatalogService
             'updated' => $query->latest('updated_at'), 'name' => $query->orderBy('name'),
             'price_asc' => $query->orderByRaw('COALESCE(sale_price, regular_price) ASC'),
             'price_desc' => $query->orderByRaw('COALESCE(sale_price, regular_price) DESC'),
-            'stock_asc' => $query->orderBy('stock_quantity'), 'stock_desc' => $query->orderByDesc('stock_quantity'),
+            'stock_asc' => $query->orderByRaw('(stock_quantity + sourced_stock_quantity) ASC'), 'stock_desc' => $query->orderByRaw('(stock_quantity + sourced_stock_quantity) DESC'),
             'relevance' => $filters['q'] !== '' ? $query->orderByRaw("CASE WHEN LOWER(sku) = ? THEN 0 WHEN LOWER(name) = ? THEN 1 WHEN LOWER(sku) LIKE ? ESCAPE '!' THEN 2 WHEN LOWER(name) LIKE ? ESCAPE '!' THEN 3 ELSE 4 END", [mb_strtolower($filters['q']), mb_strtolower($filters['q']), $this->escapeLike(mb_strtolower($filters['q'])).'%', $this->escapeLike(mb_strtolower($filters['q'])).'%']) : $query->latest('created_at'),
             default => $query->latest('created_at'),
         };

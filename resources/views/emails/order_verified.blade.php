@@ -20,11 +20,16 @@
     <div style="background:#fff;padding:28px 24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:0;">
       <p style="margin:0 0 8px;font-size:15px;">Hi <strong>{{ $order->customer_name }}</strong>,</p>
       <p style="margin:0 0 20px;font-size:15px;color:#64748b;">
-        Great news! Your payment has been verified and your order is now <strong style="color:#16a34a;">confirmed</strong>.
+        @if ($order->awaiting_sourcing)
+          Your payment has been verified. Your order is still <strong>Awaiting sourcing</strong>.
+          We will confirm the order after the required items have been received and allocated.
+        @else
+          Great news! Your payment has been verified and your order is now <strong style="color:#16a34a;">confirmed</strong>.
+        @endif
       </p>
 
       <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 20px;margin-bottom:20px;">
-        <p style="margin:0;font-size:13px;color:#166534;text-transform:uppercase;letter-spacing:0.05em;">Order Confirmed</p>
+        <p style="margin:0;font-size:13px;color:#166534;text-transform:uppercase;letter-spacing:0.05em;">{{ $order->awaiting_sourcing ? 'Payment verified — Awaiting sourcing' : 'Order Confirmed' }}</p>
         <p style="margin:4px 0 0;font-size:22px;font-weight:800;color:#16a34a;letter-spacing:0.04em;">{{ $order->order_number }}</p>
       </div>
 
@@ -45,7 +50,11 @@
 
       <div style="background:#f9fafb;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
         <p style="margin:0;font-size:14px;color:#374151;">
-          We are now preparing your order. You will receive another update once it has been shipped.
+          @if ($order->awaiting_sourcing)
+            We are arranging the required items. We will contact you about availability and delivery timing.
+          @else
+            We are now preparing your order. You will receive another update once it has been shipped.
+          @endif
           Thank you for shopping with <strong>{{ $siteName }}</strong>!
         </p>
       </div>

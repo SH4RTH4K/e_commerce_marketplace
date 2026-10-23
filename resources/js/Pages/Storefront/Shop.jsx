@@ -349,7 +349,7 @@ export default function ShopPage({
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <input type="checkbox" name="in_stock" value="1" defaultChecked={inStock} className="w-4 h-4 text-[#717fe0] border-gray-300 rounded focus:ring-[#717fe0]" />
-                    <span className="text-gray-600 group-hover:text-[#717fe0]">In Stock</span>
+                    <span className="text-gray-600 group-hover:text-[#717fe0]">Available to order</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <input type="checkbox" name="out_of_stock" value="1" defaultChecked={outOfStock} className="w-4 h-4 text-[#717fe0] border-gray-300 rounded focus:ring-[#717fe0]" />
@@ -544,7 +544,7 @@ export default function ShopPage({
                   <li>
                     <label className="flex items-center gap-2.5 cursor-pointer text-gray-600 hover:text-[#f15a24] group">
                       <input type="checkbox" name="in_stock" value="1" defaultChecked={inStock} className="w-4 h-4 rounded text-[#f15a24] border-gray-300 focus:ring-[#f15a24]" />
-                      <span className="group-hover:font-medium">In Stock</span>
+                      <span className="group-hover:font-medium">Available to order</span>
                     </label>
                   </li>
                   <li>

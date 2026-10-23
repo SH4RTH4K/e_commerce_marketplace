@@ -1,6 +1,7 @@
 export const orderSegments = [
   { key: 'all', label: 'All Orders', description: 'Every customer order, across all fulfilment stages.' },
   { key: 'pending', label: 'Pending', description: 'New orders awaiting confirmation. Review the customer, products, and delivery details.' },
+  { key: 'awaiting_sourcing', label: 'Awaiting sourcing', description: 'Pending orders waiting for products to be received and allocated before confirmation.' },
   { key: 'confirmed', label: 'Confirmed', description: 'Accepted orders ready for packing and preparation.' },
   { key: 'processing', label: 'Processing', description: 'Orders being prepared for dispatch.' },
   { key: 'shipped', label: 'Shipped', description: 'Dispatched orders awaiting delivery. Follow the courier tracking details.' },

@@ -473,7 +473,7 @@ export default function OrdersIndex({
                           {order.order_number}
                         </a>
                       </div>
-                      <StatusBadge status={order.status} />
+                      <StatusBadge status={order.status} />{order.awaiting_sourcing && <span className="ml-1 inline-flex rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-800">Awaiting sourcing</span>}
                     </div>
 
                     {/* Row 2: Customer info + Phone with Click to Call */}
@@ -581,7 +581,7 @@ export default function OrdersIndex({
                         </svg>
                         Invoice
                       </a>
-                      {canManage && order.status !== 'delivered' && order.status !== 'cancelled' && !order.courier_tracking_code && (
+                      {canManage && !order.awaiting_sourcing && order.status !== 'delivered' && order.status !== 'cancelled' && !order.courier_tracking_code && (
                         <a href={orderDetailHref(order.id, url, true)} className="flex-1 min-w-[55px] py-1.5 px-2 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded-lg font-semibold transition-colors text-center flex items-center justify-center gap-1">
                           Ship
                         </a>
@@ -698,7 +698,7 @@ export default function OrdersIndex({
                         <PaymentBadge status={order.payment_status} />
                       </td>
                       <td className="px-5 py-3.5">
-                        <StatusBadge status={order.status} />
+                        <StatusBadge status={order.status} />{order.awaiting_sourcing && <span className="ml-1 inline-flex rounded-full bg-amber-100 px-2 py-1 text-[10px] font-semibold text-amber-800">Awaiting sourcing</span>}
                       </td>
                       <td className="px-5 py-3.5 text-xs whitespace-nowrap">
                         <div className="font-bold text-gray-900 text-xs">{order.created_at_formatted}</div>
@@ -738,7 +738,7 @@ export default function OrdersIndex({
                             </svg>
                             Invoice
                           </a>
-                          {canManage && order.status !== 'delivered' && order.status !== 'cancelled' && !order.courier_tracking_code && (
+                          {canManage && !order.awaiting_sourcing && order.status !== 'delivered' && order.status !== 'cancelled' && !order.courier_tracking_code && (
                             <a href={orderDetailHref(order.id, url, true)}
                               className="px-2.5 py-1 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 rounded-lg font-semibold transition-colors flex items-center gap-1">
                               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

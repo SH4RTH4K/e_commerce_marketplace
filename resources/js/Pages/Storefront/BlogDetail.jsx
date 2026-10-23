@@ -27,7 +27,7 @@ export default function BlogDetailPage({ guide, guides = [], guideCategory, guid
                   <>
                     <h3 className="mt-5 font-semibold text-gray-900">Currently available models</h3>
                     <ul className="mt-3 flex flex-col gap-3">
-                      {guideProducts.map(product => <li key={product.url}><Link href={product.url} className="text-sm text-gray-700 underline">{product.name}</Link></li>)}
+                      {guideProducts.map(product => <li key={product.url}><Link href={product.url} className="text-sm text-gray-700 underline">{product.name}</Link>{product.availability_label && <span className="mt-1 block text-xs font-medium text-green-700">{product.availability_label}</span>}</li>)}
                     </ul>
                   </>
                 )}

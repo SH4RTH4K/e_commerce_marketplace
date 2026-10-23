@@ -1,3 +1,5 @@
+import SourcingNotice from '@/Components/Storefront/SourcingNotice';
+import { requiresSourcing } from '@/lib/productAvailability';
 import { useState, useMemo, useEffect } from 'react';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/react';
@@ -28,6 +30,7 @@ export default function CheckoutPage({
 
   const { data, setData, post, processing, errors } = form;
   const itemsList = Object.values(items || {});
+  const hasSourcingItems = itemsList.some(item => requiresSourcing(item.product || item, item.qty));
   const allSelected = itemsList.length > 0 && selectedKeys.length === itemsList.length;
 
   useEffect(() => {
@@ -190,6 +193,7 @@ export default function CheckoutPage({
 
           <div className="lg:grid lg:grid-cols-[1fr_400px] lg:gap-8 lg:items-start">
             <form onSubmit={submitOrder} className="space-y-6">
+              {hasSourcingItems && <SourcingNotice />}
               
               <div className="rounded-2xl bg-white p-6 sm:p-8 border border-gray-100 shadow-sm">
                 <h2 className="text-xl font-extrabold text-gray-900 mb-5">Delivery Information</h2>

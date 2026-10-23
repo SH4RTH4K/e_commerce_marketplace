@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Inertia\Inertia;
 use App\Models\Order;
+use App\Support\CustomerOrderPayload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rules\Password;
+use Inertia\Inertia;
 
 class AccountController extends Controller
 {
@@ -14,7 +16,7 @@ class AccountController extends Controller
         $user = Auth::user();
 
         $orders = Order::query()
-            ->with(['items.product'])
+            ->with(['items.product.images'])
             ->where(function ($q) use ($user) {
                 $q->where('user_id', $user->id);
                 if ($user->phone) {
@@ -22,7 +24,8 @@ class AccountController extends Controller
                 }
             })
             ->latest()
-            ->get();
+            ->get()
+            ->map(fn (Order $order): array => CustomerOrderPayload::from($order));
 
         return Inertia::render('Storefront/Account/Index', compact('user', 'orders'));
     }
@@ -30,9 +33,9 @@ class AccountController extends Controller
     public function showOrder(Order $order)
     {
         $this->authorizeOrder($order);
-        $order->load(['items.product']);
+        $order->load(['items.product.images']);
 
-        return Inertia::render('Storefront/Account/Show', compact('order'));
+        return Inertia::render('Storefront/Account/Show', ['order' => CustomerOrderPayload::from($order)]);
     }
 
     private function authorizeOrder(Order $order): void
@@ -48,10 +51,10 @@ class AccountController extends Controller
     public function updateProfile(Request $request)
     {
         $data = $request->validate([
-            'name'        => ['required', 'string', 'max:120'],
-            'phone'       => ['nullable', 'string', 'max:40'],
-            'address'     => ['nullable', 'string', 'max:255'],
-            'city'        => ['nullable', 'string', 'max:80'],
+            'name' => ['required', 'string', 'max:120'],
+            'phone' => ['nullable', 'string', 'max:40'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:80'],
             'postal_code' => ['nullable', 'string', 'max:20'],
         ]);
 
@@ -64,7 +67,7 @@ class AccountController extends Controller
     {
         $request->validate([
             'current_password' => ['required', 'current_password'],
-            'password'         => ['required', 'confirmed', \Illuminate\Validation\Rules\Password::min(8)],
+            'password' => ['required', 'confirmed', Password::min(8)],
         ]);
 
         Auth::user()->update(['password' => $request->input('password')]);

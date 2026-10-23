@@ -345,6 +345,7 @@
       </div>
 
       <form id="order-form" method="POST" action="{{ route('landing.order', $page->slug) }}" class="order-panel reveal max-w-2xl mx-auto p-6 sm:p-8 grid gap-6 bg-white rounded-3xl border border-line shadow-xl">
+        @include('landing.partials.sourcing-notice')
         @csrf
         
         <div>

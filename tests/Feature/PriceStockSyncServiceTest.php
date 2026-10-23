@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\DropshipSupplier;
 use App\Models\DropshipSupplierProduct;
+use App\Models\Product;
 use App\Services\Dropshipping\CategoryMapper;
 use App\Services\Dropshipping\PriceStockSyncResult;
 use App\Services\Dropshipping\PriceStockSyncService;
@@ -53,22 +54,38 @@ class PriceStockSyncServiceTest extends TestCase
         $this->assertSame(8, $product->fresh()->stock_quantity);
     }
 
-    /** @return array{DropshipSupplierProduct, \App\Models\Product} */
+    public function test_supplier_sync_preserves_ordering_override_and_received_local_stock(): void
+    {
+        [$source, $product] = $this->importedProduct();
+        $product->update(['allow_backorder' => true, 'sourced_stock_quantity' => 2]);
+        $source->update(['stock_qty' => 0, 'is_available' => false]);
+
+        app(PriceStockSyncService::class)->sync($source);
+
+        $product->refresh();
+        $this->assertSame(0, $product->stock_quantity);
+        $this->assertTrue($product->allow_backorder);
+        $this->assertSame(2, $product->sourced_stock_quantity);
+        $this->assertSame(2, $product->availableStockQuantity());
+        $this->assertTrue($product->canOrderQuantity(3));
+    }
+
+    /** @return array{DropshipSupplierProduct, Product} */
     private function importedProduct(): array
     {
         $supplier = DropshipSupplier::create([
-            'key' => 'supplier-' . uniqid(),
+            'key' => 'supplier-'.uniqid(),
             'name' => 'Supplier',
             'driver_key' => 'fake',
             'is_active' => true,
             'base_url' => 'https://supplier.example',
             'pricing_rules' => ['selling_markup' => ['type' => 'percent', 'value' => 20]],
         ]);
-        $category = Category::create(['name' => 'Electronics', 'slug' => 'electronics-' . uniqid()]);
+        $category = Category::create(['name' => 'Electronics', 'slug' => 'electronics-'.uniqid()]);
         app(CategoryMapper::class)->mapManually($supplier, 'electronics', $category);
         $source = DropshipSupplierProduct::create([
             'supplier_id' => $supplier->id,
-            'supplier_product_id' => 'source-' . uniqid(),
+            'supplier_product_id' => 'source-'.uniqid(),
             'supplier_category_key' => 'electronics',
             'name' => 'Supplier Product',
             'currency' => 'BDT',

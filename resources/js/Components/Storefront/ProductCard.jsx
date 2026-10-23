@@ -3,6 +3,8 @@ import { Link, usePage, router } from '@inertiajs/react';
 import { money, imageUrl } from '@/lib/utils';
 import PulseHeart from './PulseHeart';
 import { trackAddToCart } from '@/lib/tracking';
+import ProductAvailability from './ProductAvailability';
+import { productAvailability } from '@/lib/productAvailability';
 
 export default function ProductCard({ product, highlightDiscount = true }) {
   const { app, cartItems = [] } = usePage().props;
@@ -69,7 +71,6 @@ export default function ProductCard({ product, highlightDiscount = true }) {
   const imageSrcSet = primaryImage?.id
     ? `/media/product/${primaryImage.id}/320?v=${encodeURIComponent(primaryImage.updated_at || '')} 320w, /media/product/${primaryImage.id}/640?v=${encodeURIComponent(primaryImage.updated_at || '')} 640w`
     : undefined;
-  const stock = Math.max(0, parseInt(product.stock_quantity) || 0);
   const rating = Math.max(0, Math.min(5, Math.round(parseFloat(product.rating) || 0)));
   const cardBg = app.settings?.product_card_bg_color || '#FFFFFF';
   const cardText = app.settings?.product_card_text_color || '#111827';
@@ -78,7 +79,7 @@ export default function ProductCard({ product, highlightDiscount = true }) {
   const alreadyOrdered = cartItems.some(item => Number(item.product_id) === Number(product.id));
   const buyText = alreadyOrdered ? 'Already Ordered' : (app.settings?.product_card_buy_text || 'Order Now');
   const hasVariants = Boolean(product.variants_exists);
-  const inStock = stock > 0;
+  const { canOrder: inStock } = productAvailability(product);
   const buttonStyle = {
     backgroundColor: inStock ? btnBg : '#b7bfed',
     color: btnTextColor,
@@ -158,9 +159,7 @@ export default function ProductCard({ product, highlightDiscount = true }) {
               {productLinkLabel}
             </Link>
             <p className="mt-1 text-[10px] font-medium text-gray-400">SKU: <span className="font-mono text-gray-500">{product.sku || '—'}</span></p>
-            <p className={`mt-1 text-[10px] font-semibold ${inStock ? 'text-green-600' : 'text-red-600'}`}>
-              {inStock ? `In Stock: ${stock.toLocaleString()}` : 'Out of Stock'}
-            </p>
+            <ProductAvailability product={product} className="mt-1" />
           </div>
           
           <div className="flex flex-col items-end shrink-0 leading-tight mt-0.5">

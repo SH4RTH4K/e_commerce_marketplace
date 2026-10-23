@@ -24,11 +24,16 @@ class OrderListService
         $dateFilter = match ($data['date_filter'] ?? 'all') {
             '7_days' => '7days', '30_days' => '30days', 'year' => '1year', default => $data['date_filter'] ?? 'all',
         };
-        if (! in_array($dateFilter, ['all', 'today', 'yesterday', '7days', '30days', 'this_month', 'last_month', 'this_year', '1year', 'custom'], true)) $dateFilter = 'all';
+        if (! in_array($dateFilter, ['all', 'today', 'yesterday', '7days', '30days', 'this_month', 'last_month', 'this_year', '1year', 'custom'], true)) {
+            $dateFilter = 'all';
+        }
         // Preserve bookmarked legacy custom ranges without a date_filter parameter.
-        if (! $request->filled('date_filter') && ($request->filled('from_date') || $request->filled('to_date'))) $dateFilter = 'custom';
+        if (! $request->filled('date_filter') && ($request->filled('from_date') || $request->filled('to_date'))) {
+            $dateFilter = 'custom';
+        }
+
         return [
-            'status' => in_array($status, ['all', ...Order::STATUSES, 'pending_verification'], true) ? $status : 'all',
+            'status' => in_array($status, ['all', ...Order::STATUSES, 'pending_verification', 'awaiting_sourcing'], true) ? $status : 'all',
             'q' => trim($data['q'] ?? ''),
             'method' => in_array($method, Order::PAYMENT_METHODS, true) ? $method : '',
             'date_filter' => $dateFilter,
@@ -43,7 +48,9 @@ class OrderListService
     public function query(array $filters): Builder
     {
         $query = Order::query();
-        if ($filters['method'] !== '') $query->where('payment_method', $filters['method']);
+        if ($filters['method'] !== '') {
+            $query->where('payment_method', $filters['method']);
+        }
         if ($filters['q'] !== '') {
             $query->where(fn ($query) => $query->where('order_number', 'like', '%'.$filters['q'].'%')
                 ->orWhere('customer_name', 'like', '%'.$filters['q'].'%')
@@ -67,15 +74,28 @@ class OrderListService
             ],
             default => [null, null],
         };
-        if ($from) $query->where('created_at', '>=', $from->utc());
-        if ($until) $query->where('created_at', '<', $until->utc());
+        if ($from) {
+            $query->where('created_at', '>=', $from->utc());
+        }
+        if ($until) {
+            $query->where('created_at', '<', $until->utc());
+        }
+
         return $query;
     }
 
     public function segment(Builder $query, string $status): Builder
     {
-        if ($status === 'pending_verification') return $query->awaitingPaymentVerification();
-        if (in_array($status, Order::STATUSES, true)) $query->where('status', $status);
+        if ($status === 'awaiting_sourcing') {
+            return $query->awaitingSourcing();
+        }
+        if ($status === 'pending_verification') {
+            return $query->awaitingPaymentVerification();
+        }
+        if (in_array($status, Order::STATUSES, true)) {
+            $query->where('status', $status);
+        }
+
         return $query;
     }
 
@@ -87,6 +107,7 @@ class OrderListService
             'total_asc' => $query->orderBy('total')->latest('id'),
             default => $query->latest('created_at')->latest('id'),
         };
+
         return $query;
     }
 }

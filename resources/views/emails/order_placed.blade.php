@@ -20,7 +20,12 @@
     <div style="background:#fff;padding:28px 24px;border-radius:0 0 12px 12px;border:1px solid #e5e7eb;border-top:0;">
       <p style="margin:0 0 8px;font-size:15px;">Hi <strong>{{ $order->customer_name }}</strong>,</p>
       <p style="margin:0 0 20px;font-size:15px;color:#64748b;">
-        Thank you for your order! We have received it and it is now being processed.
+        @if ($order->awaiting_sourcing)
+          Thank you for your order! We have received it and it is <strong>Awaiting sourcing</strong>.
+          We will source the required items and confirm availability and delivery timing before dispatch.
+        @else
+          Thank you for your order! We have received it and it is now being processed.
+        @endif
       </p>
 
       <div style="background:#fff4ec;border:1px solid #fed7aa;border-radius:10px;padding:14px 20px;margin-bottom:20px;">

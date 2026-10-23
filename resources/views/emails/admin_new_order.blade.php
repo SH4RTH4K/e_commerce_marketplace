@@ -23,6 +23,10 @@
         <p style="margin:4px 0 0;font-size:22px;font-weight:800;color:#f15a24;">{{ $order->order_number }}</p>
       </div>
 
+      @if ($order->awaiting_sourcing)
+        <p style="margin:0 0 20px;font-size:14px;color:#92400e;"><strong>Awaiting sourcing.</strong> Receive and allocate the required items before confirming or dispatching this order.</p>
+      @endif
+
       <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin-bottom:20px;">
         <tr>
           <td style="padding:5px 0;font-size:13px;color:#6b7280;">Customer</td>

@@ -1,3 +1,5 @@
+import SourcingNotice from '@/Components/Storefront/SourcingNotice';
+import { requiresSourcing } from '@/lib/productAvailability';
 import { Fragment, useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { money, imageUrl } from '@/lib/utils';
@@ -153,6 +155,7 @@ export default function CartDrawer({ isOpen, onClose }) {
         {/* Footer */}
         {cartItems.length > 0 && (
           <div className="border-t border-gray-100 p-6 bg-gray-50/50">
+            {cartItems.some(item => requiresSourcing(item.product || item, item.qty)) && <div className="mb-4"><SourcingNotice /></div>}
             <div className="flex justify-between items-center mb-6">
               <span className="font-bold text-gray-600 text-sm">Subtotal</span>
               <span className="font-black text-[#f15a24] text-xl">{money(cartSubtotal)}</span>

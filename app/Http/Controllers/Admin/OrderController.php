@@ -3,19 +3,22 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order;
-use App\Services\BdCourierService;
-use App\Services\OrderListService;
 use App\Models\BdCourierCheck;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\Product;
+use App\Services\BdCourierService;
+use App\Services\InventoryStockService;
+use App\Services\OrderListService;
+use App\Support\BdPhoneValidator;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
-use App\Models\Product;
-use App\Models\OrderItem;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
-use Illuminate\Http\JsonResponse;
 
 class OrderController extends Controller
 {
@@ -27,12 +30,13 @@ class OrderController extends Controller
         $lists->segment($query, $filters['status']);
         $listedTotal = (clone $query)->sum('total');
         $lists->sort($query, $filters['sort']);
-        $orders = $query->withCount('items')->paginate($filters['per_page'])->withQueryString();
+        $orders = $query->withCount('items')->with('items')->paginate($filters['per_page'])->withQueryString();
 
-        $ordersData = $orders->through(fn($o) => [
+        $ordersData = $orders->through(fn ($o) => [
             'id' => $o->id, 'order_number' => $o->order_number, 'customer_name' => $o->customer_name,
             'customer_phone' => $o->customer_phone, 'total' => $o->total, 'status' => $o->status,
             'payment_status' => $o->payment_status, 'payment_method' => $o->payment_method,
+            'awaiting_sourcing' => $o->awaiting_sourcing,
             'payment_method_label' => $o->paymentMethodLabel(),
             'internal_note' => $o->internal_note,
             'delivery_note' => $o->delivery_note,
@@ -44,18 +48,18 @@ class OrderController extends Controller
             'created_at' => $o->created_at,
             'courier_provider' => $o->courier_provider,
             'courier_tracking_code' => $o->courier_tracking_code,
-            'ip_address'  => $o->ip_address,
+            'ip_address' => $o->ip_address,
             'device_hash' => $o->device_hash,
         ]);
 
         // Reuse only saved checkout checks. Loading the orders page must never
         // trigger a new BD Courier API request or consume phone-lookup quota.
         $courierRatios = [];
-        if (\Illuminate\Support\Facades\Schema::hasTable('bd_courier_checks')) {
+        if (Schema::hasTable('bd_courier_checks')) {
             $phones = $orders->getCollection()
                 ->pluck('customer_phone')
                 ->filter()
-                ->map(fn($phone) => BdCourierCheck::normalizePhone((string) $phone))
+                ->map(fn ($phone) => BdCourierCheck::normalizePhone((string) $phone))
                 ->filter()
                 ->unique()
                 ->values();
@@ -68,7 +72,7 @@ class OrderController extends Controller
                         'successful_parcels', 'cancelled_parcels', 'last_checked_at',
                     ])
                     ->keyBy('phone')
-                    ->map(fn($check) => [
+                    ->map(fn ($check) => [
                         'success_ratio' => (float) $check->success_ratio,
                         'risk_level' => $check->risk_level,
                         'total_parcels' => (int) $check->total_parcels,
@@ -80,52 +84,51 @@ class OrderController extends Controller
             }
         }
 
-
         $courierStats = [
-            'total_shipped'   => Order::whereNotNull('courier_provider')->where('courier_provider', '!=', '')->count(),
+            'total_shipped' => Order::whereNotNull('courier_provider')->where('courier_provider', '!=', '')->count(),
             'total_delivered' => Order::whereNotNull('courier_provider')->where('courier_provider', '!=', '')->where('status', 'delivered')->count(),
-            'total_returned'  => Order::whereNotNull('courier_provider')->where('courier_provider', '!=', '')->where('status', 'cancelled')->count(),
-            'total_in_transit'=> Order::whereNotNull('courier_provider')->where('courier_provider', '!=', '')->whereIn('status', ['shipped', 'confirmed'])->count(),
+            'total_returned' => Order::whereNotNull('courier_provider')->where('courier_provider', '!=', '')->where('status', 'cancelled')->count(),
+            'total_in_transit' => Order::whereNotNull('courier_provider')->where('courier_provider', '!=', '')->whereIn('status', ['shipped', 'confirmed'])->count(),
             'providers' => [
                 'steadfast' => [
-                    'total'      => Order::where('courier_provider', 'steadfast')->count(),
-                    'delivered'  => Order::where('courier_provider', 'steadfast')->where('status', 'delivered')->count(),
-                    'cancelled'  => Order::where('courier_provider', 'steadfast')->where('status', 'cancelled')->count(),
+                    'total' => Order::where('courier_provider', 'steadfast')->count(),
+                    'delivered' => Order::where('courier_provider', 'steadfast')->where('status', 'delivered')->count(),
+                    'cancelled' => Order::where('courier_provider', 'steadfast')->where('status', 'cancelled')->count(),
                     'in_transit' => Order::where('courier_provider', 'steadfast')->whereIn('status', ['shipped', 'confirmed'])->count(),
                 ],
                 'pathao' => [
-                    'total'      => Order::where('courier_provider', 'pathao')->count(),
-                    'delivered'  => Order::where('courier_provider', 'pathao')->where('status', 'delivered')->count(),
-                    'cancelled'  => Order::where('courier_provider', 'pathao')->where('status', 'cancelled')->count(),
+                    'total' => Order::where('courier_provider', 'pathao')->count(),
+                    'delivered' => Order::where('courier_provider', 'pathao')->where('status', 'delivered')->count(),
+                    'cancelled' => Order::where('courier_provider', 'pathao')->where('status', 'cancelled')->count(),
                     'in_transit' => Order::where('courier_provider', 'pathao')->whereIn('status', ['shipped', 'confirmed'])->count(),
                 ],
                 'redx' => [
-                    'total'      => Order::where('courier_provider', 'redx')->count(),
-                    'delivered'  => Order::where('courier_provider', 'redx')->where('status', 'delivered')->count(),
-                    'cancelled'  => Order::where('courier_provider', 'redx')->where('status', 'cancelled')->count(),
+                    'total' => Order::where('courier_provider', 'redx')->count(),
+                    'delivered' => Order::where('courier_provider', 'redx')->where('status', 'delivered')->count(),
+                    'cancelled' => Order::where('courier_provider', 'redx')->where('status', 'cancelled')->count(),
                     'in_transit' => Order::where('courier_provider', 'redx')->whereIn('status', ['shipped', 'confirmed'])->count(),
                 ],
-            ]
+            ],
         ];
 
         return Inertia::render('Admin/Orders/Index', [
-            'orders'             => $ordersData,
-            'status'             => $filters['status'],
-            'counts'             => $counts,
-            'method'             => $filters['method'],
-            'dateFilter'         => $filters['date_filter'],
-            'fromDate'           => $filters['from_date'],
-            'toDate'             => $filters['to_date'],
-            'q'                  => $filters['q'],
-            'sort'               => $filters['sort'],
-            'per_page'           => $filters['per_page'],
-            'listedTotal'        => $listedTotal,
-            'courierStats'       => $courierStats,
-            'courierRatios'      => $courierRatios,
-            'bdcourierConfigured'=> (string) setting('fog_enabled', '1') === '1'
+            'orders' => $ordersData,
+            'status' => $filters['status'],
+            'counts' => $counts,
+            'method' => $filters['method'],
+            'dateFilter' => $filters['date_filter'],
+            'fromDate' => $filters['from_date'],
+            'toDate' => $filters['to_date'],
+            'q' => $filters['q'],
+            'sort' => $filters['sort'],
+            'per_page' => $filters['per_page'],
+            'listedTotal' => $listedTotal,
+            'courierStats' => $courierStats,
+            'courierRatios' => $courierRatios,
+            'bdcourierConfigured' => (string) setting('fog_enabled', '1') === '1'
                 && (string) setting('fog_bdcourier_enabled', '0') === '1'
                 && (bool) ! empty(setting('fog_bdcourier_api_key', ''))
-                && \Illuminate\Support\Facades\Schema::hasTable('bd_courier_checks'),
+                && Schema::hasTable('bd_courier_checks'),
         ]);
     }
 
@@ -136,20 +139,23 @@ class OrderController extends Controller
             ->orderBy('id', 'desc')
             ->limit(50)
             ->get()
-            ->map(fn($p) => [
+            ->map(fn ($p) => [
                 'id' => $p->id,
                 'name' => $p->name,
                 'sku' => $p->sku,
                 'price' => (float) ($p->sale_price > 0 ? $p->sale_price : $p->regular_price),
                 'stock_quantity' => $p->stock_quantity,
+                'sourced_stock_quantity' => $p->sourced_stock_quantity,
+                'available_stock_quantity' => $p->availableStockQuantity(),
+                'allow_backorder' => $p->allow_backorder,
                 'image' => $p->images->where('is_primary', true)->first()?->path,
             ]);
 
         return Inertia::render('Admin/Orders/Create', [
             'initialProducts' => $initialProducts,
-            'shipInside'  => (float) setting('shipping_inside_dhaka', 60),
+            'shipInside' => (float) setting('shipping_inside_dhaka', 60),
             'shipOutside' => (float) setting('shipping_outside_dhaka', 120),
-            'taxPercent'  => (float) setting('tax_percent', 0),
+            'taxPercent' => (float) setting('tax_percent', 0),
         ]);
     }
 
@@ -162,18 +168,21 @@ class OrderController extends Controller
         if ($term !== '') {
             $query->where(function ($q) use ($term) {
                 $q->where('name', 'like', "%{$term}%")
-                  ->orWhere('sku', 'like', "%{$term}%");
+                    ->orWhere('sku', 'like', "%{$term}%");
             });
         }
 
         $products = $query->limit(25)
             ->get()
-            ->map(fn($p) => [
+            ->map(fn ($p) => [
                 'id' => $p->id,
                 'name' => $p->name,
                 'sku' => $p->sku,
                 'price' => $p->unitPriceForVariant(),
                 'stock_quantity' => $p->stock_quantity,
+                'sourced_stock_quantity' => $p->sourced_stock_quantity,
+                'available_stock_quantity' => $p->availableStockQuantity(),
+                'allow_backorder' => $p->allow_backorder,
                 'image' => $p->images->where('is_primary', true)->first()?->path,
                 'image_url' => $p->imageUrl(),
             ]);
@@ -184,21 +193,21 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'customer_name'   => ['required', 'string', 'max:120'],
-            'customer_phone'  => ['required', 'string', 'max:20'],
-            'customer_email'  => ['nullable', 'email', 'max:120'],
-            'shipping_address'=> ['required', 'string', 'max:255'],
-            'city'            => ['required', 'string', 'max:80'],
-            'postal_code'     => ['nullable', 'string', 'max:20'],
-            'shipping_zone'   => ['required', Rule::in(['inside_dhaka', 'outside_dhaka'])],
-            'internal_note'   => ['nullable', 'string', 'max:2000'],
-            'delivery_note'   => ['nullable', 'string', 'max:2000'],
-            
-            'items'           => ['required', 'array', 'min:1'],
+            'customer_name' => ['required', 'string', 'max:120'],
+            'customer_phone' => ['required', 'string', 'max:20'],
+            'customer_email' => ['nullable', 'email', 'max:120'],
+            'shipping_address' => ['required', 'string', 'max:255'],
+            'city' => ['required', 'string', 'max:80'],
+            'postal_code' => ['nullable', 'string', 'max:20'],
+            'shipping_zone' => ['required', Rule::in(['inside_dhaka', 'outside_dhaka'])],
+            'internal_note' => ['nullable', 'string', 'max:2000'],
+            'delivery_note' => ['nullable', 'string', 'max:2000'],
+
+            'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
-            'items.*.qty'     => ['required', 'integer', 'min:1'],
-            'items.*.price'   => ['nullable', 'numeric', 'min:0', 'max:10000000'],
-            
+            'items.*.qty' => ['required', 'integer', 'min:1'],
+            'items.*.price' => ['nullable', 'numeric', 'min:0', 'max:10000000'],
+
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'shipping_charge' => ['nullable', 'numeric', 'min:0'],
         ]);
@@ -210,10 +219,10 @@ class OrderController extends Controller
 
                 foreach ($validated['items'] as $item) {
                     $product = Product::where('id', $item['product_id'])->lockForUpdate()->first();
-                    
-                    if (! $product || $item['qty'] > $product->stock_quantity) {
+
+                    if (! $product || ! $product->canOrderQuantity((int) $item['qty'])) {
                         $name = $product ? "\"{$product->name}\"" : "Product ID {$item['product_id']}";
-                        $avail = $product ? $product->stock_quantity : 0;
+                        $avail = $product ? $product->availableStockQuantity() : 0;
                         throw new \RuntimeException("{$name} only has {$avail} in stock.");
                     }
 
@@ -238,62 +247,66 @@ class OrderController extends Controller
 
                 $discount = (float) ($validated['discount_amount'] ?? 0);
                 $taxable = max(0, $subtotal - $discount);
-                
-                $shipping = (float) ($validated['shipping_charge'] ?? ($validated['shipping_zone'] === 'inside_dhaka' 
-                    ? setting('shipping_inside_dhaka', 60) 
+
+                $shipping = (float) ($validated['shipping_charge'] ?? ($validated['shipping_zone'] === 'inside_dhaka'
+                    ? setting('shipping_inside_dhaka', 60)
                     : setting('shipping_outside_dhaka', 120)));
-                    
+
                 $tax = round($taxable * (float) setting('tax_percent', 0) / 100, 2);
                 $total = $taxable + $shipping + $tax;
 
                 // Generate Order Number
                 $attempts = 0;
                 do {
-                    $number = 'ORD-' . now()->format('ymd') . '-' . strtoupper(Str::random(4));
+                    $number = 'ORD-'.now()->format('ymd').'-'.strtoupper(Str::random(4));
                 } while (++$attempts <= 15 && Order::where('order_number', $number)->exists());
 
                 $order = Order::create([
-                    'order_number'    => $number,
-                    'user_id'         => auth()->id(), // Admin user ID, or could be null
-                    'customer_name'   => $validated['customer_name'],
-                    'customer_phone'  => $validated['customer_phone'],
-                    'customer_email'  => $validated['customer_email'] ?? null,
-                    'shipping_address'=> $validated['shipping_address'],
-                    'city'            => $validated['city'],
-                    'postal_code'     => $validated['postal_code'] ?? null,
-                    'shipping_zone'   => $validated['shipping_zone'],
-                    'internal_note'   => $validated['internal_note'] ?? null,
-                    'delivery_note'   => $validated['delivery_note'] ?? null,
-                    'ip_address'      => $request->ip(),
-                    'user_agent'      => $request->userAgent(),
-                    'device_hash'     => hash('sha256', $request->userAgent() ?? ''),
-                    'subtotal'        => $subtotal,
+                    'order_number' => $number,
+                    'user_id' => auth()->id(), // Admin user ID, or could be null
+                    'customer_name' => $validated['customer_name'],
+                    'customer_phone' => $validated['customer_phone'],
+                    'customer_email' => $validated['customer_email'] ?? null,
+                    'shipping_address' => $validated['shipping_address'],
+                    'city' => $validated['city'],
+                    'postal_code' => $validated['postal_code'] ?? null,
+                    'shipping_zone' => $validated['shipping_zone'],
+                    'internal_note' => $validated['internal_note'] ?? null,
+                    'delivery_note' => $validated['delivery_note'] ?? null,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'device_hash' => hash('sha256', $request->userAgent() ?? ''),
+                    'subtotal' => $subtotal,
                     'discount_amount' => $discount,
                     'shipping_charge' => $shipping,
-                    'tax'             => $tax,
-                    'total'           => $total,
-                    'payment_method'  => 'cod',
-                    'payment_status'  => 'pending',
-                    'status'          => 'confirmed', // Manual orders are usually pre-confirmed
+                    'tax' => $tax,
+                    'total' => $total,
+                    'payment_method' => 'cod',
+                    'payment_status' => 'pending',
+                    'status' => 'pending',
                 ]);
 
                 foreach ($orderItems as $itemData) {
                     $p = $itemData['product'];
                     $orderItem = OrderItem::create([
-                        'order_id'     => $order->id,
-                        'product_id'   => $p->id,
+                        'order_id' => $order->id,
+                        'product_id' => $p->id,
                         'product_name' => $p->name,
-                        'image'        => $p->primaryImage()?->path,
-                        'unit_price'   => $itemData['price'],
-                        'quantity'     => $itemData['qty'],
-                        'line_total'   => $itemData['lineTotal'],
+                        'image' => $p->primaryImage()?->path,
+                        'unit_price' => $itemData['price'],
+                        'quantity' => $itemData['qty'],
+                        'line_total' => $itemData['lineTotal'],
                     ]);
-                    app(\App\Services\InventoryStockService::class)->reserveOrderStock($request->user(), $p, $order, $orderItem);
+                    app(InventoryStockService::class)->reserveOrderStock($request->user(), $p, $order, $orderItem);
+                }
+
+                if (! $order->awaiting_sourcing) {
+                    $order->update(['status' => 'confirmed']);
                 }
 
                 return $order;
             });
-            
+
             return redirect()->route('admin.orders.index')->with('status', "Order {$order->order_number} created successfully.");
 
         } catch (\RuntimeException $e) {
@@ -304,7 +317,7 @@ class OrderController extends Controller
     public function show(Order $order)
     {
         $order->load('items.product.images');
-        $items = $order->items->map(fn($item) => [
+        $items = $order->items->map(fn ($item) => [
             'id' => $item->id,
             'product_name' => $item->product_name ?: ($item->product?->name ?? 'Product'),
             'image_url' => image_url($item->image ?: $item->product?->primaryImage()?->path, $item->product_name ?: ($item->product?->name ?? 'Product')),
@@ -312,6 +325,9 @@ class OrderController extends Controller
             'sku' => $item->product?->sku,
             'variant_label' => $item->variant,
             'quantity' => $item->quantity,
+            'sourcing_required' => $item->sourcing_required,
+            'reserved_stock_quantity' => $item->reserved_stock_quantity,
+            'sourcing_outstanding' => $item->sourcing_outstanding,
             'unit_price' => $item->unit_price,
             'unit_discount' => $item->unit_discount ?? '0.00',
             'line_total' => $item->effectiveLineTotal(),
@@ -321,7 +337,7 @@ class OrderController extends Controller
         $bdcourier = null;
         if ((string) setting('fog_bdcourier_enabled', '0') === '1'
             && $order->customer_phone
-            && \Illuminate\Support\Facades\Schema::hasTable('bd_courier_checks')) {
+            && Schema::hasTable('bd_courier_checks')) {
             $savedCheck = BdCourierCheck::query()
                 ->where('phone', BdCourierCheck::normalizePhone($order->customer_phone))
                 ->first();
@@ -343,15 +359,16 @@ class OrderController extends Controller
 
         return Inertia::render('Admin/Orders/Show', [
             'order' => array_merge($order->toArray(), [
-                'payment_method_label'    => $order->paymentMethodLabel(),
-                'items'                   => $items,
-                'created_at_formatted'    => $order->created_at->format('d M Y, h:i A'),
-                'courier_provider'        => $order->courier_provider,
-                'courier_tracking_code'   => $order->courier_tracking_code,
-                'courier_consignment_id'  => $order->courier_consignment_id,
-                'courier_status'          => $order->courier_status,
+                'payment_method_label' => $order->paymentMethodLabel(),
+                'items' => $items,
+                'created_at_formatted' => $order->created_at->format('d M Y, h:i A'),
+                'courier_provider' => $order->courier_provider,
+                'courier_tracking_code' => $order->courier_tracking_code,
+                'courier_consignment_id' => $order->courier_consignment_id,
+                'courier_status' => $order->courier_status,
             ]),
             'bdcourier' => $bdcourier,
+            'canReceiveStock' => auth()->user()?->hasPermission('orders.manage') && auth()->user()?->hasPermission('products.create'),
             'taxPercent' => (float) setting('tax_percent', 0),
         ]);
     }
@@ -384,8 +401,8 @@ class OrderController extends Controller
                 if (! $product || ! $product->is_published) {
                     throw ValidationException::withMessages(["items.{$index}.product_id" => 'This product is no longer available.']);
                 }
-                if ($item['quantity'] > $product->stock_quantity) {
-                    throw ValidationException::withMessages(["items.{$index}.quantity" => "{$product->name} only has {$product->stock_quantity} in stock."]);
+                if (! $product->canOrderQuantity((int) $item['quantity'])) {
+                    throw ValidationException::withMessages(["items.{$index}.quantity" => "{$product->name} only has {$product->availableStockQuantity()} in stock."]);
                 }
 
                 $price = round($product->unitPriceForVariant(), 2);
@@ -398,7 +415,7 @@ class OrderController extends Controller
                     'quantity' => $item['quantity'],
                     'line_total' => $lineTotal,
                 ]);
-                app(\App\Services\InventoryStockService::class)->reserveOrderStock(auth()->user(), $product, $order, $orderItem);
+                app(InventoryStockService::class)->reserveOrderStock(auth()->user(), $product, $order, $orderItem);
                 $addedSubtotal += $lineTotal;
             }
 
@@ -419,7 +436,7 @@ class OrderController extends Controller
     {
         abort_unless($item->order_id === $order->id, 404);
         $data = $request->validate([
-            'unit_discount' => ['required', 'numeric', 'min:0', 'max:' . $item->unit_price, 'decimal:0,2'],
+            'unit_discount' => ['required', 'numeric', 'min:0', 'max:'.$item->unit_price, 'decimal:0,2'],
         ]);
 
         DB::transaction(function () use ($order, $item, $data) {
@@ -451,17 +468,22 @@ class OrderController extends Controller
     /** Verify the manual payment (accept the order). */
     public function verify(Order $order)
     {
-        $order->update([
-            'payment_status' => 'verified',
-            'status'         => $order->status === 'pending' ? 'confirmed' : $order->status,
-        ]);
+        $order = DB::transaction(function () use ($order): Order {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $order->update([
+                'payment_status' => 'verified',
+                'status' => $order->status === 'pending' && ! $order->awaiting_sourcing ? 'confirmed' : $order->status,
+            ]);
+
+            return $order;
+        });
 
         // Send payment-verified confirmation to customer (silent on error)
         $order->load('items');
         send_order_email(
             $order,
             'emails.order_verified',
-            'Payment confirmed — ' . $order->order_number . ' | ' . site_name()
+            ($order->awaiting_sourcing ? 'Payment verified - Awaiting sourcing - ' : 'Payment confirmed — ').$order->order_number.' | '.site_name()
         );
 
         return back()->with('status', "Payment verified for {$order->order_number}.");
@@ -470,15 +492,18 @@ class OrderController extends Controller
     /** Reject the manual payment. */
     public function reject(Order $order)
     {
-        if ($order->shouldRestoreStockOnCancel()) {
-            $order->restoreStock();
-            $order->releaseCoupon();
-        }
+        DB::transaction(function () use ($order): void {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($order->shouldRestoreStockOnCancel()) {
+                $order->restoreStock();
+                $order->releaseCoupon();
+            }
 
-        $order->update([
-            'payment_status' => 'rejected',
-            'status'         => 'cancelled',
-        ]);
+            $order->update([
+                'payment_status' => 'rejected',
+                'status' => 'cancelled',
+            ]);
+        });
 
         return back()->with('status', "Payment rejected for {$order->order_number}.");
     }
@@ -487,18 +512,18 @@ class OrderController extends Controller
     public function update(Request $request, Order $order)
     {
         $data = $request->validate([
-            'status'           => ['sometimes', 'required', Rule::in(Order::STATUSES)],
-            'payment_status'   => ['sometimes', 'required', Rule::in(Order::PAYMENT_STATUSES)],
-            'internal_note'    => ['nullable', 'string', 'max:2000'],
-            'customer_name'    => ['sometimes', 'required', 'string', 'max:120'],
-            'customer_phone'   => ['sometimes', 'required', 'string', 'max:20'],
-            'customer_email'   => ['nullable', 'email', 'max:120'],
+            'status' => ['sometimes', 'required', Rule::in(Order::STATUSES)],
+            'payment_status' => ['sometimes', 'required', Rule::in(Order::PAYMENT_STATUSES)],
+            'internal_note' => ['nullable', 'string', 'max:2000'],
+            'customer_name' => ['sometimes', 'required', 'string', 'max:120'],
+            'customer_phone' => ['sometimes', 'required', 'string', 'max:20'],
+            'customer_email' => ['nullable', 'email', 'max:120'],
             'shipping_address' => ['sometimes', 'required', 'string', 'max:255'],
-            'city'             => ['sometimes', 'nullable', 'string', 'max:80'],
-            'postal_code'      => ['nullable', 'string', 'max:20'],
-            'shipping_zone'    => ['sometimes', 'nullable', Rule::in(['inside_dhaka', 'outside_dhaka'])],
-            'delivery_note'    => ['nullable', 'string', 'max:2000'],
-            'discount_amount'  => ['sometimes', 'required', 'numeric', 'min:0', 'max:' . $order->subtotal, 'decimal:0,2'],
+            'city' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'postal_code' => ['nullable', 'string', 'max:20'],
+            'shipping_zone' => ['sometimes', 'nullable', Rule::in(['inside_dhaka', 'outside_dhaka'])],
+            'delivery_note' => ['nullable', 'string', 'max:2000'],
+            'discount_amount' => ['sometimes', 'required', 'numeric', 'min:0', 'max:'.$order->subtotal, 'decimal:0,2'],
         ]);
 
         DB::transaction(function () use ($order, $data) {
@@ -532,12 +557,15 @@ class OrderController extends Controller
     {
         $number = $order->order_number;
 
-        if ($order->shouldRestoreStockOnCancel()) {
-            $order->restoreStock();
-            $order->releaseCoupon();
-        }
+        DB::transaction(function () use ($order): void {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+            if ($order->shouldRestoreStockOnCancel()) {
+                $order->restoreStock();
+                $order->releaseCoupon();
+            }
 
-        $order->delete();
+            $order->delete();
+        });
 
         return redirect()->route('admin.orders.index')->with('status', "Order {$number} deleted.");
     }
@@ -545,8 +573,8 @@ class OrderController extends Controller
     public function bulk(Request $request)
     {
         $data = $request->validate([
-            'ids'         => ['required', 'array', 'min:1'],
-            'ids.*'       => ['integer', 'exists:orders,id'],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:orders,id'],
             'bulk_action' => ['required', 'in:verify,reject,delete'],
         ]);
 
@@ -554,49 +582,51 @@ class OrderController extends Controller
         $count = 0;
 
         foreach ($orders as $order) {
-            if ($data['bulk_action'] === 'verify') {
-                if ($order->payment_status !== 'pending') {
-                    continue;
+            $order = DB::transaction(function () use ($order, $data): ?Order {
+                $order = Order::whereKey($order->id)->lockForUpdate()->first();
+                if (! $order || ($data['bulk_action'] !== 'delete' && $order->payment_status !== 'pending')) {
+                    return null;
                 }
-                $order->update([
-                    'payment_status' => 'verified',
-                    'status'         => $order->status === 'pending' ? 'confirmed' : $order->status,
-                ]);
+
+                if ($data['bulk_action'] === 'verify') {
+                    $order->update([
+                        'payment_status' => 'verified',
+                        'status' => $order->status === 'pending' && ! $order->awaiting_sourcing ? 'confirmed' : $order->status,
+                    ]);
+                } else {
+                    if ($order->shouldRestoreStockOnCancel()) {
+                        $order->restoreStock();
+                        $order->releaseCoupon();
+                    }
+                    if ($data['bulk_action'] === 'reject') {
+                        $order->update(['payment_status' => 'rejected', 'status' => 'cancelled']);
+                    } else {
+                        $order->delete();
+                    }
+                }
+
+                return $order;
+            });
+            if (! $order) {
+                continue;
+            }
+
+            if ($data['bulk_action'] === 'verify') {
                 // Send payment-verified confirmation to customer (silent on error)
                 $order->load('items');
                 send_order_email(
                     $order,
                     'emails.order_verified',
-                    'Payment confirmed — ' . $order->order_number . ' | ' . site_name()
+                    ($order->awaiting_sourcing ? 'Payment verified - Awaiting sourcing - ' : 'Payment confirmed — ').$order->order_number.' | '.site_name()
                 );
-                $count++;
-            } elseif ($data['bulk_action'] === 'reject') {
-                if ($order->payment_status !== 'pending') {
-                    continue;
-                }
-                if ($order->shouldRestoreStockOnCancel()) {
-                    $order->restoreStock();
-                    $order->releaseCoupon();
-                }
-                $order->update([
-                    'payment_status' => 'rejected',
-                    'status'         => 'cancelled',
-                ]);
-                $count++;
-            } else {
-                if ($order->shouldRestoreStockOnCancel()) {
-                    $order->restoreStock();
-                    $order->releaseCoupon();
-                }
-                $order->delete();
-                $count++;
             }
+            $count++;
         }
 
         $label = match ($data['bulk_action']) {
             'verify' => 'verified',
             'reject' => 'rejected',
-            default  => 'deleted',
+            default => 'deleted',
         };
 
         return back()->with('status', "{$count} order(s) {$label}.");
@@ -623,7 +653,7 @@ class OrderController extends Controller
             return response()->json(['error' => 'BD Courier is disabled in Fake Order Guard settings.'], 422);
         }
 
-        if (! \Illuminate\Support\Facades\Schema::hasTable('bd_courier_checks')) {
+        if (! Schema::hasTable('bd_courier_checks')) {
             return response()->json(['error' => 'Courier history migration is pending. Run php artisan migrate first.'], 503);
         }
 
@@ -651,41 +681,41 @@ class OrderController extends Controller
     public function customerHistory(Request $request): JsonResponse
     {
         $request->validate([
-            'phone'    => ['required', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:20'],
             'order_id' => ['nullable', 'integer'],
         ]);
 
         $phone = trim($request->input('phone'));
-        $normPhone = \App\Support\BdPhoneValidator::normalize($phone);
+        $normPhone = BdPhoneValidator::normalize($phone);
 
         $orders = Order::where(function ($q) use ($phone, $normPhone) {
             $q->where('customer_phone', $phone)
-              ->orWhere('customer_phone', $normPhone)
-              ->orWhere('customer_phone', '+88' . $normPhone)
-              ->orWhere('customer_phone', '88' . $normPhone);
+                ->orWhere('customer_phone', $normPhone)
+                ->orWhere('customer_phone', '+88'.$normPhone)
+                ->orWhere('customer_phone', '88'.$normPhone);
         })
             ->latest()
             ->limit(50)
             ->get(['id', 'order_number', 'total', 'status', 'payment_status', 'created_at']);
 
-        $total     = $orders->count();
+        $total = $orders->count();
         $delivered = $orders->where('status', 'delivered')->count();
         $cancelled = $orders->where('status', 'cancelled')->count();
         $successRate = $total > 0 ? round(($delivered / $total) * 100, 1) : 0;
 
         return response()->json([
-            'orders'       => $orders->map(fn($o) => [
-                'id'           => $o->id,
+            'orders' => $orders->map(fn ($o) => [
+                'id' => $o->id,
                 'order_number' => $o->order_number,
-                'total'        => (float) $o->total,
-                'status'       => $o->status,
+                'total' => (float) $o->total,
+                'status' => $o->status,
                 'payment_status' => $o->payment_status,
-                'date'         => $o->created_at->format('d M Y'),
+                'date' => $o->created_at->format('d M Y'),
             ])->values(),
             'summary' => [
-                'total'        => $total,
-                'delivered'    => $delivered,
-                'cancelled'    => $cancelled,
+                'total' => $total,
+                'delivered' => $delivered,
+                'cancelled' => $cancelled,
                 'success_rate' => $successRate,
             ],
         ]);

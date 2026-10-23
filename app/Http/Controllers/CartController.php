@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Inertia\Inertia;
 use App\Models\Product;
 use App\Services\CartService;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class CartController extends Controller
 {
@@ -14,7 +14,7 @@ class CartController extends Controller
     public function index()
     {
         return Inertia::render('Storefront/Cart', [
-            'items'    => $this->cart->items(),
+            'items' => $this->cart->items(),
             'subtotal' => $this->cart->subtotal(),
         ]);
     }
@@ -23,18 +23,18 @@ class CartController extends Controller
     {
         $data = $request->validate([
             'product_id' => ['required', 'exists:products,id'],
-            'qty'        => ['nullable', 'integer', 'min:1', 'max:99'],
-            'variant'    => ['nullable', 'string', 'max:120'],
+            'qty' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'variant' => ['nullable', 'string', 'max:120'],
         ]);
 
         $product = Product::published()->findOrFail($data['product_id']);
-        $qty     = (int) ($data['qty'] ?? 1);
+        $qty = (int) ($data['qty'] ?? 1);
         $variant = isset($data['variant']) && trim((string) $data['variant']) !== ''
             ? trim((string) $data['variant'])
             : null;
-        $inCart  = $this->cart->qtyInCart($product->id, $variant);
+        $inCart = $this->cart->qtyInCart($product->id, $variant);
 
-        if ($product->stock_quantity < 1) {
+        if (! $product->canOrderQuantity(1)) {
             $message = "\"{$product->name}\" is out of stock.";
             if (! $request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
                 return response()->json(['ok' => false, 'message' => $message], 422);
@@ -43,8 +43,8 @@ class CartController extends Controller
             return back()->withInput()->withErrors(['cart' => $message])->with('error', $message);
         }
 
-        if ($inCart + $qty > $product->stock_quantity) {
-            $message = "Only {$product->stock_quantity} of \"{$product->name}\" available.";
+        if (! $product->canOrderQuantity($inCart + $qty)) {
+            $message = "Only {$product->availableStockQuantity()} of \"{$product->name}\" available.";
             if (! $request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
                 return response()->json(['ok' => false, 'message' => $message], 422);
             }
@@ -57,11 +57,11 @@ class CartController extends Controller
 
         if (! $request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
             return response()->json([
-                'ok'      => true,
+                'ok' => true,
                 'message' => $message,
-                'cart'    => $this->cart->toArray(),
-                'drawer'  => view('storefront.partials.cart-drawer-items', [
-                    'items'    => $this->cart->items(),
+                'cart' => $this->cart->toArray(),
+                'drawer' => view('storefront.partials.cart-drawer-items', [
+                    'items' => $this->cart->items(),
                     'subtotal' => $this->cart->subtotal(),
                 ])->render(),
             ]);
@@ -78,11 +78,11 @@ class CartController extends Controller
         ]);
 
         $lines = session('cart', []);
-        $line  = $lines[$data['key']] ?? null;
+        $line = $lines[$data['key']] ?? null;
         if ($line && (int) $data['qty'] > 0) {
             $product = Product::published()->find($line['product_id']);
-            if ($product && (int) $data['qty'] > $product->stock_quantity) {
-                $message = "Only {$product->stock_quantity} of \"{$product->name}\" available.";
+            if ($product && ! $product->canOrderQuantity((int) $data['qty'])) {
+                $message = "Only {$product->availableStockQuantity()} of \"{$product->name}\" available.";
                 if (! $request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
                     return response()->json(['ok' => false, 'message' => $message], 422);
                 }
@@ -95,10 +95,10 @@ class CartController extends Controller
 
         if (! $request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
             return response()->json([
-                'ok'     => true,
-                'cart'   => $this->cart->toArray(),
+                'ok' => true,
+                'cart' => $this->cart->toArray(),
                 'drawer' => view('storefront.partials.cart-drawer-items', [
-                    'items'    => $this->cart->items(),
+                    'items' => $this->cart->items(),
                     'subtotal' => $this->cart->subtotal(),
                 ])->render(),
             ]);
@@ -114,17 +114,17 @@ class CartController extends Controller
     {
         $data = $request->validate([
             'product_id' => ['required', 'exists:products,id'],
-            'qty'        => ['nullable', 'integer', 'min:1', 'max:99'],
-            'variant'    => ['nullable', 'string', 'max:120'],
+            'qty' => ['nullable', 'integer', 'min:1', 'max:99'],
+            'variant' => ['nullable', 'string', 'max:120'],
         ]);
 
         $product = Product::published()->findOrFail($data['product_id']);
-        $qty     = (int) ($data['qty'] ?? 1);
+        $qty = (int) ($data['qty'] ?? 1);
         $variant = isset($data['variant']) && trim((string) $data['variant']) !== ''
             ? trim((string) $data['variant'])
             : null;
 
-        if ($product->stock_quantity < 1) {
+        if (! $product->canOrderQuantity(1)) {
             $message = "\"{$product->name}\" is out of stock.";
             if (! $request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
                 return response()->json(['ok' => false, 'message' => $message], 422);
@@ -133,8 +133,8 @@ class CartController extends Controller
             return back()->withInput()->withErrors(['cart' => $message])->with('error', $message);
         }
 
-        if ($qty > $product->stock_quantity) {
-            $message = "Only {$product->stock_quantity} of \"{$product->name}\" available.";
+        if (! $product->canOrderQuantity($qty)) {
+            $message = "Only {$product->availableStockQuantity()} of \"{$product->name}\" available.";
             if (! $request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
                 return response()->json(['ok' => false, 'message' => $message], 422);
             }
@@ -147,10 +147,10 @@ class CartController extends Controller
 
         if (! $request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
             return response()->json([
-                'ok'       => true,
-                'message'  => 'Redirecting to checkout…',
+                'ok' => true,
+                'message' => 'Redirecting to checkout…',
                 'redirect' => route('checkout.show'),
-                'cart'     => $this->cart->toArray(),
+                'cart' => $this->cart->toArray(),
             ]);
         }
 
@@ -168,10 +168,10 @@ class CartController extends Controller
 
         if (! $request->header('X-Inertia') && ($request->wantsJson() || $request->ajax())) {
             return response()->json([
-                'ok'     => true,
-                'cart'   => $this->cart->toArray(),
+                'ok' => true,
+                'cart' => $this->cart->toArray(),
                 'drawer' => view('storefront.partials.cart-drawer-items', [
-                    'items'    => $this->cart->items(),
+                    'items' => $this->cart->items(),
                     'subtotal' => $this->cart->subtotal(),
                 ])->render(),
             ]);

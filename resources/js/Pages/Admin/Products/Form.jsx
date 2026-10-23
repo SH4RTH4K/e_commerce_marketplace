@@ -84,6 +84,7 @@ export default function ProductForm({ product, categories, suppliers = [], assig
     description: product.description || '',
     ...pricingValues(product, pricing),
     stock_quantity: product.stock_quantity ?? 0,
+    allow_backorder: product.allow_backorder ?? false,
     unit: product.unit || '',
     is_published: product.is_published ?? true,
     is_featured: product.is_featured ?? false,
@@ -457,6 +458,15 @@ export default function ProductForm({ product, categories, suppliers = [], assig
                 </div>
 
                 <ProductPricingFields data={data} setData={setData} errors={errors} pricing={pricing} />
+
+                <div className="space-y-3 rounded-2xl border border-amber-100 bg-amber-50/50 p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" aria-label="Allow orders when out of stock" checked={data.allow_backorder} onChange={event => setData('allow_backorder', event.target.checked)} className="mt-0.5 h-4 w-4 rounded accent-orange-500" />
+                    <span><span className="block text-sm font-semibold text-gray-900">Allow orders when out of stock</span><span className="mt-1 block text-xs leading-relaxed text-gray-600">Customers can order at zero stock and see “Available to order”. Stock quantities are hidden on the storefront while enabled. Actual inventory stays accurate, and supplier sync preserves this setting.</span></span>
+                  </label>
+                  <p className="text-xs text-gray-500">Locally received stock available: <strong className="font-mono text-gray-800">{Number(product.sourced_stock_quantity || 0).toLocaleString()}</strong>. Receive and allocate sourced items from the order details before confirming the order.</p>
+                  {errors.allow_backorder && <p role="alert" className="text-xs text-red-600">{errors.allow_backorder}</p>}
+                </div>
 
                 {/* ── CASE A: SIMPLE PRODUCT (Show standard single price & stock) ── */}
                 {productType === 'simple' ? (

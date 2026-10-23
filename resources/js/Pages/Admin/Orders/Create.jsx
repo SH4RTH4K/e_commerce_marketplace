@@ -1,6 +1,7 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState, useEffect, useRef } from 'react';
+import { orderQuantityLimit } from '@/lib/productAvailability';
 
 export default function OrderCreate({ initialProducts = [], shipInside = 60, shipOutside = 120, taxPercent = 0 }) {
   const { data, setData, post, processing, errors } = useForm({
@@ -75,7 +76,7 @@ export default function OrderCreate({ initialProducts = [], shipInside = 60, shi
   };
 
   const addToCart = (product) => {
-    if (product.stock_quantity < 1) {
+    if (orderQuantityLimit(product) < 1) {
       alert('This product is out of stock.');
       return;
     }
@@ -83,8 +84,8 @@ export default function OrderCreate({ initialProducts = [], shipInside = 60, shi
     setCartItems(prev => {
       const exists = prev.find(i => i.id === product.id);
       if (exists) {
-        if (exists.qty + 1 > product.stock_quantity) {
-          alert(`Cannot add more than available stock (${product.stock_quantity}).`);
+        if (exists.qty + 1 > orderQuantityLimit(product)) {
+          alert(`Cannot add more than available stock (${orderQuantityLimit(product)}).`);
           return prev;
         }
         return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
@@ -100,8 +101,8 @@ export default function OrderCreate({ initialProducts = [], shipInside = 60, shi
     if (newQty < 1) return;
     setCartItems(prev => prev.map(i => {
       if (i.id === id) {
-        if (newQty > i.stock_quantity) {
-          alert(`Cannot exceed available stock (${i.stock_quantity}).`);
+        if (newQty > orderQuantityLimit(i)) {
+          alert(`Cannot exceed available stock (${orderQuantityLimit(i)}).`);
           return i;
         }
         return { ...i, qty: newQty };
@@ -253,7 +254,7 @@ export default function OrderCreate({ initialProducts = [], shipInside = 60, shi
                                     <span className="text-xs text-gray-400 font-mono">SKU: {product.sku || 'N/A'}</span>
                                     <span className="text-xs text-gray-300">•</span>
                                     <span className={`text-xs font-semibold ${product.stock_quantity > 5 ? 'text-green-600' : product.stock_quantity > 0 ? 'text-amber-600' : 'text-red-500'}`}>
-                                      Stock: {product.stock_quantity}
+                                      Stock: {product.stock_quantity} · Locally received: {Number(product.sourced_stock_quantity || 0)}{product.allow_backorder ? ' · Sourcing enabled' : ''}
                                     </span>
                                   </div>
                                 </div>
@@ -312,7 +313,7 @@ export default function OrderCreate({ initialProducts = [], shipInside = 60, shi
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-semibold text-gray-900 truncate">{item.name}</p>
-                              <p className="text-xs text-gray-400 font-mono">Stock: {item.stock_quantity}</p>
+                              <p className="text-xs text-gray-400 font-mono">Stock: {item.stock_quantity} · Locally received: {Number(item.sourced_stock_quantity || 0)}{item.allow_backorder ? ' · Sourcing enabled' : ''}</p>
                             </div>
                           </div>
 

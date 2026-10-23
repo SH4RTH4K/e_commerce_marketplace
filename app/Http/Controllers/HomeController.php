@@ -30,7 +30,7 @@ class HomeController extends Controller
         ];
         $withImages = fn ($q) => $q
             ->published()
-            ->orderByRaw('CASE WHEN stock_quantity > 0 THEN 0 ELSE 1 END')
+            ->orderByRaw('CASE WHEN stock_quantity > 0 OR sourced_stock_quantity > 0 THEN 0 WHEN allow_backorder = 1 THEN 1 ELSE 2 END')
             ->with('images', 'category', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([
@@ -48,7 +48,7 @@ class HomeController extends Controller
         $banners = fn (string $placement) => Banner::active()
             ->placement($placement)
             ->where(fn ($query) => $query->whereNull('product_id')
-                ->orWhereHas('product', fn ($products) => $products->published()->where('stock_quantity', '>', 0)))
+                ->orWhereHas('product', fn ($products) => $products->published()->where(fn ($available) => $available->where('stock_quantity', '>', 0)->orWhere('sourced_stock_quantity', '>', 0)->orWhere('allow_backorder', true))))
             ->with('product:id,name,slug,sku,is_published')
             ->orderBy('position')
             ->orderBy('id');
@@ -186,7 +186,7 @@ class HomeController extends Controller
         ]);
 
         $query = Product::published()
-            ->orderByRaw('CASE WHEN stock_quantity > 0 THEN 0 ELSE 1 END')
+            ->orderByRaw('CASE WHEN stock_quantity > 0 OR sourced_stock_quantity > 0 THEN 0 WHEN allow_backorder = 1 THEN 1 ELSE 2 END')
             ->with('images', 'category', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([
@@ -243,7 +243,7 @@ class HomeController extends Controller
 
         $limit = 10;
         $products = Product::published()
-            ->orderByRaw('CASE WHEN stock_quantity > 0 THEN 0 ELSE 1 END')
+            ->orderByRaw('CASE WHEN stock_quantity > 0 OR sourced_stock_quantity > 0 THEN 0 WHEN allow_backorder = 1 THEN 1 ELSE 2 END')
             ->with('images', 'category', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([
@@ -287,7 +287,7 @@ class HomeController extends Controller
 
         $limit = min(48, max(1, (int) setting('homepage_flash_sale_limit', '10')));
         $products = Product::published()
-            ->orderByRaw('CASE WHEN stock_quantity > 0 THEN 0 ELSE 1 END')
+            ->orderByRaw('CASE WHEN stock_quantity > 0 OR sourced_stock_quantity > 0 THEN 0 WHEN allow_backorder = 1 THEN 1 ELSE 2 END')
             ->with('images', 'category', 'supplierLinks.supplierProduct')
             ->withExists('variants')
             ->withExists([

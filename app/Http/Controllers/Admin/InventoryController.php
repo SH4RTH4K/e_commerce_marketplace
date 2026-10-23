@@ -18,14 +18,17 @@ class InventoryController extends Controller
     public function index(Request $request)
     {
         [$query, $filters] = $this->filteredQuery($request, false);
-        $totals = (clone $query)->selectRaw('COUNT(*) AS total, SUM(CASE WHEN stock_quantity > 5 THEN 1 ELSE 0 END) AS in_stock, SUM(CASE WHEN stock_quantity BETWEEN 1 AND 5 THEN 1 ELSE 0 END) AS low_stock, SUM(CASE WHEN stock_quantity = 0 THEN 1 ELSE 0 END) AS out_stock')->first();
+        $totals = (clone $query)->selectRaw('COUNT(*) AS total, SUM(CASE WHEN (stock_quantity + sourced_stock_quantity) > 5 THEN 1 ELSE 0 END) AS in_stock, SUM(CASE WHEN (stock_quantity + sourced_stock_quantity) BETWEEN 1 AND 5 THEN 1 ELSE 0 END) AS low_stock, SUM(CASE WHEN (stock_quantity + sourced_stock_quantity) = 0 THEN 1 ELSE 0 END) AS out_stock')->first();
         $localUnits = (clone $query)->where('source_type', '!=', 'dropshipping')->whereDoesntHave('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true))->sum('stock_quantity');
+        $localUnits += (clone $query)->sum('sourced_stock_quantity');
         $supplierUnits = (clone $query)->where(fn ($q) => $q->where('source_type', 'dropshipping')->orWhereHas('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true)))->sum('stock_quantity');
         $this->applyStockFilter($query, $filters['stock_level']);
         $matchingUnits = (clone $query)->where('source_type', '!=', 'dropshipping')->whereDoesntHave('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true))->sum('stock_quantity');
+        $matchingUnits += (clone $query)->sum('sourced_stock_quantity');
         $matchingSupplierUnits = (clone $query)->where(fn ($q) => $q->where('source_type', 'dropshipping')->orWhereHas('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true)))->sum('stock_quantity');
         $this->applySort($query, $filters['order']);
         $query->with('category', 'images', 'supplier', 'supplierLinks.supplierProduct.supplier')->withCount('variants');
+
         return Inertia::render('Admin/Inventory/Index', [
             ...$filters,
             'products' => $query->paginate($filters['per_page'])->withQueryString()->through(fn ($product) => $this->row($product)),
@@ -53,6 +56,7 @@ class InventoryController extends Controller
             'supplier_id' => ['sometimes', 'nullable', 'integer', Rule::exists('dropship_suppliers', 'id')->where('is_active', true)],
         ]);
         $count = $stock->adjust($request->user(), $data['items'], $data['operation'], $data['quantity'], $data['reason'], (bool) $data['protect_supplier_stock'], array_intersect_key($data, array_flip(['movement_type', 'reference', 'supplier_id'])));
+
         return back()->with('status', "Stock adjusted for {$count} product(s).");
     }
 
@@ -65,6 +69,7 @@ class InventoryController extends Controller
             'reference' => ['nullable', 'string', 'max:120'],
         ]);
         $stock->adjust($request->user(), [['product_id' => $product->id, 'expected_stock' => $data['expected_stock']]], 'set', $data['stock_quantity'], $data['reason'], (bool) $data['protect_supplier_stock'], ['reference' => $data['reference'] ?? null]);
+
         return back()->with('status', 'Stock adjustment saved.');
     }
 
@@ -85,12 +90,14 @@ class InventoryController extends Controller
     public function resume(Request $request, Product $product, InventoryStockService $stock)
     {
         $stock->resume($request->user(), $product);
+
         return back()->with('status', 'Supplier stock sync resumed. The next sync will refresh stock from the supplier.');
     }
 
     public function movements(Request $request)
     {
         [$query, $filters] = $this->movementQuery($request);
+
         return Inertia::render('Admin/Inventory/History', [
             ...$filters,
             'movements' => $query->latest('id')->paginate(25)->withQueryString()->through(fn ($item) => $this->movementRow($item)),
@@ -101,6 +108,7 @@ class InventoryController extends Controller
     public function exportHistory(Request $request)
     {
         [$query] = $this->movementQuery($request);
+
         return response()->streamDownload(function () use ($query) {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
@@ -123,13 +131,22 @@ class InventoryController extends Controller
             'movement_type' => in_array($request->input('movement_type'), ['opening', 'stock_in', 'stock_out', 'adjustment', 'return_in', 'damaged', 'sync_resume'], true) ? $request->input('movement_type') : '',
         ];
         $query = InventoryAdjustment::query()->with('user:id,name', 'supplier:id,name,supplier_code');
-        if ($filters['q'] !== '') $query->where(fn ($q) => $q->where('product_name', 'like', '%'.$filters['q'].'%')->orWhere('sku', 'like', '%'.$filters['q'].'%')->orWhere('reference', 'like', '%'.$filters['q'].'%'));
-        if ($filters['supplier']) $query->where('supplier_id', $filters['supplier']);
-        if ($filters['stock_scope']) $query->where('stock_scope', $filters['stock_scope']);
+        if ($filters['q'] !== '') {
+            $query->where(fn ($q) => $q->where('product_name', 'like', '%'.$filters['q'].'%')->orWhere('sku', 'like', '%'.$filters['q'].'%')->orWhere('reference', 'like', '%'.$filters['q'].'%'));
+        }
+        if ($filters['supplier']) {
+            $query->where('supplier_id', $filters['supplier']);
+        }
+        if ($filters['stock_scope']) {
+            $query->where('stock_scope', $filters['stock_scope']);
+        }
         if ($filters['movement_type']) {
             $type = $filters['movement_type'];
-            $query->where(fn ($q) => $q->where('movement_type', $type)->orWhere(fn ($q) => $q->whereNull('movement_type')->where('operation', match ($type) { 'stock_in' => 'add', 'stock_out' => 'remove', 'adjustment' => 'set', default => $type })));
+            $query->where(fn ($q) => $q->where('movement_type', $type)->orWhere(fn ($q) => $q->whereNull('movement_type')->where('operation', match ($type) {
+                'stock_in' => 'add', 'stock_out' => 'remove', 'adjustment' => 'set', default => $type
+            })));
         }
+
         return [$query, $filters];
     }
 
@@ -150,13 +167,14 @@ class InventoryController extends Controller
         [$query, $filters] = $this->filteredQuery($request);
         $this->applySort($query, $filters['order']);
         $query->with('category', 'images', 'supplier', 'supplierLinks.supplierProduct.supplier')->withCount('variants');
+
         return response()->streamDownload(function () use ($query) {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, ['SKU', 'Product', 'Category', 'Type', 'Stock', 'Stock status', 'Visibility', 'Stock source', 'Supplier', 'Customer price', 'Regular price', 'Selling price', 'Minimum price', 'Maximum price', 'Product source', 'Stock ownership', 'Local warehouse units', 'Supplier availability'], ',', '"', '');
+            fputcsv($output, ['SKU', 'Product', 'Category', 'Type', 'Stock', 'Stock status', 'Visibility', 'Stock source', 'Supplier', 'Customer price', 'Regular price', 'Selling price', 'Minimum price', 'Maximum price', 'Product source', 'Stock ownership', 'Local warehouse units', 'Supplier availability', 'Received sourcing units', 'Allow ordering without stock', 'Storefront availability'], ',', '"', '');
             foreach ($query->lazy(200) as $product) {
                 $row = $this->row($product);
-                $values = [$product->sku, $product->name, $product->category?->name, $row['has_variants'] ? 'Variable' : 'Simple', $product->stock_quantity, $product->stock_quantity === 0 ? 'Out of stock' : ($product->stock_quantity <= 5 ? 'Low stock' : 'Healthy stock'), $product->is_published ? 'Published' : 'Draft', $row['stock_source'], $row['supplier'], $product->sale_price ?? $product->regular_price, $product->regular_price, $row['selling_price'], $row['minimum_price'], $row['maximum_price'], $row['source_type'], $row['stock_type'] === 'supplier' ? 'Supplier-managed availability' : 'Local inventory', $row['local_stock_quantity'], $row['supplier_stock_quantity']];
+                $values = [$product->sku, $product->name, $product->category?->name, $row['has_variants'] ? 'Variable' : 'Simple', $product->stock_quantity, $product->availableStockQuantity() === 0 ? 'Out of stock' : ($product->availableStockQuantity() <= 5 ? 'Low stock' : 'Healthy stock'), $product->is_published ? 'Published' : 'Draft', $row['stock_source'], $row['supplier'], $product->sale_price ?? $product->regular_price, $product->regular_price, $row['selling_price'], $row['minimum_price'], $row['maximum_price'], $row['source_type'], $row['stock_type'] === 'supplier' ? 'Supplier-managed availability' : 'Local inventory', $row['local_stock_quantity'], $row['supplier_stock_quantity'], $row['sourced_stock_quantity'], $row['allow_backorder'] ? 'Yes' : 'No', $row['availability_label']];
                 fputcsv($output, array_map(fn ($value) => is_string($value) && preg_match('/^[=+@\-\t\r]/', $value) ? "'".$value : $value, $values), ',', '"', '');
             }
             fclose($output);
@@ -175,41 +193,68 @@ class InventoryController extends Controller
             'per_page' => in_array($request->integer('per_page', 20), [20, 50, 100], true) ? $request->integer('per_page', 20) : 20,
         ];
         foreach (['stock_level' => ['out', 'low', 'in'], 'visibility' => ['published', 'draft'], 'source' => ['local', 'supplier', 'manual'], 'product_source' => ['manual', 'dropshipping', 'other'], 'type' => ['simple', 'variable']] as $key => $allowed) {
-            if (! in_array($filters[$key], $allowed, true)) $filters[$key] = '';
+            if (! in_array($filters[$key], $allowed, true)) {
+                $filters[$key] = '';
+            }
         }
-        if (! in_array($filters['order'], ['stock_asc', 'stock_desc', 'name_asc', 'name_desc', 'price_asc', 'price_desc', 'updated'], true)) $filters['order'] = 'stock_asc';
+        if (! in_array($filters['order'], ['stock_asc', 'stock_desc', 'name_asc', 'name_desc', 'price_asc', 'price_desc', 'updated'], true)) {
+            $filters['order'] = 'stock_asc';
+        }
         $query = Product::query();
-        if ($filters['q'] !== '') $query->where(fn ($q) => $q->where('name', 'like', '%'.$filters['q'].'%')->orWhere('sku', 'like', '%'.$filters['q'].'%'));
-        if ($filters['category']) $query->where('category_id', $filters['category']);
-        if ($filters['supplier']) $query->where(fn ($q) => $q->where('supplier_id', $filters['supplier'])->orWhere(fn ($q) => $q->whereNull('supplier_id')->whereHas('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true)->whereHas('supplierProduct', fn ($q) => $q->where('supplier_id', $filters['supplier'])))));
-        if ($filters['product_source']) $query->where('source_type', $filters['product_source']);
-        if ($filters['visibility']) $query->where('is_published', $filters['visibility'] === 'published');
-        if ($filters['type'] === 'variable') $query->has('variants');
-        if ($filters['type'] === 'simple') $query->doesntHave('variants');
+        if ($filters['q'] !== '') {
+            $query->where(fn ($q) => $q->where('name', 'like', '%'.$filters['q'].'%')->orWhere('sku', 'like', '%'.$filters['q'].'%'));
+        }
+        if ($filters['category']) {
+            $query->where('category_id', $filters['category']);
+        }
+        if ($filters['supplier']) {
+            $query->where(fn ($q) => $q->where('supplier_id', $filters['supplier'])->orWhere(fn ($q) => $q->whereNull('supplier_id')->whereHas('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true)->whereHas('supplierProduct', fn ($q) => $q->where('supplier_id', $filters['supplier'])))));
+        }
+        if ($filters['product_source']) {
+            $query->where('source_type', $filters['product_source']);
+        }
+        if ($filters['visibility']) {
+            $query->where('is_published', $filters['visibility'] === 'published');
+        }
+        if ($filters['type'] === 'variable') {
+            $query->has('variants');
+        }
+        if ($filters['type'] === 'simple') {
+            $query->doesntHave('variants');
+        }
         $automatic = fn ($q) => $q->where('product_created_by_integration', true)->where('sync_status', 'active')->where('field_sync_rules->stock', true);
-        if ($filters['source'] === 'local') $query->where('source_type', '!=', 'dropshipping')->whereDoesntHave('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true));
-        if ($filters['source'] === 'supplier') $query->where(fn ($q) => $q->where('source_type', 'dropshipping')->orWhereHas('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true)));
-        if ($filters['source'] === 'manual') $query->whereHas('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true))->whereDoesntHave('supplierLinks', $automatic);
-        if ($includeStock) $this->applyStockFilter($query, $filters['stock_level']);
+        if ($filters['source'] === 'local') {
+            $query->where('source_type', '!=', 'dropshipping')->whereDoesntHave('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true));
+        }
+        if ($filters['source'] === 'supplier') {
+            $query->where(fn ($q) => $q->where('source_type', 'dropshipping')->orWhereHas('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true)));
+        }
+        if ($filters['source'] === 'manual') {
+            $query->whereHas('supplierLinks', fn ($link) => $link->where('product_created_by_integration', true))->whereDoesntHave('supplierLinks', $automatic);
+        }
+        if ($includeStock) {
+            $this->applyStockFilter($query, $filters['stock_level']);
+        }
+
         return [$query, $filters];
     }
 
     private function applyStockFilter($query, string $level): void
     {
         match ($level) {
-            'out' => $query->where('stock_quantity', 0), 'low' => $query->whereBetween('stock_quantity', [1, 5]),
-            'in' => $query->where('stock_quantity', '>', 5), default => null,
+            'out' => $query->whereRaw('(stock_quantity + sourced_stock_quantity) = 0'), 'low' => $query->whereRaw('(stock_quantity + sourced_stock_quantity) BETWEEN 1 AND 5'),
+            'in' => $query->whereRaw('(stock_quantity + sourced_stock_quantity) > 5'), default => null,
         };
     }
 
     private function applySort($query, string $order): void
     {
         match ($order) {
-            'stock_desc' => $query->orderByDesc('stock_quantity')->orderBy('name'),
+            'stock_desc' => $query->orderByRaw('(stock_quantity + sourced_stock_quantity) DESC')->orderBy('name'),
             'name_asc' => $query->orderBy('name'), 'name_desc' => $query->orderByDesc('name'),
             'price_asc' => $query->orderByRaw('COALESCE(sale_price, regular_price) ASC'),
             'price_desc' => $query->orderByRaw('COALESCE(sale_price, regular_price) DESC'),
-            'updated' => $query->latest('updated_at'), default => $query->orderBy('stock_quantity')->orderBy('name'),
+            'updated' => $query->latest('updated_at'), default => $query->orderByRaw('(stock_quantity + sourced_stock_quantity) ASC')->orderBy('name'),
         };
         $query->orderBy('id');
     }
@@ -220,6 +265,7 @@ class InventoryController extends Controller
         $automatic = $ownedLinks->first(fn ($link) => $link->sync_status === 'active' && ($link->field_sync_rules['stock'] ?? false) === true);
         $link = $automatic ?? $ownedLinks->first();
         $supplierManaged = $product->source_type === 'dropshipping' || $product->supplierLinks->contains('product_created_by_integration', true);
+
         return [
             'id' => $product->id, 'name' => $product->name, 'slug' => $product->slug, 'url_key' => $product->url_key,
             'sku' => $product->sku, 'category' => $product->category ? ['name' => $product->category->name] : null,
@@ -233,7 +279,8 @@ class InventoryController extends Controller
             'supplier' => $product->supplier?->name ?? $link?->supplierProduct?->supplier?->name,
             'supplier_id' => $product->supplier_id ?? $link?->supplierProduct?->supplier_id,
             'source_type' => $product->source_type, 'stock_type' => $supplierManaged ? 'supplier' : 'local',
-            'local_stock_quantity' => $supplierManaged ? 0 : (int) $product->stock_quantity,
+            'local_stock_quantity' => ($supplierManaged ? 0 : (int) $product->stock_quantity) + (int) $product->sourced_stock_quantity,
+            ...$product->only(['allow_backorder', 'sourced_stock_quantity', 'available_stock_quantity', 'can_order', 'availability_label', 'hide_stock_quantity']),
             'supplier_stock_quantity' => $supplierManaged ? (int) $product->stock_quantity : null,
             'has_supplier_link' => $ownedLinks->isNotEmpty(),
             'can_resume_sync' => ! $automatic && $ownedLinks->contains('sync_status', 'active'),

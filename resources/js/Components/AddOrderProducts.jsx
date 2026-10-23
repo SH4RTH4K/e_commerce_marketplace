@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useForm } from '@inertiajs/react';
 import { money } from '@/lib/utils';
+import { orderQuantityLimit } from '@/lib/productAvailability';
 
 export default function AddOrderProducts({ order, taxPercent = 0 }) {
   const [open, setOpen] = useState(false);
@@ -55,7 +56,7 @@ export default function AddOrderProducts({ order, taxPercent = 0 }) {
     const selected = form.data.items.find(item => item.product_id === product.id);
     if (selected) {
       form.setData('items', form.data.items.map(item => item.product_id === product.id
-        ? { ...item, quantity: Math.min(Number(item.quantity) + 1, Number(product.stock_quantity), 100000) } : item));
+        ? { ...item, quantity: Math.min(Number(item.quantity) + 1, orderQuantityLimit(product)) } : item));
     } else {
       form.setData('items', [...form.data.items, { ...product, product_id: product.id, quantity: 1 }]);
     }
@@ -67,7 +68,7 @@ export default function AddOrderProducts({ order, taxPercent = 0 }) {
   const total = Math.round((taxable + Number(order.shipping_charge || 0) + tax) * 100) / 100;
   const validItems = form.data.items.length > 0 && form.data.items.every(item =>
     Number.isInteger(Number(item.quantity)) && Number(item.quantity) > 0
-    && Number(item.quantity) <= Math.min(Number(item.stock_quantity), 100000));
+    && Number(item.quantity) <= orderQuantityLimit(item));
 
   const submit = (event) => {
     event.preventDefault();
@@ -109,18 +110,20 @@ export default function AddOrderProducts({ order, taxPercent = 0 }) {
               : !products.length ? <p className="p-4 text-sm text-gray-500">No products found.</p>
               : products.map(product => {
                 const selected = form.data.items.find(item => item.product_id === product.id);
-                const unavailable = Math.min(Number(product.stock_quantity), 100000) <= Number(selected?.quantity || 0);
+                const unavailable = orderQuantityLimit(product) <= Number(selected?.quantity || 0);
                 return (
                   <div key={product.id} className="flex items-center gap-3 p-3 border-b last:border-b-0 border-gray-100">
                     <img src={product.image_url} alt="" className="w-10 h-10 rounded-lg object-contain shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-gray-800 break-words">{product.name}</p>
                       <p className="text-xs text-gray-500">{product.sku && `SKU: ${product.sku} · `}{money(product.price)} · Stock: {product.stock_quantity}</p>
+                      {Number(product.sourced_stock_quantity) > 0 && <p className="mt-1 text-xs text-gray-500">Locally received: {product.sourced_stock_quantity}</p>}
+                      {product.allow_backorder && <p className="mt-1 text-xs text-amber-700">Sourcing enabled; orders can exceed available stock.</p>}
                     </div>
                     <button type="button" onClick={() => selectProduct(product)} disabled={unavailable || form.processing || (!selected && form.data.items.length >= 50)}
                       aria-label={`Add ${product.name}`}
                       className="px-3 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-xs font-semibold disabled:opacity-50 shrink-0">
-                      {Number(product.stock_quantity) <= 0 ? 'Out of stock' : 'Add'}
+                      {!product.allow_backorder && Number(product.available_stock_quantity ?? product.stock_quantity) <= 0 ? 'Out of stock' : 'Add'}
                     </button>
                   </div>
                 );
@@ -138,7 +141,7 @@ export default function AddOrderProducts({ order, taxPercent = 0 }) {
                     </div>
                     <label className="flex items-center gap-2 text-xs text-gray-600">
                       Qty
-                      <input type="number" min="1" max={Math.min(Number(item.stock_quantity), 100000)} step="1" required value={item.quantity}
+                      <input type="number" min="1" max={orderQuantityLimit(item)} step="1" required value={item.quantity}
                         disabled={form.processing} aria-label={`Quantity for ${item.name}`}
                         onChange={event => form.setData('items', form.data.items.map(row => row.product_id === item.product_id ? { ...row, quantity: event.target.value } : row))}
                         className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-sm" />

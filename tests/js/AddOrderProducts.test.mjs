@@ -6,6 +6,7 @@ import React, { act, useEffect, useRef, useState } from 'react';
 import { create } from 'react-test-renderer';
 import { transformWithOxc } from 'vite';
 import { router, useForm } from '@inertiajs/react';
+import { orderQuantityLimit } from '../../resources/js/lib/productAvailability.js';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 globalThis.window = { setTimeout: () => 0 };
@@ -26,7 +27,7 @@ async function mount(responses, submitErrors = null) {
   const timers = new Map();
   let nextTimer = 0;
   const context = vm.createContext({
-    React, useEffect, useRef, useState, useForm, AbortController,
+    React, useEffect, useRef, useState, useForm, AbortController, orderQuantityLimit,
     money: value => `৳${value}`,
     setTimeout: callback => { timers.set(++nextTimer, callback); return nextTimer; },
     clearTimeout: id => timers.delete(id),
@@ -172,5 +173,17 @@ test('stock validation errors keep the selection so the admin can correct it', a
     assert.match(app.text(), /Products to add/);
     assert.match(app.text(), /Only one item remains in stock/);
     assert.equal(app.renderer.root.findByProps({ type: 'submit' }).props.disabled, false);
+  } finally { await app.close(); }
+});
+
+test('a zero-stock sourcing-enabled product can be added without altering its stock figure', async () => {
+  const sourcedProduct = { ...product, stock_quantity: 0, available_stock_quantity: 0, allow_backorder: true };
+  const app = await mount([{ ok: true, status: 200, json: async () => [sourcedProduct] }]);
+  try {
+    await app.click('Add Products'); await app.flush();
+    assert.match(app.text(), /Sourcing enabled/);
+    await app.click('Add'); await app.click('Add');
+    await app.submit();
+    assert.deepEqual(app.submissions[0].data, { items: [{ product_id: 7, quantity: 2 }] });
   } finally { await app.close(); }
 });

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { usePage, router } from '@inertiajs/react';
 import { trackInitiateCheckout } from '@/lib/tracking';
+import ProductAvailability from './ProductAvailability';
+import { orderQuantityLimit, productAvailability } from '@/lib/productAvailability';
 
 function getCsrf() {
   return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
@@ -71,6 +73,8 @@ export default function CodOrderModal({ open, onClose, product, qty = 1, variant
   const { app } = usePage().props;
   const sym     = app.settings?.currency_symbol || '৳';
   const s       = app.settings || {};
+  const availability = productAvailability(product);
+  const quantityLimit = orderQuantityLimit(product, 99);
 
   const [quantity, setQuantity]       = useState(qty || 1);
   const [zone, setZone]               = useState('inside_dhaka');
@@ -106,9 +110,9 @@ export default function CodOrderModal({ open, onClose, product, qty = 1, variant
   // Sync quantity with prop whenever modal opens or qty prop changes
   useEffect(() => {
     if (open) {
-      setQuantity(qty || 1);
+      setQuantity(Math.max(1, Math.min(Number(qty) || 1, quantityLimit)));
     }
-  }, [open, qty]);
+  }, [open, qty, quantityLimit]);
 
   // Prefill from auth user & fire InitiateCheckout event
   const { auth } = usePage().props;
@@ -188,6 +192,10 @@ export default function CodOrderModal({ open, onClose, product, qty = 1, variant
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!availability.canOrder || quantity > quantityLimit) {
+      setGlobalError('This quantity is no longer available. Please review the product availability.');
+      return;
+    }
     setSubmitting(true);
     setErrors({});
     setGlobalError('');
@@ -326,7 +334,7 @@ export default function CodOrderModal({ open, onClose, product, qty = 1, variant
                 <button
                   type="button"
                   onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                  disabled={quantity <= 1}
+                  disabled={!availability.canOrder || quantity <= 1}
                   className="w-7 h-7 rounded-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-gray-50 flex items-center justify-center text-gray-700 font-bold text-base transition-colors"
                   aria-label="Decrease quantity"
                   title="পরিমাণ কমান"
@@ -336,12 +344,13 @@ export default function CodOrderModal({ open, onClose, product, qty = 1, variant
                 <input
                   type="number"
                   min="1"
-                  max={product?.stock_quantity > 0 ? product.stock_quantity : 99}
+                  max={quantityLimit}
+                  disabled={!availability.canOrder}
                   value={quantity}
                   onChange={(e) => {
                     const val = parseInt(e.target.value, 10);
                     if (!isNaN(val) && val >= 1) {
-                      setQuantity(Math.min(val, product?.stock_quantity > 0 ? product.stock_quantity : 99));
+                      setQuantity(Math.min(val, quantityLimit));
                     } else if (e.target.value === '') {
                       setQuantity(1);
                     }
@@ -350,7 +359,8 @@ export default function CodOrderModal({ open, onClose, product, qty = 1, variant
                 />
                 <button
                   type="button"
-                  onClick={() => setQuantity(q => (product?.stock_quantity > 0 ? Math.min(product.stock_quantity, q + 1) : q + 1))}
+                  onClick={() => setQuantity(q => Math.min(quantityLimit, q + 1))}
+                  disabled={!availability.canOrder || quantity >= quantityLimit}
                   className="w-7 h-7 rounded-lg bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-700 font-bold text-base transition-colors"
                   aria-label="Increase quantity"
                   title="পরিমাণ বাড়ান"
@@ -363,6 +373,8 @@ export default function CodOrderModal({ open, onClose, product, qty = 1, variant
             {/* ── Form Body (scrollable) ── */}
             <form id="cod-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto overscroll-contain">
               <div className="p-4 sm:p-5 space-y-4">
+                <ProductAvailability product={product} quantity={quantity} showMessage />
+                {errors.qty && <p role="alert" className="text-xs text-red-600">{errors.qty}</p>}
 
                 {/* Global error */}
                 {globalError && (
@@ -541,7 +553,7 @@ export default function CodOrderModal({ open, onClose, product, qty = 1, variant
               <button
                 type="submit"
                 form="cod-form"
-                disabled={submitting}
+                disabled={submitting || !availability.canOrder || quantity > quantityLimit}
                 className={cls(
                   'w-full h-14 rounded-2xl font-extrabold text-white text-base flex items-center justify-center gap-3 transition-all shadow-lg',
                   submitting

@@ -218,6 +218,7 @@
 
         <form action="{{ $orderAction }}" method="POST" class="text-slate-900">
           @csrf
+          @include('landing.partials.sourcing-notice')
           <input type="text" name="website_url" class="hidden" tabindex="-1" autocomplete="off">
 
           @if($errors->any())

@@ -1,3 +1,5 @@
+import SourcingNotice from '@/Components/Storefront/SourcingNotice';
+import { requiresSourcing } from '@/lib/productAvailability';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { money, imageUrl } from '@/lib/utils';
@@ -24,6 +26,7 @@ export default function CartPage({ items, subtotal }) {
 
   const itemsList = Object.values(items || {});
   const isEmpty = itemsList.length === 0;
+  const hasSourcingItems = itemsList.some(item => requiresSourcing(item.product || item, item.qty));
 
   if (isTemplateOne) {
     return (
@@ -31,6 +34,7 @@ export default function CartPage({ items, subtotal }) {
         <Head title="Shopping Cart" />
         <div className="template-1-page-title"><h1>Shopping Cart</h1></div>
         <main className="template-1-cart-page">
+          {hasSourcingItems && <div className="mb-5"><SourcingNotice /></div>}
           {isEmpty ? (
             <div className="template-1-empty"><h2>Your cart is empty</h2><p>There are no products in your shopping cart.</p><Link href="/shop" className="template-1-primary-button">Continue Shopping</Link></div>
           ) : (
@@ -95,6 +99,7 @@ export default function CartPage({ items, subtotal }) {
           </div>
         ) : (
           <div className="grid lg:grid-cols-12 gap-6 lg:gap-8">
+            {hasSourcingItems && <div className="lg:col-span-12"><SourcingNotice /></div>}
             <div className="lg:col-span-8">
               <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
                 <div className="hidden sm:grid grid-cols-12 gap-4 p-4 bg-gray-50/50 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">

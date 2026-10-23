@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Support\BdPhoneValidator;
+use App\Support\CustomerOrderPayload;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -18,7 +19,7 @@ class TrackOrderController extends Controller
     {
         $data = $request->validate([
             'order_number' => ['required', 'string', 'max:50'],
-            'phone'        => ['required', 'string', 'max:50'],
+            'phone' => ['required', 'string', 'max:50'],
         ]);
 
         $orderNumber = trim($data['order_number']);
@@ -29,7 +30,7 @@ class TrackOrderController extends Controller
             ->where('order_number', $orderNumber)
             ->where(function ($q) use ($rawPhone, $phoneNorm) {
                 $q->where('customer_phone', $rawPhone)
-                  ->orWhere('customer_phone', $phoneNorm);
+                    ->orWhere('customer_phone', $phoneNorm);
             })
             ->first();
 
@@ -37,7 +38,6 @@ class TrackOrderController extends Controller
             return back()->withErrors(['order_number' => 'No order found with that number and phone.'])->withInput();
         }
 
-        return Inertia::render('Storefront/Track', compact('order'));
+        return Inertia::render('Storefront/Track', ['order' => CustomerOrderPayload::from($order)]);
     }
 }
-

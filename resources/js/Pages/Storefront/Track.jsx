@@ -1,3 +1,4 @@
+import SourcingNotice from '@/Components/Storefront/SourcingNotice';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, usePage, useForm } from '@inertiajs/react';
 import { imageUrl } from '@/lib/utils';
@@ -90,9 +91,11 @@ export default function TrackPage({ order }) {
               </div>
               <div className="flex items-center gap-2">
                 <span className={`w-2.5 h-2.5 rounded-full ${getStatusColor(order.status)}`}></span>
-                <span className="text-sm font-bold text-gray-700 capitalize">{order.status}</span>
+                <span className="text-sm font-bold text-gray-700 capitalize">{order.awaiting_sourcing ? 'Awaiting sourcing' : order.status}</span>
               </div>
             </div>
+
+            {order.awaiting_sourcing && <div className="p-6"><SourcingNotice awaiting /></div>}
 
             {/* Tracking Timeline */}
             {order.status !== 'cancelled' && (

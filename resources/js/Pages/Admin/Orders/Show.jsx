@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import CourierShipModal from '@/Components/CourierShipModal';
 import AddOrderProducts from '@/Components/AddOrderProducts';
 import OrderItemDiscount from '@/Components/OrderItemDiscount';
+import ReceiveOrderStock from '@/Components/Admin/ReceiveOrderStock';
 
 function StatusBadge({ status }) {
   const map = { pending:'bg-amber-100 text-amber-700',confirmed:'bg-blue-100 text-blue-700',processing:'bg-indigo-100 text-indigo-700',shipped:'bg-purple-100 text-purple-700',delivered:'bg-green-100 text-green-700',cancelled:'bg-red-100 text-red-700' };
@@ -599,7 +600,7 @@ function EditCustomerModal({ order, onClose }) {
 /* ─────────────────────────────────────────────────────────────────────────────
    Main Order Show page
    ───────────────────────────────────────────────────────────────────────────── */
-export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
+export default function OrderShow({ order, bdcourier, taxPercent = 0, canReceiveStock = false }) {
   const { url } = usePage();
   const returnUrl = orderReturnUrl(url);
   const [showCourierModal, setShowCourierModal] = useState(false);
@@ -609,14 +610,14 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
   // Auto-open modal when navigated with ?ship=1
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('ship') === '1') {
+    if (params.get('ship') === '1' && !order.awaiting_sourcing) {
       setShowCourierModal(true);
       params.delete('ship');
       window.history.replaceState({}, '', window.location.pathname + (params.size ? `?${params}` : ''));
     }
   }, []);
 
-  const { data, setData, patch, processing } = useForm({
+  const { data, setData, patch, processing, errors } = useForm({
     status: order.status,
     payment_status: order.payment_status,
     internal_note: order.internal_note || '',
@@ -668,6 +669,7 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
             <span className="text-sm font-semibold text-gray-800">{order.order_number}</span>
             <div className="ml-auto flex items-center gap-2">
               <StatusBadge status={order.status} />
+              {order.awaiting_sourcing && <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">Awaiting sourcing</span>}
               <PaymentBadge status={order.payment_status} />
               <a
                 href={`/admin/orders/${order.id}/invoice`}
@@ -682,6 +684,7 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
               </a>
               <button
                 onClick={() => setShowCourierModal(true)}
+                disabled={order.awaiting_sourcing}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold transition-colors shadow-sm"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -691,6 +694,8 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
               </button>
             </div>
           </div>
+
+          {order.awaiting_sourcing && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-semibold">Receive and allocate stock before confirming this order.</p><p className="mt-1">The order stays pending until every item is ready. Payment verification does not confirm sourcing.</p></div>}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* Left / main column */}
@@ -732,6 +737,8 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
                                   {item.variant_label && <p className="text-xs text-gray-400">{item.variant_label}</p>}
                                   {item.sku && <p className="text-xs text-gray-500 break-all">SKU: {item.sku}</p>}
                                   <OrderItemDiscount key={`${order.id}-${item.id}`} orderId={order.id} item={item} />
+                                  {item.sourcing_required && <p className="mt-2 text-xs text-gray-500">Allocated: {Number(item.reserved_stock_quantity || 0)} of {item.quantity}</p>}
+                                  {canReceiveStock && order.status === 'pending' && <ReceiveOrderStock key={`${item.id}-${item.sourcing_outstanding}`} orderId={order.id} item={item} />}
                                 </div>
                               </div>
                             </td>
@@ -834,8 +841,9 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Order Status</label>
                       <select value={data.status} onChange={e => setData('status', e.target.value)}
                         className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 capitalize">
-                        {statuses.map(s => <option key={s} value={s} className="capitalize">{s}</option>)}
+                        {statuses.map(s => <option key={s} value={s} disabled={order.awaiting_sourcing && !['pending', 'cancelled'].includes(s)} className="capitalize">{s}</option>)}
                       </select>
+                      {errors.status && <p role="alert" className="mt-1 text-xs text-red-600">{errors.status}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Status</label>
@@ -852,7 +860,7 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
                       placeholder="Private note (not visible to customer)…" />
                   </div>
                   <div className="flex items-center gap-3">
-                    <button type="submit" disabled={processing}
+                    <button type="submit" disabled={processing || (order.awaiting_sourcing && !['pending', 'cancelled'].includes(data.status))}
                       className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors">
                       {processing ? 'Saving…' : 'Save Changes'}
                     </button>
@@ -1111,7 +1119,7 @@ export default function OrderShow({ order, bdcourier, taxPercent = 0 }) {
         </div>
       </AdminLayout>
 
-      {showCourierModal && (
+      {showCourierModal && !order.awaiting_sourcing && (
         <CourierShipModal order={order} onClose={() => setShowCourierModal(false)} />
       )}
 

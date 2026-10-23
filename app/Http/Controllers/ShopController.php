@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Inertia\Inertia;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Services\CategoryHierarchyService;
+use App\Services\StorefrontSeoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Inertia\Inertia;
 use Throwable;
 
 class ShopController extends Controller
@@ -16,7 +17,9 @@ class ShopController extends Controller
     public function index(Request $request, ?Category $category = null)
     {
         $categoryPath = $category ? app(CategoryHierarchyService::class)->path($category) : [];
-        if ($category) abort_if($categoryPath === [] || collect($categoryPath)->contains(fn ($item) => ! $item['is_active']), 404);
+        if ($category) {
+            abort_if($categoryPath === [] || collect($categoryPath)->contains(fn ($item) => ! $item['is_active']), 404);
+        }
         $categoryIds = $category?->selfAndDescendantIds(true);
 
         $query = Product::published()
@@ -24,7 +27,7 @@ class ShopController extends Controller
             // supplier payloads. Keep those on the individual product page.
             ->select([
                 'id', 'category_id', 'name', 'slug', 'sku', 'brand',
-                'regular_price', 'sale_price', 'stock_quantity', 'unit',
+                'regular_price', 'sale_price', 'stock_quantity', 'allow_backorder', 'sourced_stock_quantity', 'unit',
                 'rating', 'reviews_count', 'is_featured', 'is_new_arrival',
                 'is_best_seller', 'is_flash_sale', 'is_free_shipping',
                 'created_at', 'updated_at',
@@ -85,11 +88,13 @@ class ShopController extends Controller
         if ($inStock && ! $outOfStock) {
             $query->where(function ($q) {
                 $q->where('stock_quantity', '>', 0)
-                    ->orWhereHas('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0));
+                    ->orWhere('sourced_stock_quantity', '>', 0)
+                    ->orWhere('allow_backorder', true);
             });
         } elseif ($outOfStock && ! $inStock) {
             $query->where('stock_quantity', '<=', 0)
-                ->whereDoesntHave('variants', fn ($variantQuery) => $variantQuery->where('stock', '>', 0));
+                ->where('sourced_stock_quantity', '<=', 0)
+                ->where('allow_backorder', false);
         }
         if ($request->boolean('featured')) {
             $query->where('is_featured', true);
@@ -137,12 +142,12 @@ class ShopController extends Controller
             $query->orderBy('flash_sale_position')->orderBy('id');
         } else {
             match ($sort) {
-                'price_low'  => $query->orderByRaw('COALESCE(sale_price, regular_price) asc')->orderByDesc('id'),
+                'price_low' => $query->orderByRaw('COALESCE(sale_price, regular_price) asc')->orderByDesc('id'),
                 'price_high' => $query->orderByRaw('COALESCE(sale_price, regular_price) desc')->orderByDesc('id'),
-                'rating'     => $query->orderByDesc('rating')->orderByDesc('reviews_count')->orderByDesc('id'),
-                'name'       => $query->orderBy('name')->orderByDesc('id'),
-                'newest'     => $query->orderByDesc('created_at')->orderByDesc('id'),
-                default      => $query->orderByDesc('is_best_seller')
+                'rating' => $query->orderByDesc('rating')->orderByDesc('reviews_count')->orderByDesc('id'),
+                'name' => $query->orderBy('name')->orderByDesc('id'),
+                'newest' => $query->orderByDesc('created_at')->orderByDesc('id'),
+                default => $query->orderByDesc('is_best_seller')
                     ->orderByDesc('is_featured')
                     ->orderByDesc('reviews_count')
                     ->orderByDesc('rating')
@@ -208,20 +213,20 @@ class ShopController extends Controller
             ->values();
 
         return Inertia::render('Storefront/Shop', [
-            'structuredData' => fn () => $category ? app(\App\Services\StorefrontSeoService::class)->breadcrumbs($categoryPath) : null,
-            'products'         => $products,
-            'activeCategory'   => $category,
+            'structuredData' => fn () => $category ? app(StorefrontSeoService::class)->breadcrumbs($categoryPath) : null,
+            'products' => $products,
+            'activeCategory' => $category,
             'categoryPath' => array_map(fn ($item) => collect($item)->only(['id', 'name', 'slug'])->all(), $categoryPath),
             'browseCategories' => fn () => $category ? $category->children()->where('is_active', true)->where('show_in_menu', true)->get(['id', 'name', 'slug']) : [],
             'filterCategories' => fn () => Category::storefrontFilterTree(),
             'allProductsCount' => fn () => (int) $catalogueStats()->total,
-            'brands'           => $brands,
-            'variantFilters'   => $variantFilters,
-            'sort'             => $sort,
-            'minRating'        => $request->input('min_rating'),
-            'q'                => $term,
-            'priceCeiling'     => fn () => max(5000, (int) (ceil(max((int) $catalogueStats()->max_price, 5000) / 50) * 50)),
-            'seo'              => fn () => [
+            'brands' => $brands,
+            'variantFilters' => $variantFilters,
+            'sort' => $sort,
+            'minRating' => $request->input('min_rating'),
+            'q' => $term,
+            'priceCeiling' => fn () => max(5000, (int) (ceil(max((int) $catalogueStats()->max_price, 5000) / 50) * 50)),
+            'seo' => fn () => [
                 'title' => $category?->meta_title ?: ($category?->name ?: ($term ? "Search: {$term}" : 'Shop All Products')),
                 'description' => $category?->meta_description,
                 'keywords' => $category?->meta_keywords,

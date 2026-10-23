@@ -10,12 +10,20 @@ class OrderItem extends Model
     protected $guarded = [];
 
     protected $casts = [
+        'sourcing_required' => 'boolean',
+        'reserved_stock_quantity' => 'integer',
+        'reserved_sourced_quantity' => 'integer',
         'unit_price' => 'decimal:2',
         'unit_discount' => 'decimal:2',
         'line_total' => 'decimal:2',
     ];
 
-    protected $appends = ['image_url'];
+    protected $appends = ['image_url', 'sourcing_outstanding'];
+
+    public function getSourcingOutstandingAttribute(): int
+    {
+        return $this->sourcing_required ? max(0, (int) $this->quantity - (int) $this->reserved_stock_quantity) : 0;
+    }
 
     public function getImageUrlAttribute(): string
     {

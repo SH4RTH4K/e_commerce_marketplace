@@ -30,10 +30,10 @@ class ShoppingGuideController extends Controller
             : null;
         $guideProducts = $category ? Product::published()
             ->whereIn('category_id', $category->selfAndDescendantIds(true))
-            ->where('stock_quantity', '>', 0)
-            ->orderByDesc('stock_quantity')->orderByDesc('id')
+            ->where(fn ($available) => $available->where('stock_quantity', '>', 0)->orWhere('sourced_stock_quantity', '>', 0)->orWhere('allow_backorder', true))
+            ->orderByRaw('CASE WHEN stock_quantity > 0 OR sourced_stock_quantity > 0 THEN 0 ELSE 1 END')->orderByDesc('stock_quantity')->orderByDesc('id')
             ->take(4)->get()
-            ->map(fn (Product $product): array => ['name' => $product->name, 'url' => route('product.show', $product)])
+            ->map(fn (Product $product): array => ['name' => $product->name, 'url' => route('product.show', $product), 'availability_label' => $product->availability_label])
             ->all() : [];
 
         return Inertia::render('Storefront/BlogDetail', [

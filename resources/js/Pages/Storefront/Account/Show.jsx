@@ -1,3 +1,4 @@
+import SourcingNotice from '@/Components/Storefront/SourcingNotice';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link } from '@inertiajs/react';
 import { imageUrl } from '@/lib/utils';
@@ -37,10 +38,12 @@ export default function AccountShow({ order }) {
                   order.status === 'cancelled' ? 'bg-red-100 text-red-700' : 
                   'bg-yellow-100 text-yellow-700'}
               `}>
-                {order.status}
+                {order.awaiting_sourcing ? 'Awaiting sourcing' : order.status}
               </span>
             </div>
           </div>
+
+          {order.awaiting_sourcing && <div className="p-6"><SourcingNotice awaiting /></div>}
 
           <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>

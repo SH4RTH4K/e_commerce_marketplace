@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\IndexProductRequest;
+use App\Http\Requests\SaveProductRequest;
 use App\Models\DropshipProductLink;
 use App\Models\DropshipSupplier;
 use App\Models\DropshipSupplierProduct;
@@ -20,7 +21,6 @@ use App\Support\PublicUploader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -42,7 +42,11 @@ class ProductController extends Controller
                     'url_key' => $product->url_key, 'is_published' => $product->is_published,
                     'price' => $product->sale_price ?? $product->regular_price, 'regular_price' => $product->regular_price, 'sale_price' => $product->sale_price,
                     ...app(ProductPricingService::class)->inventoryDetails($product),
-                    'stock_quantity' => (int) $product->stock_quantity, 'has_variants' => $product->variants_count > 0,
+                    'stock_quantity' => (int) $product->stock_quantity,
+                    'supplier_stock_quantity' => $product->source_type === 'dropshipping' || $product->supplierLinks->contains('product_created_by_integration', true) ? (int) $product->stock_quantity : null,
+                    'local_stock_quantity' => ($product->source_type === 'dropshipping' || $product->supplierLinks->contains('product_created_by_integration', true) ? 0 : (int) $product->stock_quantity) + (int) $product->sourced_stock_quantity,
+                    ...$product->only(['allow_backorder', 'sourced_stock_quantity', 'available_stock_quantity', 'can_order', 'availability_label', 'hide_stock_quantity']),
+                    'has_variants' => $product->variants_count > 0,
                     'variants_count' => (int) $product->variants_count, 'image_url' => $product->imageUrl(),
                     'category' => $product->category ? ['name' => $product->category->name] : null,
                     'supplier' => $product->supplier?->name ?: $product->supplierLinks->first()?->supplierProduct?->supplier?->name,
@@ -63,7 +67,7 @@ class ProductController extends Controller
     public function create(Request $request)
     {
         return Inertia::render('Admin/Products/Form', [
-            'product' => ['is_published' => true, 'regular_price' => 0, 'stock_quantity' => 0, 'specifications' => [], 'variants' => [], 'images' => []],
+            'product' => ['is_published' => true, 'regular_price' => 0, 'stock_quantity' => 0, 'allow_backorder' => false, 'sourced_stock_quantity' => 0, 'specifications' => [], 'variants' => [], 'images' => []],
             'categories' => app(CategoryHierarchyService::class)->options(),
             'suppliers' => $this->supplierOptions(),
             'canManageSuppliers' => $request->user()->hasPermission('suppliers.manage'),
@@ -72,9 +76,9 @@ class ProductController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(SaveProductRequest $request)
     {
-        $data = $this->validateData($request);
+        $data = $request->validated();
         $this->validateSupplierAssignment($data['supplier_id'] ?? null);
         if (($data['source_type'] ?? 'manual') === 'dropshipping') {
             throw ValidationException::withMessages(['source_type' => 'Import or link this product through Dropshipping to assign its integration source.']);
@@ -152,9 +156,9 @@ class ProductController extends Controller
         ]);
     }
 
-    public function update(Request $request, Product $product)
+    public function update(SaveProductRequest $request, Product $product)
     {
-        $data = $this->validateData($request, $product);
+        $data = $request->validated();
         if (array_key_exists('source_type', $data) && $data['source_type'] === null) {
             $data['source_type'] = $product->source_type ?: 'manual';
         }
@@ -291,72 +295,6 @@ class ProductController extends Controller
     }
 
     /* ------------------------------------------------------------------ */
-    private function validateData(Request $request, ?Product $product = null): array
-    {
-        return $request->validate([
-            'product_type' => ['nullable', 'string', 'in:simple,variable'],
-            'category_id' => ['required', 'exists:categories,id'],
-            'supplier_id' => ['nullable', 'integer', 'exists:dropship_suppliers,id'],
-            'source_type' => ['nullable', 'string', 'in:manual,dropshipping,other'],
-            'purchase_price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
-            'name' => ['required', 'string', 'max:180'],
-            'slug' => ['nullable', 'string', 'max:180'],
-            'sku' => ['nullable', 'string', 'max:60', Rule::unique('products', 'sku')->ignore($product?->id)],
-            'brand' => ['nullable', 'string', 'max:80'],
-            'short_description' => ['nullable', 'string'],
-            'description' => ['nullable', 'string'],
-            'regular_price' => ['nullable', 'numeric', 'min:0'],
-            'sale_price' => ['nullable', 'numeric', 'min:0'],
-            'selling_price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
-            'minimum_price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
-            'maximum_price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99', 'decimal:0,2'],
-            'pricing_mode' => ['sometimes', 'required', 'in:auto,manual'],
-            'enforce_minimum_price' => ['sometimes', 'boolean'],
-            'enforce_maximum_price' => ['sometimes', 'boolean'],
-            'protect_minimum_price' => ['sometimes', 'boolean'],
-            'stock_quantity' => ['nullable', 'integer', 'min:0', 'max:4294967295'],
-            'unit' => ['nullable', 'string', 'max:40'],
-            'meta_title' => ['nullable', 'string', 'max:180'],
-            'meta_description' => ['nullable', 'string', 'max:500'],
-            'meta_keywords' => ['nullable', 'string', 'max:500'],
-            'size_variants' => ['nullable', 'array'],
-            'size_variants.*.value' => ['nullable', 'string', 'max:60'],
-            'size_variants.*.price_delta' => ['nullable', 'numeric'],
-            'size_variants.*.stock' => ['nullable', 'integer', 'min:0'],
-            'size_variants.*.image_path' => ['nullable', 'string', 'max:500'],
-            'size_variants.*.image_b64' => ['nullable', 'string'],
-            'size_variants.*.image_name' => ['nullable', 'string', 'max:255'],
-            'color_variants' => ['nullable', 'array'],
-            'color_variants.*.value' => ['nullable', 'string', 'max:60'],
-            'color_variants.*.color_code' => ['nullable', 'string', 'max:30'],
-            'color_variants.*.price_delta' => ['nullable', 'numeric'],
-            'color_variants.*.stock' => ['nullable', 'integer', 'min:0'],
-            'color_variants.*.image_path' => ['nullable', 'string', 'max:500'],
-            'color_variants.*.image_b64' => ['nullable', 'string'],
-            'color_variants.*.image_name' => ['nullable', 'string', 'max:255'],
-            'weight_variants' => ['nullable', 'array'],
-            'weight_variants.*.value' => ['nullable', 'string', 'max:60'],
-            'weight_variants.*.price_delta' => ['nullable', 'numeric'],
-            'weight_variants.*.stock' => ['nullable', 'integer', 'min:0'],
-            'weight_variants.*.image_path' => ['nullable', 'string', 'max:500'],
-            'weight_variants.*.image_b64' => ['nullable', 'string'],
-            'weight_variants.*.image_name' => ['nullable', 'string', 'max:255'],
-            'custom_variant_groups' => ['nullable', 'array'],
-            'custom_variant_groups.*.name' => ['nullable', 'string', 'max:60'],
-            'custom_variant_groups.*.options' => ['nullable', 'array'],
-            'custom_variant_groups.*.options.*.value' => ['nullable', 'string', 'max:60'],
-            'custom_variant_groups.*.options.*.price_delta' => ['nullable', 'numeric'],
-            'custom_variant_groups.*.options.*.stock' => ['nullable', 'integer', 'min:0'],
-            'custom_variant_groups.*.options.*.image_path' => ['nullable', 'string', 'max:500'],
-            'custom_variant_groups.*.options.*.image_b64' => ['nullable', 'string'],
-            'custom_variant_groups.*.options.*.image_name' => ['nullable', 'string', 'max:255'],
-            'spec_labels' => ['nullable', 'array'],
-            'spec_labels.*' => ['nullable', 'string', 'max:120'],
-            'spec_values' => ['nullable', 'array'],
-            'spec_values.*' => ['nullable', 'string', 'max:255'],
-        ]);
-    }
-
     private function sanitizeProductData(array $data, ?Request $request = null, ?Product $product = null): array
     {
         $isVariable = ($data['product_type'] ?? '') === 'variable';

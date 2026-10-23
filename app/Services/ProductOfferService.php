@@ -42,6 +42,7 @@ class ProductOfferService
     {
         if ($groups === []) {
             yield $this->offering($product, $selected);
+
             return;
         }
         $options = array_shift($groups);
@@ -64,7 +65,8 @@ class ProductOfferService
             'price' => $product->unitPriceForVariant($label ?: null),
             // Checkout consumes parent stock. Variant option stock is not a
             // substitute for an orderable parent product.
-            'in_stock' => (int) $product->stock_quantity > 0,
+            'in_stock' => $product->availableStockQuantity() > 0,
+            'availability' => $product->availableStockQuantity() > 0 ? 'in_stock' : ($product->allow_backorder ? 'backorder' : 'out_of_stock'),
         ];
     }
 }

@@ -24,8 +24,15 @@ class MerchantFeedController extends Controller
             $xml->writeElement('description', 'Current published products, prices and availability in BDT.');
             echo $xml->flush();
             foreach (Product::published()->with(['images', 'variants', 'category', 'supplierLinks.supplierProduct'])->lazyById(100) as $product) {
+                // Google requires an availability date for backorders. Keep
+                // undated sourcing products on the storefront, not in this feed.
+                if ($product->allow_backorder && $product->availableStockQuantity() === 0) {
+                    continue;
+                }
                 $image = $product->primaryImage();
-                if (! $image) continue; // Merchant listings require a real image.
+                if (! $image) {
+                    continue;
+                } // Merchant listings require a real image.
                 $product->sku = $product->sku ?: $product->supplierLinks->first()?->supplierProduct?->product_code;
                 $path = $product->category ? $hierarchy->path($product->category) : [];
                 // Use the existing English SEO copy when the source catalogue
@@ -37,23 +44,31 @@ class MerchantFeedController extends Controller
                         'id' => $offer['id'], 'title' => Str::limit($feedName.($offer['label'] ? ' — '.$offer['label'] : ''), 150, ''),
                         'description' => Str::limit(trim(html_entity_decode(strip_tags((string) ($product->meta_description ?: $product->description ?: $product->short_description ?: $product->name)), ENT_QUOTES | ENT_HTML5, 'UTF-8')), 5000, ''),
                         'link' => $offer['url'], 'image_link' => image_url($image->path, $product->name),
-                        'availability' => $offer['in_stock'] ? 'in_stock' : 'out_of_stock',
+                        'availability' => $offer['availability'],
                         'price' => number_format($offer['price'], 2, '.', '').' BDT',
                         'condition' => 'new',
                     ];
-                    if ($path !== []) $fields['product_type'] = implode(' > ', array_column($path, 'name'));
-                    if ($product->brand) $fields['brand'] = $product->brand;
+                    if ($path !== []) {
+                        $fields['product_type'] = implode(' > ', array_column($path, 'name'));
+                    }
+                    if ($product->brand) {
+                        $fields['brand'] = $product->brand;
+                    }
                     if ($offer['label']) {
                         $fields['item_group_id'] = (string) $product->id;
                         $fields['item_group_title'] = Str::limit($feedName, 150, '');
                     }
                     foreach ($offer['selection'] as $type => $value) {
                         $name = strtolower($type) === 'agegroup' ? 'age_group' : strtolower($type);
-                        if (in_array($name, ['color', 'size', 'material', 'pattern', 'gender', 'age_group'], true)) $fields[$name] = $value;
+                        if (in_array($name, ['color', 'size', 'material', 'pattern', 'gender', 'age_group'], true)) {
+                            $fields[$name] = $value;
+                        }
                     }
                     // Never invent GTIN/MPN or assert identifier_exists=no from
                     // missing data. Google may request genuine manufacturer IDs.
-                    foreach ($fields as $name => $value) $xml->writeElement('g:'.$name, $value);
+                    foreach ($fields as $name => $value) {
+                        $xml->writeElement('g:'.$name, $value);
+                    }
                     // Google now supports custom dimensions (for example weight
                     // or capacity) through the repeatable variant_option group.
                     foreach ($offer['selection'] as $type => $value) {
@@ -75,7 +90,9 @@ class MerchantFeedController extends Controller
                     echo $xml->flush();
                 }
             }
-            $xml->endElement(); $xml->endElement(); $xml->endDocument();
+            $xml->endElement();
+            $xml->endElement();
+            $xml->endDocument();
             echo $xml->flush();
         }, 200, ['Content-Type' => 'application/xml; charset=UTF-8', 'Cache-Control' => 'public, max-age=300', 'X-Content-Type-Options' => 'nosniff']);
     }

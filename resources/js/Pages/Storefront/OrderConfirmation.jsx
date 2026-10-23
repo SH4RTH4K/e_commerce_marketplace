@@ -1,3 +1,4 @@
+import SourcingNotice from '@/Components/Storefront/SourcingNotice';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { money } from '@/lib/utils';
@@ -38,7 +39,7 @@ export default function OrderConfirmationPage({ order, trackingOrder }) {
 
   return (
     <StorefrontLayout>
-      <Head title="Order Confirmed" />
+      <Head title={order.awaiting_sourcing ? 'Order Received - Awaiting sourcing' : 'Order Confirmed'} />
       
       {showConfetti && (
         <div className="fixed inset-0 z-50 pointer-events-none">
@@ -70,6 +71,8 @@ export default function OrderConfirmationPage({ order, trackingOrder }) {
             </>
           )}
 
+          {order.awaiting_sourcing && <div className="mt-6 text-left"><SourcingNotice awaiting /></div>}
+
           <div className="mt-8 bg-blue-50/80 border border-blue-100 rounded-2xl p-6 text-left max-w-2xl mx-auto shadow-sm">
             <h3 className="font-bold text-blue-900 text-lg mb-2 flex items-center gap-2">
               <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -89,7 +92,7 @@ export default function OrderConfirmationPage({ order, trackingOrder }) {
             <span className={`text-xs px-3 py-1.5 rounded-full font-black uppercase tracking-wider ${
               isCod ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
             }`}>
-              {order.status}
+              {order.awaiting_sourcing ? 'Awaiting sourcing' : order.status}
             </span>
           </div>
           

@@ -64,3 +64,18 @@ test('integration ownership is read-only in the normal editor and shows external
     assert.match(JSON.stringify(app.renderer.toJSON()), /EXT-3002/);
   } finally { await app.close(); }
 });
+
+test('sourcing switch is independent of supplier ownership and does not change actual inventory', async () => {
+  const app = await mount({ assignment: { locked: true }, product: { id: 8, name: 'Imported', stock_quantity: 0, allow_backorder: false, sourced_stock_quantity: 2, supplier_id: 1, source_type: 'dropshipping' } });
+  try {
+    const toggle = () => app.renderer.root.findByProps({ 'aria-label': 'Allow orders when out of stock' });
+    assert.equal(toggle().props.checked, false);
+    await act(async () => toggle().props.onChange({ target: { checked: true } }));
+    assert.equal(toggle().props.checked, true);
+    assert.equal(app.renderer.root.findByProps({ placeholder: '0' }).props.value, 0);
+    assert.match(JSON.stringify(app.renderer.toJSON()), /Locally received stock available/);
+    assert.equal(app.renderer.root.findAllByType('input').some(input => input.props.name === 'sourced_stock_quantity'), false);
+    await act(async () => toggle().props.onChange({ target: { checked: false } }));
+    assert.equal(toggle().props.checked, false);
+  } finally { await app.close(); }
+});
