@@ -3,40 +3,42 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\Dropshipping\StartSupplierCatalogSync;
 use App\Jobs\Dropshipping\StartImportedProductSync;
-use App\Jobs\Dropshipping\SyncImportedProductItem;
+use App\Jobs\Dropshipping\StartSupplierCatalogSync;
 use App\Jobs\Dropshipping\StartSupplierPriceStockSync;
+use App\Jobs\Dropshipping\SyncImportedProductItem;
 use App\Jobs\Dropshipping\SyncSupplierCatalogPage;
 use App\Jobs\Dropshipping\TestSupplierConnection;
-use App\Models\DropshipSupplier;
+use App\Models\Category;
 use App\Models\DropshipDriverProfile;
 use App\Models\DropshipProductLink;
+use App\Models\DropshipSupplier;
 use App\Models\DropshipSupplierCategory;
 use App\Models\DropshipSupplierProduct;
 use App\Models\DropshipSupplierVariant;
 use App\Models\DropshipSyncRun;
-use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\SupplierAudit;
 use App\Services\Dropshipping\CategoryMapper;
-use App\Services\Dropshipping\ProductImportService;
-use App\Services\Dropshipping\ProductImportResult;
 use App\Services\Dropshipping\PricingEngine;
-use App\Services\Dropshipping\Support\SyncRunState;
-use App\Services\Dropshipping\SyncRunService;
-use App\Services\Dropshipping\SupplierRegistry;
-use App\Services\Dropshipping\SupplierVariantAutoMapper;
+use App\Services\Dropshipping\ProductImportResult;
+use App\Services\Dropshipping\ProductImportService;
 use App\Services\Dropshipping\SupplierAssociationService;
 use App\Services\Dropshipping\SupplierOwnershipException;
+use App\Services\Dropshipping\SupplierProductImageResolver;
+use App\Services\Dropshipping\SupplierRegistry;
+use App\Services\Dropshipping\SupplierVariantAutoMapper;
+use App\Services\Dropshipping\Support\SyncRunState;
+use App\Services\Dropshipping\SyncRunService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Inertia\Inertia;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 use Throwable;
 
 class DropshippingController extends Controller
@@ -91,14 +93,20 @@ class DropshippingController extends Controller
     private function selectedSupplierId(Request $request, bool $allowAll = false): ?int
     {
         $value = $request->query('supplier_id');
-        if ($allowAll && (string) $value === '0') return null;
+        if ($allowAll && (string) $value === '0') {
+            return null;
+        }
         if ($value !== null && $value !== '') {
             $data = $request->validate(['supplier_id' => ['integer', 'min:1']]);
             $supplier = DropshipSupplier::query()->withIntegration()->find($data['supplier_id']);
-            if (! $supplier) throw ValidationException::withMessages(['supplier_id' => 'Select a configured dropshipping supplier.']);
+            if (! $supplier) {
+                throw ValidationException::withMessages(['supplier_id' => 'Select a configured dropshipping supplier.']);
+            }
+
             return $supplier->id;
         }
         $suppliers = DropshipSupplier::query()->withIntegration()->orderByDesc('is_active')->orderBy('id')->pluck('id');
+
         return $allowAll ? null : $suppliers->first();
     }
 
@@ -122,7 +130,7 @@ class DropshippingController extends Controller
                 'type' => $run->type, 'status' => $run->status, 'total_items' => $run->total_items,
                 'processed_items' => $run->processed_items, 'success_items' => $run->success_items,
                 'failed_items' => $run->failed_items,
-                'error_summary' => $run->error_summary ?: $run->items->first(fn ($item) => !empty($item->error_summary))?->error_summary,
+                'error_summary' => $run->error_summary ?: $run->items->first(fn ($item) => ! empty($item->error_summary))?->error_summary,
                 'failed_items_list' => $run->items->map(fn ($item) => [
                     'id' => $item->id,
                     'key' => $item->item_key,
@@ -136,7 +144,7 @@ class DropshippingController extends Controller
         ]);
     }
 
-    public function supplierProducts(Request $request, PricingEngine $pricing)
+    public function supplierProducts(Request $request, PricingEngine $pricing, SupplierProductImageResolver $imageResolver)
     {
         $supplierId = $this->selectedSupplierId($request, true);
         $stockFilter = $request->string('stock')->toString();
@@ -153,7 +161,7 @@ class DropshippingController extends Controller
             ? (int) $requestedPerPage
             : 100;
         $orderBy = $this->dropshippingProductOrder($request->string('order_by')->toString());
-        
+
         $productQuery = DropshipSupplierProduct::query()
             ->when($supplierId, fn ($query) => $query->where('supplier_id', $supplierId))
             ->when($search !== '', fn ($query) => $query->where(function ($searchQuery) use ($search) {
@@ -189,18 +197,18 @@ class DropshippingController extends Controller
             ->withQueryString();
 
         $productRows = $products->getCollection()
-            ->map(function (DropshipSupplierProduct $product) use ($pricing): array {
+            ->map(function (DropshipSupplierProduct $product) use ($pricing, $imageResolver): array {
                 $price = $pricing->calculate(
                     $product->cost_price,
                     $product->max_price,
                     $product->supplier->pricing_rules ?? []
                 );
-                
+
                 return [
                     'id' => $product->id,
                     'supplier' => $product->supplier ? ['name' => $product->supplier->name, 'key' => $product->supplier->key] : null,
                     'supplier_product_id' => $product->supplier_product_id,
-                    'image_url' => $this->supplierProductImageUrl($product->raw_payload ?? []),
+                    'image_url' => $imageResolver->resolve($product->raw_payload ?? [])[0] ?? null,
                     'product_code' => $product->product_code ?: $product->supplier_product_id,
                     'variant_skus' => $product->variants->pluck('sku')->filter()->values()->all(),
                     'name' => $product->name,
@@ -249,44 +257,6 @@ class DropshippingController extends Controller
         ]);
     }
 
-    /**
-     * Return the first usable image exposed by a supplier payload.
-     * Supplier integrations use slightly different field names and nesting.
-     */
-    private function supplierProductImageUrl(array $payload): ?string
-    {
-        $candidates = [
-            $payload['thumbnail_img'] ?? null,
-            $payload['thumbnail'] ?? null,
-            $payload['image_url'] ?? null,
-            $payload['image'] ?? null,
-        ];
-
-        foreach ($candidates as $candidate) {
-            if (is_string($candidate) && trim($candidate) !== '') {
-                return trim($candidate);
-            }
-        }
-
-        foreach (['product_images', 'images'] as $field) {
-            $images = $payload[$field] ?? [];
-            if (!is_array($images)) {
-                continue;
-            }
-
-            foreach ($images as $item) {
-                $candidate = is_array($item)
-                    ? ($item['product_image'] ?? $item['image_url'] ?? $item['url'] ?? $item['image'] ?? null)
-                    : $item;
-                if (is_string($candidate) && trim($candidate) !== '') {
-                    return trim($candidate);
-                }
-            }
-        }
-
-        return null;
-    }
-
     public function bulkImportSupplierProducts(Request $request, ProductImportService $imports)
     {
         $data = $request->validate([
@@ -324,7 +294,7 @@ class DropshippingController extends Controller
             ? (int) $requestedPerPage
             : 100;
         $orderBy = $this->dropshippingProductOrder($request->string('order_by')->toString());
-        
+
         $productQuery = Product::query()
             ->whereHas('supplierLinks.supplierProduct', fn ($query) => $query
                 ->when($supplierId, fn ($supplierQuery) => $supplierQuery->where('supplier_id', $supplierId))
@@ -357,7 +327,7 @@ class DropshippingController extends Controller
             ->when(in_array($profitOperator, ['gt', 'lt', 'eq'], true) && is_numeric($profitValue), function ($query) use ($profitOperator, $profitValue) {
                 $operator = ['gt' => '>', 'lt' => '<', 'eq' => '='][$profitOperator];
                 $query->whereHas('supplierLinks.supplierProduct', function ($supplierProductQuery) use ($operator, $profitValue) {
-                    $supplierProductQuery->whereRaw('(COALESCE(products.sale_price, products.regular_price, 0) - COALESCE(dropship_supplier_products.cost_price, 0)) ' . $operator . ' ?', [(float) $profitValue]);
+                    $supplierProductQuery->whereRaw('(COALESCE(products.sale_price, products.regular_price, 0) - COALESCE(dropship_supplier_products.cost_price, 0)) '.$operator.' ?', [(float) $profitValue]);
                 });
             });
 
@@ -609,7 +579,7 @@ class DropshippingController extends Controller
                     'key' => $category->supplier_category_key,
                     'name' => $category->name,
                     'path' => $category->path,
-                    'image' => $category->image ? \Illuminate\Support\Facades\Storage::url($category->image) : null,
+                    'image' => $category->image ? Storage::url($category->image) : null,
                     'local_category' => $mapping?->category?->name,
                 ];
             })
@@ -903,7 +873,7 @@ class DropshippingController extends Controller
             return back()->withErrors(['category_id' => 'Select a category or enter a new name.']);
         }
 
-        if (!empty($data['new_category_name'])) {
+        if (! empty($data['new_category_name'])) {
             $category = Category::create([
                 'name' => $data['new_category_name'],
                 'slug' => Str::slug($data['new_category_name']),
@@ -925,7 +895,7 @@ class DropshippingController extends Controller
         ]);
 
         if ($supplierCategory->image) {
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($supplierCategory->image);
+            Storage::disk('public')->delete($supplierCategory->image);
         }
 
         $path = $request->file('image')->store('supplier_categories', 'public');
@@ -971,8 +941,11 @@ class DropshippingController extends Controller
             if ($target === null) {
                 throw ValidationException::withMessages(['external_product_id' => 'No mirrored product matches this supplier and external product ID. Synchronize the supplier catalog first.']);
             }
-            try { $associations->resolve($target); }
-            catch (SupplierOwnershipException $exception) { throw ValidationException::withMessages(['target_supplier_id' => $exception->getMessage()]); }
+            try {
+                $associations->resolve($target);
+            } catch (SupplierOwnershipException $exception) {
+                throw ValidationException::withMessages(['target_supplier_id' => $exception->getMessage()]);
+            }
             if (DropshipSyncRun::query()->whereIn('supplier_id', [$current->supplier_id, $target->supplier_id])->whereIn('status', ['queued', 'running'])->exists()) {
                 throw ValidationException::withMessages(['product' => 'Cancel or finish active supplier sync runs before relinking.']);
             }
@@ -999,6 +972,7 @@ class DropshippingController extends Controller
 
         $run = $syncRuns->createRun($source->supplier, 'imported_product_sync', $request->user(), ['supplier_product_ids' => [$source->id]]);
         StartImportedProductSync::dispatch($run->id);
+
         return back()->with('status', 'Product relinked with an audit record. Synchronization queued.');
     }
 
@@ -1040,7 +1014,7 @@ class DropshippingController extends Controller
         $published = 0;
         foreach ($products as $product) {
             $product->forceFill(['is_published' => true, ...$this->publishFlags($request, $product)]);
-            
+
             if (isset($data['prices'][$product->id])) {
                 if (isset($data['prices'][$product->id]['regular_price'])) {
                     $product->regular_price = $data['prices'][$product->id]['regular_price'];
@@ -1049,9 +1023,9 @@ class DropshippingController extends Controller
                     $product->sale_price = $data['prices'][$product->id]['sale_price'];
                 }
             }
-            
+
             $product->save();
-            ++$published;
+            $published++;
         }
 
         return back()->with('status', "{$published} imported product(s) published.");
@@ -1126,7 +1100,7 @@ class DropshippingController extends Controller
                 ];
                 $link->save();
             }
-            ++$updated;
+            $updated++;
         }
 
         return back()->with('status', "{$updated} imported product price(s) updated.");
@@ -1170,7 +1144,7 @@ class DropshippingController extends Controller
                 $link->price_override = null;
             }
             $link->save();
-            ++$restored;
+            $restored++;
         }
 
         return back()->with('status', "{$restored} custom product price(s) restored.");
@@ -1252,7 +1226,7 @@ class DropshippingController extends Controller
             ->when($profitOperator !== '' && is_numeric($profitValue), function ($query) use ($profitOperator, $profitValue) {
                 $operator = ['gt' => '>', 'lt' => '<', 'eq' => '='][$profitOperator];
                 $query->whereHas('supplierLinks.supplierProduct', function ($supplierProductQuery) use ($operator, $profitValue) {
-                    $supplierProductQuery->whereRaw('(COALESCE(products.sale_price, products.regular_price, 0) - COALESCE(dropship_supplier_products.cost_price, 0)) ' . $operator . ' ?', [(float) $profitValue]);
+                    $supplierProductQuery->whereRaw('(COALESCE(products.sale_price, products.regular_price, 0) - COALESCE(dropship_supplier_products.cost_price, 0)) '.$operator.' ?', [(float) $profitValue]);
                 });
             })
             ->pluck('id');
@@ -1284,7 +1258,8 @@ class DropshippingController extends Controller
                 ->whereIn('status', [SyncRunState::QUEUED, SyncRunState::RUNNING])
                 ->exists();
             if ($hasActiveRun) {
-                ++$alreadyRunning;
+                $alreadyRunning++;
+
                 continue;
             }
 
@@ -1295,7 +1270,7 @@ class DropshippingController extends Controller
                 ['supplier_product_ids' => $supplierSources->modelKeys()],
             );
             StartImportedProductSync::dispatch($run->id);
-            ++$runs;
+            $runs++;
             $queuedProducts += $supplierSources->count();
         }
 
@@ -1353,6 +1328,7 @@ class DropshippingController extends Controller
             }
             $connectSupplierId = $supplier->id;
         }
+
         return Inertia::render('Admin/Dropshipping/ApiSettings', [
             'selected_supplier_id' => $connectSupplierId ? null : $this->selectedSupplierId($request),
             'connect_supplier_id' => $connectSupplierId,
@@ -1461,11 +1437,14 @@ class DropshippingController extends Controller
 
     private function decodeFieldMapping(?string $json): ?array
     {
-        if (trim((string) $json) === '') return null;
+        if (trim((string) $json) === '') {
+            return null;
+        }
         $mapping = json_decode($json, true);
         if (! is_array($mapping)) {
             throw ValidationException::withMessages(['field_mapping' => 'Field mapping must be valid JSON.']);
         }
+
         return $mapping;
     }
 
@@ -1481,7 +1460,7 @@ class DropshippingController extends Controller
         $candidate = $base;
         $suffix = 2;
         while (DropshipSupplier::withTrashed()->where('key', $candidate)->exists()) {
-            $candidate = substr($base, 0, 70 - strlen((string) $suffix) - 1) . '-' . $suffix++;
+            $candidate = substr($base, 0, 70 - strlen((string) $suffix) - 1).'-'.$suffix++;
         }
 
         return $candidate;
@@ -1534,6 +1513,7 @@ class DropshippingController extends Controller
                 $supplier->forceFill(['supplier_code' => 'SUP-'.str_pad((string) $supplier->id, 5, '0', STR_PAD_LEFT), 'created_by' => $request->user()?->id, 'updated_by' => $request->user()?->id])->saveQuietly();
             }
             SupplierAudit::create(['supplier_id' => $supplier->id, 'actor_id' => $request->user()?->id, 'actor_name' => $request->user()?->name, 'event' => 'integration_connected', 'before' => $before, 'after' => ['driver_key' => $supplier->driver_key], 'metadata' => ['integration_key' => $supplier->key]]);
+
             return $supplier;
         });
 
@@ -1574,7 +1554,9 @@ class DropshippingController extends Controller
             }
             $before = ['driver_key' => $supplier->driver_key];
             $syncRules = is_array($supplier->sync_rules) ? $supplier->sync_rules : [];
-            if (array_key_exists('category_endpoint', $data)) $syncRules['category_endpoint'] = $data['category_endpoint'];
+            if (array_key_exists('category_endpoint', $data)) {
+                $syncRules['category_endpoint'] = $data['category_endpoint'];
+            }
             $syncRules['import_status'] = $data['import_status'] ?? ($syncRules['import_status'] ?? 'draft');
             $syncRules['import_images'] = (bool) ($data['import_images'] ?? ($syncRules['import_images'] ?? false));
             $syncRules['import_variations'] = (bool) ($data['import_variations'] ?? ($syncRules['import_variations'] ?? false));
@@ -1677,7 +1659,7 @@ class DropshippingController extends Controller
             'processed_items' => $run->processed_items,
             'success_items' => $run->success_items,
             'failed_items' => $run->failed_items,
-            'error_summary' => $run->error_summary ?: $run->items->first(fn ($item) => !empty($item->error_summary))?->error_summary,
+            'error_summary' => $run->error_summary ?: $run->items->first(fn ($item) => ! empty($item->error_summary))?->error_summary,
             'started_at' => $run->started_at?->toIso8601String(),
             'finished_at' => $run->finished_at?->toIso8601String(),
             'items' => $run->items->map(fn ($item) => [
@@ -1718,7 +1700,7 @@ class DropshippingController extends Controller
             }
 
             SyncImportedProductItem::dispatchSync($run->id, (int) $matches[1], false);
-            ++$processed;
+            $processed++;
             $run->refresh();
         }
 
@@ -1838,7 +1820,7 @@ class DropshippingController extends Controller
 
                 SyncSupplierCatalogPage::dispatchSync($run->id, (int) $matches[1]);
             }
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             report($exception);
             $errorMsg = trim($exception->getMessage());
             $errorSummary = $errorMsg !== '' ? $errorMsg : 'Catalog sync failed.';
@@ -1859,6 +1841,7 @@ class DropshippingController extends Controller
     public function activeRun(DropshipSupplier $supplier)
     {
         $run = $this->unfinishedCatalogRun($supplier);
+
         return response()->json($run);
     }
 

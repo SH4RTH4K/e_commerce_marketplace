@@ -215,6 +215,27 @@ class ImportedProductBatchSyncTest extends TestCase
             );
     }
 
+    public function test_supplier_catalog_exposes_an_image_from_a_nested_supplier_payload(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $supplier = $this->supplier();
+        $source = $this->linkedProduct($supplier, 'Nested Image Speaker', true);
+        $source->update([
+            'raw_payload' => [
+                'data' => [
+                    'gallery' => [
+                        ['media' => ['src' => 'https://supplier.example/speaker.webp']],
+                    ],
+                ],
+            ],
+        ]);
+
+        $this->actingAs($admin)->get('/admin/dropshipping/products')
+            ->assertInertia(fn ($page) => $page
+                ->where('products.0.image_url', 'https://supplier.example/speaker.webp')
+            );
+    }
+
     public function test_product_code_is_available_on_supplier_and_imported_product_lists(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

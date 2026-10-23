@@ -4,9 +4,10 @@ namespace App\Services\Dropshipping;
 
 use App\Models\DropshipProductLink;
 use App\Models\DropshipSupplierProduct;
-use App\Models\ProductImage;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Services\ProductPricingService;
+use App\Services\SkuConfigurationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -18,8 +19,8 @@ class ProductImportService
         private readonly SupplierVariantAutoMapper $variantMapper,
         private readonly SupplierDescriptionFormatter $descriptionFormatter,
         private readonly SupplierAssociationService $associations,
-    ) {
-    }
+        private readonly SupplierProductImageResolver $imageResolver,
+    ) {}
 
     public function import(DropshipSupplierProduct $supplierProduct): ProductImportResult
     {
@@ -46,6 +47,7 @@ class ProductImportService
                     return new ProductImportResult(ProductImportResult::BLOCKED, reason: $exception->reason);
                 }
                 $this->syncProductContent($source, $product);
+
                 return new ProductImportResult(ProductImportResult::ALREADY_LINKED, $product);
             }
 
@@ -109,7 +111,7 @@ class ProductImportService
                 'last_stock_synced_at' => now(),
             ]);
             $link->save();
-            app(\App\Services\SkuConfigurationService::class)->assignNew($product, imported: true);
+            app(SkuConfigurationService::class)->assignNew($product, imported: true);
             $this->syncProductContent($source, $product);
             $this->variantMapper->sync($source->load('variants', 'productLink'));
 
@@ -142,7 +144,7 @@ class ProductImportService
         $sourceSku = trim((string) ($source->product_code
             ?: $source->variants->pluck('sku')->filter()->first()
             ?: $source->supplier_product_id));
-        if (!$product->sku_managed && $sourceSku !== '' && $product->sku !== $sourceSku) {
+        if (! $product->sku_managed && $sourceSku !== '' && $product->sku !== $sourceSku) {
             $updates['sku'] = $sourceSku;
         }
         $description = $this->descriptionFormatter->format($source);
@@ -153,27 +155,12 @@ class ProductImportService
             $product->forceFill($updates)->save();
         }
 
-        $images = $this->supplierImages($payload);
+        $images = $this->imageResolver->resolve($payload);
         foreach ($images as $position => $image) {
             ProductImage::query()->firstOrCreate(
                 ['product_id' => $product->getKey(), 'path' => $image],
                 ['alt' => $product->name, 'is_primary' => $position === 0, 'position' => $position],
             );
         }
-    }
-
-    /** @return list<string> */
-    private function supplierImages(array $payload): array
-    {
-        $images = [];
-        foreach (['thumbnail_img'] as $field) {
-            if (is_string($payload[$field] ?? null) && trim($payload[$field]) !== '') $images[] = trim($payload[$field]);
-        }
-        foreach (($payload['product_images'] ?? []) as $item) {
-            $image = is_array($item) ? ($item['product_image'] ?? null) : null;
-            if (is_string($image) && trim($image) !== '') $images[] = trim($image);
-        }
-
-        return array_values(array_unique($images));
     }
 }
