@@ -108,7 +108,7 @@ export default function AdminForm({ admin, roles = [], availablePermissions = {}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Full Name" required error={errors.name}>
-                  <input value={data.name} onChange={(event) => setData('name', event.target.value)} className={inputClass} placeholder="e.g. Tanvir Hasan" required />
+                  <input value={data.name} onChange={(event) => setData('name', event.target.value)} className={inputClass} placeholder="Name" required />
                 </Field>
 
                 <Field label="Username" required error={errors.username}>
