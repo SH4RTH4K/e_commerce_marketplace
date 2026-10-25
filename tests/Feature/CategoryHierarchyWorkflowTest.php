@@ -86,6 +86,21 @@ class CategoryHierarchyWorkflowTest extends TestCase
             ->where('categories.2.depth', 3)->where('categories.2.label', 'Main / Sub / Sub sub'));
     }
 
+    public function test_admin_category_thumbnails_use_a_small_cached_variant(): void
+    {
+        $this->admin();
+        $category = Category::create([
+            'name' => 'Thumbnail category',
+            'slug' => 'thumbnail-category',
+            'image' => 'uploads/categories/example.jpg',
+        ]);
+
+        $this->get('/admin/categories')->assertInertia(fn (Assert $page) => $page
+            ->where('categories.0.image_url', route('admin.categories.image', ['category' => $category->id, 'width' => 160])));
+
+        $this->get('/admin/categories/'.$category->id.'/image/120')->assertNotFound();
+    }
+
     public function test_home_sections_roll_up_descendants_and_product_breadcrumbs_show_the_full_path(): void
     {
         [$root, $child, $leaf] = $this->tree();

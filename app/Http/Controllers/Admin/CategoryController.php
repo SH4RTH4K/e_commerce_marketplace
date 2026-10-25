@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Services\CategoryHierarchyService;
 use App\Services\SitemapService;
+use App\Services\StorefrontImageService;
 use App\Services\StorefrontPageCache;
 use App\Support\PublicUploader;
 use Illuminate\Http\Request;
@@ -19,9 +20,32 @@ class CategoryController extends Controller
 {
     public function index()
     {
+        $categories = app(CategoryHierarchyService::class)->options(Category::with('parent')->withCount('products')->orderBy('menu_order')->orderBy('name')->get());
+        $categories = array_map(function (array $category): array {
+            $category['image_url'] = filled($category['image'] ?? null)
+                ? route('admin.categories.image', ['category' => $category['id'], 'width' => 160])
+                : null;
+
+            return $category;
+        }, $categories);
+
         return Inertia::render('Admin/Categories/Index', [
-            'categories' => app(CategoryHierarchyService::class)->options(Category::with('parent')->withCount('products')->orderBy('menu_order')->orderBy('name')->get()),
+            'categories' => $categories,
         ]);
+    }
+
+    public function image(Category $category, int $width, StorefrontImageService $images)
+    {
+        abort_unless(in_array($width, [160, 320, 640, 960, 1280], true), 404);
+        abort_unless(filled($category->image), 404);
+
+        try {
+            $url = $images->optimized((string) $category->image, $width);
+
+            return redirect($url)->header('Cache-Control', 'private, max-age=31536000, immutable');
+        } catch (\Throwable) {
+            return redirect(image_url($category->image))->header('Cache-Control', 'private, max-age=60');
+        }
     }
 
     public function ordering()

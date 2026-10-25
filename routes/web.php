@@ -326,6 +326,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('categories/bulk', [AdminCategoryController::class, 'bulk'])->name('categories.bulk');
         Route::get('categories', [AdminCategoryController::class, 'index'])->name('categories.index');
         Route::get('categories/create', [AdminCategoryController::class, 'create'])->name('categories.create');
+        Route::get('categories/{category:id}/image/{width}', [AdminCategoryController::class, 'image'])->whereNumber('width')->name('categories.image');
         Route::post('categories', [AdminCategoryController::class, 'store'])->name('categories.store');
         Route::get('categories/{category:id}/edit', [AdminCategoryController::class, 'edit'])->name('categories.edit');
         Route::put('categories/{category:id}', [AdminCategoryController::class, 'update'])->name('categories.update');

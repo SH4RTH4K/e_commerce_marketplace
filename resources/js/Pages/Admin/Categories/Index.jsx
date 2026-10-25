@@ -99,7 +99,7 @@ export default function CategoriesIndex({ categories }) {
                             : <div className="h-10 w-10 rounded-xl bg-orange-50 shrink-0 flex items-center justify-center text-lg">{category.icon || '📦'}</div>
                           )} */}
                           {category.image ? (
-                            <img src={category.image.startsWith('http') ? category.image : `/${category.image}`} alt="" className="h-10 w-10 rounded-xl object-cover shrink-0 border border-gray-100" />
+                            <img src={category.image_url || (category.image.startsWith('http') ? category.image : `/${category.image}`)} alt="" width="40" height="40" loading="lazy" decoding="async" className="h-10 w-10 rounded-xl object-cover shrink-0 border border-gray-100" />
                           ) : (
                             <div className="h-10 w-10 rounded-xl bg-orange-50 text-orange-500 shrink-0 flex items-center justify-center border border-orange-100">
                               <CategoryIcon icon={category.icon} name={category.name} className="h-6 w-6" />
