@@ -156,7 +156,9 @@ export default function StorefrontLayout({ children, title, description, activeC
   };
   const defaultSeoTitle = chatSettings.default_meta_title?.trim() || app?.name || 'Store';
   const seoTitle = appendKeywords(pageSeo.title?.trim() || defaultSeoTitle, 180);
-  const seoDescription = descriptionWithKeywords(pageSeo.description?.trim() || chatSettings.default_meta_description?.trim());
+  const seoDescription = pageSeo.description_is_generated
+    ? pageSeo.description?.trim()
+    : descriptionWithKeywords(pageSeo.description?.trim() || chatSettings.default_meta_description?.trim());
   const seoKeywords = appendKeywords(pageSeo.keywords?.trim() || chatSettings.default_meta_keywords?.trim(), 500, ', ');
   const seoImage = pageSeo.image
     ? (/^https?:\/\//i.test(pageSeo.image) ? pageSeo.image : imageUrl(pageSeo.image))

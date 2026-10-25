@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\User;
+use App\Services\ProductMetaDescriptionService;
 use App\Support\ProductSlug;
 use DOMDocument;
 use DOMXPath;
@@ -234,7 +235,8 @@ class ProductUrlTest extends TestCase
         $this->assertSame($canonical, $xpath->evaluate('string(//meta[@property="og:url"]/@content)'));
         $this->assertSame($product->meta_title, $xpath->evaluate('string(//title)'));
         $this->assertSame($product->meta_title, $xpath->evaluate('string(//meta[@property="og:title"]/@content)'));
-        $this->assertSame($product->meta_description, $xpath->evaluate('string(//meta[@name="description"]/@content)'));
+        $generatedDescription = app(ProductMetaDescriptionService::class)->generate($product->load('category', 'variants'));
+        $this->assertSame($generatedDescription, $xpath->evaluate('string(//meta[@name="description"]/@content)'));
         $this->assertSame(image_url($imageUrl, $product->slug), $xpath->evaluate('string(//meta[@property="og:image"]/@content)'));
         $this->assertSame('product', $xpath->evaluate('string(//meta[@property="og:type"]/@content)'));
     }

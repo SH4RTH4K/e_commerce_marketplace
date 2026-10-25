@@ -18,6 +18,7 @@ use App\Services\InventoryStockService;
 use App\Services\ProductCatalogService;
 use App\Services\ProductPricingService;
 use App\Services\SkuConfigurationService;
+use App\Services\StorefrontPageCache;
 use App\Support\PublicUploader;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -218,6 +219,7 @@ class ProductController extends Controller
         $product->refresh();
         $this->syncVariants($product, $request);
         $this->storeImages($product, $request);
+        app(StorefrontPageCache::class)->invalidate();
 
         return redirect()->route('admin.products.edit', ['product' => $product->id, ...($request->filled('return_to') ? ['return_to' => ProductCatalogService::returnUrl($request->input('return_to'))] : [])])->with('status', 'Product updated.');
     }
@@ -251,6 +253,7 @@ class ProductController extends Controller
         if ($data['bulk_action'] === 'activate') {
             Product::whereIn('id', $ids)->update(['is_published' => true]);
             Cache::forget('sitemap_urls_v2');
+            app(StorefrontPageCache::class)->invalidate();
 
             return back()->with('status', "{$count} product(s) set to Active.");
         }
@@ -258,12 +261,14 @@ class ProductController extends Controller
         if ($data['bulk_action'] === 'deactivate') {
             Product::whereIn('id', $ids)->update(['is_published' => false]);
             Cache::forget('sitemap_urls_v2');
+            app(StorefrontPageCache::class)->invalidate();
 
             return back()->with('status', "{$count} product(s) set to Inactive.");
         }
 
         if ($data['bulk_action'] === 'move_category') {
             Product::whereIn('id', $ids)->update(['category_id' => $data['category_id']]);
+            app(StorefrontPageCache::class)->invalidate();
 
             return back()->with('status', "{$count} product(s) moved to the selected category.");
         }
@@ -272,6 +277,7 @@ class ProductController extends Controller
             $enabled = $data['bulk_action'] === 'enable_sourcing';
             Product::whereIn('id', $ids)->update(['allow_backorder' => $enabled]);
             Cache::forget('sitemap_urls_v2');
+            app(StorefrontPageCache::class)->invalidate();
 
             return back()->with('status', $enabled
                 ? "Source-on-order enabled for {$count} product(s). Actual inventory is unchanged."
@@ -281,6 +287,7 @@ class ProductController extends Controller
         abort_unless($data['bulk_action'] === 'delete', 422);
         Product::whereIn('id', $ids)->delete();
         Cache::forget('sitemap_urls_v2');
+        app(StorefrontPageCache::class)->invalidate();
 
         return back()->with('status', "{$count} product(s) deleted.");
     }
@@ -295,6 +302,7 @@ class ProductController extends Controller
         if ($wasPrimary) {
             $product->images()->orderBy('position')->first()?->update(['is_primary' => true]);
         }
+        app(StorefrontPageCache::class)->invalidate();
 
         return back()->with('status', 'Image removed.');
     }

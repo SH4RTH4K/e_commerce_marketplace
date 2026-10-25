@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StorefrontPageCache;
 use App\Support\ProductSlug;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -43,11 +44,16 @@ class Product extends Model
         });
 
         static::saved(function (Product $product) {
+            app(StorefrontPageCache::class)->invalidate();
+
             if ($product->wasRecentlyCreated || $product->wasChanged(['slug', 'sku', 'is_published', 'updated_at'])) {
                 Cache::forget('sitemap_urls_v2');
             }
         });
-        static::deleted(fn () => Cache::forget('sitemap_urls_v2'));
+        static::deleted(function () {
+            app(StorefrontPageCache::class)->invalidate();
+            Cache::forget('sitemap_urls_v2');
+        });
     }
 
     protected $fillable = [

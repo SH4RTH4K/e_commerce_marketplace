@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class StorefrontSeoService
 {
@@ -102,7 +101,7 @@ class StorefrontSeoService
         $item = [
             '@type' => 'Product', '@id' => $url.'#product', 'url' => $url,
             'name' => $product->name,
-            'description' => Str::limit(trim(html_entity_decode(strip_tags((string) ($product->short_description ?: $product->description ?: $product->meta_description)), ENT_QUOTES | ENT_HTML5, 'UTF-8')), 5000, ''),
+            'description' => app(ProductMetaDescriptionService::class)->generate($product),
         ];
         $images = $product->images->map(fn ($image) => image_url($image->path, $product->slug))->filter()->values()->all();
         if ($images !== []) {

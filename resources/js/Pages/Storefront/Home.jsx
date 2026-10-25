@@ -1,6 +1,6 @@
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { useEffect, useRef, useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import ProductCard from '@/Components/Storefront/ProductCard';
 import { imageUrl } from '@/lib/utils';
 import CategoryIcon from '@/Components/Storefront/CategoryIcon';
@@ -159,6 +159,20 @@ function heroCopyEdgeSpacing(position, fallback = 'center-left') {
   return spacing[horizontal];
 }
 
+function ProductRailSkeleton({ count = 8 }) {
+  return Array.from({ length: count }, (_, index) => (
+    <div key={`product-skeleton-${index}`} className="animate-pulse overflow-hidden rounded-[20px] border border-gray-100 bg-white p-2 shadow-sm">
+      <div className="aspect-square rounded-[14px] bg-gray-200" />
+      <div className="space-y-2 p-3 sm:p-4">
+        <div className="h-2.5 w-1/3 rounded bg-gray-200" />
+        <div className="h-4 w-4/5 rounded bg-gray-200" />
+        <div className="h-3 w-1/2 rounded bg-gray-200" />
+        <div className="mt-4 h-10 rounded-xl bg-gray-200" />
+      </div>
+    </div>
+  ));
+}
+
 function HeroDots({ banners, activeIndex, onSelect, controlsId }) {
   if (!banners || banners.length < 2) return null;
 
@@ -203,7 +217,8 @@ export default function HomePage({
   trending, 
   bestSellers, 
   newArrivals,
-  templateTwoCategorySections = [],
+  templateTwoCategorySections,
+  templateTwoCategorySectionMeta = [],
   homeOverviewHasMore = {},
   flashSaleHasMore = false,
   app 
@@ -263,6 +278,9 @@ export default function HomePage({
     : 'center';
   const templateTwoCategoryTextShadow = app?.settings?.template_2_category_text_shadow === true;
   const flashSaleEnabled = app?.settings?.homepage_flash_sale_enabled !== false;
+  const categorySectionsLoaded = !isTemplateTwo || templateTwoCategorySections !== undefined;
+  const overviewLoaded = !isTemplateOne || (trending !== undefined && newArrivals !== undefined && bestSellers !== undefined);
+  const categorySectionRows = categorySectionsLoaded ? (templateTwoCategorySections || []) : templateTwoCategorySectionMeta;
   const flashSaleTitle = app?.settings?.home_hot_deal_title || 'Flash Sale';
   const flashSaleEndsAt = app?.settings?.flash_sale_ends_at || '';
   const displayHeroBanners = isTemplateOne
@@ -343,10 +361,10 @@ export default function HomePage({
   const [overviewHasMore, setOverviewHasMore] = useState(homeOverviewHasMore);
   const [loadingOverviewTab, setLoadingOverviewTab] = useState(null);
   const [categoryProductLists, setCategoryProductLists] = useState(() => Object.fromEntries(
-    (templateTwoCategorySections || []).map(section => [section.id, section.products || []]),
+    categorySectionRows.map(section => [section.id, section.products || []]),
   ));
   const [categoryHasMore, setCategoryHasMore] = useState(() => Object.fromEntries(
-    (templateTwoCategorySections || []).map(section => [section.id, Boolean(section.has_more)]),
+    categorySectionRows.map(section => [section.id, Boolean(section.has_more)]),
   ));
   const [loadingCategorySection, setLoadingCategorySection] = useState(null);
   const [flashProductList, setFlashProductList] = useState(flashProducts || []);
@@ -364,12 +382,46 @@ export default function HomePage({
 
   useEffect(() => {
     setCategoryProductLists(Object.fromEntries(
-      (templateTwoCategorySections || []).map(section => [section.id, section.products || []]),
+      categorySectionRows.map(section => [section.id, section.products || []]),
     ));
     setCategoryHasMore(Object.fromEntries(
-      (templateTwoCategorySections || []).map(section => [section.id, Boolean(section.has_more)]),
+      categorySectionRows.map(section => [section.id, Boolean(section.has_more)]),
     ));
-  }, [templateTwoCategorySections]);
+  }, [categorySectionsLoaded, templateTwoCategorySections, templateTwoCategorySectionMeta]);
+
+  useEffect(() => {
+    setOverviewProductLists({
+      all: uniqueProducts([...(trending || []), ...(newArrivals || []), ...(bestSellers || [])]),
+      featured: trending || [],
+      new: newArrivals || [],
+      best: bestSellers || [],
+    });
+    setOverviewHasMore(homeOverviewHasMore || {});
+  }, [trending, newArrivals, bestSellers, homeOverviewHasMore]);
+
+  useEffect(() => {
+    if (!isTemplateOne || overviewLoaded) return undefined;
+
+    router.reload({
+      only: ['trending', 'bestSellers', 'newArrivals', 'homeOverviewHasMore'],
+      preserveState: true,
+      preserveScroll: true,
+    });
+
+    return undefined;
+  }, [isTemplateOne, overviewLoaded]);
+
+  useEffect(() => {
+    if (!isTemplateTwo || categorySectionsLoaded) return undefined;
+
+    router.reload({
+      only: ['templateTwoCategorySections'],
+      preserveState: true,
+      preserveScroll: true,
+    });
+
+    return undefined;
+  }, [isTemplateTwo, categorySectionsLoaded]);
 
   useEffect(() => {
     setFlashProductList(flashProducts || []);
@@ -940,9 +992,9 @@ export default function HomePage({
           </div>
 
           <div className={`grid ${productGridClass} gap-3 sm:gap-4 lg:gap-5`}>
-            {overviewProducts.map(product => (
+            {overviewLoaded ? overviewProducts.map(product => (
               <ProductCard key={product.id} product={product} />
-            ))}
+            )) : <ProductRailSkeleton count={8} />}
           </div>
           {loadMoreButton(activeOverview)}
         </section>
@@ -1191,7 +1243,7 @@ export default function HomePage({
 
       <FlashSaleSection template="two" />
 
-      {isTemplateTwo && templateTwoCategorySections.map(section => (
+      {isTemplateTwo && categorySectionRows.map(section => (
         <section key={section.id} className="template-2-category-section storefront-section mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-between gap-4 mb-6 border-b border-gray-100 pb-4">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">{section.name}</h2>
@@ -1205,11 +1257,11 @@ export default function HomePage({
             return (
               <>
                 <div className={`template-2-category-product-grid grid ${productGridClass} gap-3 sm:gap-4 lg:gap-5`}>
-                  {sectionProducts.map(product => (
+                  {categorySectionsLoaded ? sectionProducts.map(product => (
                     <ProductCard key={product.id} product={product} />
-                  ))}
+                  )) : <ProductRailSkeleton count={8} />}
                 </div>
-                {categoryHasMore[section.id] && (
+                {categorySectionsLoaded && categoryHasMore[section.id] && (
                   <div className="mt-5 flex justify-center">
                     <button
                       type="button"

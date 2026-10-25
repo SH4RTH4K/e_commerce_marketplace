@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\StorefrontPageCache;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
@@ -46,6 +47,7 @@ class Setting extends Model
     {
         static::updateOrCreate(['key' => $key], ['value' => $value]);
         static::forgetCache();
+        app(StorefrontPageCache::class)->invalidate();
     }
 
     public static function forgetCache(): void
@@ -57,4 +59,3 @@ class Setting extends Model
         }
     }
 }
-

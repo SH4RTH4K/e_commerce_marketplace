@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
+use App\Services\CategoryHierarchyService;
+use App\Services\StorefrontPageCache;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use App\Services\CategoryHierarchyService;
 use Illuminate\Support\Facades\Cache;
 
 class Category extends Model
@@ -19,8 +20,14 @@ class Category extends Model
 
     protected static function booted(): void
     {
-        static::saved(fn () => Cache::forget('sitemap_urls_v2'));
-        static::deleted(fn () => Cache::forget('sitemap_urls_v2'));
+        static::saved(function () {
+            app(StorefrontPageCache::class)->invalidate();
+            Cache::forget('sitemap_urls_v2');
+        });
+        static::deleted(function () {
+            app(StorefrontPageCache::class)->invalidate();
+            Cache::forget('sitemap_urls_v2');
+        });
     }
 
     public function parent(): BelongsTo

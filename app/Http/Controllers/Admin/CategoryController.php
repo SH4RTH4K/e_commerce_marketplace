@@ -7,10 +7,11 @@ use Inertia\Inertia;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Services\CategoryHierarchyService;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Cache;
+use App\Services\StorefrontPageCache;
 use App\Support\PublicUploader;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -44,6 +45,7 @@ class CategoryController extends Controller
                 'position' => $item['menu_order'],
             ]);
         }
+        app(StorefrontPageCache::class)->invalidate();
 
         return redirect()->route('admin.categories.index')->with('status', 'Category ordering updated.');
     }
@@ -117,12 +119,14 @@ class CategoryController extends Controller
 
         if ($data['bulk_action'] === 'activate') {
             Category::whereIn('id', $ids)->update(['is_active' => true]);
+            app(StorefrontPageCache::class)->invalidate();
 
             return back()->with('status', "{$count} categor" . ($count === 1 ? 'y' : 'ies') . ' set to Active.');
         }
 
         if ($data['bulk_action'] === 'deactivate') {
             Category::whereIn('id', $ids)->update(['is_active' => false]);
+            app(StorefrontPageCache::class)->invalidate();
 
             return back()->with('status', "{$count} categor" . ($count === 1 ? 'y' : 'ies') . ' set to Hidden.');
         }

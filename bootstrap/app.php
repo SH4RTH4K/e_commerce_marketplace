@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SecurityHeaders::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \App\Http\Middleware\EnsureActiveCustomer::class,
+            \App\Http\Middleware\GuestPageCache::class,
         ]);
 
         // Exempt courier webhooks from CSRF verification

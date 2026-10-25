@@ -6,10 +6,10 @@ use App\Models\Feature;
 use App\Models\Product;
 use App\Models\ProductReview;
 use App\Services\CategoryHierarchyService;
+use App\Services\ProductMetaDescriptionService;
 use App\Services\ProductOfferService;
 use App\Services\StorefrontSeoService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class ProductController extends Controller
@@ -98,7 +98,8 @@ class ProductController extends Controller
             'structuredData' => app(StorefrontSeoService::class)->product($product, $categoryPath),
             'seo' => [
                 'title' => $product->meta_title ?: $product->name,
-                'description' => Str::limit(trim(strip_tags((string) ($product->meta_description ?: $product->short_description ?: $product->description))), 300),
+                'description' => app(ProductMetaDescriptionService::class)->generate($product),
+                'description_is_generated' => true,
                 'keywords' => $product->meta_keywords,
                 'image' => $product->primaryImage() ? image_url($product->primaryImage()->path, $product->slug) : null,
                 'type' => 'product',
