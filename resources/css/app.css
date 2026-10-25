@@ -215,6 +215,17 @@
     color: var(--template-2-orange) !important;
 }
 
+/* The configurable CTA text color must not hide unselected variant labels. */
+.storefront-theme-root .storefront-main-area .storefront-variant-option {
+    color: #374151 !important;
+}
+.storefront-theme-root .storefront-main-area .storefront-variant-option--selected {
+    color: #fff !important;
+}
+.storefront-theme-root .storefront-main-area .storefront-variant-option:not(.storefront-variant-option--selected):hover {
+    color: #f15a24 !important;
+}
+
 .storefront-product-breadcrumb-name {
     display: block;
     min-width: 0;

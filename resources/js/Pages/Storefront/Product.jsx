@@ -808,7 +808,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
                                   setActiveImage(opt.image_path);
                                 }
                               }}
-                              className={`px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 border cursor-pointer ${
+                              className={`storefront-variant-option px-3.5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 border cursor-pointer ${isSelected ? 'storefront-variant-option--selected' : ''} ${
                                 isSelected
                                   ? 'bg-[#f15a24] text-white shadow-md shadow-[#f15a24]/20 border-[#f15a24] ring-2 ring-orange-200'
                                   : 'bg-white border-gray-200 text-gray-700 hover:border-[#f15a24] hover:text-[#f15a24]'
