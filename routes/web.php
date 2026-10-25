@@ -418,6 +418,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // System
         Route::middleware('permission:settings.manage')->group(function () {
             Route::get('settings/seo-completion', [SeoCompletionController::class, 'index'])->name('seo-completion.index');
+            Route::post('settings/seo-completion/translate', [SeoCompletionController::class, 'translate'])->middleware('throttle:30,1')->name('seo-completion.translate');
             Route::post('settings/seo-completion', [SeoCompletionController::class, 'store'])->name('seo-completion.store');
         });
         Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');

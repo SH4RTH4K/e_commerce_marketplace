@@ -1,17 +1,48 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, useForm } from '@inertiajs/react';
+import React from 'react';
 
 const labels = { meta_title: 'Meta Title', meta_description: 'Meta Description', meta_keywords: 'Meta Keywords' };
 const translatorUrl = name => 'https://translate.google.com/?sl=bn&tl=en&text=' + encodeURIComponent(name) + '&op=translate';
 
 export default function SeoCompletion({ summary, samples = [], englishNames = [], result }) {
   const { data, setData, post, processing, errors } = useForm({ fill_missing: true, english_names: {} });
+  const [translatingId, setTranslatingId] = React.useState(null);
+  const [translationMessages, setTranslationMessages] = React.useState({});
   const remaining = summary.categories.incomplete + summary.products.incomplete;
   const bengaliScript = /[\u0980-\u09FF]/;
   const invalidEnglishNames = englishNames.filter(item => {
     const name = (data.english_names[item.id] || '').trim();
     return !name || name.length > 300 || !/[A-Za-z]/.test(name) || bengaliScript.test(name);
   });
+  const translateName = async (event, item) => {
+    event.preventDefault();
+    if (translatingId !== null) return;
+
+    setTranslatingId(item.id);
+    setTranslationMessages(current => ({ ...current, [item.id]: null }));
+    try {
+      const response = await fetch('/admin/settings/seo-completion/translate', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+        },
+        body: JSON.stringify({ name: item.name }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.message || 'Translation failed. Try again or use Google Translate.');
+
+      setData('english_names', { ...data.english_names, [item.id]: payload.translation });
+      setTranslationMessages(current => ({ ...current, [item.id]: { type: 'success', text: 'Translation filled in. Review it before completing SEO.' } }));
+    } catch (error) {
+      setTranslationMessages(current => ({ ...current, [item.id]: { type: 'error', text: error.message || 'Translation failed. Use Google Translate instead.' } }));
+    } finally {
+      setTranslatingId(null);
+    }
+  };
   return <><Head title="Catalog SEO" /><AdminLayout title="Catalog SEO">
     <div className="max-w-6xl space-y-5">
       <div><a href="/admin/settings?tab=seo" className="text-sm text-gray-500 hover:text-orange-600">← SEO Settings</a>
@@ -23,16 +54,19 @@ export default function SeoCompletion({ summary, samples = [], englishNames = []
       </div>)}</div>
       {remaining > 0 && englishNames.length > 0 && <section className="rounded-2xl border border-amber-200 bg-amber-50/50 p-5">
         <h3 className="font-semibold text-gray-900">English SEO names required</h3>
-        <p className="mt-1 text-sm text-gray-600">Use Translate to English beside a name to open Google Translate. Review the result and paste it into the field; original product names stay unchanged.</p>
+        <p className="mt-1 text-sm text-gray-600">Translate to English fills the matching field automatically. Review the machine translation before completing SEO; original product names stay unchanged.</p>
         <div className="mt-4 space-y-4">{englishNames.map(item => {
           const value = data.english_names[item.id] || '';
           const isInvalid = invalidEnglishNames.some(invalid => invalid.id === item.id);
           return <label key={item.id} className="block">
             <span className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-sm text-gray-700">{item.name} <span className="text-xs text-gray-400">({item.count} products)</span></span>
-              <a href={translatorUrl(item.name)} target="_blank" rel="noopener noreferrer" className="shrink-0 text-sm font-medium text-orange-600 hover:underline">Translate to English</a>
+              <a href={translatorUrl(item.name)} target="_blank" rel="noopener noreferrer" aria-busy={translatingId === item.id} onClick={event => translateName(event, item)} className="shrink-0 text-sm font-medium text-orange-600 hover:underline">{translatingId === item.id ? 'Translating…' : 'Translate to English'}</a>
             </span>
-            <input aria-label={'English SEO name ' + item.id} aria-required="true" aria-invalid={isInvalid} maxLength={300} value={value} onChange={event => setData('english_names', {...data.english_names, [item.id]: event.target.value})} className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm" />
+            <input aria-label={'English SEO name ' + item.id} aria-required="true" aria-invalid={isInvalid} maxLength={300} disabled={translatingId !== null} value={value} onChange={event => setData('english_names', {...data.english_names, [item.id]: event.target.value})} className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm disabled:bg-gray-50" />
+            {translationMessages[item.id] && <span role="status" className={`mt-1 block text-xs ${translationMessages[item.id].type === 'error' ? 'text-red-600' : 'text-green-700'}`}>
+              {translationMessages[item.id].text}{translationMessages[item.id].type === 'error' && <> <a href={translatorUrl(item.name)} target="_blank" rel="noopener noreferrer" className="font-medium underline">Open Google Translate instead</a>.</>}
+            </span>}
             {isInvalid && value.trim() !== '' && <span className="mt-1 block text-xs text-red-600">Use an English name with at least one English letter and no Bengali characters (up to 300 characters).</span>}
           </label>;
         })}</div>
