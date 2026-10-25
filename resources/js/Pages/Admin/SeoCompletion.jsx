@@ -54,14 +54,17 @@ export default function SeoCompletion({ summary, samples = [], englishNames = []
       </div>)}</div>
       {remaining > 0 && englishNames.length > 0 && <section className="rounded-2xl border border-amber-200 bg-amber-50/50 p-5">
         <h3 className="font-semibold text-gray-900">English SEO names required</h3>
-        <p className="mt-1 text-sm text-gray-600">Translate to English fills the matching field automatically. Review the machine translation before completing SEO; original product names stay unchanged.</p>
+        <p className="mt-1 text-sm text-gray-600">Translate to English uses the provider saved in Admin → System → Translation API and fills the matching field. Review or edit the suggestion before completing SEO; original product names stay unchanged.</p>
         <div className="mt-4 space-y-4">{englishNames.map(item => {
           const value = data.english_names[item.id] || '';
           const isInvalid = invalidEnglishNames.some(invalid => invalid.id === item.id);
           return <label key={item.id} className="block">
             <span className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-sm text-gray-700">{item.name} <span className="text-xs text-gray-400">({item.count} products)</span></span>
-              <a href={translatorUrl(item.name)} target="_blank" rel="noopener noreferrer" aria-busy={translatingId === item.id} onClick={event => translateName(event, item)} className="shrink-0 text-sm font-medium text-orange-600 hover:underline">{translatingId === item.id ? 'Translating…' : 'Translate to English'}</a>
+              <span className="flex shrink-0 items-center gap-3">
+                <button type="button" aria-busy={translatingId === item.id} disabled={translatingId !== null} onClick={event => translateName(event, item)} className="text-sm font-medium text-orange-600 hover:underline disabled:opacity-60">{translatingId === item.id ? 'Translating…' : 'Translate to English'}</button>
+                <a href={translatorUrl(item.name)} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:text-orange-600 hover:underline">Open Google Translate</a>
+              </span>
             </span>
             <input aria-label={'English SEO name ' + item.id} aria-required="true" aria-invalid={isInvalid} maxLength={300} disabled={translatingId !== null} value={value} onChange={event => setData('english_names', {...data.english_names, [item.id]: event.target.value})} className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm disabled:bg-gray-50" />
             {translationMessages[item.id] && <span role="status" className={`mt-1 block text-xs ${translationMessages[item.id].type === 'error' ? 'text-red-600' : 'text-green-700'}`}>

@@ -13,10 +13,10 @@ const source = (await readFile(filename, 'utf8')).replace(/^import .*;\r?\n/gm, 
 const { code } = await transformWithOxc(source, filename.pathname, { jsx: { runtime: 'classic' } });
 const stats = { total: 3, incomplete: 2, meta_title: 1, meta_description: 2, meta_keywords: 1 };
 
-async function mount(summary, englishNames = []) {
+async function mount(summary, englishNames = [], fetcher = globalThis.fetch) {
   const calls = []; const original = router.post;
   router.post = (url, data, options) => calls.push({ url, data, options });
-  const context = vm.createContext({ React, useForm, Head: () => null, AdminLayout: ({children}) => React.createElement('main', {}, children) });
+  const context = vm.createContext({ React, useForm, fetch: fetcher, document: { querySelector: () => ({ content: 'test-token' }) }, Head: () => null, AdminLayout: ({children}) => React.createElement('main', {}, children) });
   vm.runInContext(`${code}\nglobalThis.Component = SeoCompletion;`, context);
   let renderer;
   await act(async () => { renderer = create(React.createElement(context.Component, { summary, englishNames })); });
@@ -47,16 +47,19 @@ test('bulk completion stays disabled until every Bengali product name has a vali
   ];
   const app = await mount({ categories: stats, products: stats }, englishNames);
   try {
-    const button = () => app.renderer.root.findByType('button');
-    const translatorLinks = app.renderer.root.findAllByType('a').filter(link => link.props.children === 'Translate to English');
-    assert.equal(translatorLinks.length, 2);
-    const translateUrl = new URL(translatorLinks[0].props.href);
+    const button = () => app.renderer.root.findAllByType('button').find(item => item.props.type === 'submit');
+    const translateButtons = app.renderer.root.findAllByType('button').filter(button => button.props.children === 'Translate to English');
+    assert.equal(translateButtons.length, 2);
+    assert.equal(translateButtons[0].props.type, 'button');
+    assert.equal(translateButtons[0].props.disabled, false);
+    const googleLinks = app.renderer.root.findAllByType('a').filter(link => link.props.children === 'Open Google Translate');
+    const translateUrl = new URL(googleLinks[0].props.href);
     assert.equal(translateUrl.origin, 'https://translate.google.com');
     assert.equal(translateUrl.searchParams.get('sl'), 'bn');
     assert.equal(translateUrl.searchParams.get('tl'), 'en');
     assert.equal(translateUrl.searchParams.get('text'), englishNames[0].name);
-    assert.equal(translatorLinks[0].props.target, '_blank');
-    assert.equal(translatorLinks[0].props.rel, 'noopener noreferrer');
+    assert.equal(googleLinks[0].props.target, '_blank');
+    assert.equal(googleLinks[0].props.rel, 'noopener noreferrer');
     assert.equal(button().props.disabled, true);
     assert.equal(button().props.children, 'Complete English SEO names above');
     assert.match(JSON.stringify(app.renderer.toJSON()), /2 English SEO names still required/);
@@ -74,6 +77,26 @@ test('bulk completion stays disabled until every Bengali product name has a vali
   } finally { await app.close(); }
 });
 
+test('Translate to English fills the matching field from the saved-provider endpoint', async () => {
+  const englishNames = [{ id: 3374, name: 'রাসূল আমার ভালোবাসা Islamic Hoodie (Royal Blue)', count: 1 }];
+  const requests = [];
+  const fetcher = async (url, options) => {
+    requests.push({ url, options });
+    return { ok: true, json: async () => ({ translation: 'The Messenger Is My Love Islamic Hoodie (Royal Blue)' }) };
+  };
+  const app = await mount({ categories: stats, products: stats }, englishNames, fetcher);
+  try {
+    const translateButton = app.renderer.root.findAllByType('button').find(button => button.props.children === 'Translate to English');
+    await act(async () => {
+      await translateButton.props.onClick({ preventDefault() {} });
+    });
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].url, '/admin/settings/seo-completion/translate');
+    assert.equal(JSON.parse(requests[0].options.body).name, englishNames[0].name);
+    assert.equal(app.renderer.root.findByProps({ 'aria-label': 'English SEO name 3374' }).props.value, 'The Messenger Is My Love Islamic Hoodie (Royal Blue)');
+  } finally { await app.close(); }
+});
+
 test('Bengali script cannot be submitted as an English SEO name', async () => {
   const englishNames = [{ id: 3374, name: 'Bengali product title', count: 1 }];
   const app = await mount({ categories: stats, products: stats }, englishNames);
@@ -81,7 +104,7 @@ test('Bengali script cannot be submitted as an English SEO name', async () => {
     await act(async () => {
       app.renderer.root.findByProps({ 'aria-label': 'English SEO name 3374' }).props.onChange({ target: { value: 'বাংলা Hoodie' } });
     });
-    assert.equal(app.renderer.root.findByType('button').props.disabled, true);
+    assert.equal(app.renderer.root.findAllByType('button').find(button => button.props.type === 'submit').props.disabled, true);
     assert.equal(app.renderer.root.findByProps({ 'aria-label': 'English SEO name 3374' }).props['aria-invalid'], true);
   } finally { await app.close(); }
 });

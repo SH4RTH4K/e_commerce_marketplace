@@ -11,11 +11,22 @@ use RuntimeException;
 
 class SeoNameTranslationService
 {
+    /** Canonical English renderings for approved Bengali catalog phrases. */
+    private const PREFERRED_PHRASES = [
+        'রাসূল আমার ভালোবাসা' => 'The Messenger Is My Love',
+        'রাসুল আমার ভালোবাসা' => 'The Messenger Is My Love',
+    ];
+
     public function translate(string $name): string
     {
         $name = trim($name);
         if ($name === '' || mb_strlen($name) > 300) {
             throw new RuntimeException('Enter a product name of up to 300 characters.');
+        }
+
+        $name = strtr($name, self::PREFERRED_PHRASES);
+        if (! preg_match('/\p{Bengali}/u', $name)) {
+            return $name;
         }
 
         $provider = (string) Setting::get('seo_translation_provider', 'mymemory');
