@@ -171,6 +171,9 @@ class ShopController extends Controller
             $product->unsetRelation('supplierLinks');
         });
 
+        $isPlainShop = ! $category && ! $term;
+        $shopDescription = 'Shop fashion, gadgets, electronics, home essentials and daily-use products at '.site_name().', with reliable delivery across Bangladesh.';
+
         // Resolve sidebar data only when requested. Inertia's Load More
         // requests only products, so it should not rebuild every filter.
         $stats = null;
@@ -227,8 +230,9 @@ class ShopController extends Controller
             'q' => $term,
             'priceCeiling' => fn () => max(5000, (int) (ceil(max((int) $catalogueStats()->max_price, 5000) / 50) * 50)),
             'seo' => fn () => [
-                'title' => $category?->meta_title ?: ($category?->name ?: ($term ? "Search: {$term}" : 'Shop All Products')),
-                'description' => $category?->meta_description,
+                'title' => $category?->meta_title ?: ($category?->name ?: ($term ? "Search: {$term}" : 'Shop All Products | '.site_name())),
+                'description' => $category?->meta_description ?: ($isPlainShop ? $shopDescription : null),
+                'h1' => $isPlainShop ? 'Shop All Products' : null,
                 'keywords' => $category?->meta_keywords,
                 'robots' => $term || count(array_diff(array_keys($request->query()), ['page', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid'])) > 0 ? 'noindex,follow' : 'index,follow',
                 'canonical' => $request->url().($products->currentPage() > 1 ? '?page='.$products->currentPage() : ''),

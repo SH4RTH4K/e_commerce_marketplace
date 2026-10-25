@@ -94,6 +94,26 @@ class StorefrontSeoTest extends TestCase
         $this->assertSame(route('about'), $alias->evaluate('string(//link[@rel="canonical"]/@href)'));
     }
 
+    public function test_shop_page_has_branded_unique_metadata_and_one_shop_heading(): void
+    {
+        $shop = $this->html($this->get('/shop')->assertOk()->getContent());
+        $shopTitle = $shop->evaluate('string(//title)');
+        $shopDescription = $shop->evaluate('string(//meta[@name="description"]/@content)');
+
+        $this->assertSame('Shop All Products | TAQI LIFE', $shopTitle);
+        $this->assertStringContainsString('fashion', strtolower($shopDescription));
+        $this->assertStringContainsString('gadgets', strtolower($shopDescription));
+        $this->assertStringContainsString('delivery across Bangladesh', $shopDescription);
+        $this->assertSame($shopDescription, $shop->evaluate('string(//meta[@property="og:description"]/@content)'));
+        $this->assertSame($shopDescription, $shop->evaluate('string(//meta[@name="twitter:description"]/@content)'));
+        $this->assertSame(1, $shop->query('//h1')->length);
+        $this->assertSame('Shop All Products', trim($shop->evaluate('string(//h1)')));
+
+        $home = $this->html($this->get('/')->assertOk()->getContent());
+        $this->assertNotSame($shopTitle, $home->evaluate('string(//title)'));
+        $this->assertNotSame($shopDescription, $home->evaluate('string(//meta[@name="description"]/@content)'));
+    }
+
     public function test_private_pages_emit_noindex_headers_and_meta_tags(): void
     {
         foreach (['/login', '/admin/login', '/wishlist', '/track'] as $uri) {
