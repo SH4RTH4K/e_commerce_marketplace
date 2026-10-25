@@ -1,6 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router } from '@inertiajs/react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
+import { Bar, ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from 'recharts';
 
 /* ─── Stat Card ─────────────────────────────────────────────────── */
 function StatCard({ label, value, sub, icon, href, accent = '#f97316', bg = '#fff7ed' }) {
@@ -42,15 +42,36 @@ const CustomTooltip = ({ active, payload, label }) => {
     return (
       <div className="bg-white border border-gray-100 shadow-xl rounded-xl px-4 py-3 text-sm">
         <p className="text-gray-400 text-xs mb-0.5">{label}</p>
-        <p className="font-bold text-gray-900">৳{payload[0].value?.toLocaleString()}</p>
+        {payload.map(item => (
+          <p key={item.dataKey} className="font-semibold text-gray-900">
+            {item.name === 'Revenue' ? `৳${Number(item.value).toLocaleString()}` : `${item.value} orders`}
+          </p>
+        ))}
       </div>
     );
   }
   return null;
 };
 
+function InsightCard({ label, value, detail, accent = '#f97316', bg = '#fff7ed' }) {
+  return (
+    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+      <div className="w-2.5 h-2.5 rounded-full mb-4" style={{ background: accent, boxShadow: `0 0 0 5px ${bg}` }} />
+      <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
+      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{label}</p>
+      <p className="text-xs text-gray-500 mt-2">{detail}</p>
+    </div>
+  );
+}
+
+function periodChange(value) {
+  if (value === null || value === undefined) return 'No activity in the previous 7 days';
+  const direction = value > 0 ? 'up' : value < 0 ? 'down' : 'unchanged';
+  return direction === 'unchanged' ? 'Unchanged vs previous 7 days' : `${Math.abs(value)}% ${direction} vs previous 7 days`;
+}
+
 /* ─── Main Dashboard ────────────────────────────────────────────── */
-export default function Dashboard({ ordersCount, pendingCount, revenue, productsCount, pendingOrders, recentOrders, series, seriesMax, app, stats }) {
+export default function Dashboard({ ordersCount, pendingCount, revenue, productsCount, pendingOrders, recentOrders, series, seriesMax, insights, app, stats }) {
   // Derive stats with safe fallbacks
   const confirmedCount  = stats?.confirmed  ?? 0;
   const pendingOrdCount = stats?.pending    ?? pendingCount ?? 0;
@@ -141,6 +162,7 @@ export default function Dashboard({ ordersCount, pendingCount, revenue, products
   const chartData = (series || []).map(p => ({
     name: p.label,
     Revenue: Math.round(p.value),
+    Orders: Number(p.orders) || 0,
   }));
 
   const fulfillmentData = [
@@ -198,6 +220,22 @@ export default function Dashboard({ ordersCount, pendingCount, revenue, products
             </div>
           </section>
 
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-bold text-gray-900">Business Insights</h2>
+                <p className="text-xs text-gray-400 mt-0.5">A quick read on the last 7 days</p>
+              </div>
+              <a href="/admin/analytics" className="text-xs font-semibold text-orange-600 hover:text-orange-700">Detailed analytics →</a>
+            </div>
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+              <InsightCard label="Revenue · 7 days" value={`৳${Number(insights?.revenue_7d || 0).toLocaleString()}`} detail={periodChange(insights?.revenue_change)} accent="#f97316" bg="#fff7ed" />
+              <InsightCard label="Orders · 7 days" value={Number(insights?.orders_7d || 0).toLocaleString()} detail={periodChange(insights?.orders_change)} accent="#3b82f6" bg="#eff6ff" />
+              <InsightCard label="Average order value" value={`৳${Number(insights?.average_order_value || 0).toLocaleString()}`} detail="Verified orders · last 7 days" accent="#8b5cf6" bg="#f5f3ff" />
+              <InsightCard label="Payment verification" value={`${Number(insights?.payment_verification_rate || 0)}%`} detail="Verified orders · last 7 days" accent="#059669" bg="#ecfdf5" />
+            </div>
+          </section>
+
           {/* Chart + Fulfillment breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -211,18 +249,24 @@ export default function Dashboard({ ordersCount, pendingCount, revenue, products
                 <span className="text-xs bg-orange-50 text-orange-600 font-medium px-3 py-1.5 rounded-full border border-orange-100">Live</span>
               </div>
               <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <ComposedChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="revenue" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="orders" orientation="right" allowDecimals={false} tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: '#fff7ed', radius: 6 }} />
-                  <Bar dataKey="Revenue" radius={[6, 6, 0, 0]} maxBarSize={36}>
+                  <Bar yAxisId="revenue" dataKey="Revenue" radius={[6, 6, 0, 0]} maxBarSize={36}>
                     {chartData.map((_, i) => (
                       <Cell key={i} fill={i === chartData.length - 1 ? '#f97316' : '#fed7aa'} />
                     ))}
                   </Bar>
-                </BarChart>
+                  <Line yAxisId="orders" type="monotone" dataKey="Orders" stroke="#3b82f6" strokeWidth={2} dot={{ r: 2, fill: '#3b82f6' }} activeDot={{ r: 4 }} />
+                </ComposedChart>
               </ResponsiveContainer>
+              <div className="flex justify-center gap-5 text-[11px] text-gray-500 mt-1">
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-orange-400" /> Revenue (BDT)</span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500" /> Orders</span>
+              </div>
             </div>
 
             {/* Fulfillment Status */}
