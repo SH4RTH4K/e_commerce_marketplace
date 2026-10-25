@@ -26,7 +26,9 @@ class StorefrontSeoTest extends TestCase
     {
         Setting::put('template_2_products_per_page', '12');
         $category = $this->category();
-        for ($i = 0; $i < 35; $i++) $this->product(['name' => 'Speaker '.$i]);
+        for ($i = 0; $i < 35; $i++) {
+            $this->product(['name' => 'Speaker '.$i]);
+        }
         $response = $this->get('/category/speakers?page=2')->assertOk();
         $html = $this->html($response->getContent());
         $this->assertSame(route('shop.category', $category).'?page=2', $html->evaluate('string(//link[@rel="canonical"]/@href)'));
@@ -55,6 +57,7 @@ class StorefrontSeoTest extends TestCase
         $this->assertSame('https://schema.org/OutOfStock', $item['offers']['availability']);
         $this->assertSame(route('product.show', $product), $item['url']);
         $this->assertArrayNotHasKey('aggregateRating', $item);
+        $this->assertArrayNotHasKey('review', $item);
         $this->assertSame(['Home', 'Shop', 'Speakers', 'Portable', 'Speaker'], array_column($schema['@graph'][1]['itemListElement'], 'name'));
         $product->variants()->update(['stock' => 0]);
         $item = $this->schema($this->get(route('product.show', $product))->getContent())['@graph'][0];
@@ -129,6 +132,7 @@ class StorefrontSeoTest extends TestCase
     {
         $document = new DOMDocument;
         @$document->loadHTML($html);
+
         return new DOMXPath($document);
     }
 

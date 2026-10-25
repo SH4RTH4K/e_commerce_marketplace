@@ -98,6 +98,12 @@ class MerchantSeoTest extends TestCase
         $this->assertStringNotContainsString('order by', strtolower(array_values($reviewQueries)[0]['query']), 'Review aggregation must work with MySQL ONLY_FULL_GROUP_BY.');
         $this->assertSame(1, $schema['@graph'][0]['aggregateRating']['reviewCount']);
         $this->assertSame(4.0, $schema['@graph'][0]['aggregateRating']['ratingValue']);
+        $this->assertCount(1, $schema['@graph'][0]['review']);
+        $this->assertSame('Review', $schema['@graph'][0]['review'][0]['@type']);
+        $this->assertSame('Customer A', $schema['@graph'][0]['review'][0]['author']['name']);
+        $this->assertSame(4, $schema['@graph'][0]['review'][0]['reviewRating']['ratingValue']);
+        $this->assertSame('Useful product', $schema['@graph'][0]['review'][0]['reviewBody']);
+        $this->assertNotSame('Pending review', $schema['@graph'][0]['review'][0]['reviewBody']);
         $policy = app(StorefrontSeoService::class)->organization()['@graph'][0]['hasMerchantReturnPolicy'];
         $this->assertSame(route('refund'), $policy['merchantReturnLink']);
         $this->assertArrayNotHasKey('returnFees', $policy);

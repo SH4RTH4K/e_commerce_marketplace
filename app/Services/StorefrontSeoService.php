@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class StorefrontSeoService
 {
@@ -181,8 +182,49 @@ class StorefrontSeoService
                 '@type' => 'AggregateRating', 'ratingValue' => round((float) $reviews->average_rating, 2),
                 'reviewCount' => (int) $reviews->review_count, 'bestRating' => 5, 'worstRating' => 1,
             ];
+            $item['review'] = $product->approvedReviews()
+                ->select(['id', 'author_name', 'rating', 'title', 'body', 'approved_at', 'created_at'])
+                ->orderByDesc('approved_at')
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->limit(3)
+                ->get()
+                ->map(function ($review): array {
+                    $body = $this->plainText($review->body);
+                    $entry = [
+                        '@type' => 'Review',
+                        'author' => [
+                            '@type' => 'Person',
+                            'name' => $this->plainText($review->author_name) ?: 'Customer',
+                        ],
+                        'reviewRating' => [
+                            '@type' => 'Rating',
+                            'ratingValue' => (int) $review->rating,
+                            'bestRating' => 5,
+                            'worstRating' => 1,
+                        ],
+                        'reviewBody' => $body,
+                    ];
+                    $date = $review->approved_at ?: $review->created_at;
+                    if ($date) {
+                        $entry['datePublished'] = $date->toDateString();
+                    }
+                    if ($title = $this->plainText($review->title)) {
+                        $entry['name'] = $title;
+                    }
+
+                    return $entry;
+                })
+                ->filter(fn (array $review): bool => $review['reviewBody'] !== '')
+                ->values()
+                ->all();
         }
 
         return ['@context' => 'https://schema.org', '@graph' => [$item, $this->breadcrumbs($path, $product)]];
+    }
+
+    private function plainText(?string $value): string
+    {
+        return trim(Str::squish(html_entity_decode(strip_tags((string) $value), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
     }
 }
