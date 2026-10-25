@@ -6,7 +6,7 @@ export function productAvailability(product = {}) {
   const backorder = Boolean(product.allow_backorder);
   const canOrder = product.can_order ?? (backorder || stock > 0);
   const label = product.availability_label || (stock > 0 ? 'In Stock' : backorder ? 'Available to order' : 'Out of Stock');
-  return { stock, canOrder, backorder, hideQuantity: backorder || Boolean(product.hide_stock_quantity), label };
+  return { stock, canOrder, backorder, hideQuantity: stock <= 0 && (backorder || Boolean(product.hide_stock_quantity)), label };
 }
 
 export function orderQuantityLimit(product = {}, maximum = 100000) {

@@ -201,7 +201,7 @@ class Product extends Model
 
     public function getHideStockQuantityAttribute(): bool
     {
-        return (bool) $this->allow_backorder;
+        return (bool) $this->allow_backorder && $this->availableStockQuantity() <= 0;
     }
 
     public function getAvailabilityLabelAttribute(): string
