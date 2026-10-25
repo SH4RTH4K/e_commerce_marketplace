@@ -72,6 +72,9 @@ Route::get('/campaign/{slug}', [LandingPageController::class, 'show'])->name('ca
 Route::post('/lp/{slug}/order', [LandingPageController::class, 'order'])->middleware('throttle:60,1')->name('landing.order');
 Route::post('/campaign/{slug}/order', [LandingPageController::class, 'order'])->middleware('throttle:60,1');
 Route::get('/shop', [ShopController::class, 'index'])->name('shop');
+Route::redirect('/category/watch', '/category/watches', 301);
+Route::redirect('/category/airpod', '/category/airpods', 301);
+Route::redirect('/category/others', '/category/miscellaneous-products', 301);
 Route::get('/category/{category}', [ShopController::class, 'index'])->name('shop.category');
 Route::get('/product/{product}', [ProductController::class, 'show'])->name('product.show');
 Route::get('/home-02', [HomeController::class, 'index'])->name('home.two');
