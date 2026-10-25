@@ -79,6 +79,43 @@ class OptimizedImageCleanupTest extends TestCase
         }
     }
 
+    public function test_admin_can_view_preview_and_restore_a_quarantined_image(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $filename = str_repeat('b', 64).'.webp';
+        $directory = public_path('uploads/optimized');
+        if (! is_dir($directory)) mkdir($directory, 0775, true);
+        $path = $directory.DIRECTORY_SEPARATOR.$filename;
+        file_put_contents($path, 'orphan');
+
+        try {
+            $this->post('/admin/system/optimized-images/delete', ['filenames' => [$filename]])
+                ->assertSessionHasNoErrors();
+            $trashPath = (glob(storage_path('app/private/optimized-image-trash/*/'.$filename)) ?: [])[0] ?? null;
+            $this->assertNotNull($trashPath);
+            $batch = basename(dirname($trashPath));
+
+            $this->get('/admin/system/recovery-trash')
+                ->assertOk()
+                ->assertInertia(fn (Assert $page) => $page
+                    ->where('batches.0.files.0.filename', $filename));
+            $this->get('/admin/system/recovery-trash/'.$batch.'/'.$filename.'/preview')
+                ->assertOk()
+                ->assertHeader('content-type', 'image/webp');
+            $this->post('/admin/system/recovery-trash/restore', ['batch' => $batch, 'filename' => $filename])
+                ->assertSessionHas('status', 'Optimized image restored successfully.');
+            $this->assertFileExists($path);
+            $this->assertFileDoesNotExist($trashPath);
+        } finally {
+            if (is_file($path)) unlink($path);
+            foreach (glob(storage_path('app/private/optimized-image-trash/*/'.$filename)) ?: [] as $trashPath) {
+                if (is_file($trashPath)) unlink($trashPath);
+                $batchDirectory = dirname($trashPath);
+                if (is_dir($batchDirectory)) File::deleteDirectory($batchDirectory);
+            }
+        }
+    }
+
     public function test_manual_delete_cannot_remove_a_current_referenced_variant(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'admin']));

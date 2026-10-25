@@ -134,6 +134,93 @@ class OptimizedImageCleanupService
         return ['purged' => $purged, 'bytes' => $bytes, 'formatted' => $this->formatBytes($bytes)];
     }
 
+    /** @return array<int,array<string,mixed>> */
+    public function trash(?int $retentionDays = null): array
+    {
+        $retentionDays = max(1, $retentionDays ?? (int) config('optimized-images.trash_retention_days', 30));
+        $root = storage_path('app/private/'.self::TRASH_DIRECTORY);
+        $batches = [];
+
+        if (! is_dir($root)) {
+            return [];
+        }
+
+        foreach (File::directories($root) as $directory) {
+            $batch = basename($directory);
+            $createdTimestamp = @filemtime($directory);
+            if ($createdTimestamp === false) {
+                continue;
+            }
+
+            $files = [];
+            foreach (File::files($directory) as $file) {
+                $filename = $file->getFilename();
+                if (strtolower($file->getExtension()) !== 'webp' || ! preg_match('/^[a-f0-9]{64}\.webp$/i', $filename)) {
+                    continue;
+                }
+
+                $size = max(0, (int) $file->getSize());
+                $files[] = [
+                    'filename' => $filename,
+                    'formatted' => $this->formatBytes($size),
+                    'bytes' => $size,
+                    'preview_url' => route('admin.optimized-images.trash.preview', [$batch, $filename]),
+                ];
+            }
+
+            if ($files === []) {
+                continue;
+            }
+
+            usort($files, fn (array $left, array $right): int => $right['bytes'] <=> $left['bytes']);
+            $expiresTimestamp = $createdTimestamp + ($retentionDays * 86400);
+            $batches[] = [
+                'id' => $batch,
+                'created_at' => date(DATE_ATOM, $createdTimestamp),
+                'expires_at' => date(DATE_ATOM, $expiresTimestamp),
+                'age_days' => max(0, (int) floor((time() - $createdTimestamp) / 86400)),
+                'expired' => time() >= $expiresTimestamp,
+                'files' => $files,
+                'file_count' => count($files),
+                'bytes' => array_sum(array_column($files, 'bytes')),
+                'formatted' => $this->formatBytes(array_sum(array_column($files, 'bytes'))),
+            ];
+        }
+
+        usort($batches, fn (array $left, array $right): int => strcmp($right['created_at'], $left['created_at']));
+
+        return $batches;
+    }
+
+    public function restore(string $batch, string $filename): bool
+    {
+        $source = $this->trashPath($batch, $filename);
+        if (! $source || ! is_file($source)) {
+            return false;
+        }
+
+        $protected = $this->protectedVariants();
+        if (isset($protected[$filename])) {
+            return false;
+        }
+
+        $destination = public_path('uploads/optimized/'.$filename);
+        if (is_file($destination)) {
+            return false;
+        }
+
+        File::ensureDirectoryExists(dirname($destination), 0775);
+
+        return @rename($source, $destination);
+    }
+
+    public function trashFile(string $batch, string $filename): ?string
+    {
+        $path = $this->trashPath($batch, $filename);
+
+        return $path && is_file($path) ? $path : null;
+    }
+
     /** @return array<string, true> */
     public function protectedVariants(): array
     {
@@ -180,5 +267,14 @@ class OptimizedImageCleanupService
         }
 
         return $bytes;
+    }
+
+    private function trashPath(string $batch, string $filename): ?string
+    {
+        if (! preg_match('/^[0-9]{8}_[0-9]{6}-[a-z0-9]{8}$/', $batch) || ! preg_match('/^[a-f0-9]{64}\.webp$/i', $filename)) {
+            return null;
+        }
+
+        return storage_path('app/private/'.self::TRASH_DIRECTORY.'/'.$batch.'/'.$filename);
     }
 }

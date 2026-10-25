@@ -145,6 +145,11 @@ const navGroups = [
         perm: 'settings.manage',
       },
       {
+        key: 'recovery-trash', label: 'Recovery Trash', href: '/admin/system/recovery-trash', pattern: /^\/admin\/system\/recovery-trash/,
+        icon: 'M6 7h12m-9 0v10m6-10v10M9 4h6l1 3H8l1-3zm-4 3h14',
+        perm: 'settings.manage',
+      },
+      {
         key: 'git-repository', label: 'Git Repository', href: '/admin/system/git-repository', pattern: /^\/admin\/system\/git-repository/,
         icon: 'M8 12a4 4 0 108 0 4 4 0 00-8 0zm0 0H4a2 2 0 01-2-2V6a2 2 0 012-2h4m8 8h4a2 2 0 002-2V6a2 2 0 00-2-2h-4M8 8l8 8m0-8l-8 8',
         perm: 'settings.manage',

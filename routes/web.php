@@ -426,6 +426,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::get('system-health', [SystemHealthController::class, 'index'])->name('system-health.index');
             Route::get('system/optimized-images', [OptimizedImageController::class, 'index'])->name('optimized-images.index');
             Route::post('system/optimized-images/delete', [OptimizedImageController::class, 'delete'])->name('optimized-images.delete');
+            Route::get('system/recovery-trash', [OptimizedImageController::class, 'trash'])->name('optimized-images.trash');
+            Route::get('system/recovery-trash/{batch}/{filename}/preview', [OptimizedImageController::class, 'previewTrash'])->name('optimized-images.trash.preview');
+            Route::post('system/recovery-trash/restore', [OptimizedImageController::class, 'restoreTrash'])->name('optimized-images.trash.restore');
+            Route::post('system/recovery-trash/purge', [OptimizedImageController::class, 'purgeTrash'])->name('optimized-images.trash.purge');
             Route::post('system-health/backup', [SystemHealthController::class, 'createBackup'])->name('system-health.backup');
             Route::post('system-health/media-backup', [SystemHealthController::class, 'createMediaBackup'])->name('system-health.media-backup');
             Route::post('system-health/full-backup', [SystemHealthController::class, 'createFullBackup'])->name('system-health.full-backup');

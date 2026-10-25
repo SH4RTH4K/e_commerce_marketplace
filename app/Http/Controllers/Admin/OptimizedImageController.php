@@ -45,4 +45,44 @@ class OptimizedImageController extends Controller
 
         return back()->with('status', count($result['quarantined']).' orphaned optimized image(s) moved to recovery trash for '.config('optimized-images.trash_retention_days', 30).' days.'.(count($result['skipped']) ? ' Some files were skipped because they are no longer orphaned.' : ''));
     }
+
+    public function trash(OptimizedImageCleanupService $cleanup)
+    {
+        return Inertia::render('Admin/OptimizedImages/Trash', [
+            'batches' => $cleanup->trash(),
+            'trash_retention_days' => (int) config('optimized-images.trash_retention_days', 30),
+        ]);
+    }
+
+    public function previewTrash(string $batch, string $filename, OptimizedImageCleanupService $cleanup)
+    {
+        $path = $cleanup->trashFile($batch, $filename);
+        abort_unless($path, 404);
+
+        return response()->file($path, [
+            'Content-Type' => 'image/webp',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    public function restoreTrash(Request $request, OptimizedImageCleanupService $cleanup)
+    {
+        $data = $request->validate([
+            'batch' => ['required', 'string', 'regex:/^[0-9]{8}_[0-9]{6}-[a-z0-9]{8}$/'],
+            'filename' => ['required', 'string', 'regex:/^[a-f0-9]{64}\.webp$/i'],
+        ]);
+
+        $restored = $cleanup->restore($data['batch'], $data['filename']);
+
+        return back()->with('status', $restored
+            ? 'Optimized image restored successfully.'
+            : 'The image could not be restored because it is missing, already exists, or is now protected.');
+    }
+
+    public function purgeTrash(OptimizedImageCleanupService $cleanup)
+    {
+        $result = $cleanup->purgeTrash();
+
+        return back()->with('status', 'Permanently removed '.$result['purged'].' expired recovery batch(es) and freed '.$result['formatted'].'.');
+    }
 }
