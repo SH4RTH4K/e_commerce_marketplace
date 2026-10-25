@@ -123,6 +123,12 @@ class StorefrontSeoTest extends TestCase
         $this->get('/')->assertHeaderMissing('X-Robots-Tag');
     }
 
+    public function test_footer_trust_pages_are_publicly_available(): void
+    {
+        $this->get('/terms')->assertOk();
+        $this->get('/privacy')->assertOk();
+    }
+
     public function test_sitemap_excludes_inactive_ancestor_categories_and_llms_uses_sku_canonical_urls(): void
     {
         $parent = $this->category();

@@ -572,6 +572,7 @@ export default function StorefrontLayout({ children, title, description, activeC
                   <li><a href="/track">Track Order</a></li>
                   <li><a href="/refund-policy">Returns</a></li>
                   <li><a href="/contact">Contact Us</a></li>
+                  <li><a href="/terms">Terms &amp; Conditions</a></li>
                   <li><a href="/privacy">Privacy Policy</a></li>
                   {chatSettings.shipping_page_enabled !== false && (
                     <li><a href="/shipping">Shipping</a></li>
@@ -680,6 +681,8 @@ export default function StorefrontLayout({ children, title, description, activeC
               <h4>{templateTwoFooter.quick.title}</h4>
               <ul>
                 {templateTwoFooter.quick.links.filter(link => link.label && link.url).map((link, index) => <li key={`${link.url}-${index}`}><a href={link.url}>{link.label}</a></li>)}
+                {!templateTwoFooter.quick.links.some(link => link.url === '/terms') && <li><a href="/terms">Terms &amp; Conditions</a></li>}
+                {!templateTwoFooter.quick.links.some(link => link.url === '/privacy') && <li><a href="/privacy">Privacy Policy</a></li>}
                 {!templateTwoFooter.quick.links.some(link => link.url === '/blog') && <li><a href="/blog">Shopping guides</a></li>}
               </ul>
             </div>
