@@ -246,19 +246,19 @@ class ProductUrlTest extends TestCase
         $product = $this->product(['slug' => 'original-speaker']);
         $oldUrl = route('product.show', $product);
 
-        $this->get('/sitemap.xml')->assertOk()->assertSee('<loc>'.$oldUrl.'</loc>', false);
+        $this->get('/sitemaps/products.xml')->assertOk()->assertSee('<loc>'.$oldUrl.'</loc>', false);
 
         $product->update(['slug' => self::LONG_SLUG]);
         $newUrl = route('product.show', $product);
 
-        $this->get('/sitemap.xml')
+        $this->get('/sitemaps/products.xml')
             ->assertOk()
             ->assertSee('<loc>'.$newUrl.'</loc>', false)
             ->assertDontSee('<loc>'.$oldUrl.'</loc>', false);
 
         $product->update(['is_published' => false]);
 
-        $this->get('/sitemap.xml')->assertOk()->assertDontSee('<loc>'.$newUrl.'</loc>', false);
+        $this->get('/sitemaps/products.xml')->assertOk()->assertDontSee('<loc>'.$newUrl.'</loc>', false);
     }
 
     private function category(): Category

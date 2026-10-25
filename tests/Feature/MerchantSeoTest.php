@@ -117,7 +117,7 @@ class MerchantSeoTest extends TestCase
             ->where('structuredData.@type', 'BlogPosting')->has('guide.sections', 4));
         $this->get('/blog/unknown')->assertNotFound();
         $this->get('/blog/winter-dresses')->assertStatus(301)->assertRedirect(route('blog'));
-        $this->get('/sitemap.xml')->assertSee(route('blog.detail', 'clothing-size-guide'), false);
+        $this->get('/sitemaps/blogs.xml')->assertSee(route('blog.detail', 'clothing-size-guide'), false);
     }
 
     public function test_direct_ga4_is_configured_with_gtm_and_admin_does_not_load_marketing_tags(): void

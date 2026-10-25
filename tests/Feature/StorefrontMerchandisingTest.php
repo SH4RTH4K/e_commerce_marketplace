@@ -101,7 +101,7 @@ class StorefrontMerchandisingTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->has('guideProducts', 1)->where('guideProducts.0.url', route('product.show', $available))
                 ->where('guideCategory.url', route('shop.category', $category)));
-        $this->get('/sitemap.xml')->assertOk()
+        $this->get('/sitemaps/blogs.xml')->assertOk()
             ->assertSee(route('blog.detail', 'bluetooth-speaker-buying-guide-bangladesh'), false)
             ->assertSee(route('blog.detail', 'bluetooth-speaker-battery-waterproof-guide'), false);
         $available->update(['stock_quantity' => 0]);

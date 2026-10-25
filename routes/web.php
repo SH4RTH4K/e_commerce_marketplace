@@ -126,6 +126,10 @@ Route::get('/media/{kind}/{id}/{width}', StorefrontImageController::class)
     ->where('kind', 'product|banner|category|logo')->whereNumber('id')->whereNumber('width')
     ->middleware('throttle:300,1')->name('storefront.image');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/sitemaps/products.xml', [SitemapController::class, 'child'])->defaults('type', 'products')->name('sitemap.products');
+Route::get('/sitemaps/categories.xml', [SitemapController::class, 'child'])->defaults('type', 'categories')->name('sitemap.categories');
+Route::get('/sitemaps/pages.xml', [SitemapController::class, 'child'])->defaults('type', 'pages')->name('sitemap.pages');
+Route::get('/sitemaps/blogs.xml', [SitemapController::class, 'child'])->defaults('type', 'blogs')->name('sitemap.blogs');
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 Route::get('/llms.txt', [SitemapController::class, 'llms'])->name('llms');
 

@@ -1,17 +1,22 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Schedule;
 use App\Jobs\Dropshipping\StartSupplierCatalogSync;
 use App\Jobs\Dropshipping\StartSupplierPriceStockSync;
 use App\Models\DropshipSupplier;
 use App\Models\DropshipSyncRun;
 use App\Services\Dropshipping\SyncRunService;
+use Illuminate\Foundation\Inspiring;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+Schedule::command('sitemap:rebuild')
+    ->dailyAt('03:00')
+    ->withoutOverlapping(10)
+    ->onOneServer();
 
 if ((bool) config('dropshipping.enabled')) {
     Schedule::call(function (): void {

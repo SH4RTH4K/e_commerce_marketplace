@@ -2,52 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Category;
 use App\Models\Product;
+use App\Services\SitemapService;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Cache;
 
 class SitemapController extends Controller
 {
-    public function index()
+    public function index(SitemapService $sitemaps)
     {
-        // Cache sitemap for 6 hours — avoids DB hit on every crawler request
-        $urls = Cache::remember('sitemap_urls_v2', 21600, function () {
-            $list = [];
-            $list[] = ['loc' => route('home'), 'priority' => '1.0', 'changefreq' => 'daily'];
-            $list[] = ['loc' => route('shop'), 'priority' => '0.9', 'changefreq' => 'daily'];
-
-            foreach (['about', 'contact', 'terms', 'privacy', 'refund', 'shipping'] as $page) {
-                $list[] = ['loc' => route($page), 'priority' => '0.5', 'changefreq' => 'monthly'];
-            }
-            $list[] = ['loc' => route('blog'), 'priority' => '0.5', 'changefreq' => 'monthly'];
-            foreach (app(\App\Services\ShoppingGuideService::class)->links() as $guide) {
-                $list[] = ['loc' => route('blog.detail', $guide['slug']), 'priority' => '0.5', 'changefreq' => 'monthly'];
-            }
-
-            foreach ($this->visibleCategories() as $category) {
-                $list[] = [
-                    'loc'        => route('shop.category', $category),
-                    'priority'   => '0.8',
-                    'changefreq' => 'weekly',
-                    'lastmod'    => $category->updated_at?->toAtomString(),
-                ];
-            }
-
-            foreach (Product::published()->get() as $product) {
-                $list[] = [
-                    'loc'        => route('product.show', $product),
-                    'priority'   => '0.7',
-                    'changefreq' => 'weekly',
-                    'lastmod'    => $product->updated_at?->toAtomString(),
-                ];
-            }
-
-            return $list;
-        });
-
         return response()
-            ->view('sitemap', compact('urls'))
+            ->view('sitemap-index', ['sitemaps' => $sitemaps->index()])
+            ->header('Content-Type', 'application/xml')
+            ->header('Cache-Control', 'public, max-age=21600');
+    }
+
+    public function child(string $type, SitemapService $sitemaps)
+    {
+        return response()
+            ->view('sitemap', ['urls' => $sitemaps->urls($type)])
             ->header('Content-Type', 'application/xml')
             ->header('Cache-Control', 'public, max-age=21600');
     }
@@ -84,7 +56,7 @@ class SitemapController extends Controller
             ?: trim((string) setting('footer_text', ''))
             ?: "{$siteName} online store.";
         $notes = trim((string) setting('seo_llms_txt_notes', ''));
-        $categories = $this->visibleCategories()->where('show_in_menu', true)->take(12);
+        $categories = app(SitemapService::class)->visibleCategories()->where('show_in_menu', true)->take(12);
         $products = Product::query()
             ->published()
             ->orderByDesc('is_featured')
@@ -144,20 +116,4 @@ class SitemapController extends Controller
             ->header('Cache-Control', 'public, max-age=86400');
     }
 
-    private function visibleCategories(): \Illuminate\Support\Collection
-    {
-        $categories = Category::orderBy('menu_order')->orderBy('name')->get();
-        $byId = $categories->keyBy('id');
-
-        return $categories->filter(function (Category $category) use ($byId) {
-            $seen = [];
-            while ($category) {
-                if (! $category->is_active || isset($seen[$category->id])) return false;
-                $seen[$category->id] = true;
-                if (! $category->parent_id) return true;
-                $category = $byId->get($category->parent_id);
-            }
-            return false;
-        });
-    }
 }

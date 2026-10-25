@@ -17,12 +17,12 @@ use App\Services\CategoryHierarchyService;
 use App\Services\InventoryStockService;
 use App\Services\ProductCatalogService;
 use App\Services\ProductPricingService;
+use App\Services\SitemapService;
 use App\Services\SkuConfigurationService;
 use App\Services\StorefrontPageCache;
 use App\Support\PublicUploader;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -252,7 +252,7 @@ class ProductController extends Controller
 
         if ($data['bulk_action'] === 'activate') {
             Product::whereIn('id', $ids)->update(['is_published' => true]);
-            Cache::forget('sitemap_urls_v2');
+            app(SitemapService::class)->invalidate();
             app(StorefrontPageCache::class)->invalidate();
 
             return back()->with('status', "{$count} product(s) set to Active.");
@@ -260,7 +260,7 @@ class ProductController extends Controller
 
         if ($data['bulk_action'] === 'deactivate') {
             Product::whereIn('id', $ids)->update(['is_published' => false]);
-            Cache::forget('sitemap_urls_v2');
+            app(SitemapService::class)->invalidate();
             app(StorefrontPageCache::class)->invalidate();
 
             return back()->with('status', "{$count} product(s) set to Inactive.");
@@ -276,7 +276,7 @@ class ProductController extends Controller
         if (in_array($data['bulk_action'], ['enable_sourcing', 'disable_sourcing'], true)) {
             $enabled = $data['bulk_action'] === 'enable_sourcing';
             Product::whereIn('id', $ids)->update(['allow_backorder' => $enabled]);
-            Cache::forget('sitemap_urls_v2');
+            app(SitemapService::class)->invalidate();
             app(StorefrontPageCache::class)->invalidate();
 
             return back()->with('status', $enabled
@@ -286,7 +286,7 @@ class ProductController extends Controller
 
         abort_unless($data['bulk_action'] === 'delete', 422);
         Product::whereIn('id', $ids)->delete();
-        Cache::forget('sitemap_urls_v2');
+        app(SitemapService::class)->invalidate();
         app(StorefrontPageCache::class)->invalidate();
 
         return back()->with('status', "{$count} product(s) deleted.");

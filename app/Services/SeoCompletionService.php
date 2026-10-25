@@ -196,7 +196,7 @@ class SeoCompletionService
             $audit['status'] = 'completed';
             $audit['result'] = $result;
             Storage::disk('local')->put($path, json_encode($audit, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE));
-            Cache::forget('sitemap_urls_v2');
+            app(SitemapService::class)->invalidate();
 
             return $result;
         } finally {

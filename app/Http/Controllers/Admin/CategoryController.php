@@ -7,11 +7,11 @@ use Inertia\Inertia;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Services\CategoryHierarchyService;
+use App\Services\SitemapService;
 use App\Services\StorefrontPageCache;
 use App\Support\PublicUploader;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -114,7 +114,7 @@ class CategoryController extends Controller
         ]);
 
         $ids = $data['ids'];
-        Cache::forget('sitemap_urls_v2');
+        app(SitemapService::class)->invalidate();
         $count = count($ids);
 
         if ($data['bulk_action'] === 'activate') {

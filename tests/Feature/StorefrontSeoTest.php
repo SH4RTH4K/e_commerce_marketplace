@@ -130,9 +130,11 @@ class StorefrontSeoTest extends TestCase
         $child = Category::create(['name' => 'Hidden branch', 'slug' => 'hidden-branch', 'is_active' => true, 'show_in_menu' => true, 'parent_id' => $parent->id]);
         $product = $this->product(['sku' => 'ABC123', 'sale_price' => 0]);
         $this->get('/category/hidden-branch')->assertNotFound();
-        $this->get('/sitemap.xml')->assertOk()
-            ->assertDontSee(route('shop.category', $child), false)
-            ->assertSee('<loc>'.route('contact').'</loc>', false)
+        $this->get('/sitemaps/categories.xml')->assertOk()
+            ->assertDontSee(route('shop.category', $child), false);
+        $this->get('/sitemaps/pages.xml')->assertOk()
+            ->assertSee('<loc>'.route('contact').'</loc>', false);
+        $this->get('/sitemaps/products.xml')->assertOk()
             ->assertSee('<loc>'.route('product.show', $product).'</loc>', false);
         $this->get('/llms.txt')->assertOk()->assertSee(route('product.show', $product), false)
             ->assertDontSee(route('shop.category', $child), false)->assertSee(money(0), false);

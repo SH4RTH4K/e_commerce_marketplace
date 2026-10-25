@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
+use App\Services\SitemapService;
 use App\Services\StorefrontPageCache;
 use App\Support\ProductSlug;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class Product extends Model
@@ -47,12 +47,12 @@ class Product extends Model
             app(StorefrontPageCache::class)->invalidate();
 
             if ($product->wasRecentlyCreated || $product->wasChanged(['slug', 'sku', 'is_published', 'updated_at'])) {
-                Cache::forget('sitemap_urls_v2');
+                app(SitemapService::class)->invalidate();
             }
         });
         static::deleted(function () {
             app(StorefrontPageCache::class)->invalidate();
-            Cache::forget('sitemap_urls_v2');
+            app(SitemapService::class)->invalidate();
         });
     }
 
