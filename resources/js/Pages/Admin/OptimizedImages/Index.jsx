@@ -2,11 +2,15 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, orphaned_formatted = '0 B', protected_count = 0, directory = 'public/uploads/optimized' }) {
+export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, orphaned_formatted = '0 B', protected_count = 0, directory = 'public/uploads/optimized', pagination = {} }) {
   const [selected, setSelected] = useState([]);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(null);
   const orphanedFiles = files.filter(file => (file.status || 'orphaned') === 'orphaned');
+  const currentPage = pagination.current_page || 1;
+  const lastPage = pagination.last_page || 1;
+  const perPage = pagination.per_page || 50;
+  const pageNumbers = getPageNumbers(currentPage, lastPage);
 
   const toggle = filename => setSelected(current => current.includes(filename)
     ? current.filter(item => item !== filename)
@@ -28,6 +32,16 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
     deleteFiles(selected);
   };
 
+  const goToPage = (page, limit = perPage) => {
+    setBusy(true);
+    router.get('/admin/system/optimized-images', { page, per_page: limit }, {
+      preserveState: true,
+      preserveScroll: true,
+      onSuccess: () => setSelected([]),
+      onFinish: () => setBusy(false),
+    });
+  };
+
   return (
     <AdminLayout title="Optimized Images">
       <Head title="Optimized Images" />
@@ -38,7 +52,13 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
             <h2 className="mt-1 text-2xl font-bold text-slate-900">Optimized image cleanup</h2>
             <p className="mt-1 text-sm text-slate-500">Review generated WebP files that are no longer referenced by a current product, category, banner, or logo.</p>
           </div>
-          <button type="button" onClick={() => router.reload({ only: ['files', 'orphaned_count', 'orphaned_formatted', 'protected_count'] })} disabled={busy} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50">Rescan</button>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-slate-500" htmlFor="optimized-images-limit">Show</label>
+            <select id="optimized-images-limit" value={perPage} onChange={event => goToPage(1, Number(event.target.value))} disabled={busy} className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 disabled:opacity-50">
+              {[25, 50, 100, 250, 500].map(limit => <option key={limit} value={limit}>{limit} per page</option>)}
+            </select>
+            <button type="button" onClick={() => goToPage(currentPage)} disabled={busy} className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-50">Rescan</button>
+          </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
@@ -92,6 +112,17 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
               </tbody>
             </table>
           </div>
+
+          <div className="flex flex-col justify-between gap-3 border-t border-slate-100 px-5 py-4 text-sm sm:flex-row sm:items-center">
+            <p className="text-xs text-slate-500">Showing {pagination.from || 0}–{pagination.to || 0} of {pagination.total ?? orphaned_count} orphaned files</p>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={() => goToPage(currentPage - 1)} disabled={busy || currentPage <= 1} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
+              {pageNumbers.map((page, index) => page === 'ellipsis'
+                ? <span key={`ellipsis-${index}`} className="px-1 text-slate-400">…</span>
+                : <button key={page} type="button" onClick={() => goToPage(page)} disabled={busy || page === currentPage} className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${page === currentPage ? 'bg-orange-500 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-50'} disabled:cursor-default`}>{page}</button>)}
+              <button type="button" onClick={() => goToPage(currentPage + 1)} disabled={busy || currentPage >= lastPage} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">Next</button>
+            </div>
+          </div>
         </section>
       </div>
 
@@ -106,6 +137,21 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
       )}
     </AdminLayout>
   );
+}
+
+function getPageNumbers(current, last) {
+  if (last <= 7) return Array.from({ length: last }, (_, index) => index + 1);
+
+  const pages = new Set([1, last, current - 1, current, current + 1]);
+  const ordered = [...pages].filter(page => page > 0 && page <= last).sort((a, b) => a - b);
+  const result = [];
+
+  ordered.forEach((page, index) => {
+    if (index > 0 && page - ordered[index - 1] > 1) result.push('ellipsis');
+    result.push(page);
+  });
+
+  return result;
 }
 
 function Stat({ label, value }) {

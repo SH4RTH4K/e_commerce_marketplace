@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\User;
+use App\Services\OptimizedImageCleanupService;
 use App\Services\StorefrontImageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -30,11 +31,15 @@ class OptimizedImageCleanupTest extends TestCase
         touch($path, now()->subDays(10)->timestamp);
 
         try {
+            $scan = app(OptimizedImageCleanupService::class)->scan();
+            $this->assertTrue(collect($scan['files'])->contains(fn ($file) => ($file['filename'] ?? null) === $filename));
+
             $this->get('/admin/system/optimized-images')
                 ->assertOk()
                 ->assertInertia(fn (Assert $page) => $page
                     ->where('directory', 'public/uploads/optimized')
-                    ->where('files', fn ($files) => collect($files)->contains(fn ($file) => ($file['filename'] ?? null) === $filename && ($file['status'] ?? null) === 'orphaned')));
+                    ->where('pagination.per_page', 50)
+                    ->where('pagination.total', $scan['orphaned_count']));
 
             $this->post('/admin/system/optimized-images/delete', ['filenames' => [$filename]])
                 ->assertSessionHasNoErrors();
