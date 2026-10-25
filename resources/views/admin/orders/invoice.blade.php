@@ -263,7 +263,7 @@
             max-width: 470px;
             margin-top: 11px;
             color: var(--muted);
-            font-size: 11px;
+            font-size: 12px;
         }
 
         .header-meta {
@@ -276,7 +276,7 @@
 
         .invoice-eyebrow {
             color: var(--accent);
-            font-size: 9px;
+            font-size: 10px;
             font-weight: 800;
             letter-spacing: 0.16em;
             text-transform: uppercase;
@@ -286,7 +286,7 @@
             margin-top: 1px;
             color: var(--ink);
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 25px;
+            font-size: 28px;
             font-weight: 700;
             letter-spacing: 0.04em;
         }
@@ -295,14 +295,14 @@
             margin-top: 6px;
             color: var(--ink-soft);
             font-family: 'Space Grotesk', monospace;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 600;
         }
 
         .invoice-date {
             margin-top: 3px;
             color: var(--muted);
-            font-size: 10.5px;
+            font-size: 11.5px;
         }
 
         .details-grid {
@@ -332,7 +332,7 @@
             gap: 7px;
             margin-bottom: 8px;
             color: var(--muted);
-            font-size: 9.5px;
+            font-size: 10.5px;
             font-weight: 800;
             letter-spacing: 0.12em;
             text-transform: uppercase;
@@ -353,14 +353,14 @@
         .customer-name {
             color: var(--ink);
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 16px;
+            font-size: 17px;
             font-weight: 700;
         }
 
         .text-row {
             margin-top: 3px;
             color: var(--ink-soft);
-            font-size: 11.5px;
+            font-size: 12.5px;
         }
 
         .text-row strong {
@@ -380,7 +380,7 @@
             background: #eaf0f0;
             border: 1px solid #dfe9e8;
             border-radius: 5px;
-            font-size: 9px;
+            font-size: 10px;
             font-weight: 800;
             letter-spacing: 0.05em;
             text-transform: uppercase;
@@ -405,7 +405,7 @@
             background: var(--gold-soft);
             border: 1px solid #f2dfad;
             border-radius: 6px;
-            font-size: 10.5px;
+            font-size: 11.5px;
         }
 
         .delivery-note strong {
@@ -426,7 +426,7 @@
             padding: 10px 10px;
             color: var(--accent-dark);
             background: var(--accent-soft);
-            font-size: 9.5px;
+            font-size: 10.5px;
             font-weight: 800;
             letter-spacing: 0.1em;
             text-align: left;
@@ -457,7 +457,7 @@
             padding: 16px 10px;
             border-bottom: 1px solid var(--line-soft);
             color: var(--ink-soft);
-            font-size: 12px;
+            font-size: 13px;
             vertical-align: top;
         }
 
@@ -503,7 +503,7 @@
         .item-title {
             color: var(--ink);
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 12.5px;
+            font-size: 14px;
             font-weight: 600;
         }
 
@@ -520,7 +520,7 @@
         .item-variant {
             margin-top: 2px;
             color: var(--muted);
-            font-size: 10.5px;
+            font-size: 11.5px;
         }
 
         .item-sku,
@@ -531,7 +531,7 @@
         .item-sku {
             margin-top: 4px;
             color: var(--muted);
-            font-size: 9.5px;
+            font-size: 10.5px;
         }
 
         .font-bold {
@@ -549,7 +549,7 @@
         .notes-content {
             padding: 13px 0;
             color: var(--muted);
-            font-size: 11.5px;
+            font-size: 12.5px;
             line-height: 1.65;
         }
 
@@ -568,7 +568,7 @@
         table.summary-table td {
             padding: 5px 0;
             color: var(--muted);
-            font-size: 11.5px;
+            font-size: 12.5px;
         }
 
         table.summary-table td.amount {
@@ -606,7 +606,7 @@
             padding-top: 16px;
             border-top: 1px solid var(--line);
             color: var(--muted);
-            font-size: 10px;
+            font-size: 11px;
         }
 
         .footer strong {
@@ -1031,7 +1031,7 @@
                                         @php
                                             $productName = $item->product_name ?: ($item->product?->name ?? 'Product');
                                             $productImage = $item->image ?: $item->product?->primaryImage()?->path;
-                                            $productImageUrl = !($isPdf ?? false) ? image_url($productImage, $productName) : null;
+                                            $productImageUrl = $productImage ? image_url($productImage, $productName) : null;
                                         @endphp
                                         @if($productImageUrl)
                                             <img class="item-thumb" src="{{ $productImageUrl }}" alt="{{ $productName }}">

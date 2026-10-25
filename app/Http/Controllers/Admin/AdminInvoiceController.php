@@ -174,6 +174,11 @@ class AdminInvoiceController extends Controller
             $quantity = $item->quantity ?? $item->qty ?? 1;
             $lineTotal = $item->effectiveLineTotal();
             $productName = e($item->product_name ?: ($item->product?->name ?? 'Product'));
+            $productImage = $item->image ?: $item->product?->primaryImage()?->path;
+            $productImageUrl = $productImage ? e(image_url($productImage, $item->product_name ?: ($item->product?->name ?? 'Product'))) : null;
+            $image = $productImageUrl
+                ? '<img class="product-image" src="' . $productImageUrl . '" alt="' . $productName . '">'
+                : '<span class="image-box">Image</span>';
             $variant = $item->variant ? '<br><small>' . e($item->variant) . '</small>' : '';
             $sku = ($item->product && $item->product->sku) ? '<br><small>SKU: ' . e($item->product->sku) . '</small>' : '';
             $itemDiscount = (float) $item->unit_discount > 0
@@ -181,7 +186,7 @@ class AdminInvoiceController extends Controller
 
             $rows .= '<tr>'
                 . '<td class="center">' . ($index + 1) . '</td>'
-                . '<td class="center"><span class="image-box">Image</span></td>'
+                . '<td class="center">' . $image . '</td>'
                 . '<td><strong>' . $productName . '</strong>' . $variant . $sku . $itemDiscount . '</td>'
                 . '<td class="right">' . $currency . number_format((float) $item->unit_price, 2) . '</td>'
                 . '<td class="center">' . e((string) $quantity) . '</td>'
@@ -211,22 +216,26 @@ class AdminInvoiceController extends Controller
 <head>
     <meta charset="utf-8">
     <style>
-        body { font-family: DejaVu Sans, sans-serif; color: #111827; font-size: 12px; line-height: 1.45; }
+        body { font-family: DejaVu Sans, sans-serif; color: #111827; font-size: 13px; line-height: 1.45; }
         h1, h2, p { margin: 0; }
+        h1 { font-size: 25px; }
+        h2 { font-size: 14px; }
         .header { border-bottom: 2px solid #111827; padding-bottom: 14px; margin-bottom: 18px; }
-        .store { font-size: 18px; font-weight: 700; }
+        .store { font-size: 20px; font-weight: 700; }
         .muted { color: #6b7280; }
         .grid { width: 100%; margin-bottom: 18px; }
         .grid td { vertical-align: top; width: 50%; padding: 10px; border: 1px solid #e5e7eb; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: #f3f4f6; text-align: left; font-size: 10px; text-transform: uppercase; }
+        th { background: #f3f4f6; text-align: left; font-size: 11px; text-transform: uppercase; }
         th, td { border-bottom: 1px solid #e5e7eb; padding: 8px; }
+        td strong { font-size: 13px; }
         .right { text-align: right; }
         .center { text-align: center; }
         .image-box { display: inline-block; width: 42px; height: 42px; border: 1px solid #d1d5db; color: #6b7280; font-size: 8px; line-height: 42px; }
+        .product-image { width: 42px; height: 42px; }
         .summary { width: 42%; margin-left: auto; margin-top: 14px; }
         .total td { font-weight: 700; border-top: 2px solid #111827; }
-        .footer { margin-top: 22px; color: #6b7280; font-size: 10px; text-align: center; }
+        .footer { margin-top: 22px; color: #6b7280; font-size: 11px; text-align: center; }
     </style>
 </head>
 <body>
@@ -306,61 +315,61 @@ class AdminInvoiceController extends Controller
             }
         }
 
-        $content .= $this->pdfText($store['name'], $brandTextX, 752, 18, true, '#152238');
-        $content .= $this->pdfText($store['tagline'], $brandTextX, 735, 8, true, $green);
+        $content .= $this->pdfText($store['name'], $brandTextX, 752, 19, true, '#152238');
+        $content .= $this->pdfText($store['tagline'], $brandTextX, 735, 9, true, $green);
         $content .= $this->pdfWrappedText(
             $store['address'] . ' | ' . $store['phone'] . ' | ' . $store['email'],
             62,
             714,
-            9,
+            10,
             false,
             '#64748b',
-            70,
-            12
+            66,
+            13
         );
 
         $content .= $this->pdfRect(425, 682, 110, 105, $softGreen);
-        $content .= $this->pdfText('OFFICIAL DOCUMENT', 449, 758, 7, true, $green);
-        $content .= $this->pdfText('INVOICE', 453, 734, 20, true, '#0f172a');
-        $content .= $this->pdfText('#' . $order->order_number, 452, 709, 9, true, '#334155');
-        $content .= $this->pdfText($order->created_at ? $order->created_at->format('d M Y, h:i A') : '', 461, 692, 8, false, '#64748b');
+        $content .= $this->pdfText('OFFICIAL DOCUMENT', 449, 758, 8, true, $green);
+        $content .= $this->pdfText('INVOICE', 453, 734, 22, true, '#0f172a');
+        $content .= $this->pdfText('#' . $order->order_number, 452, 709, 10, true, '#334155');
+        $content .= $this->pdfText($order->created_at ? $order->created_at->format('d M Y, h:i A') : '', 461, 692, 9, false, '#64748b');
 
         $content .= $this->pdfLine(62, 658, 535, 658, '#e5e7eb');
         $content .= $this->pdfRect(62, 548, 285, 88, '#ffffff', '#e5e7eb');
         $content .= $this->pdfRect(360, 548, 175, 88, '#ffffff', '#e5e7eb');
-        $content .= $this->pdfText('BILLED & SHIPPED TO', 76, 612, 7, true, $gold);
-        $content .= $this->pdfText($order->customer_name, 76, 590, 12, true, '#1f2937');
-        $content .= $this->pdfText('Phone: ' . $order->customer_phone, 76, 574, 9, false, '#111827');
+        $content .= $this->pdfText('BILLED & SHIPPED TO', 76, 612, 8, true, $gold);
+        $content .= $this->pdfText($order->customer_name, 76, 590, 13, true, '#1f2937');
+        $content .= $this->pdfText('Phone: ' . $order->customer_phone, 76, 574, 10, false, '#111827');
         $content .= $this->pdfWrappedText(
             trim($order->shipping_address . ($order->city ? ', ' . $order->city : '')),
             76,
             559,
-            8,
+            9,
             false,
             '#475569',
-            58,
-            10
+            54,
+            11
         );
         if ($order->delivery_note) {
             $content .= $this->pdfRect(76, 518, 250, 18, '#fff7df', '#f1dfad');
-            $content .= $this->pdfText('Note: ' . $order->delivery_note, 82, 524, 7, false, '#6b4f00');
+            $content .= $this->pdfText('Note: ' . $order->delivery_note, 82, 524, 8, false, '#6b4f00');
         }
 
-        $content .= $this->pdfText('PAYMENT & DELIVERY', 425, 612, 7, true, $gold);
-        $content .= $this->pdfText('Payment: ' . $order->paymentMethodLabel(), 390, 588, 9, false, '#111827');
+        $content .= $this->pdfText('PAYMENT & DELIVERY', 425, 612, 8, true, $gold);
+        $content .= $this->pdfText('Payment: ' . $order->paymentMethodLabel(), 390, 588, 10, false, '#111827');
         $content .= $this->pdfRect(411, 568, 46, 16, '#fff7df', '#f1dfad');
-        $content .= $this->pdfText(strtoupper((string) $order->payment_status), 417, 573, 6, true, '#6b4f00');
+        $content .= $this->pdfText(strtoupper((string) $order->payment_status), 417, 573, 7, true, '#6b4f00');
         $content .= $this->pdfRect(463, 568, 42, 16, '#edf2f7', '#d1d5db');
-        $content .= $this->pdfText(strtoupper((string) $order->status), 470, 573, 6, true, '#334155');
+        $content .= $this->pdfText(strtoupper((string) $order->status), 470, 573, 7, true, '#334155');
 
         $content .= $this->pdfLine(62, 496, 535, 496, '#e5e7eb');
         $content .= $this->pdfRect(62, 462, 473, 24, $tableHead);
-        $content .= $this->pdfText('SL', 70, 471, 7, true, '#0f172a');
-        $content .= $this->pdfText('IMAGE', 94, 471, 7, true, '#0f172a');
-        $content .= $this->pdfText('ITEM & DESCRIPTION', 140, 471, 7, true, '#0f172a');
-        $content .= $this->pdfText('PRICE', 404, 471, 7, true, '#0f172a');
-        $content .= $this->pdfText('QTY', 459, 471, 7, true, '#0f172a');
-        $content .= $this->pdfText('TOTAL', 500, 471, 7, true, '#0f172a');
+        $content .= $this->pdfText('SL', 70, 471, 8, true, '#0f172a');
+        $content .= $this->pdfText('IMAGE', 94, 471, 8, true, '#0f172a');
+        $content .= $this->pdfText('ITEM & DESCRIPTION', 140, 471, 8, true, '#0f172a');
+        $content .= $this->pdfText('PRICE', 404, 471, 8, true, '#0f172a');
+        $content .= $this->pdfText('QTY', 459, 471, 8, true, '#0f172a');
+        $content .= $this->pdfText('TOTAL', 500, 471, 8, true, '#0f172a');
 
         $y = 430;
 
@@ -373,7 +382,7 @@ class AdminInvoiceController extends Controller
                 break;
             }
 
-            $content .= $this->pdfText((string) ($index + 1), 72, $y, 9, false, '#111827');
+            $content .= $this->pdfText((string) ($index + 1), 72, $y, 10, false, '#111827');
             $productImage = $item->image ?: $item->product?->primaryImage()?->path;
             $productImageSource = $productImage ? image_url($productImage, $productName) : null;
             $productImageName = $this->addPdfImage($images, $productImageSource, 220);
@@ -382,27 +391,27 @@ class AdminInvoiceController extends Controller
                 $content .= $this->pdfImage($productImageName, 95, $y - 17, 26, 26);
             } else {
                 $content .= $this->pdfRect(94, $y - 18, 28, 28, '#f8fafc', '#cbd5e1');
-                $content .= $this->pdfText('Image', 98, $y - 3, 6, true, '#64748b');
+                $content .= $this->pdfText('Image', 98, $y - 3, 7, true, '#64748b');
             }
-            $productLines = array_slice($this->pdfWrapLines($productName, 38), 0, 4);
+            $productLines = array_slice($this->pdfWrapLines($productName, 34), 0, 4);
             foreach ($productLines as $lineIndex => $line) {
-                $content .= $this->pdfText($line, 140, $y + 2 - ($lineIndex * 11), 9, true, '#111827');
+                $content .= $this->pdfText($line, 140, $y + 2 - ($lineIndex * 12), 10, true, '#111827');
             }
-            $metaY = $y + 2 - (count($productLines) * 11) - 4;
+            $metaY = $y + 2 - (count($productLines) * 12) - 4;
             if ($item->variant) {
-                $content .= $this->pdfText((string) $item->variant, 140, $metaY, 7, false, '#64748b');
-                $metaY -= 10;
+                $content .= $this->pdfText((string) $item->variant, 140, $metaY, 8, false, '#64748b');
+                $metaY -= 11;
             }
             if ($item->product && $item->product->sku) {
-                $content .= $this->pdfText('SKU: ' . $item->product->sku, 140, $metaY, 7, false, '#64748b');
-                $metaY -= 10;
+                $content .= $this->pdfText('SKU: ' . $item->product->sku, 140, $metaY, 8, false, '#64748b');
+                $metaY -= 11;
             }
             if ((float) $item->unit_discount > 0) {
-                $content .= $this->pdfText('Discount/unit: -BDT ' . number_format((float) $item->unit_discount, 2), 140, $metaY, 7, false, '#64748b');
+                $content .= $this->pdfText('Discount/unit: -BDT ' . number_format((float) $item->unit_discount, 2), 140, $metaY, 8, false, '#64748b');
             }
-            $content .= $this->pdfText('BDT ' . number_format((float) $item->unit_price, 2), 392, $y, 8, false, '#111827');
-            $content .= $this->pdfText((string) $quantity, 464, $y, 8, true, '#111827');
-            $content .= $this->pdfText('BDT ' . number_format($lineTotal, 2), 486, $y, 8, true, '#111827');
+            $content .= $this->pdfText('BDT ' . number_format((float) $item->unit_price, 2), 392, $y, 9, false, '#111827');
+            $content .= $this->pdfText((string) $quantity, 464, $y, 9, true, '#111827');
+            $content .= $this->pdfText('BDT ' . number_format($lineTotal, 2), 486, $y, 9, true, '#111827');
             $content .= $this->pdfLine(62, $y - 48, 535, $y - 48, '#e5e7eb');
 
             $y -= 64;
@@ -417,38 +426,38 @@ class AdminInvoiceController extends Controller
             $order->internal_note ? 'Note: ' . $order->internal_note : 'Thank you for your order. Please check the parcel before accepting delivery.',
             62,
             $summaryY,
-            8,
+            9,
             false,
             '#334155',
-            54,
-            11
+            48,
+            12
         );
-        $content .= $this->pdfText('Cash on Delivery Amount: BDT ' . number_format((float) $order->total, 2), 62, $summaryY - 30, 8, true, '#334155');
+        $content .= $this->pdfText('Cash on Delivery Amount: BDT ' . number_format((float) $order->total, 2), 62, $summaryY - 30, 9, true, '#334155');
 
         $summaryX = 390;
-        $content .= $this->pdfText('Subtotal', $summaryX, $summaryY, 8, false, '#475569');
-        $content .= $this->pdfText('BDT ' . number_format($subtotal, 2), 475, $summaryY, 8, true, '#111827');
-        $content .= $this->pdfText('Delivery', $summaryX, $summaryY - 18, 8, false, '#475569');
-        $content .= $this->pdfText('BDT ' . number_format((float) ($order->shipping_charge ?? 0), 2), 475, $summaryY - 18, 8, true, '#111827');
+        $content .= $this->pdfText('Subtotal', $summaryX, $summaryY, 9, false, '#475569');
+        $content .= $this->pdfText('BDT ' . number_format($subtotal, 2), 475, $summaryY, 9, true, '#111827');
+        $content .= $this->pdfText('Delivery', $summaryX, $summaryY - 18, 9, false, '#475569');
+        $content .= $this->pdfText('BDT ' . number_format((float) ($order->shipping_charge ?? 0), 2), 475, $summaryY - 18, 9, true, '#111827');
         $summaryTotalY = $summaryY - 72;
         if ($discount > 0) {
-            $content .= $this->pdfText('Discount', $summaryX, $summaryY - 36, 8, false, '#475569');
-            $content .= $this->pdfText('-BDT ' . number_format($discount, 2), 475, $summaryY - 36, 8, true, '#b91c1c');
+            $content .= $this->pdfText('Discount', $summaryX, $summaryY - 36, 9, false, '#475569');
+            $content .= $this->pdfText('-BDT ' . number_format($discount, 2), 475, $summaryY - 36, 9, true, '#b91c1c');
             $summaryTotalY -= 18;
         }
         if ($tax > 0) {
-            $content .= $this->pdfText('Tax', $summaryX, $summaryTotalY + 18, 8, false, '#475569');
-            $content .= $this->pdfText('BDT ' . number_format($tax, 2), 475, $summaryTotalY + 18, 8, true, '#111827');
+            $content .= $this->pdfText('Tax', $summaryX, $summaryTotalY + 18, 9, false, '#475569');
+            $content .= $this->pdfText('BDT ' . number_format($tax, 2), 475, $summaryTotalY + 18, 9, true, '#111827');
             $summaryTotalY -= 18;
         }
 
         $content .= $this->pdfRect(388, $summaryTotalY - 8, 148, 34, $green);
-        $content .= $this->pdfText('Total due', 400, $summaryTotalY + 5, 10, true, '#ffffff');
-        $content .= $this->pdfText('BDT ' . number_format((float) $order->total, 2), 472, $summaryTotalY + 5, 10, true, '#ffffff');
+        $content .= $this->pdfText('Total due', 400, $summaryTotalY + 5, 11, true, '#ffffff');
+        $content .= $this->pdfText('BDT ' . number_format((float) $order->total, 2), 472, $summaryTotalY + 5, 11, true, '#ffffff');
 
         $content .= $this->pdfLine(62, 84, 535, 84, '#e5e7eb');
-        $content .= $this->pdfText($store['name'] . ' | ' . url('/'), 62, 62, 7, true, '#64748b');
-        $content .= $this->pdfWrappedText($store['footer_text'] ?: 'Computer-generated invoice.', 62, 48, 7, false, '#64748b', 96, 9);
+        $content .= $this->pdfText($store['name'] . ' | ' . url('/'), 62, 62, 8, true, '#64748b');
+        $content .= $this->pdfWrappedText($store['footer_text'] ?: 'Computer-generated invoice.', 62, 48, 8, false, '#64748b', 88, 10);
 
         return $this->buildPdfPage($content, $images);
     }
