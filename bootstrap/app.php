@@ -47,6 +47,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn () => route('login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Translation credentials must never be copied into the session's old-input bag.
+        $exceptions->dontFlash(['api_key']);
+
         // Admin settings/fetch calls send Accept: application/json but are not under /api.
         // Without this, validation/upload errors return HTML and the UI shows "Unexpected token '<'".
         $exceptions->shouldRenderJsonWhen(

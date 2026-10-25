@@ -61,6 +61,7 @@ class AdminPermissions
         'roles' => ['Roles & Permissions (Super Admin only)', ['view', 'add', 'edit', 'delete']],
         'settings' => ['Store Settings / Payments / Shipping / SEO / Tracking', ['view', 'edit', 'execute']],
         'seo_completion' => ['Product SEO Completion', ['view', 'execute']],
+        'translation_settings' => ['Translation API Settings', ['view', 'edit', 'execute']],
     ];
 
     private const RESOURCES = [
@@ -119,6 +120,7 @@ class AdminPermissions
         ],
         'SettingController' => ['edit' => 'settings.view', 'updateSection' => 'settings.edit', 'testMail' => 'settings.execute'],
         'SeoCompletionController' => ['index' => 'seo_completion.view', 'translate' => 'seo_completion.execute', 'store' => 'seo_completion.execute'],
+        'TranslationSettingsController' => ['index' => 'translation_settings.view', 'update' => 'translation_settings.edit', 'test' => 'translation_settings.execute'],
         'DropshippingController' => [
             'index' => 'dropshipping.view', 'apiSettings' => 'supplier_connections.view',
             'store' => 'supplier_connections.add', 'update' => 'supplier_connections.edit', 'toggle' => 'supplier_connections.edit',
@@ -150,6 +152,7 @@ class AdminPermissions
                 'system_health' => 'Execute: clear caches and run database migrations.',
                 'recovery_trash' => 'Execute: restore files. Delete: permanently purge expired batches.',
                 'reviews' => 'Execute: approve or reject real reviews.',
+                'translation_settings' => 'Edit: choose the translation provider and manage its API key. Execute: test the saved provider.',
                 'supplier_products' => 'Execute: import selected supplier products.',
                 'sync_runs' => 'Execute: start, pause, resume, cancel, retry and work sync queues.',
                 'media' => 'Execute: create banners from selected media.',

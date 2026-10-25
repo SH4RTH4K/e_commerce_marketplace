@@ -38,6 +38,7 @@ use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SkuConfigurationController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\SystemHealthController;
+use App\Http\Controllers\Admin\TranslationSettingsController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\OtpController;
 use App\Http\Controllers\Auth\PasswordResetController;
@@ -422,6 +423,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('settings/seo-completion', [SeoCompletionController::class, 'store'])->name('seo-completion.store');
         });
         Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');
+        Route::get('settings/translation', [TranslationSettingsController::class, 'index'])->name('translation-settings.index');
+        Route::put('settings/translation', [TranslationSettingsController::class, 'update'])->name('translation-settings.update');
+        Route::post('settings/translation/test', [TranslationSettingsController::class, 'test'])->middleware('throttle:10,1')->name('translation-settings.test');
         Route::match(['put', 'post'], 'settings/{section}', [SettingController::class, 'updateSection'])->name('settings.update-section');
         Route::post('settings/test-mail', [SettingController::class, 'testMail'])->name('settings.test-mail');
 

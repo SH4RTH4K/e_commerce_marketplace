@@ -53,6 +53,7 @@ class SettingController extends Controller
     public function edit()
     {
         $settings = Setting::pluck('value', 'key')->all();
+        unset($settings['seo_translation_api_key']);
         $settings += [
             'seo_https_redirect_enabled' => app()->environment('production') ? '1' : '0',
             'seo_canonical_host' => $this->defaultCanonicalHost(),

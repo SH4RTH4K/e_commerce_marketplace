@@ -19,6 +19,7 @@ class FakeOrderGuardController extends Controller
     public function index(string $section = 'overview')
     {
         $settings = Setting::pluck('value', 'key');
+        $settings->forget('seo_translation_api_key');
         $apiConnection = BdCourierService::connectionStatus((string) ($settings['fog_bdcourier_api_key'] ?? ''));
         $historyReady = Schema::hasTable('bd_courier_checks');
         $databaseStatus = [

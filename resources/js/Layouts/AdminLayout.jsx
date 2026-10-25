@@ -155,6 +155,11 @@ const navGroups = [
         perm: 'git_repository.view',
       },
       {
+        key: 'translation-settings', label: 'Translation API', href: '/admin/settings/translation', pattern: /^\/admin\/settings\/translation(?:\/|$)/,
+        icon: 'M12 3v18m9-9H3m15.5-6.5a9 9 0 11-12.7 12.7',
+        perm: 'translation_settings.view',
+      },
+      {
         key: 'fake-order-guard-group', label: 'Fraud Guard', defaultOpen: false,
         icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
         children: [
