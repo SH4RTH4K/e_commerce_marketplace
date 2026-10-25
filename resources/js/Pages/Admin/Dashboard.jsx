@@ -56,6 +56,7 @@ export default function Dashboard({ ordersCount, pendingCount, revenue, products
   const pendingOrdCount = stats?.pending    ?? pendingCount ?? 0;
   const courierCount    = stats?.shipped    ?? 0;
   const cancelledCount  = stats?.cancelled  ?? 0;
+  const abandonedCount  = stats?.abandoned_carts;
   const lowStockCount   = stats?.low_stock  ?? 0;
   const usersCount      = stats?.users      ?? 0;
   const totalOrders     = Number(ordersCount) || 0;
@@ -158,6 +159,17 @@ export default function Dashboard({ ordersCount, pendingCount, revenue, products
         </svg>
       ) 
     },
+    ...(abandonedCount !== null && abandonedCount !== undefined ? [{
+      label: 'Abandoned Carts',
+      value: Number(abandonedCount).toLocaleString(),
+      sub: 'Active checkouts to recover',
+      href: '/admin/abandoned-checkouts', accent: '#ea580c', bg: '#fff7ed',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 7h12l1 13H5L6 7zM9 7a3 3 0 016 0" />
+        </svg>
+      ),
+    }] : []),
   ];
 
   const chartData = (series || []).map(p => ({
@@ -201,7 +213,7 @@ export default function Dashboard({ ordersCount, pendingCount, revenue, products
           </div>
 
           {/* Bottom 4 order-status cards */}
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {bottomCards.map(c => <StatCard key={c.label} {...c} />)}
           </div>
 

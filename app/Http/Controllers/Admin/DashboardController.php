@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AbandonedCheckout;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
@@ -49,6 +50,9 @@ class DashboardController extends Controller
                 'pending' => Order::where('status', 'pending')->count(),
                 'shipped' => Order::where('status', 'shipped')->count(),
                 'cancelled' => Order::where('status', 'cancelled')->count(),
+                'abandoned_carts' => request()->user()?->hasPermission('abandoned_carts.view')
+                    ? AbandonedCheckout::where('is_recovered', false)->count()
+                    : null,
                 'low_stock' => Product::whereRaw('(stock_quantity + sourced_stock_quantity) BETWEEN 1 AND 5')->count(),
                 'users' => User::count(),
             ],
