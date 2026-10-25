@@ -169,6 +169,73 @@ const hasDescriptionContent = (value) => String(value || '')
   .replace(/&nbsp;/gi, '')
   .trim().length > 0;
 
+function ProductShareButton({ productName, productUrl, price, className = '' }) {
+  const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef(null);
+
+  useEffect(() => () => window.clearTimeout(copiedTimer.current), []);
+
+  const copyProductLink = async () => {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(productUrl);
+      return;
+    }
+
+    const input = document.createElement('textarea');
+    input.value = productUrl;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.select();
+    const didCopy = document.execCommand('copy');
+    input.remove();
+    if (!didCopy) throw new Error('Clipboard is unavailable');
+  };
+
+  const shareProduct = async () => {
+    const shareData = { title: productName, text: `${productName} — ${price}`, url: productUrl };
+    try {
+      if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
+        await navigator.share(shareData);
+        return;
+      }
+
+      await copyProductLink();
+      setCopied(true);
+      window.clearTimeout(copiedTimer.current);
+      copiedTimer.current = window.setTimeout(() => setCopied(false), 2200);
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      try {
+        await copyProductLink();
+        setCopied(true);
+        window.clearTimeout(copiedTimer.current);
+        copiedTimer.current = window.setTimeout(() => setCopied(false), 2200);
+      } catch {
+        setCopied(false);
+      }
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={shareProduct}
+      aria-label={copied ? 'Product link copied' : `Share ${productName}`}
+      className={`inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:border-orange-300 hover:text-[#f15a24] ${className}`}
+    >
+      <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="18" cy="5" r="3" />
+        <circle cx="6" cy="12" r="3" />
+        <circle cx="18" cy="19" r="3" />
+        <path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4" />
+      </svg>
+      <span aria-live="polite">{copied ? 'Link copied' : 'Share product'}</span>
+    </button>
+  );
+}
+
 export default function ProductPage(props) {
   return <ProductDetail key={`${props.product.id}:${JSON.stringify(props.initialVariants || {})}`} {...props} />;
 }
@@ -563,6 +630,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
               <p className="mt-2 text-sm text-gray-500">SKU: <span className="font-mono font-semibold text-gray-700">{product.sku || '—'}</span></p>
               <ProductAvailability product={product} quantity={qty} showMessage className="mt-2" />
               <ProductRating rating={product.rating} reviewCount={reviewCount} className="template-1-product-rating" />
+              <ProductShareButton productName={product.name} productUrl={productShareUrl} price={money(priceData.price)} className="mt-3 w-fit" />
               <div className="template-1-product-description" dangerouslySetInnerHTML={{ __html: descriptionMarkup }} />
 
               {(variantGroups || []).map(group => (
@@ -742,6 +810,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
             
             <div className="flex flex-wrap items-center gap-4 mb-2">
               <ProductRating rating={product.rating} reviewCount={reviewCount} />
+              <ProductShareButton productName={product.name} productUrl={productShareUrl} price={money(priceData.price)} />
               <>
                 <span className="text-gray-300 hidden sm:inline">|</span>
                 <span className="text-sm text-gray-500">SKU: <span className="font-semibold text-gray-900">{product.sku || '—'}</span></span>
