@@ -224,6 +224,7 @@ function ProductShareButton({ productName, productUrl, price, className = '' }) 
       onClick={shareProduct}
       aria-label={copied ? 'Product link copied' : `Share ${productName}`}
       className={`inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition-colors hover:border-orange-300 hover:text-[#f15a24] ${className}`}
+      style={{ color: copied ? '#15803d' : '#374151', backgroundColor: '#fff', borderColor: copied ? '#bbf7d0' : '#e5e7eb' }}
     >
       <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <circle cx="18" cy="5" r="3" />
