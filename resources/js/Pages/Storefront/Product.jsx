@@ -791,9 +791,9 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
 
                   return (
                     <div key={grp.name}>
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2 mb-2">
                         <p className="text-sm font-bold text-gray-900">{grp.name}</p>
-                        <span className="text-sm text-gray-500 font-medium">{currentVal}</span>
+                        {currentVal && <span className="rounded-md bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700">{currentVal}</span>}
                       </div>
                       <div className="flex flex-wrap gap-2.5">
                         {(grp.options || []).map(opt => {
