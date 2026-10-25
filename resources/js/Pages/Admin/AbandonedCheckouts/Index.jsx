@@ -65,16 +65,16 @@ export default function AbandonedCheckoutsIndex({ checkouts, stats, filter = 'ac
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[1190px] table-fixed text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/50 border-b border-gray-100">
-                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
-                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Address</th>
-                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cart Details</th>
-                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Active</th>
-                <th className="p-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+                <th className="w-[150px] p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
+                <th className="w-[140px] p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
+                <th className="w-[190px] p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Address</th>
+                <th className="w-[220px] p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cart Details</th>
+                <th className="w-[100px] p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="w-[210px] p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Last Active</th>
+                <th className="w-[180px] p-3 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -87,7 +87,7 @@ export default function AbandonedCheckoutsIndex({ checkouts, stats, filter = 'ac
                 </tr>
               ) : checkouts.data.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="p-4">
+                  <td className="p-3 align-top">
                     <span className="font-bold text-gray-900">{item.customer_name || 'N/A'}</span>
                     <div className="text-xs text-gray-500 mt-1">
                       {item.cart_items && item.cart_items.length > 0 ? (
@@ -98,7 +98,7 @@ export default function AbandonedCheckoutsIndex({ checkouts, stats, filter = 'ac
                       ) : 'No items'}
                     </div>
                   </td>
-                  <td className="p-4 align-top">
+                  <td className="p-3 align-top">
                     {item.customer_phone ? (
                       <div className="text-sm font-semibold text-gray-900 mb-0.5">{item.customer_phone}</div>
                     ) : null}
@@ -106,27 +106,29 @@ export default function AbandonedCheckoutsIndex({ checkouts, stats, filter = 'ac
                       <div className="text-xs text-gray-500">{item.customer_email}</div>
                     ) : null}
                   </td>
-                  <td className="p-4 align-top"><span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${item.is_recovered ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>{item.is_recovered ? 'Recovered' : 'Active'}</span></td>
-                  <td className="p-4 align-top">
-                    <div className="text-sm text-gray-600 max-w-xs truncate" title={item.shipping_address}>
+                  <td className="p-3 align-top">
+                    <div className="w-full truncate text-sm text-gray-600" title={item.shipping_address}>
                       {item.shipping_address || '-'}
                     </div>
                   </td>
-                  <td className="p-4 align-top">
+                  <td className="p-3 align-top">
                     <div className="font-bold text-gray-900 mb-1">৳{Number(item.cart_total).toLocaleString()}</div>
-                    <div className="text-xs text-gray-500 max-w-[220px] space-y-0.5">
+                    <div className="w-full min-w-0 space-y-0.5 text-xs text-gray-500">
                       {item.cart_items && item.cart_items.map((cartItem, idx) => (
-                        <div key={idx} className="truncate" title={cartItem.name}>
+                        <div key={idx} className="w-full truncate" title={cartItem.name}>
                           {cartItem.qty || cartItem.quantity || 1}x {cartItem.name}
                         </div>
                       ))}
                     </div>
                   </td>
-                  <td className="p-4 align-top">
+                  <td className="p-3 align-top">
+                    <span className={`inline-flex whitespace-nowrap px-2 py-1 rounded-full text-xs font-semibold ${item.is_recovered ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>{item.is_recovered ? 'Recovered' : 'Active'}</span>
+                  </td>
+                  <td className="p-3 align-top">
                     <span className="text-xs text-gray-500 block mb-2 font-medium">
                       {new Date(item.last_active_at).toLocaleString()}
                     </span>
-                    <div className="flex flex-col gap-1.5 w-48">
+                    <div className="flex w-full max-w-[180px] flex-col gap-1.5">
                       <textarea 
                         className="w-full text-xs border border-gray-200 rounded-lg p-2 focus:ring-1 focus:ring-orange-500 outline-none resize-none" 
                         rows="2" 
@@ -139,8 +141,8 @@ export default function AbandonedCheckoutsIndex({ checkouts, stats, filter = 'ac
                       </button>
                     </div>
                   </td>
-                  <td className="p-4 text-right align-top whitespace-nowrap">
-                    <div className="flex items-center justify-end gap-1.5">
+                  <td className="p-3 text-right align-top">
+                    <div className="flex max-w-full flex-wrap items-center justify-end gap-1.5">
                       {/* 1-Click Create Order & Recover Button */}
                       {!item.is_recovered && <button
                         onClick={() => handleCreateOrder(item)}
