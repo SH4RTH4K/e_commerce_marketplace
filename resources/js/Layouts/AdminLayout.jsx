@@ -140,6 +140,11 @@ const navGroups = [
         perm: 'settings.manage',
       },
       {
+        key: 'optimized-images', label: 'Optimized Images', href: '/admin/system/optimized-images', pattern: /^\/admin\/system\/optimized-images/,
+        icon: 'M4 5h16v14H4zM8 10l2 2 3-3 3 4',
+        perm: 'settings.manage',
+      },
+      {
         key: 'git-repository', label: 'Git Repository', href: '/admin/system/git-repository', pattern: /^\/admin\/system\/git-repository/,
         icon: 'M8 12a4 4 0 108 0 4 4 0 00-8 0zm0 0H4a2 2 0 01-2-2V6a2 2 0 012-2h4m8 8h4a2 2 0 002-2V6a2 2 0 00-2-2h-4M8 8l8 8m0-8l-8 8',
         perm: 'settings.manage',

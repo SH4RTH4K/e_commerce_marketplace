@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\LandingPageController as AdminLandingPageControll
 use App\Http\Controllers\Admin\MediaController as AdminMediaController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\OrderSourcingController;
+use App\Http\Controllers\Admin\OptimizedImageController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductCtaController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
@@ -423,6 +424,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         // System health, private backups, and recovery tools.
         Route::middleware('permission:settings.manage')->group(function () {
             Route::get('system-health', [SystemHealthController::class, 'index'])->name('system-health.index');
+            Route::get('system/optimized-images', [OptimizedImageController::class, 'index'])->name('optimized-images.index');
+            Route::post('system/optimized-images/delete', [OptimizedImageController::class, 'delete'])->name('optimized-images.delete');
             Route::post('system-health/backup', [SystemHealthController::class, 'createBackup'])->name('system-health.backup');
             Route::post('system-health/media-backup', [SystemHealthController::class, 'createMediaBackup'])->name('system-health.media-backup');
             Route::post('system-health/full-backup', [SystemHealthController::class, 'createFullBackup'])->name('system-health.full-backup');

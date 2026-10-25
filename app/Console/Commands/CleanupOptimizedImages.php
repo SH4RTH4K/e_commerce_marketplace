@@ -2,12 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Banner;
-use App\Models\Category;
-use App\Models\ProductImage;
-use App\Services\StorefrontImageService;
+use App\Services\OptimizedImageCleanupService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Collection;
 
 class CleanupOptimizedImages extends Command
 {
@@ -17,72 +13,31 @@ class CleanupOptimizedImages extends Command
 
     protected $description = 'Remove orphaned generated storefront image variants';
 
-    public function handle(StorefrontImageService $images): int
+    public function handle(OptimizedImageCleanupService $cleanup): int
     {
         $graceDays = max(0, (int) $this->option('grace-days'));
-        $cutoff = now()->subDays($graceDays)->getTimestamp();
-        $protected = $this->protectedVariants($images);
-        $directory = public_path('uploads/optimized');
-        $orphaned = 0;
-        $deleted = 0;
+        try {
+            $scan = $cleanup->scan();
+        } catch (\Throwable $exception) {
+            $this->error($exception->getMessage());
 
-        if (! is_dir($directory)) {
-            $this->info('No optimized image directory exists.');
+            return self::FAILURE;
+        }
+        $eligible = collect($scan['files'])
+            ->filter(fn (array $file): bool => $file['age_days'] >= $graceDays)
+            ->pluck('filename')
+            ->all();
+
+        if ($this->option('dry-run')) {
+            $this->info('Found '.count($eligible).' orphaned optimized image(s) past the grace period.');
 
             return self::SUCCESS;
         }
 
-        try {
-            $iterator = new \FilesystemIterator($directory, \FilesystemIterator::SKIP_DOTS);
-            foreach ($iterator as $file) {
-                if (! $file->isFile() || strtolower($file->getExtension()) !== 'webp' || $file->getMTime() > $cutoff) {
-                    continue;
-                }
-                if (isset($protected[$file->getFilename()])) {
-                    continue;
-                }
-
-                $orphaned++;
-                if (! $this->option('dry-run') && @unlink($file->getPathname())) {
-                    $deleted++;
-                }
-            }
-        } catch (\Throwable $exception) {
-            $this->error('Could not scan optimized images: '.$exception->getMessage());
-
-            return self::FAILURE;
-        }
-
-        $this->info(($this->option('dry-run') ? 'Found ' : 'Removed ').$orphaned.' orphaned optimized image(s).');
-        if (! $this->option('dry-run')) {
-            $this->line('Deleted: '.$deleted.'; protected current variants: '.count($protected).'.');
-        }
+        $result = $cleanup->delete($eligible);
+        $this->info('Removed '.count($result['deleted']).' orphaned optimized image(s).');
+        $this->line('Deleted: '.count($result['deleted']).'; protected current variants: '.$scan['protected_count'].'.');
 
         return self::SUCCESS;
-    }
-
-    /** @return array<string, true> */
-    private function protectedVariants(StorefrontImageService $images): array
-    {
-        $sources = new Collection();
-        $sources = $sources
-            ->merge(ProductImage::query()->pluck('path'))
-            ->merge(Category::query()->pluck('image'))
-            ->merge(Banner::query()->pluck('image'))
-            ->push(setting('logo', ''))
-            ->filter(fn ($source) => is_string($source) && trim($source) !== '')
-            ->unique();
-
-        $protected = [];
-        foreach ($sources as $source) {
-            foreach (StorefrontImageService::WIDTHS as $width) {
-                $path = $images->currentOptimizedPath((string) $source, $width);
-                if ($path) {
-                    $protected[basename($path)] = true;
-                }
-            }
-        }
-
-        return $protected;
     }
 }
