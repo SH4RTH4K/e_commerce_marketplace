@@ -34,7 +34,7 @@ class OptimizedImageCleanupTest extends TestCase
                 ->assertOk()
                 ->assertInertia(fn (Assert $page) => $page
                     ->where('directory', 'public/uploads/optimized')
-                    ->where('files', fn ($files) => collect($files)->contains('filename', $filename)));
+                    ->where('files', fn ($files) => collect($files)->contains(fn ($file) => ($file['filename'] ?? null) === $filename && ($file['status'] ?? null) === 'orphaned')));
 
             $this->post('/admin/system/optimized-images/delete', ['filenames' => [$filename]])
                 ->assertSessionHasNoErrors();

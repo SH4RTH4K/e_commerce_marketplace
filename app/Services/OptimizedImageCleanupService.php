@@ -35,6 +35,7 @@ class OptimizedImageCleanupService
                     $modified = $file->getMTime();
                     $files[] = [
                         'filename' => $file->getFilename(),
+                        'status' => 'orphaned',
                         'path' => 'public/uploads/optimized/'.$file->getFilename(),
                         'bytes' => $size,
                         'formatted' => $this->formatBytes($size),

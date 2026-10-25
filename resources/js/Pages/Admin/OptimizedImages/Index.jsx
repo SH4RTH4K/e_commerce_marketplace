@@ -56,11 +56,12 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+            <table className="w-full min-w-[850px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="w-10 px-5 py-3"><input type="checkbox" aria-label="Select all orphaned files" checked={files.length > 0 && selected.length === files.length} onChange={toggleAll} /></th>
                   <th className="px-5 py-3">File</th>
+                  <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3">Size</th>
                   <th className="px-5 py-3">Age</th>
                   <th className="px-5 py-3">Modified</th>
@@ -77,13 +78,14 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
                         <span><p className="font-mono text-xs text-slate-700 group-hover:text-orange-600">{file.filename}</p><p className="mt-1 text-[11px] text-slate-400">{file.path}</p></span>
                       </button>
                     </td>
+                    <td className="px-5 py-3"><span className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold capitalize text-amber-700">{file.status || 'orphaned'}</span></td>
                     <td className="px-5 py-3 text-slate-600">{file.formatted}</td>
                     <td className="px-5 py-3 text-slate-600">{file.age_days} day{file.age_days === 1 ? '' : 's'}</td>
                     <td className="px-5 py-3 text-xs text-slate-500">{file.modified_at}</td>
                     <td className="px-5 py-3 text-right"><button type="button" onClick={() => { if (window.confirm('Delete this orphaned optimized image? This cannot be undone.')) deleteFiles([file.filename]); }} disabled={busy} className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50">Delete</button></td>
                   </tr>
                 ))}
-                {!files.length && <tr><td colSpan="6" className="px-5 py-12 text-center text-sm text-emerald-600">No orphaned optimized images found.</td></tr>}
+                {!files.length && <tr><td colSpan="7" className="px-5 py-12 text-center text-sm text-emerald-600">No orphaned optimized images found.</td></tr>}
               </tbody>
             </table>
           </div>
