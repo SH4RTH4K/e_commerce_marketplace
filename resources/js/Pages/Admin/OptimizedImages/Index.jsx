@@ -6,12 +6,13 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
   const [selected, setSelected] = useState([]);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(null);
+  const orphanedFiles = files.filter(file => (file.status || 'orphaned') === 'orphaned');
 
   const toggle = filename => setSelected(current => current.includes(filename)
     ? current.filter(item => item !== filename)
     : [...current, filename]);
 
-  const toggleAll = event => setSelected(event.target.checked ? files.map(file => file.filename) : []);
+  const toggleAll = event => setSelected(event.target.checked ? orphanedFiles.map(file => file.filename) : []);
 
   const deleteFiles = filenames => {
     setBusy(true);
@@ -50,16 +51,17 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
           <div className="flex flex-col justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center">
             <div>
               <h3 className="font-bold text-slate-900">Orphaned files</h3>
-              <p className="mt-1 text-xs text-slate-500">Directory: <code>{directory}</code>. Current referenced variants are never shown here.</p>
+              <p className="mt-1 text-xs text-slate-500">Only orphaned files are shown and eligible for deletion. Current referenced variants are never shown here. Directory: <code>{directory}</code>.</p>
             </div>
             <button type="button" onClick={deleteSelected} disabled={!selected.length || busy} className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40">Delete selected ({selected.length})</button>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[850px] text-left text-sm">
+            <table className="w-full min-w-[900px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="w-10 px-5 py-3"><input type="checkbox" aria-label="Select all orphaned files" checked={files.length > 0 && selected.length === files.length} onChange={toggleAll} /></th>
+                  <th className="w-14 px-5 py-3">SL</th>
+                  <th className="w-10 px-5 py-3"><input type="checkbox" aria-label="Select all orphaned files" checked={orphanedFiles.length > 0 && selected.length === orphanedFiles.length} onChange={toggleAll} /></th>
                   <th className="px-5 py-3">File</th>
                   <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3">Size</th>
@@ -69,8 +71,9 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {files.map(file => (
+                {orphanedFiles.map((file, index) => (
                   <tr key={file.filename} className="hover:bg-slate-50/70">
+                    <td className="px-5 py-3 text-xs font-semibold text-slate-400">{index + 1}</td>
                     <td className="px-5 py-3"><input type="checkbox" checked={selected.includes(file.filename)} onChange={() => toggle(file.filename)} aria-label={`Select ${file.filename}`} /></td>
                     <td className="px-5 py-3">
                       <button type="button" onClick={() => setPreview(file)} className="group flex items-center gap-3 text-left" aria-label={`Preview ${file.filename}`}>
@@ -85,7 +88,7 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
                     <td className="px-5 py-3 text-right"><button type="button" onClick={() => { if (window.confirm('Delete this orphaned optimized image? This cannot be undone.')) deleteFiles([file.filename]); }} disabled={busy} className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50">Delete</button></td>
                   </tr>
                 ))}
-                {!files.length && <tr><td colSpan="7" className="px-5 py-12 text-center text-sm text-emerald-600">No orphaned optimized images found.</td></tr>}
+                {!orphanedFiles.length && <tr><td colSpan="8" className="px-5 py-12 text-center text-sm text-emerald-600">No orphaned optimized images found.</td></tr>}
               </tbody>
             </table>
           </div>
