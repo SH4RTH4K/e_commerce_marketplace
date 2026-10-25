@@ -216,7 +216,7 @@ function Chevron({ open }) {
 }
 
 /* ─── Collapsible nav item ────────────────────────────────────────── */
-function CollapsibleItem({ item, isActive, admin_badges, hasPerm, featureEnabled }) {
+function CollapsibleItem({ item, isActive, admin_badges, abandonedNotifications, onOpenAbandoned, hasPerm, featureEnabled }) {
   if (!item.children || item.children.length === 0) {
     if (!hasPerm(item.perm)) return null;
     const active = isActive(item.pattern);
@@ -269,11 +269,13 @@ function CollapsibleItem({ item, isActive, admin_badges, hasPerm, featureEnabled
         <div className="ml-3 pl-3 border-l border-gray-100 space-y-0.5 mb-1">
           {visibleChildren.map(child => {
             const active = isActive(child.pattern, child.orderSegment, child.crmSegment);
-            const childBadge = child.badge && admin_badges ? admin_badges[child.badge] : 0;
+            const childBadge = child.key === 'abandoned'
+              ? abandonedNotifications
+              : child.badge && admin_badges ? admin_badges[child.badge] : 0;
             return (
               <div key={child.key}>
               {child.section && <p className="px-2.5 pt-3 pb-1 text-[9px] font-semibold uppercase tracking-wider text-gray-400">{child.section}</p>}
-              <a href={child.href}
+              <a href={child.href} onClick={child.key === 'abandoned' ? onOpenAbandoned : undefined}
                 aria-current={active ? 'page' : undefined}
                 className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-sm transition-all
                   ${active
@@ -302,10 +304,69 @@ export default function AdminLayout({ children, title }) {
   const { auth, app, flash, testing_mode, admin_badges, dropshipping_enabled } = props;
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null);
+  const [abandonedNotifications, setAbandonedNotifications] = useState(0);
+  const [abandonedToast, setAbandonedToast] = useState(null);
 
   const user = auth?.user;
   const isSuperAdmin = user?.is_super_admin || user?.role === 'admin';
   const userPerms = Array.isArray(user?.permissions) ? user.permissions : [];
+
+  useEffect(() => {
+    if (!user || !hasPerm('abandoned_carts.view')) return;
+
+    const storageKey = `admin-abandoned-checkout-cursor-${user.id}`;
+    let cursor = Number(sessionStorage.getItem(storageKey));
+    if (!Number.isFinite(cursor) || cursor <= 0) {
+      cursor = Number(admin_badges?.latest_abandoned_checkout_id || 0);
+      sessionStorage.setItem(storageKey, String(cursor));
+    }
+
+    let disposed = false;
+    const poll = async () => {
+      try {
+        const response = await fetch(`/admin/abandoned-checkouts/notifications?after=${cursor}`, {
+          headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin',
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (disposed) return;
+
+        const newCheckouts = Array.isArray(data.checkouts) ? data.checkouts : [];
+        if (newCheckouts.length) {
+          cursor = Math.max(cursor, ...newCheckouts.map(checkout => Number(checkout.id) || 0));
+          setAbandonedNotifications(count => count + newCheckouts.length);
+          const latest = newCheckouts[newCheckouts.length - 1];
+          setAbandonedToast({
+            count: newCheckouts.length,
+            name: latest.customer_name || 'A customer',
+            id: latest.id,
+          });
+        }
+        cursor = Math.max(cursor, Number(data.latest_id) || 0);
+        sessionStorage.setItem(storageKey, String(cursor));
+      } catch {
+        // A later polling cycle can recover from temporary network errors.
+      }
+    };
+
+    const interval = window.setInterval(poll, 15000);
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+    };
+  }, [user?.id, userPerms.join(','), admin_badges?.latest_abandoned_checkout_id]);
+
+  useEffect(() => {
+    if (!abandonedToast) return;
+    const timeout = window.setTimeout(() => setAbandonedToast(null), 10000);
+    return () => window.clearTimeout(timeout);
+  }, [abandonedToast]);
+
+  const openAbandonedCheckouts = () => {
+    setAbandonedNotifications(0);
+    setAbandonedToast(null);
+  };
 
   const hasPerm = (perm) => !perm || (perm.startsWith('roles.') ? isSuperAdmin : isSuperAdmin || userPerms.includes(perm));
   const featureEnabled = (feature) => !feature || (feature === 'dropshipping' && dropshipping_enabled);
@@ -422,6 +483,8 @@ export default function AdminLayout({ children, title }) {
                     item={item}
                     isActive={isActive}
                     admin_badges={admin_badges}
+                    abandonedNotifications={abandonedNotifications}
+                    onOpenAbandoned={openAbandonedCheckouts}
                     hasPerm={hasPerm}
                     featureEnabled={featureEnabled}
                   />
@@ -454,6 +517,28 @@ export default function AdminLayout({ children, title }) {
 
       {/* ── Main content ── */}
       <div className="flex-1 flex flex-col min-w-0">
+
+        {abandonedToast && (
+          <div className="fixed right-5 top-[4.5rem] z-50 w-[min(24rem,calc(100vw-2.5rem))] rounded-xl border border-orange-200 bg-white p-4 shadow-xl">
+            <a href="/admin/abandoned-checkouts" onClick={openAbandonedCheckouts} className="block transition hover:bg-orange-50">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M6 7h12l1 13H5L6 7zM9 7a3 3 0 016 0" />
+                </svg>
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-bold text-gray-900">
+                  {abandonedToast.count > 1 ? `${abandonedToast.count} new abandoned checkouts` : 'New abandoned checkout'}
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-gray-500">{abandonedToast.name} left items in checkout. Click to view.</span>
+              </span>
+            </div>
+            </a>
+            <button type="button" aria-label="Dismiss notification" onClick={() => setAbandonedToast(null)}
+              className="absolute right-3 top-3 text-gray-400 hover:text-gray-700">×</button>
+          </div>
+        )}
 
         {/* Topbar */}
         <header className="h-14 bg-white border-b border-gray-100 flex items-center gap-3 px-4 sm:px-6 shrink-0 sticky top-0 z-30 shadow-sm">

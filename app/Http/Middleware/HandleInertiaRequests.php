@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\ContactMessage;
 use App\Models\Banner;
 use App\Models\Category;
+use App\Models\AbandonedCheckout;
 use App\Models\Feature;
 use App\Models\Order;
 use App\Models\ProductReview;
@@ -287,6 +288,7 @@ class HandleInertiaRequests extends Middleware
             'pending_orders' => $counts['pending'] ?? 0,
             'pending_reviews' => $request->user()->hasPermission('reviews.view') ? ProductReview::pending()->count() : 0,
             'new_messages' => $request->user()->hasPermission('messages.view') ? ContactMessage::new()->count() : 0,
+            'latest_abandoned_checkout_id' => $request->user()->hasPermission('abandoned_carts.view') ? (int) (AbandonedCheckout::max('id') ?? 0) : 0,
         ];
     }
 

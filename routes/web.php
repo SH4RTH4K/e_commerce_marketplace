@@ -304,6 +304,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('orders/{order:id}/send-to-courier', [CourierController::class, 'sendToCourier'])->name('orders.send-to-courier');
 
         // Abandoned Checkouts
+        Route::get('/abandoned-checkouts/notifications', [App\Http\Controllers\Admin\AbandonedCheckoutController::class, 'notifications'])->name('abandoned-checkouts.notifications');
         Route::get('/abandoned-checkouts', [App\Http\Controllers\Admin\AbandonedCheckoutController::class, 'index'])->name('abandoned-checkouts.index');
         Route::delete('/abandoned-checkouts/{id}', [App\Http\Controllers\Admin\AbandonedCheckoutController::class, 'destroy'])->name('abandoned-checkouts.destroy');
         Route::patch('/abandoned-checkouts/{id}/recover', [App\Http\Controllers\Admin\AbandonedCheckoutController::class, 'recover'])->name('abandoned-checkouts.recover');

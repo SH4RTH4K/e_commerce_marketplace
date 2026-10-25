@@ -103,7 +103,7 @@ class AdminPermissions
         'CourierController' => ['sendToCourier' => 'orders.execute'],
         'OrderSourcingController' => ['store' => 'orders.execute'],
         'AdminInvoiceController' => ['show' => 'invoices.view', 'pdf' => 'invoices.execute', 'bulk' => 'invoices.execute'],
-        'AbandonedCheckoutController' => ['index' => 'abandoned_carts.view', 'updateNote' => 'abandoned_carts.edit', 'recover' => 'abandoned_carts.edit', 'destroy' => 'abandoned_carts.delete', 'createOrder' => 'abandoned_carts.execute'],
+        'AbandonedCheckoutController' => ['index' => 'abandoned_carts.view', 'notifications' => 'abandoned_carts.view', 'updateNote' => 'abandoned_carts.edit', 'recover' => 'abandoned_carts.edit', 'destroy' => 'abandoned_carts.delete', 'createOrder' => 'abandoned_carts.execute'],
         'ReviewController' => ['approve' => 'reviews.execute', 'reject' => 'reviews.execute'],
         'MediaController' => ['createBanners' => 'media.execute'],
         'FakeOrderGuardController' => ['index' => 'fraud_guard.view', 'checkPhone' => 'fraud_guard.execute', 'testConnection' => 'fraud_guard.execute', 'planInfo' => 'fraud_guard.view'],

@@ -16,6 +16,21 @@ use Inertia\Inertia;
 
 class AbandonedCheckoutController extends Controller
 {
+    public function notifications(Request $request)
+    {
+        $afterId = max(0, (int) $request->query('after', 0));
+        $checkouts = AbandonedCheckout::query()
+            ->where('id', '>', $afterId)
+            ->orderBy('id')
+            ->limit(20)
+            ->get(['id', 'customer_name', 'cart_total']);
+
+        return response()->json([
+            'latest_id' => (int) (AbandonedCheckout::max('id') ?? $afterId),
+            'checkouts' => $checkouts,
+        ]);
+    }
+
     public function index(Request $request)
     {
         $filter = $request->string('filter')->toString();
