@@ -26,6 +26,11 @@ class ContentSecurityPolicyTest extends TestCase
 
         $response = $this->get('/');
         $this->assertSame('SAMEORIGIN', $response->headers->get('X-Frame-Options'));
+        $this->assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
+        $this->assertSame('strict-origin-when-cross-origin', $response->headers->get('Referrer-Policy'));
+        $this->assertSame('camera=(), microphone=(), geolocation=()', $response->headers->get('Permissions-Policy'));
+        $this->assertSame('max-age=31536000; includeSubDomains; preload', $response->headers->get('Strict-Transport-Security'));
+        $this->assertFalse($response->headers->has('X-XSS-Protection'));
         $csp = (string) $response->headers->get('Content-Security-Policy');
         $scriptDirective = collect(explode(';', $csp))
             ->first(fn (string $directive): bool => str_starts_with(trim($directive), 'script-src'));

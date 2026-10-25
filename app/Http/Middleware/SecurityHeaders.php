@@ -30,8 +30,6 @@ class SecurityHeaders
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         // Camera / mic / location off
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-        // XSS protection (legacy browsers)
-        $response->headers->set('X-XSS-Protection', '1; mode=block');
         // No Flash / PDF cross-domain policy
         $response->headers->set('X-Permitted-Cross-Domain-Policies', 'none');
 
