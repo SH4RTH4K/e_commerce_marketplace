@@ -65,7 +65,25 @@
     @endphp
     <title data-inertia="">{{ $pageMetaTitle }}</title>
     {{-- Keep the server-rendered fallback visible until the React storefront has mounted. --}}
-    <style nonce="{{ csp_nonce() }}">.js .seo-crawler-fallback { display: none; }</style>
+    <style nonce="{{ csp_nonce() }}">
+        .js .seo-crawler-fallback { display: none; }
+        /* Keep the server-rendered storefront useful and readable while the React bundle loads. */
+        .seo-crawler-fallback {
+            box-sizing: border-box;
+            max-width: 760px;
+            margin: 32px auto;
+            padding: 28px;
+            border: 1px solid #e6e9ee;
+            border-radius: 16px;
+            background: #fff;
+            color: #1e2430;
+            font: 16px/1.65 Arial, Helvetica, sans-serif;
+        }
+        .seo-crawler-fallback h1 { margin: 0 0 12px; font-size: clamp(22px, 4vw, 32px); line-height: 1.25; }
+        .seo-crawler-fallback p { color: #687282; }
+        .seo-crawler-fallback a { color: #e84f19; }
+        @media (max-width: 800px) { .seo-crawler-fallback { margin: 16px; padding: 20px; } }
+    </style>
     <meta name="site-name" content="{{ site_name() }}" />
     <meta name="seo-default-title" content="{{ $pageMetaTitle }}" />
     {{-- Social crawlers read this HTML without running the storefront JavaScript. --}}

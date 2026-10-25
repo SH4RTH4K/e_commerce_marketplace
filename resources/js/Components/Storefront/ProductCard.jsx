@@ -6,6 +6,12 @@ import { trackAddToCart } from '@/lib/tracking';
 import ProductAvailability from './ProductAvailability';
 import { productAvailability } from '@/lib/productAvailability';
 
+let productPageModule;
+const preloadProductPage = () => {
+  productPageModule ??= import('@/Pages/Storefront/Product.jsx');
+  return productPageModule;
+};
+
 export default function ProductCard({ product, highlightDiscount = true }) {
   const { app, cartItems = [] } = usePage().props;
   const isTemplateOne = app?.settings?.storefront_template === 'template-1';
@@ -96,7 +102,13 @@ export default function ProductCard({ product, highlightDiscount = true }) {
       style={{ backgroundColor: cardBg }}
     >
       <div className="relative shrink-0 aspect-square">
-        <Link href={`/product/${product.url_key || product.slug || product.id}`} className="block w-full h-full overflow-hidden bg-gray-50 rounded-[14px]">
+        <Link
+          href={`/product/${product.url_key || product.slug || product.id}`}
+          prefetch="hover"
+          cacheFor="10s"
+          onPointerEnter={preloadProductPage}
+          className="block w-full h-full overflow-hidden bg-gray-50 rounded-[14px]"
+        >
           {discount > 0 && (
             <span className={`absolute left-2.5 top-2.5 z-10 text-white font-bold rounded-md shadow-sm ${highlightDiscount ? 'bg-[#f2541c] px-2.5 py-1 text-[10px] sm:text-[11px]' : 'bg-[#00D06C] px-2 py-0.5 text-[10px] sm:text-[11px]'}`}>
               {highlightDiscount ? `${money(discountAmount)} OFF` : `-${discount}%`}
@@ -153,6 +165,9 @@ export default function ProductCard({ product, highlightDiscount = true }) {
           <div className="min-w-0 flex-1">
             <Link
               href={`/product/${product.url_key || product.slug || product.id}`}
+              prefetch="hover"
+              cacheFor="10s"
+              onPointerEnter={preloadProductPage}
               className="storefront-product-title block text-[13px] sm:text-[14px] hover:opacity-80 font-bold transition-colors leading-tight line-clamp-2 pr-2"
               style={{ color: cardText }}
             >
@@ -183,6 +198,9 @@ export default function ProductCard({ product, highlightDiscount = true }) {
           {hasVariants && inStock ? (
             <Link 
               href={`/product/${product.url_key || product.slug || product.id}`}
+              prefetch="hover"
+              cacheFor="10s"
+              onPointerEnter={preloadProductPage}
               onClick={alreadyOrdered ? previewCart : undefined}
               style={buttonStyle}
               className={buttonClassName}
