@@ -123,6 +123,7 @@ class CategoryController extends Controller
     public function destroy(Category $category)
     {
         $this->ensureEmpty([$category->id]);
+        app(StorefrontImageService::class)->forgetOptimizedVariants((string) $category->image);
         $this->deleteStoredImage($category->image);
         $category->delete();
 
@@ -158,6 +159,7 @@ class CategoryController extends Controller
         $this->ensureEmpty($ids);
         $categories = Category::whereIn('id', $ids)->get();
         foreach ($categories as $category) {
+            app(StorefrontImageService::class)->forgetOptimizedVariants((string) $category->image);
             $this->deleteStoredImage($category->image);
             $category->delete();
         }
@@ -199,6 +201,7 @@ class CategoryController extends Controller
         }
 
         if ($category?->image) {
+            app(StorefrontImageService::class)->forgetOptimizedVariants($category->image);
             $this->deleteStoredImage($category->image);
         }
         $data['image'] = $path;

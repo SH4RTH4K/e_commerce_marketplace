@@ -9,13 +9,16 @@ use RuntimeException;
 
 class StorefrontImageService
 {
+    public const WIDTHS = [160, 320, 640, 960, 1280];
+
     public function optimized(string $source, int $width): string
     {
         if (! function_exists('imagewebp')) throw new RuntimeException('WebP is unavailable.');
+        if (! in_array($width, self::WIDTHS, true)) throw new RuntimeException('Unsupported image width.');
         $local = $this->localPath($source);
         $version = $local ? filemtime($local) : intdiv(time(), 604800);
-        $key = hash('sha256', $source.'|'.$width.'|'.$version);
-        $relative = 'uploads/optimized/'.$key.'.webp';
+        $relative = $this->optimizedRelativePath($source, $width, (int) $version);
+        $key = pathinfo($relative, PATHINFO_FILENAME);
         $target = public_path($relative);
         if (is_file($target)) return '/'.$relative;
 
@@ -45,6 +48,61 @@ class StorefrontImageService
         });
 
         return '/'.$relative;
+    }
+
+    /** Return the current generated path without downloading or creating an image. */
+    public function currentOptimizedPath(string $source, int $width): ?string
+    {
+        if (! in_array($width, self::WIDTHS, true)) {
+            return null;
+        }
+
+        try {
+            $local = $this->localPath($source);
+            $version = $local ? filemtime($local) : intdiv(time(), 604800);
+
+            return $this->optimizedRelativePath($source, $width, (int) $version);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** Remove generated variants for a source before its original is replaced or deleted. */
+    public function forgetOptimizedVariants(string $source): int
+    {
+        $versions = [];
+        try {
+            $local = $this->localPath($source);
+            if ($local) {
+                $versions[] = (int) filemtime($local);
+            }
+        } catch (\Throwable) {
+            // The nightly orphan sweep will handle invalid or already-missing sources.
+        }
+
+        if ($versions === []) {
+            $current = intdiv(time(), 604800);
+            $versions = [$current, $current - 1, $current - 2];
+        }
+
+        $deleted = 0;
+        foreach (array_unique($versions) as $version) {
+            foreach (self::WIDTHS as $width) {
+                $target = public_path($this->optimizedRelativePath($source, $width, (int) $version));
+                if (is_file($target) && @unlink($target)) {
+                    $deleted++;
+                }
+            }
+        }
+
+        return $deleted;
+    }
+
+    private function optimizedRelativePath(string $source, int $width, int $version): string
+    {
+        $key = hash('sha256', $source.'|'.$width.'|'.$version);
+
+        return 'uploads/optimized/'.$key.'.webp';
     }
 
     private function localPath(string $source): ?string

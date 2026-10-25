@@ -18,6 +18,11 @@ Schedule::command('sitemap:rebuild')
     ->withoutOverlapping(10)
     ->onOneServer();
 
+Schedule::command('storefront:cleanup-optimized-images')
+    ->dailyAt('04:00')
+    ->withoutOverlapping(30)
+    ->onOneServer();
+
 if ((bool) config('dropshipping.enabled')) {
     Schedule::call(function (): void {
         DropshipSupplier::query()->where('is_active', true)->each(function (DropshipSupplier $supplier): void {

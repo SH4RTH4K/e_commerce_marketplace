@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Product;
 use App\Models\Category;
 use App\Services\Dropshipping\Security\SupplierImageUrlValidator;
+use App\Services\StorefrontImageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -48,5 +49,34 @@ class StorefrontImageTest extends TestCase
         $image = $product->images()->create(['path' => 'https://supplier.example.com/private.png']);
         $this->get('/media/product/'.$image->id.'/320')->assertRedirect('https://supplier.example.com/private.png');
         Http::assertNothingSent();
+    }
+
+    public function test_generated_variants_for_a_replaced_source_can_be_removed(): void
+    {
+        $name = 'uploads/categories/cleanup-test-'.bin2hex(random_bytes(6)).'.png';
+        if (! is_dir(public_path('uploads/categories'))) mkdir(public_path('uploads/categories'), 0775, true);
+        $bitmap = imagecreatetruecolor(320, 240);
+        imagepng($bitmap, public_path($name));
+        imagedestroy($bitmap);
+
+        $images = app(StorefrontImageService::class);
+        $paths = [];
+        try {
+            foreach ([160, 320] as $width) {
+                $response = $images->optimized($name, $width);
+                $paths[] = public_path(ltrim($response, '/'));
+                $this->assertFileExists(end($paths));
+            }
+
+            $this->assertSame(2, $images->forgetOptimizedVariants($name));
+            foreach ($paths as $path) {
+                $this->assertFileDoesNotExist($path);
+            }
+        } finally {
+            if (is_file(public_path($name))) unlink(public_path($name));
+            foreach ($paths as $path) {
+                if (is_file($path)) unlink($path);
+            }
+        }
     }
 }
