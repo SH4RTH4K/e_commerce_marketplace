@@ -2,19 +2,21 @@
   $gtmId   = tracking_gtm_id();
   $ga4Id   = tracking_ga4_id();
   $pixelId = tracking_meta_pixel_id();
+  $hotjarId = tracking_hotjar_id();
   $ga4Mode = setting('tracking_ga4_mode', 'direct');
   // Marketing tags belong on the storefront, never in the administrator UI.
-  if (request()->is('admin', 'admin/*')) $gtmId = $ga4Id = $pixelId = null;
+  if (request()->is('admin', 'admin/*')) $gtmId = $ga4Id = $pixelId = $hotjarId = null;
 @endphp
 
 {{-- Inject tracking config for JS (tracking.js reads window.__tracking) --}}
-@if($gtmId || $ga4Id || $pixelId)
+@if($gtmId || $ga4Id || $pixelId || $hotjarId)
 <script nonce="{{ csp_nonce() }}">
 window.__tracking = {
   gtm:      @json($gtmId),
   ga4:      @json($ga4Id),
   ga4Mode:  @json($ga4Mode),
   pixel:    @json($pixelId),
+  hotjar:   @json($hotjarId),
   currency: @json(setting('currency_code', 'BDT')),
 };
 </script>

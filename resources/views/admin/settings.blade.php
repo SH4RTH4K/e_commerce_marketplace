@@ -322,7 +322,7 @@
         <button type="submit" class="section-save-btn btn-primary">Save section</button>
       </div>
       <div class="section-feedback hidden text-sm rounded-lg px-3 py-2"></div>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div><label class="lbl">Inside zone fee (amount)</label><input name="shipping_inside_dhaka" type="number" step="0.01" class="inp" value="{{ $settings['shipping_inside_dhaka'] ?? '' }}" required /></div>
         <div><label class="lbl">Outside zone fee (amount)</label><input name="shipping_outside_dhaka" type="number" step="0.01" class="inp" value="{{ $settings['shipping_outside_dhaka'] ?? '' }}" required /></div>
         <div><label class="lbl">Tax (%)</label><input name="tax_percent" type="number" step="0.01" class="inp" value="{{ $settings['tax_percent'] ?? '' }}" required /></div>
@@ -426,10 +426,15 @@
           <input name="tracking_meta_pixel_id" class="inp font-mono text-sm" value="{{ $settings['tracking_meta_pixel_id'] ?? '' }}" placeholder="123456789012345" />
           <p class="text-xs text-gray-400 mt-1">Numeric Pixel ID from Meta Events Manager</p>
         </div>
+        <div>
+          <label class="lbl">Hotjar site ID</label>
+          <input name="tracking_hotjar_id" class="inp font-mono text-sm" value="{{ $settings['tracking_hotjar_id'] ?? '' }}" placeholder="12345678" />
+          <p class="text-xs text-gray-400 mt-1">Loads after interaction or consent</p>
+        </div>
       </div>
       <p class="text-xs font-medium {{ tracking_any_enabled() ? 'text-brand-700' : 'text-gray-400 hidden' }}" data-tracking-status>
         @if(tracking_any_enabled())
-          Active on storefront: @if(tracking_gtm_id()) GTM @endif @if(tracking_ga4_id()) GA4 @endif @if(tracking_meta_pixel_id()) Meta Pixel @endif
+          Active on storefront: @if(tracking_gtm_id()) GTM @endif @if(tracking_ga4_id()) GA4 @endif @if(tracking_meta_pixel_id()) Meta Pixel @endif @if(tracking_hotjar_id()) Hotjar (deferred) @endif
         @endif
       </p>
     </div>

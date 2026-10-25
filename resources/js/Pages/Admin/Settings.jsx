@@ -386,7 +386,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     seo_canonical_host: settings.seo_canonical_host || 'non_www',
     
     // Tracking
-    tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_ga4_mode: settings.tracking_ga4_mode || 'direct', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '',
+    tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_ga4_mode: settings.tracking_ga4_mode || 'direct', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '', tracking_hotjar_id: settings.tracking_hotjar_id || '',
     
     // Legal
     about_content: settings.about_content || '', terms_content: settings.terms_content || '', privacy_content: settings.privacy_content || '', refund_content: settings.refund_content || '', shipping_content: settings.shipping_content || '', shipping_page_enabled: settings.shipping_page_enabled !== '0',
@@ -1612,7 +1612,7 @@ export default function Settings({ settings, templateStatus = {} }) {
                   <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-950">
                     <h4 className="font-bold">Setup helper</h4>
                     <p className="mt-1 text-xs leading-5 text-blue-800">Paste only the ID, not the complete script. Save, open your storefront in a new tab, then verify that the tag fires with the provider’s browser helper.</p>
-                    <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                    <div className="mt-4 grid gap-3 lg:grid-cols-4">
                       <div className="rounded-lg bg-white/80 p-3">
                         <p className="font-semibold">1. Google Tag Manager</p>
                         <p className="mt-1 text-xs leading-5 text-blue-800">In Tag Manager, open your Web container and copy its container ID, for example <code>GTM-ABC1234</code>. Publish the container after configuring tags.</p>
@@ -1624,6 +1624,10 @@ export default function Settings({ settings, templateStatus = {} }) {
                       <div className="rounded-lg bg-white/80 p-3">
                         <p className="font-semibold">3. Meta Pixel</p>
                         <p className="mt-1 text-xs leading-5 text-blue-800">In Meta Events Manager, copy the numeric Pixel ID only. Use Meta Pixel Helper after saving to confirm the <code>PageView</code> event.</p>
+                      </div>
+                      <div className="rounded-lg bg-white/80 p-3">
+                        <p className="font-semibold">4. Hotjar</p>
+                        <p className="mt-1 text-xs leading-5 text-blue-800">Enter the numeric site ID. Hotjar is deferred until the first interaction or an explicit consent call.</p>
                       </div>
                     </div>
                   </div>
@@ -1646,6 +1650,10 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <Field label="Meta Pixel ID" error={errors.tracking_meta_pixel_id}>
                       <input value={data.tracking_meta_pixel_id} onChange={e => setData('tracking_meta_pixel_id', e.target.value)} className={inputClass} placeholder="Numeric ID" />
                       <p className="mt-1.5 text-xs text-gray-500">Use numbers only; do not paste Meta’s full Pixel code.</p>
+                    </Field>
+                    <Field label="Hotjar site ID" error={errors.tracking_hotjar_id}>
+                      <input value={data.tracking_hotjar_id} onChange={e => setData('tracking_hotjar_id', e.target.value)} className={inputClass} placeholder="Numeric ID" />
+                      <p className="mt-1.5 text-xs text-gray-500">Deferred until first interaction or explicit consent; enter numbers only.</p>
                     </Field>
                   </div>
                 </div>

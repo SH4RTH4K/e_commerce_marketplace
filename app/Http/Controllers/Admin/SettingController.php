@@ -110,6 +110,7 @@ class SettingController extends Controller
                 tracking_gtm_id() ? 'GTM' : null,
                 tracking_ga4_id() ? 'GA4' : null,
                 tracking_meta_pixel_id() ? 'Meta Pixel' : null,
+                tracking_hotjar_id() ? 'Hotjar (deferred)' : null,
             ]));
         }
 
@@ -331,6 +332,7 @@ class SettingController extends Controller
                 'tracking_gtm_id'        => ['nullable', 'string', 'max:20', 'regex:/^(|GTM-[A-Z0-9]+)$/i'],
                 'tracking_ga4_id'        => ['nullable', 'string', 'max:20', 'regex:/^(|G-[A-Z0-9]+)$/i'],
                 'tracking_meta_pixel_id' => ['nullable', 'string', 'max:20', 'regex:/^(|\d+)$/'],
+                'tracking_hotjar_id'     => ['nullable', 'string', 'max:20', 'regex:/^(|\d+)$/'],
             ],
             'legal' => [
                 'about_content'   => ['nullable', 'string', 'max:20000'],
@@ -424,7 +426,7 @@ class SettingController extends Controller
                 'default_meta_title', 'default_meta_description', 'default_meta_keywords',
                 'seo_target_keywords', 'seo_h1_heading', 'seo_llms_txt_notes', 'seo_canonical_host',
             ],
-            'tracking' => ['tracking_gtm_id', 'tracking_ga4_id', 'tracking_ga4_mode', 'tracking_meta_pixel_id'],
+            'tracking' => ['tracking_gtm_id', 'tracking_ga4_id', 'tracking_ga4_mode', 'tracking_meta_pixel_id', 'tracking_hotjar_id'],
             'legal' => ['about_content', 'terms_content', 'privacy_content', 'refund_content', 'shipping_content', 'shipping_page_enabled'],
             'courier' => [
                 'courier_default', 'steadfast_api_key', 'steadfast_secret_key',

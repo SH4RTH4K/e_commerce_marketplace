@@ -6,11 +6,26 @@ import vm from 'node:vm';
 const source = (await readFile(new URL('../../resources/js/lib/tracking.js', import.meta.url), 'utf8')).replaceAll('export function', 'function');
 function setup(config = {}, blockedStorage = false) {
   const sent = []; const saved = new Map();
-  const window = { __tracking: config, location: { href: 'https://taqilife.com/', origin: 'https://taqilife.com' }, dataLayer: [], gtag: (...args) => sent.push(args) };
+  const listeners = new Map(); const appendedScripts = [];
+  const window = {
+    __tracking: config,
+    location: { href: 'https://taqilife.com/', origin: 'https://taqilife.com' },
+    dataLayer: [],
+    gtag: (...args) => sent.push(args),
+    addEventListener: (event, handler) => { listeners.set(event, handler); },
+    removeEventListener: event => { listeners.delete(event); },
+    dispatchEvent: event => listeners.get(event.type)?.(event),
+  };
+  const document = {
+    title: 'Store',
+    createElement: () => ({ dataset: {}, set async(value) { this.isAsync = value; } }),
+    head: { appendChild: script => appendedScripts.push(script) },
+    getElementsByTagName: () => [],
+  };
   const sessionStorage = { getItem: key => { if (blockedStorage) throw Error('Blocked'); return saved.get(key); }, setItem: (key, value) => { if (blockedStorage) throw Error('Blocked'); saved.set(key, value); } };
-  const context = vm.createContext({ window, sessionStorage, URL, document: { title: 'Store' } });
+  const context = vm.createContext({ window, sessionStorage, URL, document });
   vm.runInContext(`${source}\nglobalThis.api = {trackPurchase, trackPageView, trackInitiateCheckout, trackAddToCart, trackViewItem};`, context);
-  return { ...context.api, window, sent, saved };
+  return { ...context.api, window, sent, saved, appendedScripts };
 }
 
 test('direct GA4 delivers commerce events even with an empty GTM container; GTM mode has only one sender', () => {
@@ -48,4 +63,18 @@ test('disabled analytics does not consume a purchase, and checkout keeps zero-va
   assert.equal(app.sent[1][2].items[0].item_id, '7');
   app.trackPageView('/shop');
   assert.equal(app.sent[2][1], 'page_view'); assert.equal(app.sent[2][2].page_location, 'https://taqilife.com/shop');
+});
+
+test('Hotjar is absent until interaction and remains callable through the consent hook', () => {
+  const app = setup({ hotjar: '12345678' });
+  assert.equal(app.appendedScripts.length, 0);
+  app.window.dispatchEvent({ type: 'pointerdown' });
+  assert.equal(app.appendedScripts.length, 1);
+  assert.equal(app.appendedScripts[0].src, 'https://static.hotjar.com/c/hotjar-12345678.js?sv=6');
+  assert.equal(app.window.dataLayer.at(-1).event, 'tracking_interaction');
+
+  const consent = setup({ hotjar: '12345678' });
+  consent.window.__loadHotjar();
+  assert.equal(consent.appendedScripts.length, 1);
+  assert.equal(consent.window.dataLayer.at(-1).event, 'tracking_consent_granted');
 });

@@ -440,11 +440,21 @@ if (! function_exists('tracking_meta_pixel_id')) {
     }
 }
 
+if (! function_exists('tracking_hotjar_id')) {
+    /** Valid Hotjar site ID, or null when Hotjar is not configured. */
+    function tracking_hotjar_id(): ?string
+    {
+        $id = trim((string) setting('tracking_hotjar_id', ''));
+
+        return preg_match('/^\d+$/', $id) ? $id : null;
+    }
+}
+
 if (! function_exists('tracking_any_enabled')) {
     /** Whether any storefront tracking tag is configured. */
     function tracking_any_enabled(): bool
     {
-        return tracking_gtm_id() || tracking_ga4_id() || tracking_meta_pixel_id();
+        return tracking_gtm_id() || tracking_ga4_id() || tracking_meta_pixel_id() || tracking_hotjar_id();
     }
 }
 

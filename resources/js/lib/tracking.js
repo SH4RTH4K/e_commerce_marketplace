@@ -26,6 +26,46 @@ function hasPixel() {
   return Boolean(cfg().pixel);
 }
 
+function hasHotjar() {
+  return Boolean(cfg().hotjar);
+}
+
+/**
+ * Load Hotjar only after an interaction. Consent managers can call
+ * window.__loadHotjar directly when the visitor grants consent.
+ */
+export function loadHotjar(reason = 'consent') {
+  if (!hasHotjar() || typeof document === 'undefined' || window.__hotjarLoaded) return;
+
+  window.__hotjarLoaded = true;
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    event: reason === 'interaction' ? 'tracking_interaction' : 'tracking_consent_granted',
+  });
+  window.hj = window.hj || function () { (window.hj.q = window.hj.q || []).push(arguments); };
+  window._hjSettings = { hjid: Number(cfg().hotjar), hjsv: 6 };
+
+  const script = document.createElement('script');
+  script.async = true;
+  script.src = `https://static.hotjar.com/c/hotjar-${cfg().hotjar}.js?sv=6`;
+  script.dataset.hotjarDeferred = 'true';
+  (document.head || document.getElementsByTagName('head')[0]).appendChild(script);
+}
+
+export function armHotjar() {
+  if (!hasHotjar() || typeof window === 'undefined') return;
+
+  window.__loadHotjar = () => loadHotjar('consent');
+  const events = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+  const trigger = () => {
+    events.forEach(event => window.removeEventListener(event, trigger));
+    loadHotjar('interaction');
+  };
+  events.forEach(event => window.addEventListener(event, trigger, { once: true, passive: true }));
+}
+
+armHotjar();
+
 // ─── dataLayer push (GTM) ───────────────────────────────────────────────────
 function dlPush(eventName, ecommercePayload) {
   if (!hasGtm() && !hasGa4()) return;
