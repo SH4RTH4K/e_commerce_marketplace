@@ -17,56 +17,11 @@ const RoleIcon = ({ roleKey, className = 'w-4 h-4' }) => (
   </svg>
 );
 
-const ROLE_PRESETS = [
-  {
-    key: 'admin',
-    label: 'Super Admin',
-    desc: 'Full, unrestricted access to all features, settings, orders, and staff management.',
-    perms: 'ALL',
-  },
-  {
-    key: 'manager',
-    label: 'Store Manager',
-    desc: 'Products, orders, customers, marketing, media, and store settings.',
-    perms: [
-      'products.view', 'products.create', 'products.delete',
-      'orders.view', 'orders.manage', 'orders.delete',
-      'customers.manage', 'reviews.manage',
-      'catalog.manage', 'marketing.manage', 'messages.manage',
-      'media.manage', 'fraud_guard.manage', 'settings.manage',
-    ],
-  },
-  {
-    key: 'support',
-    label: 'Order & Support Agent',
-    desc: 'Orders, courier updates, customers, reviews, messages, and product lookup.',
-    perms: [
-      'orders.view', 'orders.manage',
-      'customers.manage', 'reviews.manage', 'messages.manage', 'products.view',
-    ],
-  },
-  {
-    key: 'inventory',
-    label: 'Product & Inventory Staff',
-    desc: 'Products, stock, categories, and media without order or settings access.',
-    perms: [
-      'products.view', 'products.create',
-      'catalog.manage', 'media.manage',
-    ],
-  },
-  {
-    key: 'staff',
-    label: 'Custom Role',
-    desc: 'Start with no preset and choose exact permissions manually.',
-    perms: [],
-  },
-];
-
-export default function AdminForm({ admin, availablePermissions = {} }) {
+export default function AdminForm({ admin, roles = [], availablePermissions = {} }) {
   const isEdit = Boolean(admin.id);
   const { auth } = usePage().props;
   const currentUserId = auth?.user?.id;
-  const initialRole = admin.role || 'manager';
+  const initialRole = admin.role || roles.find((role) => role.key === 'manager')?.key || roles[0]?.key || 'manager';
   const initialPerms = Array.isArray(admin.permissions) ? admin.permissions : [];
 
   const { data, setData, post, put, processing, errors } = useForm({
@@ -81,15 +36,15 @@ export default function AdminForm({ admin, availablePermissions = {} }) {
 
   const isSuperAdmin = data.role === 'admin';
 
-  const handleRoleSelect = (presetKey) => {
-    const preset = ROLE_PRESETS.find((role) => role.key === presetKey);
+  const handleRoleSelect = (roleKey) => {
+    const role = roles.find((item) => item.key === roleKey);
 
     setData((current) => ({
       ...current,
-      role: presetKey,
-      permissions: preset && Array.isArray(preset.perms)
-        ? [...preset.perms]
-        : (presetKey === 'admin' ? [] : current.permissions),
+      role: roleKey,
+      permissions: roleKey === 'admin'
+        ? []
+        : (Array.isArray(role?.permissions) ? [...role.permissions] : current.permissions),
     }));
   };
 
@@ -139,7 +94,7 @@ export default function AdminForm({ admin, availablePermissions = {} }) {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 5l-7 7 7 7" />
             </svg>
-            Back to Users &amp; Roles
+            Back to Users
           </a>
 
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
@@ -203,14 +158,14 @@ export default function AdminForm({ admin, availablePermissions = {} }) {
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 pt-2">
-                  {ROLE_PRESETS.map((preset) => {
-                    const selected = data.role === preset.key;
+                  {roles.map((role) => {
+                    const selected = data.role === role.key;
 
                     return (
                       <button
-                        key={preset.key}
+                        key={role.key}
                         type="button"
-                        onClick={() => handleRoleSelect(preset.key)}
+                        onClick={() => handleRoleSelect(role.key)}
                         className={`p-4 rounded-xl border text-left transition-all relative ${
                           selected
                             ? 'border-orange-500 bg-orange-50/40 ring-2 ring-orange-400/20'
@@ -220,13 +175,13 @@ export default function AdminForm({ admin, availablePermissions = {} }) {
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2 font-bold text-sm text-gray-900">
                             <span className="p-1 rounded-lg bg-orange-100 text-orange-600">
-                              <RoleIcon roleKey={preset.key} />
+                              <RoleIcon roleKey={role.key} />
                             </span>
-                            {preset.label}
+                            {role.name}
                           </div>
                           {selected && <span className="text-xs font-bold text-orange-600">Selected</span>}
                         </div>
-                        <p className="text-xs text-gray-500 leading-relaxed">{preset.desc}</p>
+                        <p className="text-xs text-gray-500 leading-relaxed">{role.description || (role.key === 'admin' ? 'Full, unrestricted access to all admin features.' : 'Choose exact permissions for this role.')}</p>
                       </button>
                     );
                   })}

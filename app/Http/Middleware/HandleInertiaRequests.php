@@ -72,7 +72,7 @@ class HandleInertiaRequests extends Middleware
                     'name'           => $request->user()->name,
                     'email'          => $request->user()->email,
                     'role'           => $request->user()->role ?? 'customer',
-                    'permissions'    => $request->user()->permissions ?? [],
+                    'permissions'    => $request->user()->effectivePermissions(),
                     'is_super_admin' => $request->user()->isSuperAdmin(),
                 ] : null,
             ],

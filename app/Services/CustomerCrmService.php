@@ -46,7 +46,13 @@ class CustomerCrmService
 
     private function accounts(): Builder
     {
-        return DB::table('users')->whereNotIn(DB::raw("LOWER(TRIM(COALESCE(role, 'customer')))"), User::STAFF_ROLES)
+        return DB::table('users')
+            ->whereNotIn(DB::raw("LOWER(TRIM(COALESCE(role, 'customer')))"), User::STAFF_ROLES)
+            ->whereNotExists(function ($query) {
+                $query->selectRaw('1')
+                    ->from('roles')
+                    ->whereColumn('roles.key', 'users.role');
+            })
             ->select('id as account_id', 'name', 'phone', 'email', 'address', 'city', 'postal_code', 'is_active', 'created_at as registered_at')
             ->selectRaw($this->phoneSql('phone').' AS phone_key');
     }

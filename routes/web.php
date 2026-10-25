@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\OptimizedImageController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductCtaController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SeoCompletionController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SkuConfigurationController;
@@ -397,6 +398,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('admins/password', [AdminUserController::class, 'editPassword'])->name('admins.password.edit');
         Route::put('admins/password', [AdminUserController::class, 'updatePassword'])->name('admins.password.update');
         Route::resource('admins', AdminUserController::class)->except(['show']);
+        Route::resource('roles', RoleController::class)->only(['index', 'store', 'update', 'destroy'])
+            ->middleware('permission:admins.manage');
 
         // Security & Blocked IPs
         Route::resource('blocked-ips', BlockedIpController::class)->only(['index', 'store', 'destroy']);

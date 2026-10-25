@@ -45,7 +45,7 @@ const ROLE_META = {
   staff:     { label: 'Custom Role', color: 'bg-gray-100 text-gray-700 border-gray-200' },
 };
 
-export default function AdminsIndex({ admins = [] }) {
+export default function AdminsIndex({ admins = [], roles = [] }) {
   const { auth } = usePage().props;
   const currentUserId = auth?.user?.id;
 
@@ -58,12 +58,12 @@ export default function AdminsIndex({ admins = [] }) {
 
   return (
     <>
-      <Head title="Users & Roles" />
-      <AdminLayout title="Users & Roles Management">
+      <Head title="Users" />
+      <AdminLayout title="User Management">
         <div className="space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-gray-500">Manage admin users separately from their assigned roles and permissions.</p>
+              <p className="text-sm text-gray-500">Manage staff accounts separately from their assigned roles and permissions.</p>
             </div>
             <div className="flex items-center gap-3">
               <a
@@ -78,6 +78,12 @@ export default function AdminsIndex({ admins = [] }) {
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8zM16 11h6M19 8v6"/></svg>
                 Add User
+              </a>
+              <a
+                href="/admin/roles"
+                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2 shadow-sm"
+              >
+                Manage Roles
               </a>
             </div>
           </div>
@@ -98,9 +104,15 @@ export default function AdminsIndex({ admins = [] }) {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {admins.map((admin) => {
-                    const roleInfo = ROLE_META[admin.role] || ROLE_META.staff;
-                    const isSuper = admin.role === 'admin';
-                    const permCount = Array.isArray(admin.permissions) ? admin.permissions.length : 0;
+                    const assignedRole = roles.find((role) => role.key === admin.role);
+                    const roleInfo = assignedRole
+                      ? { label: assignedRole.name, color: assignedRole.is_system ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-100 text-gray-700 border-gray-200' }
+                      : (ROLE_META[admin.role] || ROLE_META.staff);
+                    const isSuper = String(admin.role || '').trim().toLowerCase() === 'admin';
+                    const effectivePermissions = Array.isArray(admin.permissions)
+                      ? admin.permissions
+                      : (Array.isArray(assignedRole?.permissions) ? assignedRole.permissions : []);
+                    const permCount = effectivePermissions.length;
 
                     return (
                       <tr key={admin.id} className="hover:bg-gray-50/50 transition-colors">

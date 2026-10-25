@@ -6,6 +6,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -95,7 +96,15 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return in_array($this->normalisedRole(), self::STAFF_ROLES, true);
+        if (in_array($this->normalisedRole(), self::STAFF_ROLES, true)) {
+            return true;
+        }
+
+        if ($this->relationLoaded('roleDefinition')) {
+            return $this->roleDefinition !== null;
+        }
+
+        return $this->roleDefinition()->exists();
     }
 
     public function isCustomer(): bool
@@ -114,7 +123,7 @@ class User extends Authenticatable
             return true;
         }
 
-        $perms = $this->permissions ?? [];
+        $perms = $this->effectivePermissions();
 
         if ($permission === 'suppliers.view' && is_array($perms) && in_array('suppliers.manage', $perms, true)) {
             return true;
@@ -131,6 +140,23 @@ class User extends Authenticatable
     public function normalisedRole(): string
     {
         return strtolower(trim((string) $this->role));
+    }
+
+    public function roleDefinition(): BelongsTo
+    {
+        return $this->belongsTo(Role::class, 'role', 'key');
+    }
+
+    /** @return list<string> */
+    public function effectivePermissions(): array
+    {
+        if (is_array($this->permissions)) {
+            return array_values(array_unique($this->permissions));
+        }
+
+        return is_array($this->roleDefinition?->permissions)
+            ? array_values(array_unique($this->roleDefinition->permissions))
+            : [];
     }
 
     public function orders(): HasMany

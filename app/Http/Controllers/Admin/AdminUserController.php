@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use Inertia\Inertia;
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,21 +15,34 @@ class AdminUserController extends Controller
 {
     public function index()
     {
+        $roles = Role::query()->withCount('users')->orderByDesc('is_system')->orderBy('name')->get();
         $admins = User::query()
-            ->whereIn('role', User::STAFF_ROLES)
+            ->where(function ($query) use ($roles) {
+                $query->whereRaw('LOWER(TRIM(role)) IN ('.implode(',', array_fill(0, count(User::STAFF_ROLES), '?')).')', User::STAFF_ROLES)
+                    ->orWhereIn('role', $roles->pluck('key')->all());
+            })
+            ->with('roleDefinition')
             ->orderBy('name')
             ->get();
 
         return Inertia::render('Admin/Admins/Index', [
             'admins'               => $admins,
+            'roles'                => $roles,
             'availablePermissions' => User::PERMISSIONS,
         ]);
     }
 
     public function create()
     {
+        $roles = Role::query()->orderByDesc('is_system')->orderBy('name')->get();
+        $defaultRole = $roles->firstWhere('key', 'manager') ?? $roles->first();
+
         return Inertia::render('Admin/Admins/Form', [
-            'admin'                => new User(['role' => 'manager', 'permissions' => []]),
+            'admin'                => new User([
+                'role' => $defaultRole?->key ?? 'manager',
+                'permissions' => $defaultRole?->permissions ?? [],
+            ]),
+            'roles'                => $roles,
             'availablePermissions' => User::PERMISSIONS,
         ]);
     }
@@ -40,7 +54,7 @@ class AdminUserController extends Controller
             'username'      => ['required', 'string', 'min:3', 'max:60', 'regex:/^[A-Za-z0-9._-]+$/', 'unique:users,username'],
             'email'         => ['required', 'email', 'max:180', 'unique:users,email'],
             'password'      => ['required', 'confirmed', Password::defaults()],
-            'role'          => ['required', Rule::in(User::STAFF_ROLES)],
+            'role'          => ['required', Rule::in(Role::adminKeys())],
             'permissions'   => ['nullable', 'array'],
             'permissions.*' => ['string', Rule::in(self::knownPermissionKeys())],
         ]);
@@ -51,7 +65,9 @@ class AdminUserController extends Controller
             'email'             => $data['email'],
             'password'          => $data['password'],
             'role'              => $data['role'],
-            'permissions'       => $data['role'] === 'admin' ? null : ($data['permissions'] ?? []),
+            'permissions'       => $data['role'] === 'admin'
+                ? null
+                : ($data['permissions'] ?? (Role::findByKey($data['role'])?->permissions ?? [])),
             'email_verified_at' => now(),
         ]);
 
@@ -64,6 +80,7 @@ class AdminUserController extends Controller
 
         return Inertia::render('Admin/Admins/Form', [
             'admin'                => $admin,
+            'roles'                => Role::query()->orderByDesc('is_system')->orderBy('name')->get(),
             'availablePermissions' => User::PERMISSIONS,
         ]);
     }
@@ -77,12 +94,12 @@ class AdminUserController extends Controller
             'username'      => ['required', 'string', 'min:3', 'max:60', 'regex:/^[A-Za-z0-9._-]+$/', Rule::unique('users', 'username')->ignore($admin->id)],
             'email'         => ['required', 'email', 'max:180', Rule::unique('users', 'email')->ignore($admin->id)],
             'password'      => ['nullable', 'confirmed', Password::defaults()],
-            'role'          => ['required', Rule::in(User::STAFF_ROLES)],
+            'role'          => ['required', Rule::in(Role::adminKeys())],
             'permissions'   => ['nullable', 'array'],
             'permissions.*' => ['string', Rule::in(self::knownPermissionKeys())],
         ]);
 
-        if ($admin->isSuperAdmin() && $data['role'] !== 'admin' && User::where('role', 'admin')->count() <= 1) {
+        if ($admin->isSuperAdmin() && $data['role'] !== 'admin' && User::whereRaw('LOWER(TRIM(role)) = ?', ['admin'])->count() <= 1) {
             return back()->withErrors(['role' => 'At least one Super Admin account must remain.']);
         }
 
@@ -90,7 +107,9 @@ class AdminUserController extends Controller
         $admin->username    = $data['username'];
         $admin->email       = $data['email'];
         $admin->role        = $data['role'];
-        $admin->permissions = $data['role'] === 'admin' ? null : ($data['permissions'] ?? []);
+        $admin->permissions = $data['role'] === 'admin'
+            ? null
+            : ($data['permissions'] ?? (Role::findByKey($data['role'])?->permissions ?? []));
 
         if (! empty($data['password'])) {
             $admin->password = $data['password'];
@@ -108,7 +127,7 @@ class AdminUserController extends Controller
             return back()->withErrors(['admin' => 'You cannot delete your own account while logged in.']);
         }
 
-        if ($admin->isSuperAdmin() && User::where('role', 'admin')->count() <= 1) {
+        if ($admin->isSuperAdmin() && User::whereRaw('LOWER(TRIM(role)) = ?', ['admin'])->count() <= 1) {
             return back()->withErrors(['admin' => 'At least one Super Admin account must remain.']);
         }
 
@@ -138,12 +157,6 @@ class AdminUserController extends Controller
 
     private static function knownPermissionKeys(): array
     {
-        $keys = [];
-        foreach (User::PERMISSIONS as $group) {
-            foreach (array_keys($group['items'] ?? []) as $key) {
-                $keys[] = $key;
-            }
-        }
-        return $keys;
+        return Role::permissionKeys();
     }
 }

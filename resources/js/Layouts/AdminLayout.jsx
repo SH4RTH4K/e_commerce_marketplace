@@ -169,8 +169,13 @@ const navGroups = [
         ],
       },
       {
-        key: 'admins', label: 'Users & Roles', href: '/admin/admins', pattern: /^\/admin\/admins/,
+        key: 'admins', label: 'Users', href: '/admin/admins', pattern: /^\/admin\/admins(?:\/|$)/,
         icon: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1',
+        perm: 'admins.manage',
+      },
+      {
+        key: 'roles', label: 'Roles', href: '/admin/roles', pattern: /^\/admin\/roles(?:\/|$)/,
+        icon: 'M12 15a3 3 0 100-6 3 3 0 000 6zm0 0v6m0-18v3m9 6h-3M6 12H3m15.364-6.364l-2.121 2.121M7.757 16.243l-2.121 2.121m12.728 0l-2.121-2.121M7.757 7.757L5.636 5.636',
         perm: 'admins.manage',
       },
       {

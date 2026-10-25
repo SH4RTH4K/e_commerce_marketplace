@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -34,7 +35,10 @@ class AuthController extends Controller
         $user = User::query()
             // Keep legacy cPanel accounts usable when role values were
             // entered with different casing or accidental whitespace.
-            ->whereRaw('LOWER(TRIM(role)) IN ('.implode(',', array_fill(0, count(User::STAFF_ROLES), '?')).')', User::STAFF_ROLES)
+            ->where(function ($query) {
+                $query->whereRaw('LOWER(TRIM(role)) IN ('.implode(',', array_fill(0, count(User::STAFF_ROLES), '?')).')', User::STAFF_ROLES)
+                    ->orWhereIn('role', Role::query()->pluck('key')->all());
+            })
             ->where('username', $login)
             ->first();
 
