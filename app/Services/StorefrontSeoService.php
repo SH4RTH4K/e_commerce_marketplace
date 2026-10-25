@@ -104,7 +104,11 @@ class StorefrontSeoService
             'name' => $product->name,
             'description' => app(ProductMetaDescriptionService::class)->generate($product),
         ];
-        $images = $product->images->map(fn ($image) => image_url($image->path, $product->slug))->filter()->values()->all();
+        $images = $product->images->map(fn ($image) => route('storefront.image', [
+            'kind' => 'product',
+            'id' => $image->id,
+            'width' => 1280,
+        ]))->values()->all();
         if ($images !== []) {
             $item['image'] = $images;
         }

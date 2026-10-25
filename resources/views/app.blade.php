@@ -94,7 +94,11 @@
     <meta data-inertia="og:title" property="og:title" content="{{ $pageMetaTitle }}" />
     @if($pageMetaDescription)<meta data-inertia="og:description" property="og:description" content="{{ $pageMetaDescription }}" />@endif
     <meta data-inertia="og:url" property="og:url" content="{{ $pageCanonical }}" />
-    @if($pageMetaImage)<meta data-inertia="og:image" property="og:image" content="{{ $pageMetaImage }}" />@endif
+    @if($pageMetaImage)
+        <meta data-inertia="og:image" property="og:image" content="{{ $pageMetaImage }}" />
+        <meta data-inertia="og:image:secure_url" property="og:image:secure_url" content="{{ $pageMetaImage }}" />
+        <meta data-inertia="og:image:alt" property="og:image:alt" content="{{ $pageProps['product']['name'] ?? site_name() }}" />
+    @endif
     <meta data-inertia="twitter:card" name="twitter:card" content="{{ $pageMetaImage ? 'summary_large_image' : 'summary' }}" />
     <meta data-inertia="twitter:title" name="twitter:title" content="{{ $pageMetaTitle }}" />
     @if($pageMetaDescription)<meta data-inertia="twitter:description" name="twitter:description" content="{{ $pageMetaDescription }}" />@endif

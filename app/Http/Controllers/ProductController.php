@@ -81,6 +81,7 @@ class ProductController extends Controller
         } catch (\InvalidArgumentException|\TypeError $exception) {
             abort(404);
         }
+        $primaryImage = $product->primaryImage();
 
         return Inertia::render('Storefront/Product', array_merge(compact(
             'product',
@@ -101,7 +102,12 @@ class ProductController extends Controller
                 'description' => app(ProductMetaDescriptionService::class)->generate($product),
                 'description_is_generated' => true,
                 'keywords' => $product->meta_keywords,
-                'image' => $product->primaryImage() ? image_url($product->primaryImage()->path, $product->slug) : null,
+                // Keep share previews on this storefront's host. Some product
+                // images still store their original supplier URL, which social
+                // crawlers may reject or display with the supplier's domain.
+                'image' => $primaryImage
+                    ? route('storefront.image', ['kind' => 'product', 'id' => $primaryImage->id, 'width' => 1280])
+                    : null,
                 'type' => 'product',
                 'canonical' => $canonical,
             ],
