@@ -111,66 +111,32 @@ export default function Dashboard({ ordersCount, pendingCount, revenue, products
     },
   ];
 
-  const bottomCards = [
-    { 
-      label: 'Confirmed Orders',  
-      value: confirmedCount.toLocaleString(),  
-      href: '/admin/orders?status=confirmed', accent: '#10b981', bg: '#ecfdf5',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-        </svg>
-      ) 
-    },
-    { 
-      label: 'Pending Orders',    
-      value: pendingOrdCount.toLocaleString(), 
-      href: '/admin/orders?status=pending', accent: '#f59e0b', bg: '#fffbeb',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <polyline points="12 6 12 12 16 14"></polyline>
-        </svg>
-      ) 
-    },
-    { 
-      label: 'Courier Shipments', 
-      value: courierCount.toLocaleString(),    
-      href: '/admin/orders?status=shipped', accent: '#6366f1', bg: '#eef2ff',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="1" y="3" width="15" height="13"></rect>
-          <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
-          <circle cx="5.5" cy="18.5" r="2.5"></circle>
-          <circle cx="18.5" cy="18.5" r="2.5"></circle>
-        </svg>
-      ) 
-    },
-    { 
-      label: 'Cancelled Orders',  
-      value: cancelledCount.toLocaleString(),  
-      href: '/admin/orders?status=cancelled', accent: '#ef4444', bg: '#fef2f2',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="15" y1="9" x2="9" y2="15"></line>
-          <line x1="9" y1="9" x2="15" y2="15"></line>
-        </svg>
-      ) 
-    },
+  const orderSegmentCounts = stats?.order_segments || {};
+  const orderWorkflowCards = [
+    { key: 'all', label: 'All Orders', href: '/admin/orders', accent: '#2563eb', bg: '#eff6ff' },
+    { key: 'pending', label: 'Pending', href: '/admin/orders?status=pending', accent: '#d97706', bg: '#fffbeb' },
+    { key: 'awaiting_sourcing', label: 'Awaiting Sourcing', href: '/admin/orders?status=awaiting_sourcing', accent: '#9333ea', bg: '#faf5ff' },
+    { key: 'pending_verification', label: 'Payment Verification', href: '/admin/orders?status=pending_verification', accent: '#0891b2', bg: '#ecfeff' },
+    { key: 'confirmed', label: 'Confirmed', href: '/admin/orders?status=confirmed', accent: '#059669', bg: '#ecfdf5' },
+    { key: 'processing', label: 'Processing', href: '/admin/orders?status=processing', accent: '#4f46e5', bg: '#eef2ff' },
+    { key: 'shipped', label: 'Shipped', href: '/admin/orders?status=shipped', accent: '#0284c7', bg: '#f0f9ff' },
+    { key: 'delivered', label: 'Delivered', href: '/admin/orders?status=delivered', accent: '#16a34a', bg: '#f0fdf4' },
+    { key: 'cancelled', label: 'Cancelled', href: '/admin/orders?status=cancelled', accent: '#dc2626', bg: '#fef2f2' },
     ...(abandonedCount !== null && abandonedCount !== undefined ? [{
-      label: 'Abandoned Carts',
-      value: Number(abandonedCount).toLocaleString(),
-      sub: 'Active checkouts to recover',
-      href: '/admin/abandoned-checkouts', accent: '#ea580c', bg: '#fff7ed',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 7h12l1 13H5L6 7zM9 7a3 3 0 016 0" />
-        </svg>
-      ),
+      key: 'abandoned', label: 'Abandoned Carts', href: '/admin/abandoned-checkouts',
+      count: Number(abandonedCount), accent: '#ea580c', bg: '#fff7ed',
     }] : []),
-  ];
+  ].map(card => ({
+    ...card,
+    value: Number(card.count ?? orderSegmentCounts[card.key] ?? 0).toLocaleString(),
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {card.key === 'abandoned'
+          ? <path d="M6 7h12l1 13H5L6 7zM9 7a3 3 0 016 0" />
+          : <><rect x="4" y="4" width="16" height="16" rx="2" /><path d="M8 9h8M8 13h8M8 17h4" /></>}
+      </svg>
+    ),
+  }));
 
   const chartData = (series || []).map(p => ({
     name: p.label,
@@ -178,23 +144,25 @@ export default function Dashboard({ ordersCount, pendingCount, revenue, products
   }));
 
   const fulfillmentData = [
-    { label: 'Confirmed',  count: confirmedCount,  color: '#10b981' },
-    { label: 'Pending',    count: pendingOrdCount,  color: '#f59e0b' },
-    { label: 'Shipped',    count: courierCount,     color: '#6366f1' },
-    { label: 'Cancelled',  count: cancelledCount,   color: '#ef4444' },
+    { label: 'Pending', count: Number(orderSegmentCounts.pending ?? pendingOrdCount), color: '#f59e0b' },
+    { label: 'Confirmed', count: Number(orderSegmentCounts.confirmed ?? confirmedCount), color: '#10b981' },
+    { label: 'Processing', count: Number(orderSegmentCounts.processing || 0), color: '#4f46e5' },
+    { label: 'Shipped', count: Number(orderSegmentCounts.shipped ?? courierCount), color: '#0284c7' },
+    { label: 'Delivered', count: Number(orderSegmentCounts.delivered || 0), color: '#16a34a' },
+    { label: 'Cancelled', count: Number(orderSegmentCounts.cancelled ?? cancelledCount), color: '#ef4444' },
   ];
 
   return (
     <>
-      <Head title="Analytics Dashboard" />
+      <Head title="Store Dashboard" />
       <AdminLayout title="">
         <div className="space-y-6">
 
           {/* Page header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Analytics Dashboard</h1>
-              <p className="text-sm text-gray-400 mt-0.5">Overview of your store performance</p>
+                <h1 className="text-xl font-bold text-gray-900">Store Dashboard</h1>
+                <p className="text-sm text-gray-400 mt-0.5">Orders, sales, customers, and operations at a glance</p>
             </div>
             <div className="flex items-center gap-2">
               <a href="/admin/orders"
@@ -204,18 +172,31 @@ export default function Dashboard({ ordersCount, pendingCount, revenue, products
                 </svg>
                 View Orders
               </a>
+              <a href="/admin/orders/create"
+                className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-xl border border-gray-200 transition-colors">
+                Create Order
+              </a>
             </div>
           </div>
 
-          {/* Top 4 stat cards */}
+          {/* Store overview cards */}
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {topCards.map(c => <StatCard key={c.label} {...c} />)}
           </div>
 
-          {/* Bottom 4 order-status cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            {bottomCards.map(c => <StatCard key={c.label} {...c} />)}
-          </div>
+          {/* Full order workflow */}
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-bold text-gray-900">Order Workflow</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Open any stage to review and manage those orders.</p>
+              </div>
+              <a href="/admin/orders" className="text-xs font-semibold text-orange-600 hover:text-orange-700">Manage all orders →</a>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {orderWorkflowCards.map(card => <StatCard key={card.key} {...card} />)}
+            </div>
+          </section>
 
           {/* Chart + Fulfillment breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

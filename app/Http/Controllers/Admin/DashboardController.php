@@ -15,6 +15,7 @@ class DashboardController extends Controller
     public function index()
     {
         $revenue = (float) Order::where('payment_status', 'verified')->sum('total');
+        $orderSegments = Order::segmentCounts();
 
         // Last 14 days revenue series for the chart.
         $series = collect(range(13, 0))->map(function ($daysAgo) {
@@ -46,6 +47,7 @@ class DashboardController extends Controller
             'series' => $series,
             'seriesMax' => max(1, $series->max('value')),
             'stats' => [
+                'order_segments' => $orderSegments,
                 'confirmed' => Order::where('status', 'confirmed')->count(),
                 'pending' => Order::where('status', 'pending')->count(),
                 'shipped' => Order::where('status', 'shipped')->count(),
