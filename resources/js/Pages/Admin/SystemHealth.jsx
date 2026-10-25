@@ -7,7 +7,7 @@ const checks = [
   ['storage', 'Storage', 'Runtime directories and log access'],
   ['php', 'PHP runtime', 'Required PHP version'],
   ['laravel', 'Laravel', 'Framework version'],
-  ['disk', 'Disk space', 'Available filesystem capacity'],
+  ['disk', 'Project storage', 'Files and folders inside this Laravel project'],
   ['environment', 'Environment', 'Production-safe debug configuration'],
 ];
 
@@ -109,6 +109,11 @@ export default function SystemHealth({ health = {}, migrations = {}, backups = [
                   <h3 className="font-semibold text-slate-900">{label}</h3>
                   <p className="mt-1 break-words text-sm text-slate-500">{item.message}</p>
                   <p className="mt-1 text-[11px] text-slate-400">{description}</p>
+                  {key === 'disk' && item.breakdown?.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                      {item.breakdown.map(folder => <span key={folder.path}>{folder.label}: {folder.formatted}</span>)}
+                    </div>
+                  )}
                 </div>
               </div>
             );

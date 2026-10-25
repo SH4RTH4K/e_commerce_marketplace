@@ -7,6 +7,7 @@ use App\Services\DatabaseBackupService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class SystemHealthTest extends TestCase
@@ -17,7 +18,11 @@ class SystemHealthTest extends TestCase
     {
         $this->actingAs(User::factory()->create(['role' => 'admin']))
             ->get('/admin/system-health')
-            ->assertOk();
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('health.disk.ok', true)
+                ->where('health.disk.message', fn ($message) => str_contains($message, 'Project files use'))
+                ->has('health.disk.breakdown'));
     }
 
     public function test_customers_cannot_open_system_health(): void

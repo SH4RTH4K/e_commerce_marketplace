@@ -196,21 +196,74 @@ class SystemHealthController extends Controller
 
     private function diskHealth(): array
     {
-        $path = base_path();
-        $free = @disk_free_space($path);
-        $total = @disk_total_space($path);
+        return Cache::remember('system-health.project-storage', now()->addSeconds(60), function (): array {
+            $root = realpath(base_path());
+            if ($root === false || ! is_dir($root)) {
+                return ['ok' => false, 'message' => 'Project directory unavailable', 'breakdown' => []];
+            }
 
-        if ($free === false || $total === false || $total <= 0) {
-            return ['ok' => false, 'message' => 'Unavailable'];
+            $project = $this->scanDirectory($root);
+            $breakdown = [];
+            foreach ([
+                'public/uploads' => 'Uploads',
+                'public/build' => 'Build assets',
+                'storage/app' => 'Private storage',
+                'storage/logs' => 'Logs',
+                'storage/framework' => 'Framework cache',
+                'database' => 'Database files',
+            ] as $relative => $label) {
+                $path = base_path($relative);
+                if (! is_dir($path) && ! is_file($path)) {
+                    continue;
+                }
+
+                $usage = is_dir($path) ? $this->scanDirectory($path) : [filesize($path) ?: 0, 1, 0];
+                $breakdown[] = [
+                    'label' => $label,
+                    'path' => $relative,
+                    'bytes' => $usage[0],
+                    'formatted' => $this->formatBytes((float) $usage[0]),
+                    'files' => $usage[1],
+                ];
+            }
+
+            return [
+                'ok' => true,
+                'message' => 'Project files use '.$this->formatBytes((float) $project[0]).' across '.number_format($project[1]).' files',
+                'breakdown' => $breakdown,
+            ];
+        });
+    }
+
+    /** @return array{0:int,1:int,2:int} [bytes, files, directories] */
+    private function scanDirectory(string $path): array
+    {
+        $bytes = 0;
+        $files = 0;
+        $directories = 0;
+
+        try {
+            $iterator = new \FilesystemIterator($path, \FilesystemIterator::SKIP_DOTS);
+            foreach ($iterator as $item) {
+                if ($item->isLink()) {
+                    continue;
+                }
+                if ($item->isDir()) {
+                    $directories++;
+                    [$childBytes, $childFiles, $childDirectories] = $this->scanDirectory($item->getPathname());
+                    $bytes += $childBytes;
+                    $files += $childFiles;
+                    $directories += $childDirectories;
+                } elseif ($item->isFile()) {
+                    $files++;
+                    $bytes += max(0, (int) $item->getSize());
+                }
+            }
+        } catch (\Throwable) {
+            // Ignore files that disappear or become unreadable during the scan.
         }
 
-        $minimum = max(1, (int) config('system-health.minimum_free_bytes', 536870912));
-        $percent = round(((float) ($total - $free) / (float) $total) * 100, 1);
-
-        return [
-            'ok' => $free >= $minimum,
-            'message' => $this->formatBytes((float) $free).' free of '.$this->formatBytes((float) $total).' ('.$percent.'% used)',
-        ];
+        return [$bytes, $files, $directories];
     }
 
     private function migrationStatus(): array
