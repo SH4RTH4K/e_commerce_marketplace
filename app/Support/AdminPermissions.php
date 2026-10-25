@@ -118,7 +118,7 @@ class AdminPermissions
             'discardAndDeploy' => 'git_repository.execute', 'resetToRemote' => 'git_repository.execute', 'rollback' => 'git_repository.execute',
         ],
         'SettingController' => ['edit' => 'settings.view', 'updateSection' => 'settings.edit', 'testMail' => 'settings.execute'],
-        'SeoCompletionController' => ['index' => 'seo_completion.view', 'store' => 'seo_completion.execute'],
+        'SeoCompletionController' => ['index' => 'seo_completion.view', 'translate' => 'seo_completion.execute', 'store' => 'seo_completion.execute'],
         'DropshippingController' => [
             'index' => 'dropshipping.view', 'apiSettings' => 'supplier_connections.view',
             'store' => 'supplier_connections.add', 'update' => 'supplier_connections.edit', 'toggle' => 'supplier_connections.edit',
