@@ -27,6 +27,7 @@ class AbandonedCheckoutController extends Controller
 
         return response()->json([
             'latest_id' => (int) (AbandonedCheckout::max('id') ?? $afterId),
+            'active_count' => AbandonedCheckout::where('is_recovered', false)->count(),
             'checkouts' => $checkouts,
         ]);
     }

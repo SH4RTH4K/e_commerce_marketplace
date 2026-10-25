@@ -288,6 +288,7 @@ class HandleInertiaRequests extends Middleware
             'pending_orders' => $counts['pending'] ?? 0,
             'pending_reviews' => $request->user()->hasPermission('reviews.view') ? ProductReview::pending()->count() : 0,
             'new_messages' => $request->user()->hasPermission('messages.view') ? ContactMessage::new()->count() : 0,
+            'abandoned_carts' => $request->user()->hasPermission('abandoned_carts.view') ? AbandonedCheckout::where('is_recovered', false)->count() : 0,
             'latest_abandoned_checkout_id' => $request->user()->hasPermission('abandoned_carts.view') ? (int) (AbandonedCheckout::max('id') ?? 0) : 0,
         ];
     }

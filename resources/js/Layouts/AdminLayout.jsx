@@ -216,7 +216,7 @@ function Chevron({ open }) {
 }
 
 /* ─── Collapsible nav item ────────────────────────────────────────── */
-function CollapsibleItem({ item, isActive, admin_badges, abandonedNotifications, onOpenAbandoned, hasPerm, featureEnabled }) {
+function CollapsibleItem({ item, isActive, admin_badges, abandonedNotifications, abandonedCount, onOpenAbandoned, hasPerm, featureEnabled }) {
   if (!item.children || item.children.length === 0) {
     if (!hasPerm(item.perm)) return null;
     const active = isActive(item.pattern);
@@ -270,7 +270,7 @@ function CollapsibleItem({ item, isActive, admin_badges, abandonedNotifications,
           {visibleChildren.map(child => {
             const active = isActive(child.pattern, child.orderSegment, child.crmSegment);
             const childBadge = child.key === 'abandoned'
-              ? abandonedNotifications
+              ? (abandonedNotifications || abandonedCount)
               : child.badge && admin_badges ? admin_badges[child.badge] : 0;
             return (
               <div key={child.key}>
@@ -305,6 +305,7 @@ export default function AdminLayout({ children, title }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null);
   const [abandonedNotifications, setAbandonedNotifications] = useState(0);
+  const [abandonedCount, setAbandonedCount] = useState(Number(admin_badges?.abandoned_carts || 0));
   const [abandonedToast, setAbandonedToast] = useState(null);
 
   const user = auth?.user;
@@ -331,6 +332,7 @@ export default function AdminLayout({ children, title }) {
         if (!response.ok) return;
         const data = await response.json();
         if (disposed) return;
+        setAbandonedCount(Number(data.active_count) || 0);
 
         const newCheckouts = Array.isArray(data.checkouts) ? data.checkouts : [];
         if (newCheckouts.length) {
@@ -484,6 +486,7 @@ export default function AdminLayout({ children, title }) {
                     isActive={isActive}
                     admin_badges={admin_badges}
                     abandonedNotifications={abandonedNotifications}
+                    abandonedCount={abandonedCount}
                     onOpenAbandoned={openAbandonedCheckouts}
                     hasPerm={hasPerm}
                     featureEnabled={featureEnabled}
