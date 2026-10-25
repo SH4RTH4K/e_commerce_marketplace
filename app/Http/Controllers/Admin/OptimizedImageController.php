@@ -23,6 +23,7 @@ class OptimizedImageController extends Controller
         return Inertia::render('Admin/OptimizedImages/Index', [
             ...$scan,
             'files' => array_values(array_slice($scan['files'], $offset, $perPage)),
+            'trash_retention_days' => (int) config('optimized-images.trash_retention_days', 30),
             'pagination' => [
                 'current_page' => $page,
                 'per_page' => $perPage,
@@ -42,6 +43,6 @@ class OptimizedImageController extends Controller
         ]);
         $result = $cleanup->delete($data['filenames']);
 
-        return back()->with('status', count($result['deleted']).' orphaned optimized image(s) deleted.'.(count($result['skipped']) ? ' Some files were skipped because they are no longer orphaned.' : ''));
+        return back()->with('status', count($result['quarantined']).' orphaned optimized image(s) moved to recovery trash for '.config('optimized-images.trash_retention_days', 30).' days.'.(count($result['skipped']) ? ' Some files were skipped because they are no longer orphaned.' : ''));
     }
 }

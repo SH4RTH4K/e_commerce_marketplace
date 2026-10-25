@@ -23,6 +23,11 @@ Schedule::command('storefront:cleanup-optimized-images')
     ->withoutOverlapping(30)
     ->onOneServer();
 
+Schedule::command('storefront:purge-optimized-image-trash')
+    ->dailyAt('04:30')
+    ->withoutOverlapping(30)
+    ->onOneServer();
+
 if ((bool) config('dropshipping.enabled')) {
     Schedule::call(function (): void {
         DropshipSupplier::query()->where('is_active', true)->each(function (DropshipSupplier $supplier): void {

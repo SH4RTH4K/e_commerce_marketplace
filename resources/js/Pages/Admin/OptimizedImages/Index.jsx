@@ -2,7 +2,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, orphaned_formatted = '0 B', protected_count = 0, directory = 'public/uploads/optimized', pagination = {} }) {
+export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, orphaned_formatted = '0 B', protected_count = 0, directory = 'public/uploads/optimized', trash_retention_days = 30, pagination = {} }) {
   const [selected, setSelected] = useState([]);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(null);
@@ -28,7 +28,7 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
   };
 
   const deleteSelected = () => {
-    if (!selected.length || !window.confirm(`Delete ${selected.length} orphaned optimized image(s)? This cannot be undone.`)) return;
+    if (!selected.length || !window.confirm(`Move ${selected.length} orphaned optimized image(s) to recovery trash? They can be recovered for ${trash_retention_days} days before permanent removal.`)) return;
     deleteFiles(selected);
   };
 
@@ -50,7 +50,7 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-orange-500">System</p>
             <h2 className="mt-1 text-2xl font-bold text-slate-900">Optimized image cleanup</h2>
-            <p className="mt-1 text-sm text-slate-500">Review generated WebP files that are no longer referenced by a current product, category, banner, or logo.</p>
+            <p className="mt-1 text-sm text-slate-500">Review generated WebP files that are no longer referenced by a current product, category, banner, or logo. Removed files stay in private recovery trash for {trash_retention_days} days.</p>
           </div>
           <div className="flex items-center gap-2">
             <label className="text-xs font-semibold text-slate-500" htmlFor="optimized-images-limit">Show</label>
@@ -73,7 +73,7 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
               <h3 className="font-bold text-slate-900">Orphaned files</h3>
               <p className="mt-1 text-xs text-slate-500">Only orphaned files are shown and eligible for deletion. Current referenced variants are never shown here. Directory: <code>{directory}</code>.</p>
             </div>
-            <button type="button" onClick={deleteSelected} disabled={!selected.length || busy} className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40">Delete selected ({selected.length})</button>
+            <button type="button" onClick={deleteSelected} disabled={!selected.length || busy} className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40">Move to recovery trash ({selected.length})</button>
           </div>
 
           <div className="overflow-x-auto">
@@ -105,7 +105,7 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
                     <td className="px-5 py-3 text-slate-600">{file.formatted}</td>
                     <td className="px-5 py-3 text-slate-600">{file.age_days} day{file.age_days === 1 ? '' : 's'}</td>
                     <td className="px-5 py-3 text-xs text-slate-500">{file.modified_at}</td>
-                    <td className="px-5 py-3 text-right"><button type="button" onClick={() => { if (window.confirm('Delete this orphaned optimized image? This cannot be undone.')) deleteFiles([file.filename]); }} disabled={busy} className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50">Delete</button></td>
+                    <td className="px-5 py-3 text-right"><button type="button" onClick={() => { if (window.confirm(`Move this orphaned optimized image to recovery trash? It can be recovered for ${trash_retention_days} days before permanent removal.`)) deleteFiles([file.filename]); }} disabled={busy} className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50">Move to trash</button></td>
                   </tr>
                 ))}
                 {!orphanedFiles.length && <tr><td colSpan="8" className="px-5 py-12 text-center text-sm text-emerald-600">No orphaned optimized images found.</td></tr>}

@@ -6,10 +6,14 @@ use App\Models\Banner;
 use App\Models\Category;
 use App\Models\ProductImage;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class OptimizedImageCleanupService
 {
+    private const TRASH_DIRECTORY = 'optimized-image-trash';
+
     public function __construct(private readonly StorefrontImageService $images) {}
 
     /** @return array{directory:string, files:array<int,array<string,mixed>>, orphaned_count:int, orphaned_bytes:int, orphaned_formatted:string, protected_count:int} */
@@ -62,12 +66,13 @@ class OptimizedImageCleanupService
     }
 
     /** @param list<string> $filenames */
-    public function delete(array $filenames): array
+    public function quarantine(array $filenames): array
     {
         $scan = $this->scan();
         $orphans = collect($scan['files'])->keyBy('filename');
-        $deleted = [];
+        $quarantined = [];
         $skipped = [];
+        $batchDirectory = storage_path('app/private/'.self::TRASH_DIRECTORY.'/'.now()->format('Ymd_His').'-'.Str::lower(Str::random(8)));
 
         foreach (array_values(array_unique($filenames)) as $filename) {
             if (! is_string($filename) || ! preg_match('/^[a-f0-9]{64}\.webp$/i', $filename) || ! $orphans->has($filename)) {
@@ -76,14 +81,57 @@ class OptimizedImageCleanupService
             }
 
             $path = public_path('uploads/optimized/'.$filename);
-            if (is_file($path) && @unlink($path)) {
-                $deleted[] = $filename;
+            $destination = $batchDirectory.'/'.$filename;
+            if (is_file($path)) {
+                File::ensureDirectoryExists($batchDirectory, 0700);
+                if (@rename($path, $destination)) {
+                    $quarantined[] = $filename;
+                } else {
+                    $skipped[] = $filename;
+                }
             } else {
                 $skipped[] = $filename;
             }
         }
 
-        return ['deleted' => $deleted, 'skipped' => $skipped];
+        if ($quarantined === [] && is_dir($batchDirectory)) {
+            File::deleteDirectory($batchDirectory);
+        }
+
+        return ['quarantined' => $quarantined, 'skipped' => $skipped];
+    }
+
+    /** @param list<string> $filenames */
+    public function delete(array $filenames): array
+    {
+        return $this->quarantine($filenames);
+    }
+
+    /** @return array{purged:int, bytes:int, formatted:string} */
+    public function purgeTrash(?int $retentionDays = null): array
+    {
+        $retentionDays = max(1, $retentionDays ?? (int) config('optimized-images.trash_retention_days', 30));
+        $root = storage_path('app/private/'.self::TRASH_DIRECTORY);
+        $cutoff = now()->subDays($retentionDays)->timestamp;
+        $purged = 0;
+        $bytes = 0;
+
+        if (! is_dir($root)) {
+            return ['purged' => 0, 'bytes' => 0, 'formatted' => $this->formatBytes(0)];
+        }
+
+        foreach (File::directories($root) as $directory) {
+            $modified = @filemtime($directory);
+            if ($modified === false || $modified > $cutoff) {
+                continue;
+            }
+
+            $bytes += $this->directoryBytes($directory);
+            File::deleteDirectory($directory);
+            $purged++;
+        }
+
+        return ['purged' => $purged, 'bytes' => $bytes, 'formatted' => $this->formatBytes($bytes)];
     }
 
     /** @return array<string, true> */
@@ -122,5 +170,15 @@ class OptimizedImageCleanupService
         }
 
         return number_format($amount, $index === 0 ? 0 : 1).' '.$units[$index];
+    }
+
+    private function directoryBytes(string $directory): int
+    {
+        $bytes = 0;
+        foreach (File::allFiles($directory) as $file) {
+            $bytes += max(0, (int) $file->getSize());
+        }
+
+        return $bytes;
     }
 }

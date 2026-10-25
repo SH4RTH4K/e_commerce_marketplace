@@ -9,9 +9,9 @@ class CleanupOptimizedImages extends Command
 {
     protected $signature = 'storefront:cleanup-optimized-images
         {--grace-days=7 : Keep unreferenced variants newer than this many days}
-        {--dry-run : Report orphaned files without deleting them}';
+        {--dry-run : Report orphaned files without moving them}';
 
-    protected $description = 'Remove orphaned generated storefront image variants';
+    protected $description = 'Move orphaned generated storefront image variants to recovery trash';
 
     public function handle(OptimizedImageCleanupService $cleanup): int
     {
@@ -34,9 +34,9 @@ class CleanupOptimizedImages extends Command
             return self::SUCCESS;
         }
 
-        $result = $cleanup->delete($eligible);
-        $this->info('Removed '.count($result['deleted']).' orphaned optimized image(s).');
-        $this->line('Deleted: '.count($result['deleted']).'; protected current variants: '.$scan['protected_count'].'.');
+        $result = $cleanup->quarantine($eligible);
+        $this->info('Moved '.count($result['quarantined']).' orphaned optimized image(s) to recovery trash.');
+        $this->line('Moved: '.count($result['quarantined']).'; protected current variants: '.$scan['protected_count'].'.');
 
         return self::SUCCESS;
     }

@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\OptimizedImageCleanupService;
 use App\Services\StorefrontImageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -44,8 +45,37 @@ class OptimizedImageCleanupTest extends TestCase
             $this->post('/admin/system/optimized-images/delete', ['filenames' => [$filename]])
                 ->assertSessionHasNoErrors();
             $this->assertFileDoesNotExist($path);
+            $this->assertNotEmpty(glob(storage_path('app/private/optimized-image-trash/*/'.$filename)) ?: []);
         } finally {
             if (is_file($path)) unlink($path);
+            foreach (glob(storage_path('app/private/optimized-image-trash/*/'.$filename)) ?: [] as $trashPath) {
+                if (is_file($trashPath)) unlink($trashPath);
+                $directory = dirname($trashPath);
+                if (is_dir($directory)) File::deleteDirectory($directory);
+            }
+        }
+    }
+
+    public function test_recovery_trash_is_purged_only_after_retention_period(): void
+    {
+        $trashRoot = storage_path('app/private/optimized-image-trash');
+        $oldDirectory = $trashRoot.'/old-batch';
+        $recentDirectory = $trashRoot.'/recent-batch';
+        File::ensureDirectoryExists($oldDirectory, 0700);
+        File::ensureDirectoryExists($recentDirectory, 0700);
+        file_put_contents($oldDirectory.'/old.webp', 'old');
+        file_put_contents($recentDirectory.'/recent.webp', 'recent');
+        touch($oldDirectory, now()->subDays(31)->timestamp);
+        touch($recentDirectory, now()->subDays(2)->timestamp);
+
+        try {
+            $result = app(OptimizedImageCleanupService::class)->purgeTrash(30);
+
+            $this->assertSame(1, $result['purged']);
+            $this->assertDirectoryDoesNotExist($oldDirectory);
+            $this->assertFileExists($recentDirectory.'/recent.webp');
+        } finally {
+            if (is_dir($trashRoot)) File::deleteDirectory($trashRoot);
         }
     }
 
