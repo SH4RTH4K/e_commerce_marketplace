@@ -6,6 +6,7 @@
   <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>@yield('title', 'Admin') &mdash; {{ site_name() }} Admin</title>
   <meta name="robots" content="noindex, nofollow" />
+  @include('partials.mobile-meta')
   <link rel="icon" href="{{ favicon_url() }}" />
   <script nonce="{{ csp_nonce() }}" src="https://cdn.tailwindcss.com"></script>
   <script nonce="{{ csp_nonce() }}">

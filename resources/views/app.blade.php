@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
+    @include('partials.mobile-meta')
     @php
         $defaultMetaTitle = trim((string) setting('default_meta_title', '')) ?: site_name();
         $defaultMetaDescription = trim((string) setting('default_meta_description', ''));

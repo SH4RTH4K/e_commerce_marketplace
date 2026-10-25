@@ -1,0 +1,20 @@
+{
+  "name": "TAQI LIFE",
+  "short_name": "TAQI",
+  "start_url": "/",
+  "display": "browser",
+  "theme_color": "#f15a24",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/uploads/branding/3c5e1581-43b4-41e8-9792-efe01d256b54.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/uploads/branding/3c5e1581-43b4-41e8-9792-efe01d256b54.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

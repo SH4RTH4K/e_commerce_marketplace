@@ -125,6 +125,11 @@ Route::post('/contact', [ContactController::class, 'store'])->middleware('thrott
 Route::get('/page/{slug}', [PageController::class, 'show'])->name('page');
 
 // SEO
+Route::get('/manifest.webmanifest', function () {
+    return response(file_get_contents(public_path('manifest.webmanifest')), 200, [
+        'Content-Type' => 'application/manifest+json',
+    ]);
+})->name('manifest');
 Route::get('/.well-known/security.txt', SecurityTxtController::class)->name('security.txt');
 Route::get('/security.txt', SecurityTxtController::class)->name('security.txt.legacy');
 Route::get('/merchant-feed.xml', MerchantFeedController::class)->name('merchant.feed');

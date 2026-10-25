@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="csrf-token" content="{{ csrf_token() }}" />
   <meta name="app-base" content="{{ rtrim(request()->getBasePath() ?: (parse_url(url('/'), PHP_URL_PATH) ?: ''), '/') }}" />
-  <meta name="theme-color" content="#f15a24" />
+  @include('partials.mobile-meta')
 
   @include('partials.seo')
 

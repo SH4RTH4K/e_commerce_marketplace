@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Login - {{ site_name() }}</title>
   <meta name="robots" content="noindex, nofollow" />
+  @include('partials.mobile-meta')
   <link rel="icon" href="{{ favicon_url() }}" />
   <script nonce="{{ csp_nonce() }}" src="https://cdn.tailwindcss.com"></script>
   <script nonce="{{ csp_nonce() }}">
