@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AbandonedCheckout;
-use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -23,6 +22,13 @@ class AnalyticsController extends Controller
         $range = $request->query('range', '30d');
         $customStart = $request->query('start_date');
         $customEnd = $request->query('end_date');
+
+        if ($range === 'custom' && ($customStart || $customEnd)) {
+            $request->validate([
+                'start_date' => ['required', 'date'],
+                'end_date' => ['required', 'date', 'after_or_equal:start_date'],
+            ]);
+        }
 
         // ── 1. Calculate Date Bounds ──
         $now = Carbon::now();
@@ -127,7 +133,7 @@ class AnalyticsController extends Controller
             $prevDelivered = (clone $prevOrdersQuery)->where('status', 'delivered')->count();
             $prevAov = $prevTotalOrders > 0 ? $prevRevenue / $prevTotalOrders : 0;
 
-            $calcGrowth = fn ($curr, $prev) => $prev > 0 ? round((($curr - $prev) / $prev) * 100, 1) : ($curr > 0 ? 100 : 0);
+            $calcGrowth = fn ($curr, $prev) => $prev > 0 ? round((($curr - $prev) / $prev) * 100, 1) : ($curr > 0 ? null : 0);
 
             $growth = [
                 'revenue' => $calcGrowth($grossRevenue, $prevRevenue),
@@ -138,10 +144,13 @@ class AnalyticsController extends Controller
         }
 
         // ── 4. This Month vs Last Month Dedicated Card ──
-        $thisMonthStart = Carbon::now()->startOfMonth();
-        $thisMonthEnd = Carbon::now()->endOfDay();
-        $lastMonthStart = Carbon::now()->subMonth()->startOfMonth();
-        $lastMonthEnd = Carbon::now()->subMonth()->endOfMonth();
+        $monthDate = Carbon::now();
+        $thisMonthStart = $monthDate->copy()->startOfMonth();
+        $thisMonthEnd = $monthDate->copy()->endOfDay();
+        $lastMonthStart = $thisMonthStart->copy()->subMonthNoOverflow();
+        $lastMonthEnd = $lastMonthStart->copy()
+            ->addDays(min($monthDate->day, $lastMonthStart->daysInMonth) - 1)
+            ->endOfDay();
 
         $thisMonthOrders = Order::whereBetween('created_at', [$thisMonthStart, $thisMonthEnd]);
         $lastMonthOrders = Order::whereBetween('created_at', [$lastMonthStart, $lastMonthEnd]);
@@ -160,10 +169,10 @@ class AnalyticsController extends Controller
             'last_month_name' => Carbon::now()->subMonth()->format('F'),
             'this_month_revenue' => $thisMonthRev,
             'last_month_revenue' => $lastMonthRev,
-            'revenue_diff_percent' => $lastMonthRev > 0 ? round((($thisMonthRev - $lastMonthRev) / $lastMonthRev) * 100, 1) : ($thisMonthRev > 0 ? 100 : 0),
+            'revenue_diff_percent' => $lastMonthRev > 0 ? round((($thisMonthRev - $lastMonthRev) / $lastMonthRev) * 100, 1) : ($thisMonthRev > 0 ? null : 0),
             'this_month_orders' => $thisMonthCount,
             'last_month_orders' => $lastMonthCount,
-            'orders_diff_percent' => $lastMonthCount > 0 ? round((($thisMonthCount - $lastMonthCount) / $lastMonthCount) * 100, 1) : ($thisMonthCount > 0 ? 100 : 0),
+            'orders_diff_percent' => $lastMonthCount > 0 ? round((($thisMonthCount - $lastMonthCount) / $lastMonthCount) * 100, 1) : ($thisMonthCount > 0 ? null : 0),
             'this_month_delivered' => $thisMonthDelivered,
             'last_month_delivered' => $lastMonthDelivered,
             'this_month_cancelled' => $thisMonthCancelled,
@@ -177,33 +186,40 @@ class AnalyticsController extends Controller
         $diffDays = $start->diffInDays($end);
 
         if ($range === 'today') {
-            // Hourly series for Today
+            $hourlyMetrics = Order::whereBetween('created_at', [$start, $end])
+                ->selectRaw('HOUR(created_at) as period_key, SUM(total) as revenue, COUNT(*) as orders, SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as delivered', ['delivered'])
+                ->groupBy(DB::raw('HOUR(created_at)'))
+                ->get()
+                ->keyBy('period_key');
+
             for ($h = 0; $h <= Carbon::now()->hour; $h++) {
                 $hStart = Carbon::today()->addHours($h);
-                $hEnd = (clone $hStart)->endOfHour();
-                $hOrders = Order::whereBetween('created_at', [$hStart, $hEnd]);
+                $metrics = $hourlyMetrics->get($h);
                 $chartData[] = [
                     'label' => $hStart->format('ga'),
                     'full_date' => $hStart->format('d M, g:i A'),
-                    'revenue' => (float) (clone $hOrders)->sum('total'),
-                    'orders' => (clone $hOrders)->count(),
-                    'delivered' => (clone $hOrders)->where('status', 'delivered')->count(),
+                    'revenue' => (float) ($metrics?->revenue ?? 0),
+                    'orders' => (int) ($metrics?->orders ?? 0),
+                    'delivered' => (int) ($metrics?->delivered ?? 0),
                 ];
             }
         } elseif ($diffDays <= 31) {
-            // Daily series
+            $dailyMetrics = Order::whereBetween('created_at', [$start, $end])
+                ->selectRaw('DATE(created_at) as period_key, SUM(total) as revenue, COUNT(*) as orders, SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as delivered, SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as cancelled', ['delivered', 'cancelled'])
+                ->groupBy(DB::raw('DATE(created_at)'))
+                ->get()
+                ->keyBy('period_key');
+
             $period = CarbonPeriod::create($start->copy()->startOfDay(), '1 day', $end->copy()->startOfDay());
             foreach ($period as $date) {
-                $dStart = $date->copy()->startOfDay();
-                $dEnd = $date->copy()->endOfDay();
-                $dOrders = Order::whereBetween('created_at', [$dStart, $dEnd]);
+                $metrics = $dailyMetrics->get($date->toDateString());
                 $chartData[] = [
                     'label' => $date->format('d M'),
                     'full_date' => $date->format('D, d M Y'),
-                    'revenue' => (float) (clone $dOrders)->sum('total'),
-                    'orders' => (clone $dOrders)->count(),
-                    'delivered' => (clone $dOrders)->where('status', 'delivered')->count(),
-                    'cancelled' => (clone $dOrders)->where('status', 'cancelled')->count(),
+                    'revenue' => (float) ($metrics?->revenue ?? 0),
+                    'orders' => (int) ($metrics?->orders ?? 0),
+                    'delivered' => (int) ($metrics?->delivered ?? 0),
+                    'cancelled' => (int) ($metrics?->cancelled ?? 0),
                 ];
             }
         } else {
@@ -226,7 +242,8 @@ class AnalyticsController extends Controller
         }
 
         // ── 6. Top Selling Products Leaderboard ──
-        $topProducts = OrderItem::whereHas('order', function ($q) use ($start, $end) {
+        $topProducts = OrderItem::with(['product.images', 'product.category'])
+            ->whereHas('order', function ($q) use ($start, $end) {
             $q->whereBetween('created_at', [$start, $end])
                 ->where('status', '!=', 'cancelled');
         })
@@ -236,7 +253,7 @@ class AnalyticsController extends Controller
             ->take(8)
             ->get()
             ->map(function ($item) {
-                $product = Product::with('images', 'category')->find($item->product_id);
+                $product = $item->product;
 
                 return [
                     'id' => $item->product_id,
@@ -251,22 +268,24 @@ class AnalyticsController extends Controller
             });
 
         // ── 7. Category Revenue Share ──
-        $categoryBreakdown = Category::all()->map(function ($cat) use ($start, $end) {
-            $catRevenue = (float) OrderItem::whereHas('product', fn ($q) => $q->where('category_id', $cat->id))
-                ->whereHas('order', fn ($q) => $q->whereBetween('created_at', [$start, $end])->where('status', '!=', 'cancelled'))
-                ->sum('line_total');
-
-            $catSold = (int) OrderItem::whereHas('product', fn ($q) => $q->where('category_id', $cat->id))
-                ->whereHas('order', fn ($q) => $q->whereBetween('created_at', [$start, $end])->where('status', '!=', 'cancelled'))
-                ->sum('quantity');
-
-            return [
-                'id' => $cat->id,
-                'name' => $cat->name,
-                'revenue' => $catRevenue,
-                'quantity' => $catSold,
-            ];
-        })->filter(fn ($c) => $c['revenue'] > 0)->sortByDesc('revenue')->values();
+        $categoryBreakdown = OrderItem::query()
+            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->join('categories', 'products.category_id', '=', 'categories.id')
+            ->whereBetween('orders.created_at', [$start, $end])
+            ->where('orders.status', '!=', 'cancelled')
+            ->select('categories.id', 'categories.name')
+            ->selectRaw('SUM(order_items.line_total) as revenue, SUM(order_items.quantity) as quantity')
+            ->groupBy('categories.id', 'categories.name')
+            ->havingRaw('SUM(order_items.line_total) > 0')
+            ->orderByDesc('revenue')
+            ->get()
+            ->map(fn ($category) => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'revenue' => (float) $category->revenue,
+                'quantity' => (int) $category->quantity,
+            ]);
 
         $catTotalRevenue = $categoryBreakdown->sum('revenue');
         $categoryBreakdown = $categoryBreakdown->map(function ($c) use ($catTotalRevenue) {

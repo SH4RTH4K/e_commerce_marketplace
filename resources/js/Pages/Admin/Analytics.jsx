@@ -2,7 +2,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router } from '@inertiajs/react';
 import { useState, useMemo } from 'react';
 
-function StatCard({ title, value, subtext, growth, isCurrency = false, icon, color = 'orange' }) {
+function StatCard({ title, value, subtext, growth, isCurrency = false, suffix = '', icon, color = 'orange' }) {
   const isPositive = growth > 0;
   const isNeutral = growth === 0;
 
@@ -23,7 +23,7 @@ function StatCard({ title, value, subtext, growth, isCurrency = false, icon, col
           </div>
         </div>
         <div className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
-          {isCurrency ? `৳${Number(value || 0).toLocaleString()}` : Number(value || 0).toLocaleString()}
+          {isCurrency ? `৳${Number(value || 0).toLocaleString()}` : `${Number(value || 0).toLocaleString()}${suffix}`}
         </div>
       </div>
 
@@ -31,14 +31,13 @@ function StatCard({ title, value, subtext, growth, isCurrency = false, icon, col
         <span className="text-gray-500">{subtext}</span>
         {growth !== undefined && (
           <span className={`inline-flex items-center gap-1 font-bold px-2 py-0.5 rounded-full ${
-            isPositive
+            growth === null ? 'bg-blue-50 text-blue-700' : isPositive
               ? 'bg-emerald-50 text-emerald-700'
               : isNeutral
               ? 'bg-gray-100 text-gray-600'
               : 'bg-red-50 text-red-700'
           }`}>
-            {isPositive ? '▲ +' : isNeutral ? '' : '▼ '}
-            {growth}%
+            {growth === null ? 'New' : <>{isPositive ? '▲ +' : isNeutral ? '' : '▼ '}{growth}%</>}
           </span>
         )}
       </div>
@@ -198,6 +197,7 @@ export default function Analytics({
                       <input
                         type="date"
                         value={customEnd}
+                        min={customStart || undefined}
                         onChange={e => setCustomEnd(e.target.value)}
                         className="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-orange-300 focus:outline-none"
                         required
@@ -255,7 +255,8 @@ export default function Analytics({
 
             <StatCard
               title="Delivery Success Rate"
-              value={`${metrics.delivery_success_rate}%`}
+              value={metrics.delivery_success_rate}
+              suffix="%"
               subtext={`${metrics.delivered_orders} successfully delivered`}
               growth={growth.delivered}
               color="emerald"
@@ -288,15 +289,15 @@ export default function Analytics({
                 <div className="flex items-center gap-2">
                   <span className="px-2.5 py-0.5 rounded-full bg-orange-500 text-white font-bold text-[10px] uppercase tracking-wider">Month vs Month</span>
                   <h3 className="font-bold text-base text-white">
-                    {monthComparison.this_month_name} vs {monthComparison.last_month_name} Performance
+                    {monthComparison.this_month_name} vs {monthComparison.last_month_name} Performance (Month to Date)
                   </h3>
                 </div>
-                <p className="text-xs text-slate-300 mt-1">Real-time performance comparison against last month's full figures.</p>
+                <p className="text-xs text-slate-300 mt-1">Compared with the same dates last month.</p>
               </div>
 
               <div className="flex items-center gap-2 text-xs">
                 <span className="flex items-center gap-1 text-slate-300"><span className="w-2 h-2 rounded-full bg-orange-400"></span> {monthComparison.this_month_name} (Current)</span>
-                <span className="flex items-center gap-1 text-slate-400"><span className="w-2 h-2 rounded-full bg-slate-500"></span> {monthComparison.last_month_name} (Previous)</span>
+                <span className="flex items-center gap-1 text-slate-400"><span className="w-2 h-2 rounded-full bg-slate-500"></span> {monthComparison.last_month_name} (Same dates)</span>
               </div>
             </div>
 
@@ -307,8 +308,8 @@ export default function Analytics({
                 <div className="text-lg sm:text-xl font-bold text-white">৳{Number(monthComparison.this_month_revenue || 0).toLocaleString()}</div>
                 <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1">
                   <span>Last Mo: ৳{Number(monthComparison.last_month_revenue || 0).toLocaleString()}</span>
-                  <span className={`font-bold ${monthComparison.revenue_diff_percent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {monthComparison.revenue_diff_percent >= 0 ? '+' : ''}{monthComparison.revenue_diff_percent}%
+                  <span className={`font-bold ${monthComparison.revenue_diff_percent === null ? 'text-blue-300' : monthComparison.revenue_diff_percent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {monthComparison.revenue_diff_percent === null ? 'New' : `${monthComparison.revenue_diff_percent >= 0 ? '+' : ''}${monthComparison.revenue_diff_percent}%`}
                   </span>
                 </div>
               </div>
@@ -319,8 +320,8 @@ export default function Analytics({
                 <div className="text-lg sm:text-xl font-bold text-white">{monthComparison.this_month_orders}</div>
                 <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1">
                   <span>Last Mo: {monthComparison.last_month_orders}</span>
-                  <span className={`font-bold ${monthComparison.orders_diff_percent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                    {monthComparison.orders_diff_percent >= 0 ? '+' : ''}{monthComparison.orders_diff_percent}%
+                  <span className={`font-bold ${monthComparison.orders_diff_percent === null ? 'text-blue-300' : monthComparison.orders_diff_percent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {monthComparison.orders_diff_percent === null ? 'New' : `${monthComparison.orders_diff_percent >= 0 ? '+' : ''}${monthComparison.orders_diff_percent}%`}
                   </span>
                 </div>
               </div>
