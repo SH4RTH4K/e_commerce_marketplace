@@ -2,6 +2,7 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, useForm } from '@inertiajs/react';
 
 const labels = { meta_title: 'Meta Title', meta_description: 'Meta Description', meta_keywords: 'Meta Keywords' };
+const translatorUrl = name => 'https://translate.google.com/?sl=bn&tl=en&text=' + encodeURIComponent(name) + '&op=translate';
 
 export default function SeoCompletion({ summary, samples = [], englishNames = [], result }) {
   const { data, setData, post, processing, errors } = useForm({ fill_missing: true, english_names: {} });
@@ -22,12 +23,15 @@ export default function SeoCompletion({ summary, samples = [], englishNames = []
       </div>)}</div>
       {remaining > 0 && englishNames.length > 0 && <section className="rounded-2xl border border-amber-200 bg-amber-50/50 p-5">
         <h3 className="font-semibold text-gray-900">English SEO names required</h3>
-        <p className="mt-1 text-sm text-gray-600">Enter an English SEO name for each Bengali product name. The original product names will stay unchanged. The catalog update button becomes available when all entries are valid.</p>
+        <p className="mt-1 text-sm text-gray-600">Use Translate to English beside a name to open Google Translate. Review the result and paste it into the field; original product names stay unchanged.</p>
         <div className="mt-4 space-y-4">{englishNames.map(item => {
           const value = data.english_names[item.id] || '';
           const isInvalid = invalidEnglishNames.some(invalid => invalid.id === item.id);
           return <label key={item.id} className="block">
-            <span className="block text-sm text-gray-700">{item.name} <span className="text-xs text-gray-400">({item.count} products)</span></span>
+            <span className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm text-gray-700">{item.name} <span className="text-xs text-gray-400">({item.count} products)</span></span>
+              <a href={translatorUrl(item.name)} target="_blank" rel="noopener noreferrer" className="shrink-0 text-sm font-medium text-orange-600 hover:underline">Translate to English</a>
+            </span>
             <input aria-label={'English SEO name ' + item.id} aria-required="true" aria-invalid={isInvalid} maxLength={300} value={value} onChange={event => setData('english_names', {...data.english_names, [item.id]: event.target.value})} className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm" />
             {isInvalid && value.trim() !== '' && <span className="mt-1 block text-xs text-red-600">Use an English name with at least one English letter and no Bengali characters (up to 300 characters).</span>}
           </label>;

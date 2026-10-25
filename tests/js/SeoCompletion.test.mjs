@@ -42,12 +42,21 @@ test('a complete catalog cannot be submitted again through the completion button
 
 test('bulk completion stays disabled until every Bengali product name has a valid English SEO name', async () => {
   const englishNames = [
-    { id: 3374, name: 'A Bengali product title', count: 1 },
-    { id: 3376, name: 'Another Bengali product title', count: 1 },
+    { id: 3374, name: 'রাসূল আমার ভালোবাসা Islamic Hoodie (Royal Blue)', count: 1 },
+    { id: 3376, name: 'মুসাফির Islamic Hoodie (Sea Green)', count: 1 },
   ];
   const app = await mount({ categories: stats, products: stats }, englishNames);
   try {
     const button = () => app.renderer.root.findByType('button');
+    const translatorLinks = app.renderer.root.findAllByType('a').filter(link => link.props.children === 'Translate to English');
+    assert.equal(translatorLinks.length, 2);
+    const translateUrl = new URL(translatorLinks[0].props.href);
+    assert.equal(translateUrl.origin, 'https://translate.google.com');
+    assert.equal(translateUrl.searchParams.get('sl'), 'bn');
+    assert.equal(translateUrl.searchParams.get('tl'), 'en');
+    assert.equal(translateUrl.searchParams.get('text'), englishNames[0].name);
+    assert.equal(translatorLinks[0].props.target, '_blank');
+    assert.equal(translatorLinks[0].props.rel, 'noopener noreferrer');
     assert.equal(button().props.disabled, true);
     assert.equal(button().props.children, 'Complete English SEO names above');
     assert.match(JSON.stringify(app.renderer.toJSON()), /2 English SEO names still required/);
