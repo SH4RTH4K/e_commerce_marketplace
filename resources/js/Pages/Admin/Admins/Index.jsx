@@ -48,6 +48,8 @@ const ROLE_META = {
 export default function AdminsIndex({ admins = [], roles = [] }) {
   const { auth } = usePage().props;
   const currentUserId = auth?.user?.id;
+  const isSuperAdmin = Boolean(auth?.user?.is_super_admin);
+  const can = permission => isSuperAdmin || (auth?.user?.permissions || []).includes(permission);
 
   const handleDelete = (admin) => {
     if (admin.id === currentUserId) return alert("You cannot delete your own account.");
@@ -72,19 +74,19 @@ export default function AdminsIndex({ admins = [], roles = [] }) {
               >
                 Change My Password
               </a>
-              <a
+              {can('admins.add') && <a
                 href="/admin/admins/create"
                 className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2 shadow-sm"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8zM16 11h6M19 8v6"/></svg>
                 Add User
-              </a>
-              <a
+              </a>}
+              {isSuperAdmin && <a
                 href="/admin/roles"
                 className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2 shadow-sm"
               >
                 Manage Roles
-              </a>
+              </a>}
             </div>
           </div>
 
@@ -177,13 +179,13 @@ export default function AdminsIndex({ admins = [], roles = [] }) {
                         {/* Actions */}
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <a
+                            {can('admins.edit') && (!isSuper || isSuperAdmin) && <a
                               href={`/admin/admins/${admin.id}/edit`}
                               className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors"
                             >
                               Edit User &amp; Role
-                            </a>
-                            {admin.id !== currentUserId && (
+                            </a>}
+                            {can('admins.delete') && admin.id !== currentUserId && (!isSuper || isSuperAdmin) && (
                               <button
                                 onClick={() => handleDelete(admin)}
                                 className="px-3 py-1.5 text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-semibold transition-colors"

@@ -22,7 +22,7 @@ class CourierController extends Controller
      */
     public function sendToCourier(Request $request, Order $order): JsonResponse
     {
-        abort_unless($request->user()?->hasPermission('orders.manage'), 403);
+        abort_unless($request->user()?->hasPermission('orders.execute'), 403);
         $order->assertSourcingReady();
         if ($order->status === 'pending' && $order->items()->where('sourcing_required', true)->exists()) {
             throw ValidationException::withMessages(['status' => 'Confirm the sourced order before sending it to a courier.']);

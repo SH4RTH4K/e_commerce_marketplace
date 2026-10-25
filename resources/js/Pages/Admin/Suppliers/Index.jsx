@@ -2,9 +2,9 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Head } from '@inertiajs/react';
 import { buttonClass, labels, Pagination, Status, SupplierFilters, ToggleSupplier } from './Shared';
 
-export default function SupplierIndex({ suppliers = {}, filters = {}, types = [], canManage = false, canManageDropshipping = false }) {
+export default function SupplierIndex({ suppliers = {}, filters = {}, types = [], canAdd = false, canManage = false, canManageDropshipping = false }) {
   return <><Head title="Suppliers" /><AdminLayout title=""><div className="space-y-5">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-xl font-bold text-gray-900">Suppliers</h1><p className="mt-1 text-sm text-gray-500">Manage local, wholesale, manufacturer and dropshipping suppliers.</p></div><div className="flex flex-wrap gap-2"><a href="/admin/suppliers/report" className={buttonClass}>Supplier reports</a>{canManage && <a href="/admin/suppliers/create" className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-600">Add Supplier</a>}</div></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-xl font-bold text-gray-900">Suppliers</h1><p className="mt-1 text-sm text-gray-500">Manage local, wholesale, manufacturer and dropshipping suppliers.</p></div><div className="flex flex-wrap gap-2"><a href="/admin/suppliers/report" className={buttonClass}>Supplier reports</a>{canAdd && <a href="/admin/suppliers/create" className="rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-600">Add Supplier</a>}</div></div>
     <SupplierFilters filters={filters} types={types} />
     <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
       <div className="border-b border-gray-100 px-5 py-4"><h2 className="font-bold text-gray-900">All Suppliers</h2><p className="mt-1 text-xs text-gray-500">{suppliers.total || 0} supplier(s)</p></div>

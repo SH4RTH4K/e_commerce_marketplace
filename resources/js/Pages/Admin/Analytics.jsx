@@ -64,6 +64,7 @@ export default function Analytics({
   paymentHealth = {},
   customerInsights = {},
   inventorySummary = {},
+  canPrint = false,
 }) {
   const [chartMetric, setChartMetric] = useState('revenue'); // 'revenue' | 'orders'
   const [hoveredPoint, setHoveredPoint] = useState(null);
@@ -104,6 +105,7 @@ export default function Analytics({
   }, [chartData, chartMetric]);
 
   const printReport = () => {
+    if (!canPrint) return;
     window.print();
   };
 
@@ -160,6 +162,7 @@ export default function Analytics({
 
               <button
                 onClick={printReport}
+                disabled={!canPrint}
                 className="px-2.5 py-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-200/60 rounded-lg transition-colors border-l border-gray-200 ml-1"
                 title="Print Report"
               >

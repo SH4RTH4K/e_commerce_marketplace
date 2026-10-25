@@ -8,7 +8,7 @@ class BulkProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->hasPermission($this->input('bulk_action') === 'delete' ? 'products.delete' : 'products.create') ?? false;
+        return $this->user()?->hasPermission($this->input('bulk_action') === 'delete' ? 'products.delete' : 'products.edit') ?? false;
     }
 
     /**

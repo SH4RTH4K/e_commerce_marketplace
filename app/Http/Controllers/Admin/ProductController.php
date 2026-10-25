@@ -63,7 +63,8 @@ class ProductController extends Controller
             'suppliers' => DropshipSupplier::orderBy('name')->get(['id', 'name']),
             'filters' => $filters, 'q' => $filters['q'], 'category' => $filters['category'], 'status' => $filters['status'],
             'summary' => ['all' => (int) $totals->total, 'published' => (int) $totals->published, 'draft' => (int) $totals->draft],
-            'canEdit' => $request->user()->hasPermission('products.create'), 'canDelete' => $request->user()->hasPermission('products.delete'),
+            'canAdd' => $request->user()->hasPermission('products.add'),
+            'canEdit' => $request->user()->hasPermission('products.edit'), 'canDelete' => $request->user()->hasPermission('products.delete'),
         ]);
     }
 
@@ -73,7 +74,7 @@ class ProductController extends Controller
             'product' => ['is_published' => true, 'regular_price' => 0, 'stock_quantity' => 0, 'allow_backorder' => false, 'sourced_stock_quantity' => 0, 'specifications' => [], 'variants' => [], 'images' => []],
             'categories' => app(CategoryHierarchyService::class)->options(),
             'suppliers' => $this->supplierOptions(),
-            'canManageSuppliers' => $request->user()->hasPermission('suppliers.manage'),
+            'canManageSuppliers' => $request->user()->hasPermission('suppliers.add'),
             'canViewSuppliers' => $request->user()->hasPermission('suppliers.view'),
             'returnTo' => ProductCatalogService::returnUrl($request->input('return_to')),
         ]);
@@ -152,7 +153,7 @@ class ProductController extends Controller
             'categories' => app(CategoryHierarchyService::class)->options(),
             'suppliers' => $this->supplierOptions($product->supplier_id),
             'assignment' => $assignment,
-            'canManageSuppliers' => $request->user()->hasPermission('suppliers.manage'),
+            'canManageSuppliers' => $request->user()->hasPermission('suppliers.add'),
             'canViewSuppliers' => $request->user()->hasPermission('suppliers.view'),
             'pricing' => app(ProductPricingService::class)->context($product),
             'returnTo' => ProductCatalogService::returnUrl($request->input('return_to')),

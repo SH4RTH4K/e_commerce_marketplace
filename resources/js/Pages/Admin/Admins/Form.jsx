@@ -1,4 +1,5 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import PermissionMatrix from '@/Components/Admin/PermissionMatrix';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 
 const inputClass = 'w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300';
@@ -48,34 +49,7 @@ export default function AdminForm({ admin, roles = [], availablePermissions = {}
     }));
   };
 
-  const togglePerm = (permKey) => {
-    if (isSuperAdmin) return;
 
-    setData((current) => {
-      const selected = new Set(current.permissions || []);
-      if (selected.has(permKey)) selected.delete(permKey);
-      else selected.add(permKey);
-
-      return { ...current, permissions: Array.from(selected) };
-    });
-  };
-
-  const toggleCategory = (items) => {
-    if (isSuperAdmin) return;
-
-    const itemKeys = Object.keys(items);
-    const allSelected = itemKeys.every((key) => (data.permissions || []).includes(key));
-
-    setData((current) => {
-      const selected = new Set(current.permissions || []);
-      itemKeys.forEach((key) => {
-        if (allSelected) selected.delete(key);
-        else selected.add(key);
-      });
-
-      return { ...current, permissions: Array.from(selected) };
-    });
-  };
 
   const submit = (event) => {
     event.preventDefault();
@@ -145,7 +119,7 @@ export default function AdminForm({ admin, roles = [], availablePermissions = {}
               </div>
             </section>
 
-            <div className="space-y-6">
+            <div className="contents">
               <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-4">
                 <div>
                   <div className="flex items-center gap-2 pb-1">
@@ -165,6 +139,7 @@ export default function AdminForm({ admin, roles = [], availablePermissions = {}
                       <button
                         key={role.key}
                         type="button"
+                        disabled={isEdit && !auth?.user?.is_super_admin}
                         onClick={() => handleRoleSelect(role.key)}
                         className={`p-4 rounded-xl border text-left transition-all relative ${
                           selected
@@ -190,7 +165,7 @@ export default function AdminForm({ admin, roles = [], availablePermissions = {}
                 {errors.role && <p className="text-red-500 text-xs mt-1">{errors.role}</p>}
               </section>
 
-              <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
+              <section className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
                 <div className="flex items-center justify-between pb-3 border-b border-gray-100">
                   <div>
                     <div className="flex items-center gap-2">
@@ -199,7 +174,7 @@ export default function AdminForm({ admin, roles = [], availablePermissions = {}
                       </svg>
                       <h3 className="font-bold text-gray-900">Role Permissions</h3>
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">Fine tune the role without changing user account details.</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Only Super Admin can change permission assignments.</p>
                   </div>
 
                   {isSuperAdmin && (
@@ -210,65 +185,9 @@ export default function AdminForm({ admin, roles = [], availablePermissions = {}
                 </div>
 
                 {isSuperAdmin ? (
-                  <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-green-800 text-xs leading-relaxed flex items-start gap-2.5">
-                    <RoleIcon roleKey="admin" className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
-                    <div><strong>Super Admin</strong> can access every dashboard section and sensitive store setting.</div>
-                  </div>
+                  <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-xs text-green-800">Super Admin has full access to every function.</div>
                 ) : (
-                  <div className="space-y-5">
-                    {Object.entries(availablePermissions).map(([groupKey, group]) => {
-                      const items = group.items || {};
-                      const itemKeys = Object.keys(items);
-                      const selectedCount = itemKeys.filter((key) => (data.permissions || []).includes(key)).length;
-                      const allSelected = itemKeys.length > 0 && selectedCount === itemKeys.length;
-
-                      return (
-                        <div key={groupKey} className="rounded-xl border border-gray-100 p-4 bg-gray-50/40 space-y-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <span className="text-xs font-extrabold text-gray-700 uppercase tracking-wider">{group.label}</span>
-                            <button
-                              type="button"
-                              onClick={() => toggleCategory(items)}
-                              className="text-[11px] font-semibold text-orange-600 hover:text-orange-700 whitespace-nowrap"
-                            >
-                              {allSelected ? 'Deselect All' : 'Select All'}
-                            </button>
-                          </div>
-
-                          <div className="grid grid-cols-1 gap-2.5 pt-1">
-                            {Object.entries(items).map(([permKey, permLabel]) => {
-                              const checked = (data.permissions || []).includes(permKey);
-                              const deleteAction = permKey.endsWith('.delete');
-
-                              return (
-                                <label
-                                  key={permKey}
-                                  className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer select-none transition-all ${
-                                    checked
-                                      ? deleteAction
-                                        ? 'border-red-300 bg-red-50/50 text-red-900'
-                                        : 'border-orange-300 bg-orange-50/40 text-orange-950'
-                                      : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
-                                  }`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={() => togglePerm(permKey)}
-                                    className="mt-0.5 rounded border-gray-300 text-orange-500 focus:ring-orange-400"
-                                  />
-                                  <span className="text-xs font-medium leading-snug">
-                                    {permLabel}
-                                    {deleteAction && <span className="ml-1 text-[10px] text-red-500 font-bold">(Delete)</span>}
-                                  </span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <PermissionMatrix groups={availablePermissions} value={data.permissions} onChange={permissions => setData('permissions', permissions)} disabled={!auth?.user?.is_super_admin} />
                 )}
               </section>
             </div>

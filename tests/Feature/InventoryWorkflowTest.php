@@ -232,7 +232,7 @@ class InventoryWorkflowTest extends TestCase
     public function test_view_only_staff_cannot_mutate_stock(): void
     {
         $product = $this->product();
-        $this->actingAs(User::factory()->create(['role' => 'inventory', 'permissions' => ['products.view']]))
+        $this->actingAs(User::factory()->create(['role' => 'inventory', 'permissions' => ['inventory.view']]))
             ->get('/admin/inventory')->assertOk()->assertInertia(fn (AssertableInertia $page) => $page->where('can_adjust', false));
         $this->postJson('/admin/inventory/adjust', $this->adjustment([$product]))->assertForbidden();
         $this->postJson("/admin/inventory/{$product->id}/resume-sync")->assertForbidden();

@@ -40,7 +40,7 @@ class InventoryController extends Controller
             'summary' => [...collect(['total', 'in_stock', 'low_stock', 'out_stock'])->mapWithKeys(fn ($key) => [$key => (int) $totals->$key])->all(), 'units' => (int) $localUnits, 'supplier_units' => (int) $supplierUnits],
             'matching_units' => (int) $matchingUnits,
             'matching_supplier_units' => (int) $matchingSupplierUnits,
-            'can_adjust' => $request->user()->hasPermission('products.create'),
+            'can_adjust' => $request->user()->hasPermission('inventory.edit'),
         ]);
     }
 

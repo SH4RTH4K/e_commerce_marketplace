@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
+use App\Support\AdminPermissions;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,61 +21,10 @@ class User extends Authenticatable
 
     public const STAFF_ROLES = ['admin', 'manager', 'support', 'inventory', 'staff'];
 
-    public const PERMISSIONS = [
-        'products' => [
-            'label' => 'Products & Inventory',
-            'items' => [
-                'products.view'   => 'View Products & Inventory',
-                'products.create' => 'Add & Edit Products',
-                'products.delete' => 'Delete Products',
-            ],
-        ],
-        'orders' => [
-            'label' => 'Orders & Sales',
-            'items' => [
-                'orders.view'   => 'View Orders & Invoices',
-                'orders.manage' => 'Update Status & Send to Courier',
-                'orders.delete' => 'Delete & Reject Orders',
-            ],
-        ],
-        'crm' => [
-            'label' => 'CRM & Reviews',
-            'items' => [
-                'customers.manage' => 'Customer CRM & Abandoned Carts',
-                'reviews.manage'   => 'Approve & Delete Reviews',
-            ],
-        ],
-        'marketing' => [
-            'label' => 'Marketing & Catalog',
-            'items' => [
-                'catalog.manage'   => 'Categories, Banners & Features',
-                'marketing.manage' => 'Coupons, Flash Sale & Landing Pages',
-                'messages.manage'  => 'Contact Messages',
-            ],
-        ],
-        'suppliers' => [
-            'label' => 'Supplier Management',
-            'items' => [
-                'suppliers.view' => 'View Suppliers & Supplier Reports',
-                'suppliers.manage' => 'Create & Manage Suppliers',
-            ],
-        ],
-        'dropshipping' => [
-            'label' => 'Dropshipping',
-            'items' => [
-                'dropshipping.manage' => 'Manage Dropshipping Connections & Product Sync',
-            ],
-        ],
-        'system' => [
-            'label' => 'System & Management',
-            'items' => [
-                'media.manage'       => 'Media Manager',
-                'fraud_guard.manage' => 'Fraud Guard & Blocked IPs',
-                'admins.manage'      => 'Manage Staff & Roles',
-                'settings.manage'    => 'Store Settings & Payments',
-            ],
-        ],
-    ];
+    public static function permissionGroups(): array
+    {
+        return AdminPermissions::groups();
+    }
 
     protected function casts(): array
     {
@@ -151,11 +101,11 @@ class User extends Authenticatable
     public function effectivePermissions(): array
     {
         if (is_array($this->permissions)) {
-            return array_values(array_unique($this->permissions));
+            return AdminPermissions::expand($this->permissions);
         }
 
         return is_array($this->roleDefinition?->permissions)
-            ? array_values(array_unique($this->roleDefinition->permissions))
+            ? AdminPermissions::expand($this->roleDefinition->permissions)
             : [];
     }
 

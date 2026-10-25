@@ -9,8 +9,8 @@ class DropshippingAccessTest extends TestCase
 {
     public function test_dropshipping_permission_is_registered(): void
     {
-        $this->assertArrayHasKey('dropshipping', User::PERMISSIONS);
-        $this->assertArrayHasKey('dropshipping.manage', User::PERMISSIONS['dropshipping']['items']);
+        $this->assertArrayHasKey('dropshipping', User::permissionGroups());
+        $this->assertArrayHasKey('sync_runs.execute', User::permissionGroups()['sync_runs']['items']);
     }
 
     public function test_only_users_with_the_permission_or_super_admin_status_are_authorized(): void

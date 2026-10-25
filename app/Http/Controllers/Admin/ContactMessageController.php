@@ -50,7 +50,7 @@ class ContactMessageController extends Controller
     public function show(ContactMessage $contact_message)
     {
         $contact_message->load('values');
-        $contact_message->markRead();
+        if (request()->user()->hasPermission('messages.edit')) $contact_message->markRead();
 
         return Inertia::render('Admin/Messages/Show', [
             'message' => $contact_message->fresh('values'),

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\AdminPermissions;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -25,14 +26,7 @@ class Role extends Model
     /** @return list<string> */
     public static function permissionKeys(): array
     {
-        $keys = [];
-        foreach (User::PERMISSIONS as $group) {
-            foreach (array_keys($group['items'] ?? []) as $key) {
-                $keys[] = $key;
-            }
-        }
-
-        return $keys;
+        return AdminPermissions::keys();
     }
 
     /** @return list<string> */

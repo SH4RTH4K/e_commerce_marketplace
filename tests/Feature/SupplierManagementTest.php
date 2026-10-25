@@ -115,6 +115,8 @@ class SupplierManagementTest extends TestCase
         $supplier = $this->supplier();
         $this->staff(['suppliers.view']);
         $this->get('/admin/suppliers')->assertOk();
+        $this->get('/admin/suppliers/report')->assertForbidden();
+        $this->staff(['suppliers.view', 'supplier_reports.view']);
         $this->get('/admin/suppliers/report')->assertOk();
         $this->post('/admin/suppliers', ['name' => 'Denied', 'supplier_type' => 'local'])->assertForbidden();
         $this->patch('/admin/suppliers/'.$supplier->id.'/toggle')->assertForbidden();
@@ -157,7 +159,7 @@ class SupplierManagementTest extends TestCase
 
     public function test_supplier_search_type_status_pagination_and_supplier_report_csv_use_actual_records(): void
     {
-        $this->staff(['suppliers.view']);
+        $this->staff(['suppliers.view', 'supplier_reports.view', 'supplier_reports.execute']);
         $supplier = $this->supplier(['supplier_code' => 'ABC-1', 'mobile' => '01712345678']);
         $this->product($supplier);
         $this->product($supplier, 'dropshipping');

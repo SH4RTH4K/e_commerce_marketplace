@@ -150,7 +150,7 @@ export default function OrdersIndex({
   const { auth, errors = {} } = usePage().props;
   const user = auth?.user;
   const canDelete = user?.is_super_admin || user?.role === 'admin' || (user?.permissions || []).includes('orders.delete');
-  const canManage = user?.is_super_admin || user?.role === 'admin' || (user?.permissions || []).includes('orders.manage');
+  const canManage = user?.is_super_admin || user?.role === 'admin' || (user?.permissions || []).includes('orders.execute');
 
   const [search, setSearch]                         = useState(q || '');
   const [selectedMethod, setSelectedMethod]         = useState(methodFilter || '');
@@ -437,7 +437,7 @@ export default function OrdersIndex({
                     <option value="">Choose action…</option>
                     <option value="invoice">📄 Print Selected Invoices / Packing Slips</option>
                     {canManage && <option value="verify">✓ Verify payment</option>}
-                    {canDelete && <option value="reject">✕ Reject payment</option>}
+                    {canManage && <option value="reject">✕ Reject payment</option>}
                     {canDelete && <option value="delete">🗑 Delete</option>}
                   </select>
                   <button onClick={handleBulkApply} disabled={!bulkAction}
@@ -562,12 +562,12 @@ export default function OrdersIndex({
 
                     {/* Row 4: Action buttons */}
                     <div className="pt-2 border-t border-gray-100 flex items-center gap-1.5 flex-wrap">
-                      {order.payment_status === 'pending' && !['delivered', 'cancelled'].includes(order.status) && (canManage || canDelete) && (
+                      {order.payment_status === 'pending' && !['delivered', 'cancelled'].includes(order.status) && canManage && (
                         <>
                           {canManage && <button onClick={() => handleVerify(order.id)} className="flex-1 min-w-[65px] py-1.5 px-2 text-xs bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition-colors text-center cursor-pointer">
                             Verify
                           </button>}
-                          {canDelete && <button onClick={() => handleReject(order.id)} className="flex-1 min-w-[65px] py-1.5 px-2 text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-semibold transition-colors text-center cursor-pointer">
+                          {canManage && <button onClick={() => handleReject(order.id)} className="flex-1 min-w-[65px] py-1.5 px-2 text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-semibold transition-colors text-center cursor-pointer">
                             Reject
                           </button>}
                         </>
@@ -714,13 +714,13 @@ export default function OrdersIndex({
                       </td>
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          {order.payment_status === 'pending' && !['delivered', 'cancelled'].includes(order.status) && (canManage || canDelete) && (
+                          {order.payment_status === 'pending' && !['delivered', 'cancelled'].includes(order.status) && canManage && (
                             <>
                               {canManage && <button onClick={() => handleVerify(order.id)}
                                 className="px-2.5 py-1 text-xs bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-semibold transition-colors cursor-pointer">
                                 Verify
                               </button>}
-                              {canDelete && <button onClick={() => handleReject(order.id)}
+                              {canManage && <button onClick={() => handleReject(order.id)}
                                 className="px-2.5 py-1 text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg font-semibold transition-colors cursor-pointer">
                                 Reject
                               </button>}

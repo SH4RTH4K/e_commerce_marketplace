@@ -34,7 +34,8 @@ class SupplierController extends Controller
 
         return Inertia::render('Admin/Suppliers/Index', [
             'suppliers' => $suppliers, 'filters' => $filters, 'types' => self::TYPES,
-            'canManage' => $request->user()->hasPermission('suppliers.manage'),
+            'canAdd' => $request->user()->hasPermission('suppliers.add'),
+            'canManage' => $request->user()->hasPermission('suppliers.edit'),
             'canManageDropshipping' => $this->canManageDropshipping($request),
         ]);
     }
@@ -105,7 +106,7 @@ class SupplierController extends Controller
 
         return Inertia::render('Admin/Suppliers/Show', [
             'supplier' => $this->details($supplier), 'products' => $products, 'history' => $history, 'audits' => $audits,
-            'metrics' => $this->metrics($supplier), 'canManage' => $request->user()->hasPermission('suppliers.manage'),
+            'metrics' => $this->metrics($supplier), 'canManage' => $request->user()->hasPermission('suppliers.edit'),
             'canViewProducts' => $request->user()->hasPermission('products.view'),
             'canManageDropshipping' => $this->canManageDropshipping($request),
         ]);
@@ -265,7 +266,7 @@ class SupplierController extends Controller
 
     private function canManageDropshipping(Request $request): bool
     {
-        return config('dropshipping.enabled') && $request->user()->hasPermission('dropshipping.manage');
+        return config('dropshipping.enabled') && $request->user()->hasPermission('supplier_connections.edit');
     }
 
     private function auditValues(DropshipSupplier $supplier): array

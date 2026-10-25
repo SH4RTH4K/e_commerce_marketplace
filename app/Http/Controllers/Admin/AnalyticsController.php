@@ -401,6 +401,7 @@ class AnalyticsController extends Controller
         ];
 
         return Inertia::render('Admin/Analytics', [
+            'canPrint' => $request->user()->hasPermission('analytics.execute'),
             'range' => $range,
             'rangeLabel' => $rangeLabel,
             'startDate' => $start->format('Y-m-d'),

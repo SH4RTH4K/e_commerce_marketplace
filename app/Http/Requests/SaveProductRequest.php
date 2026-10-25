@@ -9,7 +9,7 @@ class SaveProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->hasPermission('products.create') ?? false;
+        return $this->user()?->hasPermission($this->route('product') ? 'products.edit' : 'products.add') ?? false;
     }
 
     public function rules(): array

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -15,7 +16,7 @@ class RoleController extends Controller
     {
         return Inertia::render('Admin/Roles/Index', [
             'roles' => Role::query()->withCount('users')->orderByDesc('is_system')->orderBy('name')->get(),
-            'availablePermissions' => User::PERMISSIONS,
+            'availablePermissions' => User::permissionGroups(),
         ]);
     }
 
@@ -36,16 +37,15 @@ class RoleController extends Controller
     public function update(Request $request, Role $role)
     {
         $data = $this->validated($request, $role);
-        $role->name = $data['name'];
-        $role->description = $data['description'] ?? null;
-        $role->permissions = $role->key === 'admin' ? null : ($data['permissions'] ?? []);
-        $role->save();
-
-        if ($role->key !== 'admin') {
-            User::query()->where('role', $role->key)->update(['permissions' => json_encode($role->permissions ?? [])]);
-        } else {
-            User::query()->where('role', $role->key)->update(['permissions' => null]);
-        }
+        DB::transaction(function () use ($role, $data) {
+            $role->name = $data['name'];
+            $role->description = $data['description'] ?? null;
+            $role->permissions = $role->key === 'admin' ? null : ($data['permissions'] ?? []);
+            $role->save();
+            User::query()->where('role', $role->key)->update([
+                'permissions' => $role->key === 'admin' ? null : json_encode($role->permissions ?? []),
+            ]);
+        });
 
         return redirect()->route('admin.roles.index')->with('status', "Role '{$role->name}' updated successfully.");
     }
@@ -76,6 +76,7 @@ class RoleController extends Controller
             'key' => [
                 $role ? 'nullable' : 'required',
                 'string', 'max:60', 'regex:/^[a-z][a-z0-9_-]*$/',
+                Rule::notIn(['customer', 'guest', 'user']),
                 Rule::unique('roles', 'key')->ignore($role?->id),
             ],
             'name' => ['required', 'string', 'max:120'],

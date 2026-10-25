@@ -63,7 +63,7 @@ test('supplier list respects view-only access and report CSV keeps the selected 
 });
 
 test('suppliers navigation remains available when dropshipping is disabled and restores integration dashboard separately', async () => {
-  const props = { auth: { user: { name: 'Manager', role: 'staff', permissions: ['suppliers.manage'] } }, dropshipping_enabled: false };
+  const props = { auth: { user: { name: 'Manager', role: 'staff', permissions: ['suppliers.view', 'suppliers.add', 'supplier_reports.view'] } }, dropshipping_enabled: false };
   const { AdminLayout } = await load('Layouts/AdminLayout.jsx', { usePage: () => ({ url: '/admin/suppliers', props }), router,
     orderSegments: [], activeOrderSegment: () => '', orderSegmentHref: () => '', customerSegments: [], activeCustomerSegment: () => '' }, ['AdminLayout']);
   const renderer = await mount(AdminLayout, {});
@@ -74,7 +74,7 @@ test('suppliers navigation remains available when dropshipping is disabled and r
     assert.equal(renderer.root.findAllByProps({ href: '/admin/dropshipping' }).length, 0);
   } finally { await act(async () => renderer.unmount()); }
   props.dropshipping_enabled = true;
-  props.auth.user.permissions = ['dropshipping.manage'];
+  props.auth.user.permissions = ['dropshipping.view'];
   const integration = await mount(AdminLayout, {});
   try {
     assert.ok(integration.root.findByProps({ href: '/admin/dropshipping' }));

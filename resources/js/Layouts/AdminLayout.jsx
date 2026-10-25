@@ -9,11 +9,11 @@ const navGroups = [
     label: 'OVERVIEW',
     items: [
       {
-        key: 'dashboard', label: 'Dashboard', href: '/admin', pattern: /^\/admin$/,
+        key: 'dashboard', perm: 'dashboard.view', label: 'Dashboard', href: '/admin', pattern: /^\/admin$/,
         icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
       },
       {
-        key: 'analytics', label: 'Analytics & Reports', href: '/admin/analytics', pattern: /^\/admin\/analytics/,
+        key: 'analytics', perm: 'analytics.view', label: 'Analytics & Reports', href: '/admin/analytics', pattern: /^\/admin\/analytics/,
         icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
       },
     ],
@@ -26,11 +26,11 @@ const navGroups = [
         icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9z',
         children: [
           { key: 'products',     label: 'All Products',        href: '/admin/products',        pattern: /^\/admin\/products(?:\/\d+\/edit)?\/?(?:\?.*)?$/, perm: 'products.view' },
-          { key: 'product-add',  label: 'Add New Product',     href: '/admin/products/create', pattern: /^\/admin\/products\/create/, perm: 'products.create' },
-          { key: 'inventory',    label: 'Inventory / Stock',   href: '/admin/inventory',       pattern: /^\/admin\/inventory\/?(?:\?.*)?$/, perm: 'products.view' },
-          { key: 'inventory-history', label: 'Stock History', href: '/admin/inventory/history', pattern: /^\/admin\/inventory\/history/, perm: 'products.view' },
-          { key: 'categories',   label: 'Categories',          href: '/admin/categories',      pattern: /^\/admin\/categories/, perm: 'catalog.manage' },
-          { key: 'sku-configuration', label: 'SKU Configuration', href: '/admin/sku-configuration', pattern: /^\/admin\/sku-configuration/, perm: 'settings.manage' },
+          { key: 'product-add',  label: 'Add New Product',     href: '/admin/products/create', pattern: /^\/admin\/products\/create/, perm: 'products.add' },
+          { key: 'inventory',    label: 'Inventory / Stock',   href: '/admin/inventory',       pattern: /^\/admin\/inventory\/?(?:\?.*)?$/, perm: 'inventory.view' },
+          { key: 'inventory-history', label: 'Stock History', href: '/admin/inventory/history', pattern: /^\/admin\/inventory\/history/, perm: 'stock_history.view' },
+          { key: 'categories',   label: 'Categories',          href: '/admin/categories',      pattern: /^\/admin\/categories/, perm: 'categories.view' },
+          { key: 'sku-configuration', label: 'SKU Configuration', href: '/admin/sku-configuration', pattern: /^\/admin\/sku-configuration/, perm: 'sku_configuration.view' },
         ],
       },
     ],
@@ -43,8 +43,8 @@ const navGroups = [
         icon: 'M4 7h16M6 7v10a2 2 0 002 2h8a2 2 0 002-2V7M9 7V5a3 3 0 016 0v2M9 11h6M9 15h4',
         children: [
           { key: 'suppliers', label: 'All Suppliers', href: '/admin/suppliers', pattern: /^\/admin\/suppliers(?:\/\d+(?:\/edit)?)?\/?(?:\?.*)?$/, perm: 'suppliers.view' },
-          { key: 'suppliers-create', label: 'Add Supplier', href: '/admin/suppliers/create', pattern: /^\/admin\/suppliers\/create/, perm: 'suppliers.manage' },
-          { key: 'suppliers-report', label: 'Supplier Reports', href: '/admin/suppliers/report', pattern: /^\/admin\/suppliers\/report/, perm: 'suppliers.view' },
+          { key: 'suppliers-create', label: 'Add Supplier', href: '/admin/suppliers/create', pattern: /^\/admin\/suppliers\/create/, perm: 'suppliers.add' },
+          { key: 'suppliers-report', label: 'Supplier Reports', href: '/admin/suppliers/report', pattern: /^\/admin\/suppliers\/report/, perm: 'supplier_reports.view' },
         ],
       },
     ],
@@ -58,16 +58,16 @@ const navGroups = [
         badge: 'pending_orders',
         children: [
           ...orderSegments.map(segment => ({ key: `orders-${segment.key}`, label: segment.label, href: orderSegmentHref(segment.key), pattern: /^\/admin\/orders/, orderSegment: segment.key, badge: `orders_${segment.key}`, perm: 'orders.view', section: segment.key === 'pending' ? 'Fulfilment' : segment.key === 'pending_verification' ? 'Payment review' : null })),
-          { key: 'order-create', label: 'Create Order',     href: '/admin/orders/create',       pattern: /^\/admin\/orders\/create/, perm: 'orders.view', section: 'Tools' },
-          { key: 'abandoned',    label: 'Abandoned Carts',  href: '/admin/abandoned-checkouts', pattern: /^\/admin\/abandoned-checkouts/, perm: 'customers.manage' },
+          { key: 'order-create', label: 'Create Order',     href: '/admin/orders/create',       pattern: /^\/admin\/orders\/create/, perm: 'orders.add', section: 'Tools' },
+          { key: 'abandoned',    label: 'Abandoned Carts',  href: '/admin/abandoned-checkouts', pattern: /^\/admin\/abandoned-checkouts/, perm: 'abandoned_carts.view' },
         ],
       },
       {
         key: 'crm-group', label: 'Customer CRM', defaultOpen: false,
         icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
         children: [
-          ...customerSegments.map(segment => ({ key: `customers-${segment.key}`, label: segment.label, href: segment.key === 'all' ? '/admin/customers' : `/admin/customers?segment=${segment.key}`, pattern: /^\/admin\/customers/, crmSegment: segment.key, perm: 'customers.manage' })),
-          { key: 'reviews',   label: 'Customer Reviews',href: '/admin/reviews', pattern: /^\/admin\/reviews/, badge: 'pending_reviews', perm: 'reviews.manage' },
+          ...customerSegments.map(segment => ({ key: `customers-${segment.key}`, label: segment.label, href: segment.key === 'all' ? '/admin/customers' : `/admin/customers?segment=${segment.key}`, pattern: /^\/admin\/customers/, crmSegment: segment.key, perm: 'customers.view' })),
+          { key: 'reviews',   label: 'Customer Reviews',href: '/admin/reviews', pattern: /^\/admin\/reviews/, badge: 'pending_reviews', perm: 'reviews.view' },
         ],
       },
     ],
@@ -79,14 +79,14 @@ const navGroups = [
         key: 'storefront-ui-group', label: 'Storefront & Design', defaultOpen: true,
         icon: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z',
         children: [
-          { key: 'menu-ordering',   label: 'Navbar & Menu Ordering', href: '/admin/categories/ordering', pattern: /^\/admin\/categories\/ordering/, perm: 'catalog.manage' },
-          { key: 'banners',         label: 'Banners & Sliders',   href: '/admin/banners',            pattern: /^\/admin\/banners/, perm: 'catalog.manage' },
-          { key: 'landing',         label: 'Landing Pages',       href: '/admin/landing-pages',      pattern: /^\/admin\/landing-pages/, perm: 'marketing.manage' },
-          { key: 'flash-sale',      label: 'Flash Sale UI',       href: '/admin/flash-sale',         pattern: /^\/admin\/flash-sale/, perm: 'marketing.manage' },
-          { key: 'popup-notif',     label: 'Popup & Announcement',href: '/admin/popup-notification', pattern: /^\/admin\/popup-notification/, perm: 'marketing.manage' },
-          { key: 'features',        label: 'Features & Badges',   href: '/admin/features',           pattern: /^\/admin\/features/, perm: 'catalog.manage' },
-          { key: 'product-button',  label: 'Quick Order & CTA Buttons', href: '/admin/product-button', pattern: /^\/admin\/product-button/, perm: 'settings.manage' },
-          { key: 'contact-fields',  label: 'Contact Form Fields', href: '/admin/contact-fields',     pattern: /^\/admin\/contact-fields/, perm: 'settings.manage' },
+          { key: 'menu-ordering',   label: 'Navbar & Menu Ordering', href: '/admin/categories/ordering', pattern: /^\/admin\/categories\/ordering/, perm: 'menu_ordering.view' },
+          { key: 'banners',         label: 'Banners & Sliders',   href: '/admin/banners',            pattern: /^\/admin\/banners/, perm: 'banners.view' },
+          { key: 'landing',         label: 'Landing Pages',       href: '/admin/landing-pages',      pattern: /^\/admin\/landing-pages/, perm: 'landing_pages.view' },
+          { key: 'flash-sale',      label: 'Flash Sale UI',       href: '/admin/flash-sale',         pattern: /^\/admin\/flash-sale/, perm: 'flash_sale.view' },
+          { key: 'popup-notif',     label: 'Popup & Announcement',href: '/admin/popup-notification', pattern: /^\/admin\/popup-notification/, perm: 'popup.view' },
+          { key: 'features',        label: 'Features & Badges',   href: '/admin/features',           pattern: /^\/admin\/features/, perm: 'features.view' },
+          { key: 'product-button',  label: 'Quick Order & CTA Buttons', href: '/admin/product-button', pattern: /^\/admin\/product-button/, perm: 'product_cta.view' },
+          { key: 'contact-fields',  label: 'Contact Form Fields', href: '/admin/contact-fields',     pattern: /^\/admin\/contact-fields/, perm: 'contact_fields.view' },
         ],
       },
     ],
@@ -98,8 +98,8 @@ const navGroups = [
         key: 'marketing-group', label: 'Marketing & Comms', defaultOpen: false,
         icon: 'M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z',
         children: [
-          { key: 'coupons',     label: 'Coupons & Discounts', href: '/admin/coupons',  pattern: /^\/admin\/coupons/, perm: 'marketing.manage' },
-          { key: 'messages',    label: 'Contact Messages',    href: '/admin/messages', pattern: /^\/admin\/messages/, badge: 'new_messages', perm: 'messages.manage' },
+          { key: 'coupons',     label: 'Coupons & Discounts', href: '/admin/coupons',  pattern: /^\/admin\/coupons/, perm: 'coupons.view' },
+          { key: 'messages',    label: 'Contact Messages',    href: '/admin/messages', pattern: /^\/admin\/messages/, badge: 'new_messages', perm: 'messages.view' },
         ],
       },
     ],
@@ -111,17 +111,17 @@ const navGroups = [
         key: 'dropshipping-group', label: 'Dropshipping', defaultOpen: true,
         icon: 'M12 3l8 4.5v9L12 21l-8-4.5v-9z',
         children: [
-          { key: 'dropshipping-dashboard', label: 'Overview', href: '/admin/dropshipping', pattern: /^\/admin\/dropshipping\/?(?:\?.*)?$/, perm: 'dropshipping.manage', feature: 'dropshipping' },
-          { key: 'dropshipping-settings', label: 'Supplier Connection', href: '/admin/dropshipping/settings', pattern: /^\/admin\/dropshipping\/settings/, perm: 'dropshipping.manage', feature: 'dropshipping' },
-          { key: 'dropshipping-pricing', label: 'Pricing Rules', href: '/admin/dropshipping/pricing', pattern: /^\/admin\/dropshipping\/pricing/, perm: 'dropshipping.manage', feature: 'dropshipping' },
-          { key: 'dropshipping-categories', label: 'Category Mapping', href: '/admin/dropshipping/categories', pattern: /^\/admin\/dropshipping\/categories/, perm: 'dropshipping.manage', feature: 'dropshipping' },
-          { key: 'dropshipping-products', label: 'Supplier Products', href: '/admin/dropshipping/products', pattern: /^\/admin\/dropshipping\/products/, perm: 'dropshipping.manage', feature: 'dropshipping' },
-          { key: 'dropshipping-imported', label: 'Imported Products', href: '/admin/dropshipping/imported', pattern: /^\/admin\/dropshipping\/imported/, perm: 'dropshipping.manage', feature: 'dropshipping' },
-          { key: 'dropshipping-sync-runs', label: 'Sync Runs', href: '/admin/dropshipping/sync-runs', pattern: /^\/admin\/dropshipping\/sync-runs/, perm: 'dropshipping.manage', feature: 'dropshipping' },
-          { key: 'dropshipping-variations', label: 'Variation Mapping', href: '/admin/dropshipping/variations', pattern: /^\/admin\/dropshipping\/variations/, perm: 'dropshipping.manage', feature: 'dropshipping' },
-          { key: 'dropshipping-media', label: 'Media Cleanup', href: '/admin/dropshipping/media', pattern: /^\/admin\/dropshipping\/media/, perm: 'dropshipping.manage', feature: 'dropshipping' },
-          { key: 'dropshipping-storage', label: 'Storage Usage', href: '/admin/dropshipping/storage', pattern: /^\/admin\/dropshipping\/storage/, perm: 'dropshipping.manage', feature: 'dropshipping' },
-          { key: 'dropshipping-migrations', label: 'Database Migration', href: '/admin/dropshipping/migrations', pattern: /^\/admin\/dropshipping\/migrations/, perm: 'dropshipping.manage', feature: 'dropshipping' },
+          { key: 'dropshipping-dashboard', label: 'Overview', href: '/admin/dropshipping', pattern: /^\/admin\/dropshipping\/?(?:\?.*)?$/, perm: 'dropshipping.view', feature: 'dropshipping' },
+          { key: 'dropshipping-settings', label: 'Supplier Connection', href: '/admin/dropshipping/settings', pattern: /^\/admin\/dropshipping\/settings/, perm: 'supplier_connections.view', feature: 'dropshipping' },
+          { key: 'dropshipping-pricing', label: 'Pricing Rules', href: '/admin/dropshipping/pricing', pattern: /^\/admin\/dropshipping\/pricing/, perm: 'pricing_rules.view', feature: 'dropshipping' },
+          { key: 'dropshipping-categories', label: 'Category Mapping', href: '/admin/dropshipping/categories', pattern: /^\/admin\/dropshipping\/categories/, perm: 'category_mapping.view', feature: 'dropshipping' },
+          { key: 'dropshipping-products', label: 'Supplier Products', href: '/admin/dropshipping/products', pattern: /^\/admin\/dropshipping\/products/, perm: 'supplier_products.view', feature: 'dropshipping' },
+          { key: 'dropshipping-imported', label: 'Imported Products', href: '/admin/dropshipping/imported', pattern: /^\/admin\/dropshipping\/imported/, perm: 'imported_products.view', feature: 'dropshipping' },
+          { key: 'dropshipping-sync-runs', label: 'Sync Runs', href: '/admin/dropshipping/sync-runs', pattern: /^\/admin\/dropshipping\/sync-runs/, perm: 'sync_runs.view', feature: 'dropshipping' },
+          { key: 'dropshipping-variations', label: 'Variation Mapping', href: '/admin/dropshipping/variations', pattern: /^\/admin\/dropshipping\/variations/, perm: 'variation_mapping.view', feature: 'dropshipping' },
+          { key: 'dropshipping-media', label: 'Media Cleanup', href: '/admin/dropshipping/media', pattern: /^\/admin\/dropshipping\/media/, perm: 'media_cleanup.view', feature: 'dropshipping' },
+          { key: 'dropshipping-storage', label: 'Storage Usage', href: '/admin/dropshipping/storage', pattern: /^\/admin\/dropshipping\/storage/, perm: 'storage_usage.view', feature: 'dropshipping' },
+          { key: 'dropshipping-migrations', label: 'Database Migration', href: '/admin/dropshipping/migrations', pattern: /^\/admin\/dropshipping\/migrations/, perm: 'database_migration.view', feature: 'dropshipping' },
         ],
       },
     ],
@@ -132,56 +132,56 @@ const navGroups = [
       {
         key: 'media', label: 'Media Manager', href: '/admin/media', pattern: /^\/admin\/media/,
         icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z',
-        perm: 'media.manage',
+        perm: 'media.view',
       },
       {
         key: 'system-health', label: 'System Health', href: '/admin/system-health', pattern: /^\/admin\/system-health/,
         icon: 'M4 4h16v16H4zM8 16v-3M12 16V8M16 16v-6',
-        perm: 'settings.manage',
+        perm: 'system_health.view',
       },
       {
         key: 'optimized-images', label: 'Optimized Images', href: '/admin/system/optimized-images', pattern: /^\/admin\/system\/optimized-images/,
         icon: 'M4 5h16v14H4zM8 10l2 2 3-3 3 4',
-        perm: 'settings.manage',
+        perm: 'optimized_images.view',
       },
       {
         key: 'recovery-trash', label: 'Recovery Trash', href: '/admin/system/recovery-trash', pattern: /^\/admin\/system\/recovery-trash/,
         icon: 'M6 7h12m-9 0v10m6-10v10M9 4h6l1 3H8l1-3zm-4 3h14',
-        perm: 'settings.manage',
+        perm: 'recovery_trash.view',
       },
       {
         key: 'git-repository', label: 'Git Repository', href: '/admin/system/git-repository', pattern: /^\/admin\/system\/git-repository/,
         icon: 'M8 12a4 4 0 108 0 4 4 0 00-8 0zm0 0H4a2 2 0 01-2-2V6a2 2 0 012-2h4m8 8h4a2 2 0 002-2V6a2 2 0 00-2-2h-4M8 8l8 8m0-8l-8 8',
-        perm: 'settings.manage',
+        perm: 'git_repository.view',
       },
       {
         key: 'fake-order-guard-group', label: 'Fraud Guard', defaultOpen: false,
         icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
         children: [
-          { key: 'fake-order-guard', label: 'Overview',               href: '/admin/fake-order-guard',                pattern: /^\/admin\/fake-order-guard\/?(?:\?.*)?$/, perm: 'fraud_guard.manage' },
-          { key: 'fog-guards',       label: 'Guard Modules',          href: '/admin/fake-order-guard/guards',         pattern: /^\/admin\/fake-order-guard\/guards(?:\?|$)/, perm: 'fraud_guard.manage' },
-          { key: 'fog-limits',       label: 'Timers & Limits',        href: '/admin/fake-order-guard/limits',         pattern: /^\/admin\/fake-order-guard\/limits(?:\?|$)/, perm: 'fraud_guard.manage' },
-          { key: 'fog-bd-courier',   label: 'BD Courier Integration', href: '/admin/fake-order-guard/bd-courier',     pattern: /^\/admin\/fake-order-guard\/bd-courier(?:\?|$)/, perm: 'fraud_guard.manage' },
-          { key: 'fog-orders',       label: 'Blocked-source Orders',  href: '/admin/fake-order-guard/blocked-orders', pattern: /^\/admin\/fake-order-guard\/blocked-orders(?:\?|$)/, perm: 'fraud_guard.manage' },
-          { key: 'blocked-ips',       label: 'Blocked IPs',         href: '/admin/blocked-ips',       pattern: /^\/admin\/blocked-ips(?:\/|$)/,       perm: 'fraud_guard.manage' },
-          { key: 'blocked-devices',   label: 'Blocked Devices',     href: '/admin/blocked-devices',   pattern: /^\/admin\/blocked-devices(?:\/|$)/,   perm: 'fraud_guard.manage' },
-          { key: 'blocked-phones',    label: 'Blocked Phones',      href: '/admin/blocked-phones',    pattern: /^\/admin\/blocked-phones(?:\/|$)/,    perm: 'fraud_guard.manage' },
+          { key: 'fake-order-guard', label: 'Overview',               href: '/admin/fake-order-guard',                pattern: /^\/admin\/fake-order-guard\/?(?:\?.*)?$/, perm: 'fraud_guard.view' },
+          { key: 'fog-guards',       label: 'Guard Modules',          href: '/admin/fake-order-guard/guards',         pattern: /^\/admin\/fake-order-guard\/guards(?:\?|$)/, perm: 'fraud_guard.view' },
+          { key: 'fog-limits',       label: 'Timers & Limits',        href: '/admin/fake-order-guard/limits',         pattern: /^\/admin\/fake-order-guard\/limits(?:\?|$)/, perm: 'fraud_guard.view' },
+          { key: 'fog-bd-courier',   label: 'BD Courier Integration', href: '/admin/fake-order-guard/bd-courier',     pattern: /^\/admin\/fake-order-guard\/bd-courier(?:\?|$)/, perm: 'fraud_guard.view' },
+          { key: 'fog-orders',       label: 'Blocked-source Orders',  href: '/admin/fake-order-guard/blocked-orders', pattern: /^\/admin\/fake-order-guard\/blocked-orders(?:\?|$)/, perm: 'fraud_guard.view' },
+          { key: 'blocked-ips',       label: 'Blocked IPs',         href: '/admin/blocked-ips',       pattern: /^\/admin\/blocked-ips(?:\/|$)/,       perm: 'blocked_ips.view' },
+          { key: 'blocked-devices',   label: 'Blocked Devices',     href: '/admin/blocked-devices',   pattern: /^\/admin\/blocked-devices(?:\/|$)/,   perm: 'blocked_devices.view' },
+          { key: 'blocked-phones',    label: 'Blocked Phones',      href: '/admin/blocked-phones',    pattern: /^\/admin\/blocked-phones(?:\/|$)/,    perm: 'blocked_phones.view' },
         ],
       },
       {
         key: 'admins', label: 'Users', href: '/admin/admins', pattern: /^\/admin\/admins(?:\/|$)/,
         icon: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1',
-        perm: 'admins.manage',
+        perm: 'admins.view',
       },
       {
         key: 'roles', label: 'Roles', href: '/admin/roles', pattern: /^\/admin\/roles(?:\/|$)/,
         icon: 'M12 15a3 3 0 100-6 3 3 0 000 6zm0 0v6m0-18v3m9 6h-3M6 12H3m15.364-6.364l-2.121 2.121M7.757 16.243l-2.121 2.121m12.728 0l-2.121-2.121M7.757 7.757L5.636 5.636',
-        perm: 'admins.manage',
+        perm: 'roles.view',
       },
       {
         key: 'settings', label: 'Settings', href: '/admin/settings', pattern: /^\/admin\/settings/,
         icon: 'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z',
-        perm: 'settings.manage',
+        perm: 'settings.view',
       },
     ],
   },
@@ -302,12 +302,7 @@ export default function AdminLayout({ children, title }) {
   const isSuperAdmin = user?.is_super_admin || user?.role === 'admin';
   const userPerms = Array.isArray(user?.permissions) ? user.permissions : [];
 
-  const hasPerm = (perm) => {
-    if (isSuperAdmin) return true;
-    if (!perm) return true;
-    if (perm === 'suppliers.view' && userPerms.includes('suppliers.manage')) return true;
-    return userPerms.includes(perm);
-  };
+  const hasPerm = (perm) => !perm || (perm.startsWith('roles.') ? isSuperAdmin : isSuperAdmin || userPerms.includes(perm));
   const featureEnabled = (feature) => !feature || (feature === 'dropshipping' && dropshipping_enabled);
 
   useEffect(() => {

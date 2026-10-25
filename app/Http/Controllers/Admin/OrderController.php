@@ -368,7 +368,7 @@ class OrderController extends Controller
                 'courier_status' => $order->courier_status,
             ]),
             'bdcourier' => $bdcourier,
-            'canReceiveStock' => auth()->user()?->hasPermission('orders.manage') && auth()->user()?->hasPermission('products.create'),
+            'canReceiveStock' => auth()->user()?->hasPermission('orders.execute') && auth()->user()?->hasPermission('inventory.edit'),
             'taxPercent' => (float) setting('tax_percent', 0),
         ]);
     }

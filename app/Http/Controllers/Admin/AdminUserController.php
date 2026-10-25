@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\AdminPermissions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -28,7 +29,7 @@ class AdminUserController extends Controller
         return Inertia::render('Admin/Admins/Index', [
             'admins'               => $admins,
             'roles'                => $roles,
-            'availablePermissions' => User::PERMISSIONS,
+            'availablePermissions' => User::permissionGroups(),
         ]);
     }
 
@@ -43,7 +44,7 @@ class AdminUserController extends Controller
                 'permissions' => $defaultRole?->permissions ?? [],
             ]),
             'roles'                => $roles,
-            'availablePermissions' => User::PERMISSIONS,
+            'availablePermissions' => User::permissionGroups(),
         ]);
     }
 
@@ -58,6 +59,8 @@ class AdminUserController extends Controller
             'permissions'   => ['nullable', 'array'],
             'permissions.*' => ['string', Rule::in(self::knownPermissionKeys())],
         ]);
+
+        $this->guardAssignment($request, $data);
 
         User::create([
             'name'              => $data['name'],
@@ -77,11 +80,12 @@ class AdminUserController extends Controller
     public function edit(User $admin)
     {
         abort_unless($admin->isAdmin(), 404);
+        $this->guardTarget(request(), $admin);
 
         return Inertia::render('Admin/Admins/Form', [
             'admin'                => $admin,
             'roles'                => Role::query()->orderByDesc('is_system')->orderBy('name')->get(),
-            'availablePermissions' => User::PERMISSIONS,
+            'availablePermissions' => User::permissionGroups(),
         ]);
     }
 
@@ -98,6 +102,8 @@ class AdminUserController extends Controller
             'permissions'   => ['nullable', 'array'],
             'permissions.*' => ['string', Rule::in(self::knownPermissionKeys())],
         ]);
+
+        $this->guardAssignment($request, $data, $admin);
 
         if ($admin->isSuperAdmin() && $data['role'] !== 'admin' && User::whereRaw('LOWER(TRIM(role)) = ?', ['admin'])->count() <= 1) {
             return back()->withErrors(['role' => 'At least one Super Admin account must remain.']);
@@ -122,6 +128,7 @@ class AdminUserController extends Controller
     public function destroy(User $admin)
     {
         abort_unless($admin->isAdmin(), 404);
+        $this->guardTarget(request(), $admin);
 
         if ((int) $admin->id === (int) Auth::id()) {
             return back()->withErrors(['admin' => 'You cannot delete your own account while logged in.']);
@@ -152,11 +159,34 @@ class AdminUserController extends Controller
         $user->password = $data['password'];
         $user->save();
 
-        return redirect()->route('admin.admins.index')->with('status', 'Your password was updated.');
+        return redirect(AdminPermissions::landingUrl($user))->with('status', 'Your password was updated.');
     }
 
     private static function knownPermissionKeys(): array
     {
         return Role::permissionKeys();
+    }
+
+    private function guardTarget(Request $request, User $target): void
+    {
+        if ($request->user()->isSuperAdmin()) return;
+        abort_if($target->isSuperAdmin(), 403, 'Only Super Admin can change a Super Admin account.');
+        foreach (AdminPermissions::canonical($target->effectivePermissions()) as $permission) {
+            abort_unless($request->user()->hasPermission($permission), 403, 'You cannot change an account with higher access.');
+        }
+    }
+
+    private function guardAssignment(Request $request, array $data, ?User $target = null): void
+    {
+        if ($request->user()->isSuperAdmin()) return;
+        if ($target) $this->guardTarget($request, $target);
+        abort_if($data['role'] === 'admin', 403, 'Only Super Admin can assign full access.');
+        $permissions = $data['permissions'] ?? (Role::findByKey($data['role'])?->permissions ?? []);
+        $expected = $target ? $target->effectivePermissions() : (Role::findByKey($data['role'])?->permissions ?? []);
+        abort_if(($target && $data['role'] !== $target->role)
+            || array_diff($permissions, $expected) || array_diff($expected, $permissions), 403, 'Only Super Admin can change role or permission assignments.');
+        foreach (AdminPermissions::canonical($permissions) as $permission) {
+            abort_unless($request->user()->hasPermission($permission), 403, 'You cannot assign access higher than your own.');
+        }
     }
 }

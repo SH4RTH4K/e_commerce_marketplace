@@ -8,7 +8,7 @@ class IndexInventoryRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->hasPermission('products.view') ?? false;
+        return $this->user()?->hasPermission('inventory.view') ?? false;
     }
 
     /**

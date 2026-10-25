@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\AdminPermissions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -14,7 +15,7 @@ class AuthController extends Controller
     public function showLogin()
     {
         if (Auth::check() && Auth::user()->isAdmin()) {
-            return redirect()->route('admin.dashboard');
+            return redirect(AdminPermissions::landingUrl(Auth::user()));
         }
 
         return Inertia::render('Admin/Auth/Login');
@@ -55,7 +56,7 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('admin.dashboard'));
+        return redirect()->intended(AdminPermissions::landingUrl(Auth::user()));
     }
 
     public function logout(Request $request)

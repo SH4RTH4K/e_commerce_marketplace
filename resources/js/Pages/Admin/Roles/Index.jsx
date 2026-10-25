@@ -1,4 +1,5 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import PermissionMatrix from '@/Components/Admin/PermissionMatrix';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -52,20 +53,7 @@ export default function RolesIndex({ roles = [], availablePermissions = {} }) {
     }
   };
 
-  const togglePermission = (permission) => {
-    const selected = new Set(data.permissions || []);
-    if (selected.has(permission)) selected.delete(permission);
-    else selected.add(permission);
-    setData('permissions', Array.from(selected));
-  };
 
-  const toggleGroup = (items) => {
-    const keys = Object.keys(items || {});
-    const selected = new Set(data.permissions || []);
-    const allSelected = keys.every((key) => selected.has(key));
-    keys.forEach((key) => (allSelected ? selected.delete(key) : selected.add(key)));
-    setData('permissions', Array.from(selected));
-  };
 
   const deleteRole = (role) => {
     if (role.is_system) return;
@@ -93,7 +81,7 @@ export default function RolesIndex({ roles = [], availablePermissions = {} }) {
           {errors.role && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{errors.role}</div>}
           {props.flash?.status && <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{props.flash.status}</div>}
 
-          <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px] gap-6 items-start">
+          <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-6 items-start">
             <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-100">
                 <h2 className="font-bold text-gray-900">Available roles</h2>
@@ -129,7 +117,7 @@ export default function RolesIndex({ roles = [], availablePermissions = {} }) {
               </div>
             </section>
 
-            <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-4">
+            <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center justify-between gap-3 pb-3 border-b border-gray-100">
                 <div>
                   <h2 className="font-bold text-gray-900">{editing ? 'Edit role' : 'Add role'}</h2>
@@ -152,24 +140,7 @@ export default function RolesIndex({ roles = [], availablePermissions = {} }) {
                 {editing?.key === 'admin' ? (
                   <div className="rounded-xl bg-green-50 border border-green-200 p-3 text-xs text-green-800">Super Admin always has full access. Its permission checkboxes are managed by the system.</div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between"><h3 className="text-sm font-bold text-gray-800">Permissions</h3><span className="text-xs text-gray-400">{(data.permissions || []).length} selected</span></div>
-                    {Object.entries(availablePermissions).map(([groupKey, group]) => {
-                      const items = group.items || {};
-                      const keys = Object.keys(items);
-                      const allSelected = keys.length > 0 && keys.every((key) => (data.permissions || []).includes(key));
-                      return (
-                        <div key={groupKey} className="rounded-xl border border-gray-100 p-3 bg-gray-50/50">
-                          <div className="flex items-center justify-between mb-2"><span className="text-[11px] font-extrabold uppercase tracking-wider text-gray-600">{group.label}</span><button type="button" onClick={() => toggleGroup(items)} className="text-[11px] font-semibold text-orange-600">{allSelected ? 'Deselect' : 'Select all'}</button></div>
-                          <div className="space-y-1.5">
-                            {Object.entries(items).map(([permission, label]) => (
-                              <label key={permission} className="flex items-start gap-2 text-xs text-gray-700 cursor-pointer"><input type="checkbox" checked={(data.permissions || []).includes(permission)} onChange={() => togglePermission(permission)} className="mt-0.5 rounded border-gray-300 text-orange-500 focus:ring-orange-400" />{label}</label>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <PermissionMatrix groups={availablePermissions} value={data.permissions} onChange={permissions => setData('permissions', permissions)} />
                 )}
 
                 <button type="submit" disabled={processing} className="w-full px-5 py-3 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white text-sm font-semibold rounded-xl">{processing ? 'Saving...' : (editing ? 'Save Role' : 'Create Role')}</button>

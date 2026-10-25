@@ -285,8 +285,8 @@ class HandleInertiaRequests extends Middleware
         return [
             ...collect($counts)->mapWithKeys(fn ($count, $segment) => ['orders_'.$segment => $count])->all(),
             'pending_orders' => $counts['pending'] ?? 0,
-            'pending_reviews' => ProductReview::pending()->count(),
-            'new_messages' => ContactMessage::new()->count(),
+            'pending_reviews' => $request->user()->hasPermission('reviews.view') ? ProductReview::pending()->count() : 0,
+            'new_messages' => $request->user()->hasPermission('messages.view') ? ContactMessage::new()->count() : 0,
         ];
     }
 

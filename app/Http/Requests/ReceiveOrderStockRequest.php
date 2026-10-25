@@ -12,8 +12,8 @@ class ReceiveOrderStockRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return ($this->user()?->hasPermission('orders.manage') ?? false)
-            && ($this->user()?->hasPermission('products.create') ?? false);
+        return ($this->user()?->hasPermission('orders.execute') ?? false)
+            && ($this->user()?->hasPermission('inventory.edit') ?? false);
     }
 
     /**

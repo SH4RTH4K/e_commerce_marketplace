@@ -21,8 +21,8 @@ class AdminRoleManagementTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Admin/Roles/Index')
                 ->has('roles', 5)
-                ->where('availablePermissions.system.items', fn ($items) => ($items['admins.manage'] ?? null) === 'Manage Staff & Roles')
-                ->where('availablePermissions.dropshipping.items', fn ($items) => ($items['dropshipping.manage'] ?? null) === 'Manage Dropshipping Connections & Product Sync'));
+                ->where('availablePermissions.admins.items', fn ($items) => ($items['admins.add'] ?? null) === 'Add')
+                ->where('availablePermissions.sync_runs.items', fn ($items) => ($items['sync_runs.execute'] ?? null) === 'Execute'));
     }
 
     public function test_custom_role_can_be_created_renamed_and_used_by_a_staff_user(): void
@@ -34,7 +34,7 @@ class AdminRoleManagementTest extends TestCase
             'key' => 'warehouse_lead',
             'name' => 'Warehouse Lead',
             'description' => 'Warehouse access',
-            'permissions' => ['products.view', 'products.create'],
+            'permissions' => ['products.view', 'products.add'],
         ])->assertRedirect(route('admin.roles.index'));
 
         $role = Role::where('key', 'warehouse_lead')->firstOrFail();
