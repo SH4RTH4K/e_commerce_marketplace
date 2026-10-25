@@ -51,6 +51,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\QuickOrderController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ShopController;
+use App\Http\Controllers\SecurityTxtController;
 use App\Http\Controllers\ShoppingGuideController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\StorefrontImageController;
@@ -124,6 +125,8 @@ Route::post('/contact', [ContactController::class, 'store'])->middleware('thrott
 Route::get('/page/{slug}', [PageController::class, 'show'])->name('page');
 
 // SEO
+Route::get('/.well-known/security.txt', SecurityTxtController::class)->name('security.txt');
+Route::get('/security.txt', SecurityTxtController::class)->name('security.txt.legacy');
 Route::get('/merchant-feed.xml', MerchantFeedController::class)->name('merchant.feed');
 Route::get('/media/{kind}/{id}/{width}', StorefrontImageController::class)
     ->where('kind', 'product|banner|category|logo')->whereNumber('id')->whereNumber('width')
