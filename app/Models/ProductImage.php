@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Jobs\WarmProductImageVariants;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -12,6 +13,17 @@ class ProductImage extends Model
     protected $casts = [
         'is_primary' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::created(function (ProductImage $image): void {
+            if (app()->runningUnitTests()) {
+                return;
+            }
+
+            WarmProductImageVariants::dispatch($image->getKey())->afterCommit();
+        });
+    }
 
     public function product(): BelongsTo
     {

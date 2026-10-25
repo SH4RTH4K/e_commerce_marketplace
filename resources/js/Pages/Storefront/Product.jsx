@@ -9,6 +9,10 @@ import CodOrderModal from '@/Components/Storefront/CodOrderModal';
 import { money, imageUrl, whatsappNumber } from '@/lib/utils';
 import { trackViewItem, trackAddToCart } from '@/lib/tracking';
 
+const productGalleryImageUrl = (image, width = 960) => (
+  image?.id ? `/media/product/${image.id}/${width}` : imageUrl(image?.path, image?.alt || 'Product')
+);
+
 const escapeDescriptionHtml = (value) => String(value)
   .replace(/&/g, '&amp;')
   .replace(/</g, '&lt;')
@@ -233,12 +237,29 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showQuickOrder, setShowQuickOrder] = useState(false);
+  const [displayedImageUrl, setDisplayedImageUrl] = useState(null);
   const failedImagePaths = useRef(new Set());
+  const preloadedImageUrls = useRef(new Set());
 
-  const selectImage = path => {
+  const preloadGalleryImage = (image) => {
+    if (typeof window === 'undefined' || typeof window.Image !== 'function' || !image) return;
+
+    const url = productGalleryImageUrl(image);
+    if (!url || preloadedImageUrls.current.has(url)) return;
+
+    preloadedImageUrls.current.add(url);
+    const preload = new window.Image();
+    preload.decoding = 'async';
+    preload.fetchPriority = 'low';
+    preload.src = url;
+  };
+
+  const selectImage = imageOrPath => {
+    const path = typeof imageOrPath === 'string' ? imageOrPath : imageOrPath?.path;
     setActiveImage(path);
     setImageError(false);
     setImageLoaded(false);
+    if (typeof imageOrPath === 'object') preloadGalleryImage(imageOrPath);
   };
 
   const handleMainImageError = () => {
@@ -258,7 +279,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
   // Supplier image URLs can stall or return an HTML response instead of an image.
   // Move to another gallery image instead of leaving the primary image blank.
   useEffect(() => {
-    if (!activeImage || imageLoaded || imageError) return undefined;
+    if (!activeImage || imageLoaded || imageError || typeof window === 'undefined' || typeof window.setTimeout !== 'function') return undefined;
 
     const timer = window.setTimeout(() => {
       if (!imageLoaded) handleMainImageError();
@@ -435,8 +456,53 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
 
   const { canOrder: inStock } = productAvailability(product);
   const activeImageRecord = (product.images || []).find(image => image.path === activeImage);
-  const mainImageUrl = activeImageRecord?.id ? `/media/product/${activeImageRecord.id}/960` : imageUrl(activeImage, product.name);
+  const mainImageUrl = productGalleryImageUrl(activeImageRecord || { path: activeImage, alt: product.name });
+  const previewImageUrl = activeImageRecord?.id ? productGalleryImageUrl(activeImageRecord, 320) : imageUrl(activeImage, product.name);
   const reviewCount = reviews?.total ?? product.reviews_count ?? 0;
+
+  // Keep the selected thumbnail visible while its 960px variant is fetched.
+  // The preload also warms the server-side optimized WebP before the user clicks.
+  useEffect(() => {
+    if (!mainImageUrl || typeof window === 'undefined' || typeof window.Image !== 'function') return undefined;
+
+    let cancelled = false;
+    setDisplayedImageUrl(previewImageUrl || mainImageUrl);
+    setImageLoaded(false);
+
+    const preload = new window.Image();
+    preload.decoding = 'async';
+    preload.fetchPriority = 'high';
+    preload.onload = () => {
+      if (cancelled) return;
+      setDisplayedImageUrl(mainImageUrl);
+      setImageLoaded(true);
+      preloadedImageUrls.current.add(mainImageUrl);
+    };
+    preload.onerror = () => {
+      if (!cancelled) handleMainImageError();
+    };
+    preload.src = mainImageUrl;
+
+    return () => {
+      cancelled = true;
+      preload.onload = null;
+      preload.onerror = null;
+    };
+  }, [mainImageUrl, previewImageUrl]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    if (typeof window.setTimeout !== 'function') return undefined;
+
+    const images = product.images || [];
+    const timer = window.setTimeout(() => {
+      images.forEach((image, index) => {
+        window.setTimeout(() => preloadGalleryImage(image), index * 120);
+      });
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [product.id]);
 
   // Track product view once on mount
   useEffect(() => {
@@ -465,13 +531,20 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
             <div className="template-1-gallery">
               <div className="template-1-gallery-thumbs">
                 {(product.images || []).map(image => (
-                  <button key={image.id || image.path} type="button" className={activeImage === image.path ? 'is-active' : ''} onClick={() => selectImage(image.path)}>
+                  <button
+                    key={image.id || image.path}
+                    type="button"
+                    className={activeImage === image.path ? 'is-active' : ''}
+                    onClick={() => selectImage(image)}
+                    onMouseEnter={() => preloadGalleryImage(image)}
+                    onFocus={() => preloadGalleryImage(image)}
+                  >
                     <img src={`/media/product/${image.id}/320`} alt="" width="320" height="320" loading="lazy" decoding="async" />
                   </button>
                 ))}
               </div>
               <div className="template-1-gallery-main">
-                {mainImageUrl && !imageError ? <img src={mainImageUrl} width="960" height="960" fetchPriority="high" decoding="async" onLoad={() => setImageLoaded(true)} onError={handleMainImageError} alt={product.name} /> : <span>No image available</span>}
+                {mainImageUrl && !imageError ? <img src={displayedImageUrl || mainImageUrl} width="960" height="960" fetchPriority="high" decoding="async" onLoad={() => { if (displayedImageUrl === mainImageUrl) setImageLoaded(true); }} onError={handleMainImageError} alt={product.name} /> : <span>No image available</span>}
                 {mainImageUrl && !imageError && <button type="button" onClick={() => window.open(mainImageUrl, '_blank', 'noopener,noreferrer')} aria-label="View larger image">&#8599;</button>}
               </div>
             </div>
@@ -612,7 +685,7 @@ function ProductDetail({ product, related, sizes, colors, weights, variantGroups
                     onClick={() => selectImage(img.path)}
                     className={`relative rounded-xl border-2 shrink-0 overflow-hidden w-20 h-20 bg-white transition-all ${activeImage === img.path ? 'border-[#f15a24]' : 'border-gray-100 hover:border-[#f15a24]/50'}`}
                   >
-                    <img 
+                    <img
                       src={`/media/product/${img.id}/320`}
                       width="320" height="320" loading="lazy" decoding="async"
                       onError={(e) => {
