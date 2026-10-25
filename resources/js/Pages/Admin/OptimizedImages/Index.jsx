@@ -5,6 +5,7 @@ import { useState } from 'react';
 export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, orphaned_formatted = '0 B', protected_count = 0, directory = 'public/uploads/optimized' }) {
   const [selected, setSelected] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState(null);
 
   const toggle = filename => setSelected(current => current.includes(filename)
     ? current.filter(item => item !== filename)
@@ -70,7 +71,12 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
                 {files.map(file => (
                   <tr key={file.filename} className="hover:bg-slate-50/70">
                     <td className="px-5 py-3"><input type="checkbox" checked={selected.includes(file.filename)} onChange={() => toggle(file.filename)} aria-label={`Select ${file.filename}`} /></td>
-                    <td className="px-5 py-3"><p className="font-mono text-xs text-slate-700">{file.filename}</p><p className="mt-1 text-[11px] text-slate-400">{file.path}</p></td>
+                    <td className="px-5 py-3">
+                      <button type="button" onClick={() => setPreview(file)} className="group flex items-center gap-3 text-left" aria-label={`Preview ${file.filename}`}>
+                        <img src={`/uploads/optimized/${file.filename}`} alt="" loading="lazy" decoding="async" className="h-12 w-12 rounded-lg border border-slate-200 bg-slate-50 object-contain p-0.5 transition group-hover:border-orange-300" />
+                        <span><p className="font-mono text-xs text-slate-700 group-hover:text-orange-600">{file.filename}</p><p className="mt-1 text-[11px] text-slate-400">{file.path}</p></span>
+                      </button>
+                    </td>
                     <td className="px-5 py-3 text-slate-600">{file.formatted}</td>
                     <td className="px-5 py-3 text-slate-600">{file.age_days} day{file.age_days === 1 ? '' : 's'}</td>
                     <td className="px-5 py-3 text-xs text-slate-500">{file.modified_at}</td>
@@ -83,6 +89,16 @@ export default function OptimizedImagesIndex({ files = [], orphaned_count = 0, o
           </div>
         </section>
       </div>
+
+      {preview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4" role="dialog" aria-modal="true" aria-label="Image preview" onClick={() => setPreview(null)}>
+          <div className="relative max-h-[90vh] w-full max-w-4xl rounded-2xl bg-white p-3 shadow-2xl" onClick={event => event.stopPropagation()}>
+            <button type="button" onClick={() => setPreview(null)} className="absolute right-3 top-3 z-10 rounded-full bg-slate-900/80 px-3 py-1.5 text-sm font-semibold text-white hover:bg-slate-900" aria-label="Close image preview">Close</button>
+            <img src={`/uploads/optimized/${preview.filename}`} alt={preview.filename} className="max-h-[78vh] w-full rounded-xl object-contain" />
+            <p className="px-2 pb-1 pt-3 text-center font-mono text-xs text-slate-500">{preview.filename}</p>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
