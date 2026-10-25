@@ -2,7 +2,7 @@
 @php $title = 'Login / Register'; @endphp
 
 @section('content')
-<style>
+<style nonce="{{ csp_nonce() }}">
   .fld { width: 100%; border: 1px solid #d1d5db; border-radius: .375rem; padding: .625rem .75rem; font-size: .875rem; }
   .fld:focus { outline: none; box-shadow: 0 0 0 2px rgba(241, 90, 36, .3); }
 </style>

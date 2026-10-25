@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Illuminate\Foundation\Vite;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -10,6 +11,10 @@ class SecurityHeaders
 {
     public function handle(Request $request, Closure $next): Response
     {
+        $nonce = base64_encode(random_bytes(16));
+        $request->attributes->set('csp_nonce', $nonce);
+        app(Vite::class)->useCspNonce($nonce);
+
         /** @var Response $response */
         $response = $next($request);
 
@@ -32,10 +37,11 @@ class SecurityHeaders
 
         // Content Security Policy
         // In production, enforce strict CSP. In local development, relax to allow Vite HMR dev server.
-        if (app()->environment('production')) {
+        if (config('app.env') === 'production') {
             $csp = implode('; ', [
                 "default-src 'self'",
-                "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://static.hotjar.com",
+                "script-src 'self' 'nonce-{$nonce}' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://static.hotjar.com",
+                // Style nonce migration is deferred: legacy storefront/admin markup still emits style attributes and preview HTML.
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
                 "font-src 'self' https://fonts.gstatic.com data:",
                 "img-src 'self' data: blob: https:",
@@ -46,7 +52,12 @@ class SecurityHeaders
                 "base-uri 'self'",
                 "form-action 'self'",
             ]);
-            $response->headers->set('Content-Security-Policy', $csp);
+            $response->headers->set(
+                config('security.csp_report_only', false)
+                    ? 'Content-Security-Policy-Report-Only'
+                    : 'Content-Security-Policy',
+                $csp,
+            );
         }
 
         // HSTS — force HTTPS for 1 year (only in production)

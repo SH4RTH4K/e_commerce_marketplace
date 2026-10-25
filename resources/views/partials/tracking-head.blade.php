@@ -9,7 +9,7 @@
 
 {{-- Inject tracking config for JS (tracking.js reads window.__tracking) --}}
 @if($gtmId || $ga4Id || $pixelId)
-<script>
+<script nonce="{{ csp_nonce() }}">
 window.__tracking = {
   gtm:      @json($gtmId),
   ga4:      @json($ga4Id),
@@ -22,7 +22,7 @@ window.__tracking = {
 
 @if($gtmId)
 <!-- Google Tag Manager -->
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});
 var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';
 j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
@@ -32,8 +32,8 @@ j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNo
 
 @if($ga4Id && ($ga4Mode !== 'gtm' || !$gtmId))
 <!-- Google Analytics 4 -->
-<script async src="https://www.googletagmanager.com/gtag/js?id={{ $ga4Id }}"></script>
-<script>
+<script async nonce="{{ csp_nonce() }}" src="https://www.googletagmanager.com/gtag/js?id={{ $ga4Id }}"></script>
+<script nonce="{{ csp_nonce() }}">
 window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
@@ -43,7 +43,7 @@ gtag('config', '{{ $ga4Id }}', { send_page_view: false });
 
 @if($pixelId)
 <!-- Meta (Facebook) Pixel -->
-<script>
+<script nonce="{{ csp_nonce() }}">
 !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
 n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;

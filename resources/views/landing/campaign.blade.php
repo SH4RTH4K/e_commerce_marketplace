@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
   @vite('resources/css/landing.css')
-  <style>
+  <style nonce="{{ csp_nonce() }}">
     body {
       font-family: 'Hind Siliguri', 'Plus Jakarta Sans', sans-serif;
       background-color: #f8fafc;
@@ -491,7 +491,7 @@
   </a>
   @endif
 
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     // Live Countdown Timer
     (function initTimer() {
       const countdownHours = {{ (int) ($c['countdown_hours'] ?? 14) }};

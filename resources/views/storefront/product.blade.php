@@ -326,7 +326,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
   const form = document.getElementById('pdPurchaseForm');
   const variantInput = document.getElementById('pdVariant');

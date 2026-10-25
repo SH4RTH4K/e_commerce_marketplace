@@ -458,7 +458,7 @@
   
   <div id="toast" class="toast rounded-full bg-ink text-white px-5 py-2.5 text-sm font-semibold shadow-xl" role="status"></div>
 
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     window.CHILORA = {
       brand:         @json($c['brand'] ?? 'Chilora'),
       phone:         @json($phone),
@@ -486,7 +486,7 @@
       }
     };
   </script>
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     (function() {
       const qtyInput = document.getElementById('qty');
       const plus = document.getElementById('qty-plus');
@@ -546,7 +546,7 @@
       }
     })();
   </script>
-  <script src="{{ asset('landing/chilora/js/shell.js') }}?v=v4" defer></script>
-  <script src="{{ asset('landing/chilora/js/main.js') }}?v=v4" defer></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ asset('landing/chilora/js/shell.js') }}?v=v4" defer></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ asset('landing/chilora/js/main.js') }}?v=v4" defer></script>
 </body>
 </html>

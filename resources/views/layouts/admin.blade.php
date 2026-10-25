@@ -7,8 +7,8 @@
   <title>@yield('title', 'Admin') &mdash; {{ site_name() }} Admin</title>
   <meta name="robots" content="noindex, nofollow" />
   <link rel="icon" href="{{ favicon_url() }}" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
+  <script nonce="{{ csp_nonce() }}" src="https://cdn.tailwindcss.com"></script>
+  <script nonce="{{ csp_nonce() }}">
     tailwind.config = { theme: { extend: {
       colors: { primary: { DEFAULT: '#f15a24' } },
       fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ asset('theme/css/admin.css') . '?v=chat1' }}" />
-  <style>body{font-family:'Inter',sans-serif}</style>
+  <style nonce="{{ csp_nonce() }}">body{font-family:'Inter',sans-serif}</style>
 </head>
 <body class="bg-gray-100 text-gray-800 antialiased{{ testing_mode() ? ' testing-mode' : '' }}">
   @if(testing_mode())
@@ -51,10 +51,10 @@
     </div>
   </div>
   <div id="backdrop" class="fixed inset-0 bg-ink/40 z-40 hidden lg:hidden" aria-hidden="true"></div>
-  <script src="{{ asset('theme/js/admin-shell.js') }}"></script>
-  <script src="{{ asset('theme/js/admin-bulk.js') }}?v=bulk2"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ asset('theme/js/admin-shell.js') }}"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ asset('theme/js/admin-bulk.js') }}?v=bulk2"></script>
   @if(testing_mode())
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     (function () {
       var MSG = 'Aita testing mode ase, tumi purchase korar por aigula delete edit shob kisu korte parbe.';
 
@@ -125,7 +125,7 @@
     })();
   </script>
   @endif
-  <script src="{{ asset('theme/js/upload-fallback.js') }}?v=tmp1"></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ asset('theme/js/upload-fallback.js') }}?v=tmp1"></script>
   @stack('scripts')
 </body>
 </html>

@@ -110,7 +110,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
   var modal = document.getElementById('imagePreviewModal');
   var img = document.getElementById('imagePreviewImg');

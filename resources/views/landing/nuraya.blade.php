@@ -351,7 +351,7 @@
   </button>
   <div id="toast" class="toast" role="status"></div>
 
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     window.NURAYA = {
       brand:        @json($c['brand'] ?? 'Nuraya'),
       phone:        @json($phone),
@@ -376,7 +376,7 @@
       }
     };
   </script>
-  <script>
+  <script nonce="{{ csp_nonce() }}">
     (function() {
       const qtyInput = document.getElementById('nuraya-qty');
       const subtotalEl = document.getElementById('nuraya-subtotal');
@@ -432,7 +432,7 @@
       }
     })();
   </script>
-  <script src="{{ asset('landing/nuraya/js/shell.js') }}?v=v4" defer></script>
-  <script src="{{ asset('landing/nuraya/js/main.js') }}?v=v4" defer></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ asset('landing/nuraya/js/shell.js') }}?v=v4" defer></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ asset('landing/nuraya/js/main.js') }}?v=v4" defer></script>
 </body>
 </html>

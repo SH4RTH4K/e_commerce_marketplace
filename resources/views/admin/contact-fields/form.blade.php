@@ -77,7 +77,7 @@
 </form>
 
 @push('scripts')
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
   var type = document.getElementById('fieldType');
   var options = document.getElementById('optionsBlock');

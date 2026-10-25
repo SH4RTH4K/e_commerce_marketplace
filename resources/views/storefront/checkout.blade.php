@@ -197,7 +197,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
   var subtotal = {{ $subtotal }};
   var discount = {{ $discount }};

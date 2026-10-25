@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700;800&family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
   @vite('resources/css/landing.css')
-  <style>
+  <style nonce="{{ csp_nonce() }}">
     :root { color-scheme: light; }
     html { scroll-behavior: smooth; }
     body { margin: 0; font-family: "Hind Siliguri", "Inter", system-ui, sans-serif; background: #eefdff; color: #082038; }
@@ -286,7 +286,7 @@
   <a href="#order" class="offer-button block rounded-2xl px-4 py-3 text-center font-extrabold text-white">{{ $c['cta_text'] ?? 'Order Now' }} - &#2547;{{ number_format($offer, 0) }}</a>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
   document.querySelectorAll('.thumb').forEach((btn) => {
     btn.addEventListener('click', () => {
       const image = btn.getAttribute('data-image');

@@ -10,6 +10,14 @@ if (! function_exists('setting')) {
     }
 }
 
+if (! function_exists('csp_nonce')) {
+    /** Per-request nonce used by inline scripts permitted by the CSP. */
+    function csp_nonce(): string
+    {
+        return (string) request()->attributes->get('csp_nonce', '');
+    }
+}
+
 if (! function_exists('testing_mode')) {
     /**
      * Whether admin write actions are locked (TESTING_MODE in Site 3/shop/.env).

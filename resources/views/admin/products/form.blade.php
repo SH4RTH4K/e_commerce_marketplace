@@ -280,7 +280,7 @@
 @endif
 
 @push('scripts')
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
   const list = document.getElementById('specRows');
   const addBtn = document.getElementById('addSpecRow');
@@ -328,7 +328,7 @@
     <td class="py-2"><button type="button" class="text-red-500 text-lg leading-none px-1" data-variant-remove title="Remove">&times;</button></td>
   </tr>
 </template>
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
   const tpl = document.getElementById('variantRowTpl');
   const prefixMap = { sizeRows: 'size_variants', colorRows: 'color_variants', weightRows: 'weight_variants' };

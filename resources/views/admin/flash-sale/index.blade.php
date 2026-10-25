@@ -190,8 +190,8 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<script>
+<script nonce="{{ csp_nonce() }}" src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
   var list = document.getElementById('flashSaleList');
   var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';

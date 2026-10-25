@@ -468,7 +468,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
   var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 

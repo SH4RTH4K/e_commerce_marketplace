@@ -85,6 +85,7 @@ class HandleInertiaRequests extends Middleware
                 ? $request->session()->get('errors')->getBag('default')->getMessages()
                 : (object) [],
             'testing_mode' => testing_mode(),
+            'cspNonce' => fn () => csp_nonce(),
             'seoDefaults' => fn () => app(\App\Services\StorefrontSeoService::class)->defaults($request),
             'structuredData' => fn () => $request->routeIs('home', 'home.two', 'home.three', 'about', 'refund', 'return-policy', 'shipping')
                 ? app(\App\Services\StorefrontSeoService::class)->organization() : null,

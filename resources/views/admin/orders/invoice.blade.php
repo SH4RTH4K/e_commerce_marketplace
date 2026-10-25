@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-    <style>
+    <style nonce="{{ csp_nonce() }}">
         :root {
             --ink: #123044;
             --ink-soft: #355467;
@@ -1149,7 +1149,7 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ csp_nonce() }}">
         (function () {
             const requestedMode = new URLSearchParams(window.location.search).get('print');
             if (requestedMode === 'mono') document.body.classList.add('print-mono');

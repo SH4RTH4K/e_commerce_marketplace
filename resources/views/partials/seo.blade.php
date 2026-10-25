@@ -39,6 +39,6 @@
 @if($image)<meta name="twitter:image" content="{{ $image }}">@endif
 
 @isset($jsonLd)
-<script type="application/ld+json">{!! json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+<script nonce="{{ csp_nonce() }}" type="application/ld+json">{!! json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 @endisset
 

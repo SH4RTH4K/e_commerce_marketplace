@@ -31,7 +31,7 @@
   @isset($heroPreloadUrl)
   <link rel="preload" as="image" href="{{ $heroPreloadUrl }}" fetchpriority="high" />
   @endisset
-  <style>
+  <style nonce="{{ csp_nonce() }}">
     /* Critical hostfix — product grids / flash row stay intact if style.css is slow/404 */
     .product-card .product-img{display:block;width:100%;max-width:100%;height:auto!important;aspect-ratio:1/1;object-fit:cover}
     .product-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:.375rem;row-gap:.5rem;width:100%;max-width:100%;min-width:0;align-items:start}
@@ -48,7 +48,7 @@
   <link rel="icon" href="{{ favicon_url() }}" />
   <link rel="apple-touch-icon" href="{{ favicon_url() }}" />
 
-  <script type="application/ld+json">
+  <script nonce="{{ csp_nonce() }}" type="application/ld+json">
   {!! json_encode([
     '@context' => 'https://schema.org',
     '@type' => 'Organization',
@@ -95,11 +95,11 @@
 
 
   {{-- defer: scripts load after HTML parse, no render-blocking --}}
-  <script src="{{ $themeBase }}/theme/js/storefront.js?v=hostfix6" defer></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ $themeBase }}/theme/js/storefront.js?v=hostfix6" defer></script>
   @if(session('cart_open'))
-    <script>window.addEventListener('DOMContentLoaded',()=>window.Storefront&&window.Storefront.openCart());</script>
+    <script nonce="{{ csp_nonce() }}">window.addEventListener('DOMContentLoaded',()=>window.Storefront&&window.Storefront.openCart());</script>
   @endif
-  <script src="{{ $themeBase }}/theme/js/upload-fallback.js?v=tmp2" defer></script>
+  <script nonce="{{ csp_nonce() }}" src="{{ $themeBase }}/theme/js/upload-fallback.js?v=tmp2" defer></script>
   @stack('scripts')
 </body>
 </html>

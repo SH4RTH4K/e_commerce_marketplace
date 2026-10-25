@@ -64,7 +64,7 @@
     @endphp
     <title data-inertia="">{{ $pageMetaTitle }}</title>
     {{-- Keep the server-rendered fallback visible until the React storefront has mounted. --}}
-    <style>.js .seo-crawler-fallback { display: none; }</style>
+    <style nonce="{{ csp_nonce() }}">.js .seo-crawler-fallback { display: none; }</style>
     <meta name="site-name" content="{{ site_name() }}" />
     <meta name="seo-default-title" content="{{ $pageMetaTitle }}" />
     {{-- Social crawlers read this HTML without running the storefront JavaScript. --}}
@@ -83,7 +83,7 @@
     @if(!empty($pageSeo['robots']))<meta data-inertia="robots" name="robots" content="{{ $pageSeo['robots'] }}" />@endif
     <link data-inertia="canonical" rel="canonical" href="{{ $pageCanonical }}" />
     @if(!empty($page['props']['structuredData']))
-        <script data-inertia="structured-data" type="application/ld+json">{!! json_encode($page['props']['structuredData'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+        <script data-inertia="structured-data" nonce="{{ csp_nonce() }}" type="application/ld+json">{!! json_encode($page['props']['structuredData'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
     @endif
     <link rel="icon" href="{{ favicon_url() }}" />
     <link rel="apple-touch-icon" href="{{ favicon_url() }}" />
@@ -179,6 +179,13 @@
             @if(!empty($pageProps['products']['next_page_url']))<a href="{{ $pageProps['products']['next_page_url'] }}">Next page</a>@endif
         </main>
     @endif
-    @inertia
+    @php
+        $__inertiaSsrResponse = app(\Inertia\Ssr\SsrState::class)->setPage($page)->dispatch();
+    @endphp
+    @if($__inertiaSsrResponse)
+        {!! $__inertiaSsrResponse->body !!}
+    @else
+        <script data-page="app" nonce="{{ csp_nonce() }}" type="application/json">{!! json_encode($page, JSON_HEX_TAG) !!}</script><div id="app"></div>
+    @endif
 </body>
 </html>

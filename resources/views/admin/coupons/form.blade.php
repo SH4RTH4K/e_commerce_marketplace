@@ -76,7 +76,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
   var type = document.getElementById('couponType');
   var valueLabel = document.getElementById('valueLabel');

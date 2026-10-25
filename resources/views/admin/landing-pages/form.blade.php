@@ -108,7 +108,7 @@
   @endforeach
 </div>
 
-<style>
+<style nonce="{{ csp_nonce() }}">
   @keyframes lp-pulse-msg {
     0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.35); transform: scale(1); }
     50% { box-shadow: 0 0 0 8px rgba(22, 163, 74, 0); transform: scale(1.02); }
@@ -128,7 +128,7 @@
 @endsection
 
 @push('scripts')
-<script>
+<script nonce="{{ csp_nonce() }}">
 (function () {
   function jumpOffset() {
     var topbar = document.querySelector('.admin-main > header');

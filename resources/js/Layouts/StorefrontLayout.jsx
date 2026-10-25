@@ -90,6 +90,7 @@ export default function StorefrontLayout({ children, title, description, activeC
   };
 
   const chatSettings = app?.settings || {};
+  const cspNonce = props.cspNonce;
   const headerLogoHeight = Math.min(160, Math.max(24, Number(chatSettings.header_logo_height) || 48));
   const headerTitleSize = Math.min(40, Math.max(12, Number(chatSettings.header_title_size) || 18));
   const headerTaglineSize = Math.min(24, Math.max(8, Number(chatSettings.header_tagline_size) || 11));
@@ -229,7 +230,7 @@ export default function StorefrontLayout({ children, title, description, activeC
     <>
     <div className={`storefront-theme-root storefront-template-${storefrontTemplate}`} style={typographyStyle}>
       <Head>
-        {props.structuredData && <script head-key="structured-data" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(props.structuredData).replace(/</g, '\\u003c') }} />}
+        {props.structuredData && <script head-key="structured-data" nonce={cspNonce} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(props.structuredData).replace(/</g, '\\u003c') }} />}
         {seoDescription && <meta head-key="description" name="description" content={seoDescription} />}
         {seoKeywords && <meta head-key="keywords" name="keywords" content={seoKeywords} />}
         <meta head-key="og:title" property="og:title" content={seoTitle} />
