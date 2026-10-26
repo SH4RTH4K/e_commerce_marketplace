@@ -114,6 +114,31 @@ class StorefrontSeoTest extends TestCase
         $this->assertNotSame($shopDescription, $home->evaluate('string(//meta[@name="description"]/@content)'));
     }
 
+    public function test_category_pages_use_collection_search_intent_and_preserve_saved_metadata(): void
+    {
+        $category = Category::create([
+            'name' => 'Gadgets & Electronics',
+            'slug' => 'gadgets-electronics',
+            'is_active' => true,
+            'show_in_menu' => true,
+        ]);
+
+        $this->get(route('shop.category', $category))->assertOk()->assertInertia(fn ($page) => $page
+            ->where('seo.title', 'Gadgets & Electronics Online in Bangladesh | TAQI LIFE')
+            ->where('seo.description', 'Shop gadgets and electronics in Bangladesh at TAQI LIFE. Compare product features, photos, prices and current availability before ordering.'));
+
+        $category->update([
+            'meta_title' => 'Saved category title',
+            'meta_description' => 'Saved category description.',
+            'meta_keywords' => 'saved category phrase',
+        ]);
+
+        $this->get(route('shop.category', $category))->assertOk()->assertInertia(fn ($page) => $page
+            ->where('seo.title', 'Saved category title')
+            ->where('seo.description', 'Saved category description.')
+            ->where('seo.keywords', 'saved category phrase'));
+    }
+
     public function test_private_pages_emit_noindex_headers_and_meta_tags(): void
     {
         foreach (['/login', '/admin/login', '/wishlist', '/track'] as $uri) {
