@@ -67,7 +67,7 @@ class HomeController extends Controller
             ->placement($placement)
             ->where(fn ($query) => $query->whereNull('product_id')
                 ->orWhereHas('product', fn ($products) => $products->published()->where(fn ($available) => $available->where('stock_quantity', '>', 0)->orWhere('sourced_stock_quantity', '>', 0)->orWhere('allow_backorder', true))))
-            ->with('product:id,name,slug,sku,is_published')
+            ->with('product:id,name,slug,sku,is_published,regular_price,sale_price')
             ->orderBy('position')
             ->orderBy('id');
 
@@ -83,6 +83,8 @@ class HomeController extends Controller
                 'id' => $banner->product->id,
                 'name' => $banner->product->name,
                 'slug' => $banner->product->slug,
+                'regular_price' => $banner->product->regular_price,
+                'sale_price' => $banner->product->sale_price,
             ] : null,
             'style' => $banner->style,
             'text_position' => $banner->text_position,

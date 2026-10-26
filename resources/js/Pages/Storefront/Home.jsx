@@ -2,7 +2,7 @@ import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { useEffect, useRef, useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import ProductCard from '@/Components/Storefront/ProductCard';
-import { imageUrl } from '@/lib/utils';
+import { imageUrl, money } from '@/lib/utils';
 import CategoryIcon from '@/Components/Storefront/CategoryIcon';
 
 function hexToRgba(hex, opacity) {
@@ -1024,6 +1024,11 @@ export default function HomePage({
                      const copyPosition = banner.text_position || (isProductShowcase ? 'center-left' : templateTwoHeroTextPosition);
                      const heroButtonText = banner.button || (isProductShowcase ? 'View product' : null);
                      const hasHeroCopy = Boolean(banner.subtitle || heroButtonText || (isTemplateTwo && banner.title));
+                     const regularPrice = Number(banner.product?.regular_price) || 0;
+                     const salePrice = Number(banner.product?.sale_price) || 0;
+                     const hasProductDiscount = salePrice > 0 && regularPrice > salePrice;
+                     const productPrice = hasProductDiscount ? salePrice : (salePrice || regularPrice);
+                     const discountPercent = hasProductDiscount ? Math.round(((regularPrice - salePrice) / regularPrice) * 100) : 0;
 
                      return (
                      <div key={index} className={`relative w-full shrink-0 snap-center h-full flex flex-col ${contentPositionClasses(copyPosition, templateTwoHeroTextPosition)}`}>
@@ -1047,6 +1052,15 @@ export default function HomePage({
                          <div className={`template-two-hero-copy relative z-10 mt-5 mb-16 ${isProductShowcase ? 'template-two-hero-product-promo max-w-sm' : 'max-w-md'} p-5 sm:mt-8 sm:mb-20 sm:p-7 ${heroCopyEdgeSpacing(copyPosition, templateTwoHeroTextPosition)} ${isTemplateOne ? 'text-[#222] drop-shadow-none' : isTemplateTwo ? 'rounded-xl border border-white/15 text-white shadow-lg backdrop-blur-sm' : 'text-white drop-shadow-md hidden'}`} style={isTemplateTwo ? { backgroundColor: isProductShowcase ? 'rgba(255, 255, 255, 0.94)' : hexToRgba(templateTwoHeroTextBackgroundColor, templateTwoHeroTextBackgroundOpacity) } : undefined}>
                             {banner.subtitle && <p className="text-xl md:text-2xl mb-3 font-light">{banner.subtitle}</p>}
                             {banner.title && <h2 className={`text-4xl md:text-6xl mb-8 ${isProductShowcase ? 'template-two-hero-product-title' : ''}`}>{banner.title}</h2>}
+                            {isTemplateTwo && banner.product && productPrice > 0 && (
+                              <div className="template-two-hero-product-pricing mb-5 flex flex-wrap items-center gap-x-3 gap-y-1" aria-label={hasProductDiscount ? `Sale price ${money(salePrice)}, regular price ${money(regularPrice)}, ${discountPercent}% off` : `Price ${money(productPrice)}`}>
+                                <span className="text-2xl font-extrabold text-[#f2541c] sm:text-3xl">{money(productPrice)}</span>
+                                {hasProductDiscount && <>
+                                  <span className="text-sm font-medium text-gray-500 line-through sm:text-base">{money(regularPrice)}</span>
+                                  <span className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-extrabold text-[#c2410c] sm:text-sm">{discountPercent}% OFF</span>
+                                </>}
+                              </div>
+                            )}
                             {heroButtonText && <Link href={banner.link || '/shop'} className={`inline-flex items-center justify-center px-8 py-3 text-sm font-semibold uppercase text-white transition-colors ${isTemplateOne ? 'rounded-full bg-[#717fe0] hover:bg-[#222]' : 'rounded-lg bg-[#f2541c] hover:bg-[#d6431a]'}`}>{heroButtonText}</Link>}
                          </div>
                        )}
