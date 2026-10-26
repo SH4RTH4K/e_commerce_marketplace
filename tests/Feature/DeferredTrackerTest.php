@@ -29,8 +29,11 @@ class DeferredTrackerTest extends TestCase
         $this->assertStringContainsString('googletagmanager.com/gtag/js?id=G-STORE', $html);
         $this->assertStringContainsString('pixelConsentRequired: true', $html);
         $this->assertStringContainsString('pixelConsent: false', $html);
+        $this->assertStringContainsString('pixelConsentStatus: "pending"', $html);
         $this->assertStringContainsString('data-consent-accept', $html);
         $this->assertStringContainsString('data-consent-reject', $html);
+        $this->assertStringContainsString("window.__setMetaPixelConsent?.(false, 'pending')", $html);
+        $this->assertStringContainsString("window.__setMetaPixelConsent?.(choice === 'granted', choice)", $html);
         $this->assertDoesNotMatchRegularExpression('/<script\b[^>]*\bsrc=["\']https:\/\/connect\.facebook\.net/i', $html);
         $this->assertStringNotContainsString('facebook.com/tr?id=123456789012345', $html);
     }
@@ -44,6 +47,7 @@ class DeferredTrackerTest extends TestCase
 
         $this->assertStringContainsString('pixelConsentRequired: false', $html);
         $this->assertStringContainsString('pixelConsent: true', $html);
+        $this->assertStringContainsString('pixelConsentStatus: "granted"', $html);
         $this->assertStringContainsString('window.__loadMetaPixel();', $html);
         $this->assertStringNotContainsString('taqi-pixel-consent', $html);
     }

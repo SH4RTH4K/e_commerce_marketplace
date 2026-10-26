@@ -53,7 +53,7 @@
     document.cookie = `${cookieName}=${choice}; Max-Age=15552000; Path=/; SameSite=Lax${secure}`;
     banner.hidden = true;
     preferences.hidden = false;
-    window.__setMetaPixelConsent?.(choice === 'granted');
+    window.__setMetaPixelConsent?.(choice === 'granted', choice);
   };
   const openPreferences = () => {
     banner.hidden = false;
@@ -65,11 +65,11 @@
   if (savedChoice === 'granted' || savedChoice === 'denied') {
     banner.hidden = true;
     preferences.hidden = false;
-    window.__setMetaPixelConsent?.(savedChoice === 'granted');
+    window.__setMetaPixelConsent?.(savedChoice === 'granted', savedChoice);
   } else {
     banner.hidden = false;
     preferences.hidden = true;
-    window.__setMetaPixelConsent?.(false);
+    window.__setMetaPixelConsent?.(false, 'pending');
   }
 
   banner.querySelector('[data-consent-accept]')?.addEventListener('click', () => saveChoice('granted'));

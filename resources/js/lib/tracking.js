@@ -3,7 +3,7 @@
  *
  * Reads GTM / GA4 / Meta Pixel IDs from window.__tracking (injected by blade).
  * Sends events to all enabled platforms in one call.
- * Deduplication: purchase events are guarded by sessionStorage.
+ * Purchase events are deduplicated per provider. Meta waits for marketing consent.
  */
 
 function cfg() {
@@ -90,11 +90,65 @@ function gtagEvent(eventName, params) {
 }
 
 // ─── Meta Pixel ─────────────────────────────────────────────────────────────
-function pixelTrack(eventName, params) {
-  if (!hasPixel() || !hasPixelConsent()) return;
-  if (typeof window.fbq === 'function') {
-    window.fbq('track', eventName, params);
+function pixelTrack(eventName, params, eventId = null) {
+  if (!hasPixel() || !hasPixelConsent() || typeof window.fbq !== 'function') return false;
+  try {
+    if (eventId) {
+      window.fbq('track', eventName, params, { eventID: eventId });
+    } else {
+      window.fbq('track', eventName, params);
+    }
+    return true;
+  } catch {
+    return false;
   }
+}
+
+function wasTracked(key, memoryKey) {
+  window[memoryKey] = window[memoryKey] || new Set();
+  if (window[memoryKey].has(key)) return true;
+  try {
+    if (sessionStorage.getItem(key)) {
+      window[memoryKey].add(key);
+      return true;
+    }
+  } catch {}
+  return false;
+}
+
+function markTracked(key, memoryKey) {
+  window[memoryKey] = window[memoryKey] || new Set();
+  window[memoryKey].add(key);
+  try { sessionStorage.setItem(key, '1'); } catch {}
+}
+
+function pendingMetaPurchases() {
+  window.__pendingMetaPixelPurchases = window.__pendingMetaPixelPurchases || new Map();
+  return window.__pendingMetaPixelPurchases;
+}
+
+export function flushPendingMetaPixelPurchases() {
+  if (!hasPixel() || !hasPixelConsent()) return;
+  const pending = pendingMetaPurchases();
+  for (const [key, purchase] of pending.entries()) {
+    if (wasTracked(key, '__trackedMetaPixelPurchases')) {
+      pending.delete(key);
+      continue;
+    }
+    if (pixelTrack('Purchase', purchase.params, purchase.eventId)) {
+      markTracked(key, '__trackedMetaPixelPurchases');
+      pending.delete(key);
+    }
+  }
+}
+
+export function discardPendingMetaPixelPurchases() {
+  pendingMetaPurchases().clear();
+}
+
+if (typeof window !== 'undefined') {
+  window.__flushPendingMetaPixelPurchases = flushPendingMetaPixelPurchases;
+  window.__discardPendingMetaPixelPurchases = discardPendingMetaPixelPurchases;
 }
 
 // ─── Unique event ID for dedup (Meta server-side vs client-side) ─────────────
@@ -261,14 +315,6 @@ export function trackInitiateCheckout(cartItems = [], value = 0) {
  */
 export function trackPurchase(order) {
   if ((!hasGtm() && !hasGa4() && !hasPixel()) || !order?.order_number) return;
-  const key = 'tracked_order_' + order.order_number;
-  window.__trackedPurchases = window.__trackedPurchases || new Set();
-  if (window.__trackedPurchases.has(key)) return;
-  try { if (sessionStorage.getItem(key)) return; } catch {}
-  window.__trackedPurchases.add(key);
-  try { sessionStorage.setItem(key, '1'); } catch {}
-
-  const eventId = generateEventId();
 
   const items = (order.items || []).map((item) => ({
     item_id: String(item.product_id),
@@ -288,37 +334,60 @@ export function trackPurchase(order) {
   });
 
   const currency = order.currency || cfg().currency || 'BDT';
+  const purchaseValue = Number(order.total) || 0;
 
-  // GTM / GA4 via dataLayer
-  dlPush('purchase', {
-    transaction_id: order.order_number,
-    value: Number(merchandiseValue.toFixed(2)),
-    currency,
-    tax: Number(order.tax) || 0,
-    shipping: Number(order.shipping_charge) || 0,
-    coupon: order.coupon_code || undefined,
-    items,
-  });
+  // Keep analytics deduplication separate from Meta: Meta can be waiting on consent
+  // while GA4/GTM is already allowed to record this order.
+  const analyticsKey = 'tracked_order_analytics_' + order.order_number;
+  if ((hasGtm() || hasGa4()) && !wasTracked(analyticsKey, '__trackedAnalyticsPurchases')) {
+    markTracked(analyticsKey, '__trackedAnalyticsPurchases');
 
-  // GA4 direct (no GTM)
-  gtagEvent('purchase', {
-    transaction_id: order.order_number,
-    value: Number(merchandiseValue.toFixed(2)),
-    currency,
-    tax: Number(order.tax) || 0,
-    shipping: Number(order.shipping_charge) || 0,
-    coupon: order.coupon_code || undefined,
-    items,
-  });
+    // GTM / GA4 via dataLayer
+    dlPush('purchase', {
+      transaction_id: order.order_number,
+      value: Number(merchandiseValue.toFixed(2)),
+      currency,
+      tax: Number(order.tax) || 0,
+      shipping: Number(order.shipping_charge) || 0,
+      coupon: order.coupon_code || undefined,
+      items,
+    });
 
-  // Meta Pixel
-  pixelTrack('Purchase', {
-    event_id: eventId,
-    content_ids: items.map((i) => i.item_id),
-    contents: items.map((i) => ({ id: i.item_id, quantity: i.quantity })),
-    content_type: 'product',
-    value: Number(order.total) || 0,
-    currency,
-    num_items: items.reduce((s, i) => s + i.quantity, 0),
-  });
+    // GA4 direct (no GTM)
+    gtagEvent('purchase', {
+      transaction_id: order.order_number,
+      value: Number(merchandiseValue.toFixed(2)),
+      currency,
+      tax: Number(order.tax) || 0,
+      shipping: Number(order.shipping_charge) || 0,
+      coupon: order.coupon_code || undefined,
+      items,
+    });
+  }
+
+  // Meta Pixel has its own consent-aware deduplication. Keep pending purchases
+  // in memory only until the visitor accepts; never persist a declined event.
+  const metaKey = 'tracked_meta_pixel_purchase_' + order.order_number;
+  if (hasPixel() && !wasTracked(metaKey, '__trackedMetaPixelPurchases')) {
+    const pending = pendingMetaPurchases();
+    const queued = pending.get(metaKey);
+    const purchase = queued || {
+      eventId: generateEventId(),
+      params: {
+        content_ids: items.map((i) => i.item_id),
+        contents: items.map((i) => ({ id: i.item_id, quantity: i.quantity })),
+        content_type: 'product',
+        value: purchaseValue,
+        currency,
+        num_items: items.reduce((s, i) => s + i.quantity, 0),
+      },
+    };
+
+    if (pixelTrack('Purchase', purchase.params, purchase.eventId)) {
+      markTracked(metaKey, '__trackedMetaPixelPurchases');
+      pending.delete(metaKey);
+    } else if (cfg().pixelConsentRequired === true && cfg().pixelConsentStatus !== 'denied') {
+      pending.set(metaKey, purchase);
+    }
+  }
 }

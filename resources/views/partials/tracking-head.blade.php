@@ -19,6 +19,7 @@ window.__tracking = {
   pixel:    @json($pixelId),
   pixelConsentRequired: @json((bool) ($pixelId && $pixelConsentRequired)),
   pixelConsent: @json((bool) ($pixelId && ! $pixelConsentRequired)),
+  pixelConsentStatus: @json($pixelId ? ($pixelConsentRequired ? 'pending' : 'granted') : 'unavailable'),
   hotjar:   @json($hotjarId),
   currency: @json(setting('currency_code', 'BDT')),
 };
@@ -38,10 +39,11 @@ window.__loadMetaPixel = function () {
   window.fbq('init', config.pixel);
   window.fbq('track', 'PageView');
 };
-window.__setMetaPixelConsent = function (granted) {
+window.__setMetaPixelConsent = function (granted, status) {
   var config = window.__tracking || {};
   var wasGranted = config.pixelConsent === true;
   config.pixelConsent = Boolean(granted);
+  config.pixelConsentStatus = granted ? 'granted' : (status || 'denied');
   if (granted) {
     if (window.__metaPixelInitialized && typeof window.fbq === 'function') {
       if (!wasGranted) {
@@ -51,8 +53,12 @@ window.__setMetaPixelConsent = function (granted) {
     } else if (typeof window.__loadMetaPixel === 'function') {
       window.__loadMetaPixel();
     }
+    window.__flushPendingMetaPixelPurchases?.();
   } else if (typeof window.fbq === 'function') {
     window.fbq('consent', 'revoke');
+  }
+  if (!granted && config.pixelConsentStatus === 'denied') {
+    window.__discardPendingMetaPixelPurchases?.();
   }
 };
 @if(! $pixelConsentRequired)
