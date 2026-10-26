@@ -253,7 +253,7 @@ class DropshippingController extends Controller
             'suppliers' => DropshipSupplier::query()->withIntegration()
                 ->withCount(['products', 'variants'])
                 ->latest('id')
-                ->get(['id', 'name', 'key', 'is_active', 'last_connection_status']),
+                ->get(['id', 'name', 'key', 'is_active', 'last_connection_status', 'last_connection_message']),
         ]);
     }
 

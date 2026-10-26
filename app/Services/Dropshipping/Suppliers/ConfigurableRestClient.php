@@ -88,7 +88,7 @@ final class ConfigurableRestClient implements SupplierClient
 
         $response = $this->request($supplier, $profile->products_path, array_merge($filters, [(string) $profile->pagination_param => $page]));
         if (! $response->successful()) {
-            throw new LogicException('Supplier catalog request failed with status ' . $response->status() . '.');
+            throw new SupplierRequestException($response->status(), 'Supplier catalog request failed with status ' . $response->status() . '.');
         }
         $payload = $response->json();
         if (! is_array($payload)) {
@@ -150,7 +150,7 @@ final class ConfigurableRestClient implements SupplierClient
         }
         $response = $this->request($supplier, $profile->categories_path, []);
         if (! $response->successful()) {
-            throw new LogicException('Supplier category request failed with status ' . $response->status() . '.');
+            throw new SupplierRequestException($response->status(), 'Supplier category request failed with status ' . $response->status() . '.');
         }
         $payload = $response->json();
         $profileMapping = is_array($profile->field_mapping) ? $profile->field_mapping : [];

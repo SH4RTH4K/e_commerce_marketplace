@@ -8,7 +8,7 @@ use App\Services\Dropshipping\DTO\SupplierProductPage;
 use App\Services\Dropshipping\DTO\SupplierCategory;
 use App\Services\Dropshipping\SupplierCatalogMirrorService;
 use App\Services\Dropshipping\SupplierRegistry;
-use App\Services\Dropshipping\Support\SyncRunState;
+use App\Services\Dropshipping\Suppliers\SupplierRequestException;
 use App\Services\Dropshipping\SyncRunService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -103,6 +103,17 @@ class SyncSupplierCatalogPage implements ShouldQueue
 
         $errorMsg = trim($exception->getMessage());
         $errorSummary = $errorMsg !== '' ? $errorMsg : 'Catalog page could not be refreshed.';
+
+        if ($exception instanceof SupplierRequestException && in_array($exception->status, [401, 403], true)) {
+            $supplier = DropshipSupplier::query()->find($run->supplier_id);
+            if ($supplier !== null) {
+                $supplier->forceFill([
+                    'last_connection_status' => 'failed',
+                    'last_connection_message' => 'Supplier credentials were rejected.',
+                    'last_connection_tested_at' => now(),
+                ])->save();
+            }
+        }
 
         app(SyncRunService::class)->failPendingItem($run, 'page:' . $this->page, $errorSummary);
         $run->update(['error_summary' => $errorSummary]);

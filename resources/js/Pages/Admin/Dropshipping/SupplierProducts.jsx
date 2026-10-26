@@ -224,6 +224,22 @@ function SupplierSyncCard({ supplier, onSync }) {
                     </button>
                 </div>
             </div>
+            {supplier.last_connection_status === "failed" && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+                    <p className="font-semibold">
+                        {supplier.last_connection_message || "Supplier API connection failed."}
+                    </p>
+                    <p className="mt-1">
+                        Check the saved API key and secret, and confirm API access with the supplier. Then test the connection in{" "}
+                        <a
+                            href={`/admin/dropshipping/settings?supplier_id=${supplier.id}`}
+                            className="font-semibold underline"
+                        >
+                            API settings
+                        </a>.
+                    </p>
+                </div>
+            )}
             {hasUnfinishedRun && (
                 <div className="mt-2 bg-white border border-gray-200 p-4 rounded-xl shadow-sm">
                     <div className="flex items-center justify-between text-xs mb-2">
