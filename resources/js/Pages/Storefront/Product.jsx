@@ -171,14 +171,29 @@ const hasDescriptionContent = (value) => String(value || '')
 
 function ProductShareButton({ productName, productUrl, price, className = '' }) {
   const [copied, setCopied] = useState(false);
-  const copiedTimer = useRef(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+  const dialogCloseRef = useRef(null);
 
-  useEffect(() => () => window.clearTimeout(copiedTimer.current), []);
+  useEffect(() => {
+    if (!shareDialogOpen) return undefined;
+
+    dialogCloseRef.current?.focus();
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setShareDialogOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [shareDialogOpen]);
 
   const copyProductLink = async () => {
     if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(productUrl);
-      return;
+      try {
+        await navigator.clipboard.writeText(productUrl);
+        return;
+      } catch {
+        // Fall back when async clipboard access is denied by the browser.
+      }
     }
 
     const input = document.createElement('textarea');
@@ -194,49 +209,98 @@ function ProductShareButton({ productName, productUrl, price, className = '' }) 
   };
 
   const shareProduct = async () => {
-    const shareData = { title: productName, text: `${productName} — ${price}`, url: productUrl };
+    const shareData = { title: productName, text: productName + ' — ' + price, url: productUrl };
     try {
       if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
         await navigator.share(shareData);
         return;
       }
-
-      await copyProductLink();
-      setCopied(true);
-      window.clearTimeout(copiedTimer.current);
-      copiedTimer.current = window.setTimeout(() => setCopied(false), 2200);
     } catch (error) {
       if (error?.name === 'AbortError') return;
-      try {
-        await copyProductLink();
-        setCopied(true);
-        window.clearTimeout(copiedTimer.current);
-        copiedTimer.current = window.setTimeout(() => setCopied(false), 2200);
-      } catch {
-        setCopied(false);
-      }
+    }
+
+    setCopied(false);
+    setCopyError(false);
+    setShareDialogOpen(true);
+  };
+
+  const copyLinkFromDialog = async () => {
+    try {
+      await copyProductLink();
+      setCopied(true);
+      setCopyError(false);
+    } catch {
+      setCopied(false);
+      setCopyError(true);
     }
   };
 
+  const shareText = productName + ' — ' + price;
+  const encodedShareText = encodeURIComponent(shareText + ' ' + productUrl);
+  const encodedProductUrl = encodeURIComponent(productUrl);
+  const shareOptions = [
+    { label: 'WhatsApp', href: 'https://wa.me/?text=' + encodedShareText },
+    { label: 'Facebook', href: 'https://www.facebook.com/sharer/sharer.php?u=' + encodedProductUrl },
+    { label: 'Telegram', href: 'https://t.me/share/url?url=' + encodedProductUrl + '&text=' + encodeURIComponent(shareText) },
+    { label: 'Email', href: 'mailto:?subject=' + encodeURIComponent(productName) + '&body=' + encodedShareText },
+  ];
+
   return (
-    <button
-      type="button"
-      onClick={shareProduct}
-      aria-label={copied ? 'Product link copied' : `Share ${productName}`}
-      className={`inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold !text-gray-700 transition-colors hover:border-orange-300 hover:!text-[#f15a24] ${className}`}
-      style={{ color: copied ? '#15803d' : '#374151', backgroundColor: '#fff', borderColor: copied ? '#bbf7d0' : '#e5e7eb' }}
-    >
-      <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <circle cx="18" cy="5" r="3" />
-        <circle cx="6" cy="12" r="3" />
-        <circle cx="18" cy="19" r="3" />
-        <path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4" />
-      </svg>
-      <span aria-live="polite">{copied ? 'Link copied' : 'Share product'}</span>
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={shareProduct}
+        aria-label={copied ? 'Product link copied' : 'Share ' + productName}
+        aria-haspopup="dialog"
+        className={'inline-flex min-h-9 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold !text-gray-700 transition-colors hover:border-orange-300 hover:!text-[#f15a24] ' + className}
+        style={{ color: copied ? '#15803d' : '#374151', backgroundColor: '#fff', borderColor: copied ? '#bbf7d0' : '#e5e7eb' }}
+      >
+        <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4" />
+        </svg>
+        <span aria-live="polite">{copied ? 'Link copied' : 'Share product'}</span>
+      </button>
+
+      {shareDialogOpen && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm" onClick={() => setShareDialogOpen(false)}>
+          <div className="w-full max-w-md rounded-2xl border border-gray-100 bg-white p-5 shadow-2xl sm:p-6" role="dialog" aria-modal="true" aria-labelledby="product-share-title" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 id="product-share-title" className="text-lg font-bold text-gray-900">Share this product</h2>
+                <p className="mt-1 text-sm text-gray-500">Send the product link to someone.</p>
+              </div>
+              <button ref={dialogCloseRef} type="button" onClick={() => setShareDialogOpen(false)} aria-label="Close share dialog" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path strokeLinecap="round" d="m6 6 12 12M18 6 6 18" /></svg>
+              </button>
+            </div>
+
+            <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
+              <p className="truncate text-sm font-semibold text-gray-900">{productName}</p>
+              <p className="mt-1 text-sm text-gray-600">{price}</p>
+              <div className="mt-3 flex gap-2">
+                <input aria-label="Product link" readOnly value={productUrl} onFocus={(event) => event.currentTarget.select()} className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 outline-none focus:border-orange-400" />
+                <button type="button" onClick={copyLinkFromDialog} className="shrink-0 rounded-lg bg-[#f15a24] px-3 py-2 text-sm font-semibold text-white hover:bg-[#d6431a]">{copied ? 'Copied' : 'Copy link'}</button>
+              </div>
+              {copyError && <p className="mt-2 text-xs text-red-600" role="status">Copy was blocked. Select the link above and copy it.</p>}
+            </div>
+
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Share using</p>
+            <div className="grid grid-cols-2 gap-2">
+              {shareOptions.map((option) => (
+                <a key={option.label} href={option.href} target={option.label === 'Email' ? undefined : '_blank'} rel={option.label === 'Email' ? undefined : 'noopener noreferrer'} className="rounded-xl border border-gray-200 px-3 py-2.5 text-center text-sm font-semibold text-gray-700 transition-colors hover:border-orange-300 hover:bg-orange-50 hover:text-[#f15a24]">
+                  {option.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
-
 export default function ProductPage(props) {
   return <ProductDetail key={`${props.product.id}:${JSON.stringify(props.initialVariants || {})}`} {...props} />;
 }
