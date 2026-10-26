@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductReview;
 use App\Services\CategoryHierarchyService;
 use App\Services\ProductMetaDescriptionService;
+use App\Services\ProductMetaTitleService;
 use App\Services\ProductOfferService;
 use App\Services\StorefrontSeoService;
 use Illuminate\Http\Request;
@@ -98,7 +99,7 @@ class ProductController extends Controller
             'categoryPath' => array_map(fn ($item) => collect($item)->only(['id', 'name', 'slug'])->all(), $categoryPath),
             'structuredData' => app(StorefrontSeoService::class)->product($product, $categoryPath),
             'seo' => [
-                'title' => $product->meta_title ?: $product->name,
+                'title' => app(ProductMetaTitleService::class)->generate($product),
                 'description' => app(ProductMetaDescriptionService::class)->generate($product),
                 'description_is_generated' => true,
                 'keywords' => $product->meta_keywords,
