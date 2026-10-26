@@ -1020,10 +1020,13 @@ export default function HomePage({
                  {displayHeroBanners?.length > 0 ? (
                    displayHeroBanners.map((banner, index) => {
                      const heroImage = bannerImage(banner);
-                     const hasHeroCopy = Boolean(banner.subtitle || banner.button);
+                     const isProductShowcase = isTemplateTwo && Boolean(banner.title && banner.link && !banner.subtitle && !banner.button);
+                     const copyPosition = banner.text_position || (isProductShowcase ? 'center-left' : templateTwoHeroTextPosition);
+                     const heroButtonText = banner.button || (isProductShowcase ? 'View product' : null);
+                     const hasHeroCopy = Boolean(banner.subtitle || heroButtonText || (isTemplateTwo && banner.title));
 
                      return (
-                     <div key={index} className={`relative w-full shrink-0 snap-center h-full flex flex-col ${contentPositionClasses(banner.text_position, templateTwoHeroTextPosition)}`}>
+                     <div key={index} className={`relative w-full shrink-0 snap-center h-full flex flex-col ${contentPositionClasses(copyPosition, templateTwoHeroTextPosition)}`}>
                        {banner.image ? (
                          <BlurFillImage
                            src={heroImage}
@@ -1041,10 +1044,10 @@ export default function HomePage({
                          <Link href={banner.link} className="absolute inset-0 z-[3]" aria-label={banner.title || 'Open banner'} />
                        )}
                        {hasHeroCopy && (
-                         <div className={`template-two-hero-copy relative z-10 mt-5 mb-16 max-w-md p-5 sm:mt-8 sm:mb-20 sm:p-7 ${heroCopyEdgeSpacing(banner.text_position, templateTwoHeroTextPosition)} ${isTemplateOne ? 'text-[#222] drop-shadow-none' : isTemplateTwo ? 'rounded-xl border border-white/15 text-white shadow-lg backdrop-blur-sm' : 'text-white drop-shadow-md hidden'}`} style={isTemplateTwo ? { backgroundColor: hexToRgba(templateTwoHeroTextBackgroundColor, templateTwoHeroTextBackgroundOpacity) } : undefined}>
+                         <div className={`template-two-hero-copy relative z-10 mt-5 mb-16 ${isProductShowcase ? 'template-two-hero-product-promo max-w-sm' : 'max-w-md'} p-5 sm:mt-8 sm:mb-20 sm:p-7 ${heroCopyEdgeSpacing(copyPosition, templateTwoHeroTextPosition)} ${isTemplateOne ? 'text-[#222] drop-shadow-none' : isTemplateTwo ? 'rounded-xl border border-white/15 text-white shadow-lg backdrop-blur-sm' : 'text-white drop-shadow-md hidden'}`} style={isTemplateTwo ? { backgroundColor: isProductShowcase ? 'rgba(255, 255, 255, 0.94)' : hexToRgba(templateTwoHeroTextBackgroundColor, templateTwoHeroTextBackgroundOpacity) } : undefined}>
                             {banner.subtitle && <p className="text-xl md:text-2xl mb-3 font-light">{banner.subtitle}</p>}
-                            {banner.title && <h2 className="text-4xl md:text-6xl mb-8">{banner.title}</h2>}
-                            {banner.button && <Link href={banner.link || '/shop'} className={`inline-flex items-center justify-center px-8 py-3 text-sm font-semibold uppercase text-white transition-colors ${isTemplateOne ? 'rounded-full bg-[#717fe0] hover:bg-[#222]' : 'rounded-lg bg-[#f2541c] hover:bg-[#d6431a]'}`}>{banner.button}</Link>}
+                            {banner.title && <h2 className={`text-4xl md:text-6xl mb-8 ${isProductShowcase ? 'template-two-hero-product-title' : ''}`}>{banner.title}</h2>}
+                            {heroButtonText && <Link href={banner.link || '/shop'} className={`inline-flex items-center justify-center px-8 py-3 text-sm font-semibold uppercase text-white transition-colors ${isTemplateOne ? 'rounded-full bg-[#717fe0] hover:bg-[#222]' : 'rounded-lg bg-[#f2541c] hover:bg-[#d6431a]'}`}>{heroButtonText}</Link>}
                          </div>
                        )}
                      </div>

@@ -261,6 +261,22 @@
 .storefront-template-template-2 .storefront-hero-section .template-two-hero-copy > p { color: var(--theme-hero-color, #fff) !important; font-family: var(--theme-hero-font, Arial, Helvetica, sans-serif); font-size: var(--theme-hero-size, 16px); font-weight: var(--theme-hero-weight, 600); font-style: var(--theme-hero-style, normal); text-transform: var(--theme-hero-transform, none); }
 .storefront-template-template-2 .storefront-hero-section a { color: var(--theme-button-color, #fff) !important; font-family: var(--theme-button-font, Arial, Helvetica, sans-serif); font-size: var(--theme-button-size, 13px); font-weight: var(--theme-button-weight, 700); font-style: var(--theme-button-style, normal); text-transform: var(--theme-button-transform, none); }
 .storefront-template-template-2 .storefront-hero-section .hidden.lg\:flex { border-radius: 10px; }
+.storefront-template-template-2 .storefront-hero-section .template-two-hero-product-promo {
+    max-width: min(400px, calc(100% - 96px));
+    border-color: rgb(255 255 255 / .78);
+    color: #111827;
+    box-shadow: 0 12px 36px rgb(17 24 39 / .16);
+}
+.storefront-template-template-2 .storefront-hero-section .template-two-hero-copy > .template-two-hero-product-title {
+    display: -webkit-box;
+    overflow: hidden;
+    margin-bottom: 18px;
+    font-size: clamp(25px, 2.35vw, 34px);
+    line-height: 1.14;
+    letter-spacing: -.025em;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
 
 .storefront-template-template-2 .storefront-section { max-width: 1440px; }
 .storefront-template-template-2 .storefront-section h2 {
@@ -576,6 +592,12 @@
         font-size: 21px;
         line-height: 1.16;
         -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+    .storefront-template-template-2 .storefront-hero-section .template-two-hero-copy > .template-two-hero-product-title {
+        margin-bottom: 10px;
+        font-size: 21px;
+        line-height: 1.16;
         -webkit-line-clamp: 2;
     }
     .storefront-template-template-2 .storefront-product-card > div:last-child { padding: 10px; }
