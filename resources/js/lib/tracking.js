@@ -26,6 +26,10 @@ function hasPixel() {
   return Boolean(cfg().pixel);
 }
 
+function hasPixelConsent() {
+  return cfg().pixelConsent === true;
+}
+
 function hasHotjar() {
   return Boolean(cfg().hotjar);
 }
@@ -87,7 +91,7 @@ function gtagEvent(eventName, params) {
 
 // ─── Meta Pixel ─────────────────────────────────────────────────────────────
 function pixelTrack(eventName, params) {
-  if (!hasPixel()) return;
+  if (!hasPixel() || !hasPixelConsent()) return;
   if (typeof window.fbq === 'function') {
     window.fbq('track', eventName, params);
   }

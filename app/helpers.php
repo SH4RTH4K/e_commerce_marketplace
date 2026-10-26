@@ -440,6 +440,14 @@ if (! function_exists('tracking_meta_pixel_id')) {
     }
 }
 
+if (! function_exists('tracking_meta_pixel_consent_required')) {
+    /** Whether the direct Meta Pixel must wait for visitor marketing consent. */
+    function tracking_meta_pixel_consent_required(): bool
+    {
+        return (string) setting('tracking_meta_pixel_consent_required', '1') !== '0';
+    }
+}
+
 if (! function_exists('tracking_hotjar_id')) {
     /** Valid Hotjar site ID, or null when Hotjar is not configured. */
     function tracking_hotjar_id(): ?string

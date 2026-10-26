@@ -386,7 +386,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     seo_canonical_host: settings.seo_canonical_host || 'non_www',
     
     // Tracking
-    tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_ga4_mode: settings.tracking_ga4_mode || 'direct', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '', tracking_hotjar_id: settings.tracking_hotjar_id || '',
+    tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_ga4_mode: settings.tracking_ga4_mode || 'direct', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '', tracking_meta_pixel_consent_required: settings.tracking_meta_pixel_consent_required !== '0', tracking_hotjar_id: settings.tracking_hotjar_id || '',
     
     // Legal
     about_content: settings.about_content || '', terms_content: settings.terms_content || '', privacy_content: settings.privacy_content || '', refund_content: settings.refund_content || '', shipping_content: settings.shipping_content || '', shipping_page_enabled: settings.shipping_page_enabled !== '0',
@@ -1623,7 +1623,7 @@ export default function Settings({ settings, templateStatus = {} }) {
                       </div>
                       <div className="rounded-lg bg-white/80 p-3">
                         <p className="font-semibold">3. Meta Pixel</p>
-                        <p className="mt-1 text-xs leading-5 text-blue-800">In Meta Events Manager, copy the numeric Pixel ID only. Use Meta Pixel Helper after saving to confirm the <code>PageView</code> event.</p>
+                        <p className="mt-1 text-xs leading-5 text-blue-800">In Meta Events Manager, copy the numeric Pixel ID only. With permission required, the Pixel starts after a visitor allows marketing tracking. Use Meta Pixel Helper to confirm the <code>PageView</code> event.</p>
                       </div>
                       <div className="rounded-lg bg-white/80 p-3">
                         <p className="font-semibold">4. Hotjar</p>
@@ -1651,6 +1651,13 @@ export default function Settings({ settings, templateStatus = {} }) {
                       <input value={data.tracking_meta_pixel_id} onChange={e => setData('tracking_meta_pixel_id', e.target.value)} className={inputClass} placeholder="Numeric ID" />
                       <p className="mt-1.5 text-xs text-gray-500">Use numbers only; do not paste Meta’s full Pixel code.</p>
                     </Field>
+                    <label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                      <input type="checkbox" checked={data.tracking_meta_pixel_consent_required} onChange={e => setData('tracking_meta_pixel_consent_required', e.target.checked)} className="mt-1 h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500" />
+                      <span>
+                        <span className="block text-sm font-semibold text-gray-900">Require visitor permission before loading the Meta Pixel</span>
+                        <span className="mt-1 block text-xs leading-5 text-gray-500">Visitors can allow or reject marketing tracking; their choice lasts 6 months. Uncheck to load this Pixel immediately. Pixel tags inside Google Tag Manager must be gated there separately.</span>
+                      </span>
+                    </label>
                     <Field label="Hotjar site ID" error={errors.tracking_hotjar_id}>
                       <input value={data.tracking_hotjar_id} onChange={e => setData('tracking_hotjar_id', e.target.value)} className={inputClass} placeholder="Numeric ID" />
                       <p className="mt-1.5 text-xs text-gray-500">Deferred until first interaction or explicit consent; enter numbers only.</p>

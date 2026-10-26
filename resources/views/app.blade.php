@@ -129,6 +129,7 @@
 </head>
 <body class="antialiased">
     @include('partials.tracking-body')
+    @include('partials.meta-pixel-consent')
     @if($fallbackH1Enabled && $fallbackH1 !== '')
         {{-- Render meaningful content for visitors and crawlers without JavaScript. --}}
         <main class="seo-crawler-fallback" data-seo-crawler-fallback>

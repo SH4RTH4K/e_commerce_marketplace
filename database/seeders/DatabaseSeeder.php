@@ -110,6 +110,7 @@ class DatabaseSeeder extends Seeder
             'tracking_gtm_id'          => '',
             'tracking_ga4_id'          => '',
             'tracking_meta_pixel_id'   => '',
+            'tracking_meta_pixel_consent_required' => '1',
             'otp_enabled'              => '1',
             'customer_approval_required' => '0',
             'show_brands_marquee'      => '1',

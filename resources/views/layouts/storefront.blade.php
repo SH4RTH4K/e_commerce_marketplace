@@ -65,6 +65,7 @@
 
 <body class="@yield('body_class', 'bg-[#f3f4f6] text-ink antialiased has-floating-chat')">
   @include('partials.tracking-body')
+  @include('partials.meta-pixel-consent')
 
   @hasSection('checkout_header')
     @yield('checkout_header')

@@ -4,6 +4,7 @@
   $pixelId = tracking_meta_pixel_id();
   $hotjarId = tracking_hotjar_id();
   $ga4Mode = setting('tracking_ga4_mode', 'direct');
+  $pixelConsentRequired = tracking_meta_pixel_consent_required();
   // Marketing tags belong on the storefront, never in the administrator UI.
   if (request()->is('admin', 'admin/*')) $gtmId = $ga4Id = $pixelId = $hotjarId = null;
 @endphp
@@ -16,9 +17,48 @@ window.__tracking = {
   ga4:      @json($ga4Id),
   ga4Mode:  @json($ga4Mode),
   pixel:    @json($pixelId),
+  pixelConsentRequired: @json((bool) ($pixelId && $pixelConsentRequired)),
+  pixelConsent: @json((bool) ($pixelId && ! $pixelConsentRequired)),
   hotjar:   @json($hotjarId),
   currency: @json(setting('currency_code', 'BDT')),
 };
+@if($pixelId)
+window.__loadMetaPixel = function () {
+  var config = window.__tracking || {};
+  if (!config.pixel || (config.pixelConsentRequired && config.pixelConsent !== true) || window.__metaPixelInitialized) return;
+  window.__metaPixelInitialized = true;
+  if (typeof window.fbq !== 'function') {
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+  }
+  window.fbq('consent', 'grant');
+  window.fbq('init', config.pixel);
+  window.fbq('track', 'PageView');
+};
+window.__setMetaPixelConsent = function (granted) {
+  var config = window.__tracking || {};
+  var wasGranted = config.pixelConsent === true;
+  config.pixelConsent = Boolean(granted);
+  if (granted) {
+    if (window.__metaPixelInitialized && typeof window.fbq === 'function') {
+      if (!wasGranted) {
+        window.fbq('consent', 'grant');
+        window.fbq('track', 'PageView');
+      }
+    } else if (typeof window.__loadMetaPixel === 'function') {
+      window.__loadMetaPixel();
+    }
+  } else if (typeof window.fbq === 'function') {
+    window.fbq('consent', 'revoke');
+  }
+};
+@if(! $pixelConsentRequired)
+window.__loadMetaPixel();
+@endif
+@endif
 </script>
 @endif
 
@@ -40,19 +80,6 @@ window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
 gtag('config', '{{ $ga4Id }}', { send_page_view: false });
-</script>
-@endif
-
-@if($pixelId)
-<!-- Meta (Facebook) Pixel -->
-<script nonce="{{ csp_nonce() }}">
-!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
-n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '{{ $pixelId }}');
-fbq('track', 'PageView'); {{-- Initial page load; SPA navigations handled by tracking.js --}}
 </script>
 @endif
 

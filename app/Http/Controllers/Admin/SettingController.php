@@ -333,6 +333,7 @@ class SettingController extends Controller
                 'tracking_gtm_id'        => ['nullable', 'string', 'max:20', 'regex:/^(|GTM-[A-Z0-9]+)$/i'],
                 'tracking_ga4_id'        => ['nullable', 'string', 'max:20', 'regex:/^(|G-[A-Z0-9]+)$/i'],
                 'tracking_meta_pixel_id' => ['nullable', 'string', 'max:20', 'regex:/^(|\d+)$/'],
+                'tracking_meta_pixel_consent_required' => ['nullable', 'boolean'],
                 'tracking_hotjar_id'     => ['nullable', 'string', 'max:20', 'regex:/^(|\d+)$/'],
             ],
             'legal' => [
@@ -427,7 +428,7 @@ class SettingController extends Controller
                 'default_meta_title', 'default_meta_description', 'default_meta_keywords',
                 'seo_target_keywords', 'seo_h1_heading', 'seo_llms_txt_notes', 'seo_canonical_host',
             ],
-            'tracking' => ['tracking_gtm_id', 'tracking_ga4_id', 'tracking_ga4_mode', 'tracking_meta_pixel_id', 'tracking_hotjar_id'],
+            'tracking' => ['tracking_gtm_id', 'tracking_ga4_id', 'tracking_ga4_mode', 'tracking_meta_pixel_id', 'tracking_meta_pixel_consent_required', 'tracking_hotjar_id'],
             'legal' => ['about_content', 'terms_content', 'privacy_content', 'refund_content', 'shipping_content', 'shipping_page_enabled'],
             'courier' => [
                 'courier_default', 'steadfast_api_key', 'steadfast_secret_key',
@@ -475,6 +476,13 @@ class SettingController extends Controller
                 $value = strtoupper($value);
             }
             Setting::put($key, $value);
+        }
+
+        if ($section === 'tracking') {
+            $consentRequired = $request->has('tracking_meta_pixel_consent_required')
+                ? $request->boolean('tracking_meta_pixel_consent_required')
+                : true;
+            Setting::put('tracking_meta_pixel_consent_required', $consentRequired ? '1' : '0');
         }
 
         if ($section === 'shipping') {

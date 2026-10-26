@@ -16,7 +16,7 @@ class DeferredTrackerTest extends TestCase
         $this->withoutVite();
     }
 
-    public function test_hotjar_is_not_in_initial_html_while_ga_and_meta_remain_immediate(): void
+    public function test_meta_pixel_waits_for_visitor_consent_by_default(): void
     {
         Setting::put('tracking_hotjar_id', '12345678');
         Setting::put('tracking_ga4_id', 'G-STORE');
@@ -27,6 +27,24 @@ class DeferredTrackerTest extends TestCase
         $this->assertMatchesRegularExpression('/\bhotjar:\s*"12345678"/', $html);
         $this->assertStringNotContainsString('static.hotjar.com', $html);
         $this->assertStringContainsString('googletagmanager.com/gtag/js?id=G-STORE', $html);
-        $this->assertStringContainsString('connect.facebook.net/en_US/fbevents.js', $html);
+        $this->assertStringContainsString('pixelConsentRequired: true', $html);
+        $this->assertStringContainsString('pixelConsent: false', $html);
+        $this->assertStringContainsString('data-consent-accept', $html);
+        $this->assertStringContainsString('data-consent-reject', $html);
+        $this->assertDoesNotMatchRegularExpression('/<script\b[^>]*\bsrc=["\']https:\/\/connect\.facebook\.net/i', $html);
+        $this->assertStringNotContainsString('facebook.com/tr?id=123456789012345', $html);
+    }
+
+    public function test_meta_pixel_can_be_configured_to_load_immediately(): void
+    {
+        Setting::put('tracking_meta_pixel_id', '123456789012345');
+        Setting::put('tracking_meta_pixel_consent_required', '0');
+
+        $html = $this->get('/')->assertOk()->getContent();
+
+        $this->assertStringContainsString('pixelConsentRequired: false', $html);
+        $this->assertStringContainsString('pixelConsent: true', $html);
+        $this->assertStringContainsString('window.__loadMetaPixel();', $html);
+        $this->assertStringNotContainsString('taqi-pixel-consent', $html);
     }
 }

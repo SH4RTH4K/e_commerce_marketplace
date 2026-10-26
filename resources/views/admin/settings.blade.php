@@ -424,7 +424,13 @@
         <div>
           <label class="lbl">Meta (Facebook) Pixel</label>
           <input name="tracking_meta_pixel_id" class="inp font-mono text-sm" value="{{ $settings['tracking_meta_pixel_id'] ?? '' }}" placeholder="123456789012345" />
-          <p class="text-xs text-gray-400 mt-1">Numeric Pixel ID from Meta Events Manager</p>
+          <p class="text-xs text-gray-400 mt-1">Numeric Pixel ID from Meta Events Manager. With permission required, it starts after a visitor allows marketing tracking.</p>
+          <label class="mt-3 flex items-start gap-2 text-sm text-gray-700">
+            <input type="hidden" name="tracking_meta_pixel_consent_required" value="0" />
+            <input type="checkbox" name="tracking_meta_pixel_consent_required" value="1" class="mt-1" @checked(($settings['tracking_meta_pixel_consent_required'] ?? '1') !== '0') />
+            <span>Require visitor permission before loading the Meta Pixel</span>
+          </label>
+          <p class="text-xs text-gray-400 mt-1">Visitors can allow or reject marketing tracking; their choice lasts 6 months. Uncheck to load this Pixel immediately. Pixel tags inside Google Tag Manager must be gated there separately.</p>
         </div>
         <div>
           <label class="lbl">Hotjar site ID</label>
