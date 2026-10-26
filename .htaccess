@@ -13,9 +13,18 @@
 
     # Keep legacy WordPress URLs that are still in Google's index pointed at
     # their equivalent Laravel storefront routes.
-    RewriteRule ^index\.php/taqi_category/([^/]+)/?$ /product-category/$1 [L,PT]
-    RewriteRule ^index\.php/product-category/([^/]+)/?$ /product-category/$1 [L,PT]
-    RewriteRule ^index\.php/product/([^/]+)/?$ /legacy-product/$1 [L,PT]
+    RewriteCond %{THE_REQUEST} \s/+index\.php/taqi_category/customize-gift(?:/|\?|\s) [NC]
+    RewriteRule ^.*$ /category/customize-and-gift [R=301,L,NE]
+    RewriteCond %{THE_REQUEST} \s/+index\.php/taqi_category/([^/?\s]+) [NC]
+    RewriteRule ^.*$ /category/%1 [R=301,L,NE]
+    RewriteCond %{THE_REQUEST} \s/+index\.php/product-category/customize-gift(?:/|\?|\s) [NC]
+    RewriteRule ^.*$ /category/customize-and-gift [R=301,L,NE]
+    RewriteCond %{THE_REQUEST} \s/+index\.php/product-category/([^/?\s]+) [NC]
+    RewriteRule ^.*$ /category/%1 [R=301,L,NE]
+    RewriteCond %{THE_REQUEST} \s/+index\.php/product/hy300-android-projector(?:/|\?|\s) [NC]
+    RewriteRule ^.*$ /product/hy300-android-smart-mini-projector-720p-portable-001367 [R=301,L,NE]
+    RewriteCond %{THE_REQUEST} \s/+index\.php/product/([^/?\s]+) [NC]
+    RewriteRule ^.*$ /product/%1 [R=301,L,NE]
 
     # If the app is in a subdirectory, set this (e.g. RewriteBase /myshop/).
     # Leave as / when the Laravel app root is public_html.

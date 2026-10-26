@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use App\Models\Product;
 use App\Services\CategoryHierarchyService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class LegacyStorefrontUrlController extends Controller
 {
-    public function category(string $legacyCategory): RedirectResponse
+    public function category(Request $request, string $legacyCategory): RedirectResponse
     {
         $slug = match ($legacyCategory) {
             'customize-gift' => 'customize-and-gift',
@@ -21,15 +21,8 @@ class LegacyStorefrontUrlController extends Controller
 
         abort_if($path === [] || collect($path)->contains(fn (array $item) => ! $item['is_active']), 404);
 
-        return redirect()->route('shop.category', $category, 301);
-    }
+        $destination = route('shop.category', $category, false);
 
-    public function product(string $legacyProduct): RedirectResponse
-    {
-        $product = Product::published()->where('slug', $legacyProduct)->first();
-
-        abort_unless($product, 404);
-
-        return redirect()->route('product.show', $product, 301);
+        return redirect()->away($request->getSchemeAndHttpHost().$destination, 301);
     }
 }

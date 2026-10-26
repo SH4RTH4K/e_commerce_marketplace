@@ -78,7 +78,6 @@ Route::post('/lp/{slug}/order', [LandingPageController::class, 'order'])->middle
 Route::post('/campaign/{slug}/order', [LandingPageController::class, 'order'])->middleware('throttle:60,1');
 Route::get('/shop', [ShopController::class, 'index'])->name('shop');
 Route::get('/product-category/{legacyCategory}', [LegacyStorefrontUrlController::class, 'category'])->name('legacy.category');
-Route::get('/legacy-product/{legacyProduct}', [LegacyStorefrontUrlController::class, 'product'])->name('legacy.product');
 Route::redirect('/category/watch', '/category/watches', 301);
 Route::redirect('/category/airpod', '/category/airpods', 301);
 Route::redirect('/category/others', '/category/miscellaneous-products', 301);
