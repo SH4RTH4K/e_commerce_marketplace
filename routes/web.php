@@ -48,6 +48,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LandingPageController;
+use App\Http\Controllers\LegacyStorefrontUrlController;
 use App\Http\Controllers\MerchantFeedController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductController;
@@ -76,6 +77,8 @@ Route::get('/campaign/{slug}', [LandingPageController::class, 'show'])->name('ca
 Route::post('/lp/{slug}/order', [LandingPageController::class, 'order'])->middleware('throttle:60,1')->name('landing.order');
 Route::post('/campaign/{slug}/order', [LandingPageController::class, 'order'])->middleware('throttle:60,1');
 Route::get('/shop', [ShopController::class, 'index'])->name('shop');
+Route::get('/product-category/{legacyCategory}', [LegacyStorefrontUrlController::class, 'category'])->name('legacy.category');
+Route::get('/legacy-product/{legacyProduct}', [LegacyStorefrontUrlController::class, 'product'])->name('legacy.product');
 Route::redirect('/category/watch', '/category/watches', 301);
 Route::redirect('/category/airpod', '/category/airpods', 301);
 Route::redirect('/category/others', '/category/miscellaneous-products', 301);

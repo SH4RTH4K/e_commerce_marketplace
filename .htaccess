@@ -13,11 +13,9 @@
 
     # Keep legacy WordPress URLs that are still in Google's index pointed at
     # their equivalent Laravel storefront routes.
-    RewriteRule ^index\.php/taqi_category/customize-gift/?$ /category/customize-and-gift [R=301,L,NE]
-    RewriteRule ^index\.php/taqi_category/([^/]+)/?$ /category/$1 [R=301,L,NE]
-    RewriteRule ^(?:index\.php/)?product-category/customize-gift/?$ /category/customize-and-gift [R=301,L,NE]
-    RewriteRule ^(?:index\.php/)?product-category/([^/]+)/?$ /category/$1 [R=301,L,NE]
-    RewriteRule ^index\.php/product/([^/]+)/?$ /product/$1 [R=301,L,NE]
+    RewriteRule ^index\.php/taqi_category/([^/]+)/?$ /product-category/$1 [L,PT]
+    RewriteRule ^index\.php/product-category/([^/]+)/?$ /product-category/$1 [L,PT]
+    RewriteRule ^index\.php/product/([^/]+)/?$ /legacy-product/$1 [L,PT]
 
     # If the app is in a subdirectory, set this (e.g. RewriteBase /myshop/).
     # Leave as / when the Laravel app root is public_html.
