@@ -16,6 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('store:backup')->dailyAt('02:00')->withoutOverlapping();
     })
     ->withMiddleware(function (Middleware $middleware): void {
+        // This cookie is written by storefront JavaScript so the consent choice is
+        // available to the server during checkout. It is intentionally plain and
+        // must bypass Laravel's default cookie decryption middleware.
+        $middleware->encryptCookies(except: [
+            'taqi_marketing_consent',
+        ]);
+
         // Reverse-proxy trust: read from TRUSTED_PROXIES env var.
         // Use '*' only for shared hosting / Cloudflare.
         // For a direct VPS set TRUSTED_PROXIES=127.0.0.1

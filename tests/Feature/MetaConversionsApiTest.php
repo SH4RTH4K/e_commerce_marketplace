@@ -11,6 +11,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -61,6 +62,29 @@ class MetaConversionsApiTest extends TestCase
         $this->assertFalse(app(MetaConversionsApiService::class)->sendPurchase($order, $request));
         Http::assertNothingSent();
         $this->assertNull($order->fresh()->meta_purchase_capi_sent_at);
+    }
+
+    public function test_plain_marketing_consent_cookie_survives_web_middleware_for_purchase_delivery(): void
+    {
+        $this->enableCapi();
+        Http::fake(['graph.facebook.com/*' => Http::response(['events_received' => 1], 200)]);
+
+        $order = $this->orderWithItem();
+
+        Route::middleware('web')->get('/_test/meta-capi-consent', function (Request $request) use ($order) {
+            return response()->json([
+                'consent' => $request->cookie('taqi_marketing_consent'),
+                'sent' => app(MetaConversionsApiService::class)->sendPurchase($order, $request),
+            ]);
+        });
+
+        $this->withUnencryptedCookie('taqi_marketing_consent', 'granted')
+            ->get('/_test/meta-capi-consent')
+            ->assertOk()
+            ->assertExactJson(['consent' => 'granted', 'sent' => true]);
+
+        Http::assertSentCount(1);
+        $this->assertNotNull($order->fresh()->meta_purchase_capi_sent_at);
     }
 
     public function test_failed_server_purchase_is_not_marked_as_sent(): void
