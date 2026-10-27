@@ -81,6 +81,7 @@ class Order extends Model
         'shipping_charge' => 'decimal:2',
         'tax' => 'decimal:2',
         'total' => 'decimal:2',
+        'meta_purchase_capi_sent_at' => 'datetime',
     ];
 
     public const STATUSES = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];

@@ -32,7 +32,7 @@
 
 <section id="taqi-pixel-consent" role="region" aria-labelledby="taqi-pixel-consent-title">
   <h2 id="taqi-pixel-consent-title">Choose your marketing tracking preference</h2>
-  <p>TAQI LIFE uses the Meta Pixel to measure visits and improve advertising. It will load only if you allow marketing tracking. You can change your choice any time in Cookie settings. Read our <a href="{{ route('privacy') }}">Privacy Policy</a>.</p>
+  <p>TAQI LIFE uses Meta Pixel and server-side Conversions API events to measure visits and orders for advertising. They run only if you allow marketing tracking. For order events, contact details are normalized and SHA-256 hashed before being sent. You can change your choice any time in Cookie settings. Read our <a href="{{ route('privacy') }}">Privacy Policy</a>.</p>
   <div class="taqi-consent-actions">
     <button type="button" data-consent-accept>Allow marketing</button>
     <button type="button" data-consent-reject>Reject optional tracking</button>

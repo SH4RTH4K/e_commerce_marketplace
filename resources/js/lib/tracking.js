@@ -372,7 +372,7 @@ export function trackPurchase(order) {
     const pending = pendingMetaPurchases();
     const queued = pending.get(metaKey);
     const purchase = queued || {
-      eventId: generateEventId(),
+      eventId: order.meta_event_id || generateEventId(),
       params: {
         content_ids: items.map((i) => i.item_id),
         contents: items.map((i) => ({ id: i.item_id, quantity: i.quantity })),

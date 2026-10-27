@@ -121,7 +121,7 @@ class PageController extends Controller
     {
         $site = site_name();
 
-        return "{$site} collects account, order, and delivery information needed to fulfill purchases. We do not sell your personal data. Payment transaction IDs for mobile banking are stored only to verify your order. Contact us to request account updates or deletion where applicable.";
+        return "{$site} collects account, order, and delivery information needed to fulfill purchases. We do not sell your personal data. If you allow marketing tracking, Meta Pixel and Meta Conversions API may receive visit and order events, including purchase value and product IDs. For server-side order events, email, phone, and account identifiers are normalized and SHA-256 hashed before they are sent; delivery addresses and payment transaction IDs are not sent to Meta. Payment transaction IDs for mobile banking are stored only to verify your order. Contact us to request account updates or deletion where applicable.";
     }
 
     private function defaultRefund(): string

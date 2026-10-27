@@ -10,6 +10,7 @@ use App\Support\PublicUploader;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Validation\ValidationException;
 
 class SettingController extends Controller
@@ -54,6 +55,8 @@ class SettingController extends Controller
     {
         $settings = Setting::pluck('value', 'key')->all();
         unset($settings['seo_translation_api_key']);
+        $settings['tracking_meta_capi_token_saved'] = trim((string) ($settings['tracking_meta_capi_access_token'] ?? '')) !== '';
+        unset($settings['tracking_meta_capi_access_token']);
         $settings += [
             'seo_https_redirect_enabled' => app()->environment('production') ? '1' : '0',
             'seo_canonical_host' => $this->defaultCanonicalHost(),
@@ -89,6 +92,24 @@ class SettingController extends Controller
             ]);
         }
 
+        if ($section === 'tracking' && $request->boolean('tracking_meta_capi_enabled')) {
+            $pixelId = trim((string) $request->input('tracking_meta_pixel_id', Setting::get('tracking_meta_pixel_id', '')));
+            $newToken = trim((string) $request->input('tracking_meta_capi_access_token', ''));
+            $savedToken = trim((string) Setting::get('tracking_meta_capi_access_token', '')) !== '';
+            $willClearToken = $request->boolean('tracking_meta_capi_clear_token') && $newToken === '';
+
+            if ($pixelId === '') {
+                throw ValidationException::withMessages([
+                    'tracking_meta_pixel_id' => 'Enter the Meta Pixel ID before enabling Conversions API.',
+                ]);
+            }
+            if ($newToken === '' && ($willClearToken || ! $savedToken)) {
+                throw ValidationException::withMessages([
+                    'tracking_meta_capi_access_token' => 'Enter a Conversions API access token before enabling server events.',
+                ]);
+            }
+        }
+
         $this->persistSection($section, $data, $request);
 
         $payload = [
@@ -111,6 +132,7 @@ class SettingController extends Controller
                 tracking_gtm_id() ? 'GTM' : null,
                 tracking_ga4_id() ? 'GA4' : null,
                 tracking_meta_pixel_id() ? 'Meta Pixel' : null,
+                (string) setting('tracking_meta_capi_enabled', '0') === '1' ? 'Meta Conversions API' : null,
                 tracking_hotjar_id() ? 'Hotjar (deferred)' : null,
             ]));
         }
@@ -334,6 +356,9 @@ class SettingController extends Controller
                 'tracking_ga4_id'        => ['nullable', 'string', 'max:20', 'regex:/^(|G-[A-Z0-9]+)$/i'],
                 'tracking_meta_pixel_id' => ['nullable', 'string', 'max:20', 'regex:/^(|\d+)$/'],
                 'tracking_meta_pixel_consent_required' => ['nullable', 'boolean'],
+                'tracking_meta_capi_enabled' => ['nullable', 'boolean'],
+                'tracking_meta_capi_access_token' => ['nullable', 'string', 'max:2000'],
+                'tracking_meta_capi_clear_token' => ['nullable', 'boolean'],
                 'tracking_hotjar_id'     => ['nullable', 'string', 'max:20', 'regex:/^(|\d+)$/'],
             ],
             'legal' => [
@@ -428,7 +453,7 @@ class SettingController extends Controller
                 'default_meta_title', 'default_meta_description', 'default_meta_keywords',
                 'seo_target_keywords', 'seo_h1_heading', 'seo_llms_txt_notes', 'seo_canonical_host',
             ],
-            'tracking' => ['tracking_gtm_id', 'tracking_ga4_id', 'tracking_ga4_mode', 'tracking_meta_pixel_id', 'tracking_meta_pixel_consent_required', 'tracking_hotjar_id'],
+            'tracking' => ['tracking_gtm_id', 'tracking_ga4_id', 'tracking_ga4_mode', 'tracking_meta_pixel_id', 'tracking_meta_pixel_consent_required', 'tracking_meta_capi_enabled', 'tracking_hotjar_id'],
             'legal' => ['about_content', 'terms_content', 'privacy_content', 'refund_content', 'shipping_content', 'shipping_page_enabled'],
             'courier' => [
                 'courier_default', 'steadfast_api_key', 'steadfast_secret_key',
@@ -479,6 +504,12 @@ class SettingController extends Controller
         }
 
         if ($section === 'tracking') {
+            $newToken = trim((string) $request->input('tracking_meta_capi_access_token', ''));
+            if ($newToken !== '') {
+                Setting::put('tracking_meta_capi_access_token', Crypt::encryptString($newToken));
+            } elseif ($request->boolean('tracking_meta_capi_clear_token')) {
+                Setting::put('tracking_meta_capi_access_token', '');
+            }
             $consentRequired = $request->has('tracking_meta_pixel_consent_required')
                 ? $request->boolean('tracking_meta_pixel_consent_required')
                 : true;

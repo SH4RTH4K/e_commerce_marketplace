@@ -9,6 +9,7 @@ use App\Services\CartService;
 use App\Services\CouponService;
 use App\Services\FakeOrderGuardService;
 use App\Services\InventoryStockService;
+use App\Services\MetaConversionsApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,7 @@ class CheckoutController extends Controller
         private CartService $cart,
         private CouponService $coupons,
         private FakeOrderGuardService $fraudGuard,
+        private MetaConversionsApiService $metaConversions,
     ) {}
 
     public function show()
@@ -221,6 +223,15 @@ class CheckoutController extends Controller
 
         // ─── Transactional emails (fire-and-forget; never interrupt redirect) ─
         $order->load('items');
+        try {
+            $this->metaConversions->sendPurchase($order, $request);
+        } catch (\Throwable $exception) {
+            // Third-party analytics must never prevent the order from completing.
+            \Illuminate\Support\Facades\Log::warning('Meta CAPI Purchase processing failed.', [
+                'order_id' => $order->getKey(),
+                'exception' => get_class($exception),
+            ]);
+        }
         send_order_email(
             $order,
             'emails.order_placed',
@@ -255,6 +266,7 @@ class CheckoutController extends Controller
         // OrderConfirmation.jsx will call trackPurchase() with this data.
         $trackingOrder = [
             'order_number' => $order->order_number,
+            'meta_event_id' => MetaConversionsApiService::purchaseEventId($order),
             'total' => (float) $order->total,
             'subtotal' => (float) $order->subtotal,
             'tax' => (float) $order->tax,

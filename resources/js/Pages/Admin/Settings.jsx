@@ -386,7 +386,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     seo_canonical_host: settings.seo_canonical_host || 'non_www',
     
     // Tracking
-    tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_ga4_mode: settings.tracking_ga4_mode || 'direct', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '', tracking_meta_pixel_consent_required: settings.tracking_meta_pixel_consent_required !== '0', tracking_hotjar_id: settings.tracking_hotjar_id || '',
+    tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_ga4_mode: settings.tracking_ga4_mode || 'direct', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '', tracking_meta_pixel_consent_required: settings.tracking_meta_pixel_consent_required !== '0', tracking_meta_capi_enabled: settings.tracking_meta_capi_enabled === '1', tracking_meta_capi_access_token: '', tracking_meta_capi_clear_token: false, tracking_hotjar_id: settings.tracking_hotjar_id || '',
     
     // Legal
     about_content: settings.about_content || '', terms_content: settings.terms_content || '', privacy_content: settings.privacy_content || '', refund_content: settings.refund_content || '', shipping_content: settings.shipping_content || '', shipping_page_enabled: settings.shipping_page_enabled !== '0',
@@ -507,6 +507,7 @@ export default function Settings({ settings, templateStatus = {} }) {
         preserveScroll: true,
         onSuccess: () => {
           if (section === 'mail') setData('mail_password', '');
+          if (section === 'tracking') { setData('tracking_meta_capi_access_token', ''); setData('tracking_meta_capi_clear_token', false); }
           if (section === 'brand') { setData('logo_file', null); setData('favicon_file', null); setData('seo_image_file', null); setData('remove_logo', false); setData('remove_favicon', false); setData('remove_seo_image', false); }
         },
         onError: (errs) => setError(errs),
@@ -1658,6 +1659,29 @@ export default function Settings({ settings, templateStatus = {} }) {
                         <span className="mt-1 block text-xs leading-5 text-gray-500">Visitors can allow or reject marketing tracking; their choice lasts 6 months. Uncheck to load this Pixel immediately. Pixel tags inside Google Tag Manager must be gated there separately.</span>
                       </span>
                     </label>
+                    <section className="space-y-4 rounded-xl border border-orange-100 bg-orange-50/50 p-4">
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Meta Conversions API (server events)</h4>
+                        <p className="mt-1 text-xs leading-5 text-gray-600">Sends the same Purchase event from the server after a customer allows marketing tracking. Browser Pixel and server event use the same order event ID so Meta can deduplicate them. Email, phone, and account ID are normalized and SHA-256 hashed; the access token is encrypted at rest and never sent to the browser.</p>
+                      </div>
+                      <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-white p-3">
+                        <input type="checkbox" checked={data.tracking_meta_capi_enabled} onChange={e => setData('tracking_meta_capi_enabled', e.target.checked)} className="mt-1 h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500" />
+                        <span>
+                          <span className="block text-sm font-semibold text-gray-900">Enable Meta Conversions API</span>
+                          <span className="mt-1 block text-xs leading-5 text-gray-500">Requires the Pixel ID and a server access token from Events Manager. Keep the Pixel consent setting enabled so server events follow the visitor’s saved choice.</span>
+                        </span>
+                      </label>
+                      <Field label="Conversions API access token" error={errors.tracking_meta_capi_access_token}>
+                        <input type="password" autoComplete="new-password" value={data.tracking_meta_capi_access_token} onChange={e => setData('tracking_meta_capi_access_token', e.target.value)} className={inputClass} placeholder={settings.tracking_meta_capi_token_saved ? 'Saved securely — leave blank to keep it' : 'Paste the access token from Events Manager'} />
+                        <p className="mt-1.5 text-xs text-gray-500">{settings.tracking_meta_capi_token_saved ? 'A token is saved and hidden. Enter a new token to replace it.' : 'The token is sent only to your server and encrypted before storage.'}</p>
+                      </Field>
+                      {settings.tracking_meta_capi_token_saved && (
+                        <label className="flex items-center gap-2 text-xs text-gray-600">
+                          <input type="checkbox" checked={data.tracking_meta_capi_clear_token} onChange={e => setData('tracking_meta_capi_clear_token', e.target.checked)} className={checkboxClass} />
+                          Remove the saved Conversions API token
+                        </label>
+                      )}
+                    </section>
                     <Field label="Hotjar site ID" error={errors.tracking_hotjar_id}>
                       <input value={data.tracking_hotjar_id} onChange={e => setData('tracking_hotjar_id', e.target.value)} className={inputClass} placeholder="Numeric ID" />
                       <p className="mt-1.5 text-xs text-gray-500">Deferred until first interaction or explicit consent; enter numbers only.</p>
