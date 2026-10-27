@@ -80,11 +80,19 @@ class StorefrontSeoTest extends TestCase
 
     public function test_business_schema_social_links_and_information_page_metadata_are_present_in_initial_html(): void
     {
+        Setting::put('logo', 'https://cdn.example.com/taqi-life-logo.png');
+        Setting::put('seo_share_image', '');
         Setting::put('facebook_url', 'https://facebook.com/taqilife');
+        $home = $this->html($this->get('/')->assertOk()->getContent());
         $schema = $this->schema($this->get('/')->assertOk()->getContent());
         $this->assertSame('OnlineStore', $schema['@graph'][0]['@type']);
+        $this->assertStringStartsWith('https://cdn.example.com/taqi-life-logo.png?v=', $schema['@graph'][0]['logo']);
         $this->assertSame(['https://facebook.com/taqilife'], $schema['@graph'][0]['sameAs']);
         $this->assertSame('WebSite', $schema['@graph'][1]['@type']);
+        $socialImage = $home->evaluate('string(//meta[@property="og:image"]/@content)');
+        $this->assertStringStartsWith('https://cdn.example.com/taqi-life-logo.png?v=', $socialImage);
+        $this->assertSame($socialImage, $home->evaluate('string(//meta[@name="twitter:image"]/@content)'));
+        $this->assertStringNotContainsString('seo-preview.png', $socialImage);
         $about = $this->html($this->get('/about')->assertOk()->getContent());
         $contact = $this->html($this->get('/contact')->assertOk()->getContent());
         $this->assertSame('About Us | TAQI LIFE', $about->evaluate('string(//title)'));

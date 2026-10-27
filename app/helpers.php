@@ -404,9 +404,21 @@ if (! function_exists('seo_image_url')) {
     function seo_image_url(): string
     {
         $image = trim((string) setting('seo_share_image', ''));
-        return $image !== '' && branding_asset_is_usable($image)
-            ? branding_asset_url($image) . branding_cache_buster($image)
-            : asset('theme/seo-preview.png') . '?v=1';
+        if ($image !== '' && branding_asset_is_usable($image)) {
+            return branding_asset_url($image) . branding_cache_buster($image);
+        }
+
+        // The settings screen promises that an empty social image uses the
+        // current site logo. Keep the bundled raster card only for installs
+        // that do not yet have a usable custom logo.
+        $logo = trim((string) setting('logo', ''));
+        if ($logo !== '' && branding_asset_is_usable($logo)) {
+            return branding_asset_url($logo) . branding_cache_buster($logo);
+        }
+
+        $fallback = public_path('theme/seo-preview.png');
+
+        return asset('theme/seo-preview.png') . (is_file($fallback) ? ('?v=' . filemtime($fallback)) : '?v=1');
     }
 }
 

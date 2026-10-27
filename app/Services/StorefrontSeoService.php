@@ -53,7 +53,7 @@ class StorefrontSeoService
     {
         $organization = [
             '@type' => 'OnlineStore', '@id' => route('home').'#organization',
-            'name' => site_name(), 'url' => route('home'), 'logo' => seo_image_url(),
+            'name' => site_name(), 'url' => route('home'), 'logo' => logo_url(),
             'hasMerchantReturnPolicy' => [
                 '@type' => 'MerchantReturnPolicy', 'merchantReturnLink' => route('refund'),
             ],
