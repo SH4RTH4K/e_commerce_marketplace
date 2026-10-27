@@ -262,6 +262,27 @@ class CheckoutController extends Controller
 
         $order->load('items');
 
+        // If checkout could not send the server Purchase (for example, because
+        // marketing consent was granted after checkout or Meta was temporarily
+        // unavailable), let a consented confirmation-page visit retry it once
+        // per session. The service keeps the event ID stable and marks accepted
+        // events, so Meta can deduplicate this with the browser Pixel event.
+        $capiRetryKey = 'meta_capi_purchase_attempted_'.$order->getKey();
+        if (! $order->meta_purchase_capi_sent_at
+            && $request->cookie('taqi_marketing_consent') === 'granted'
+            && ! $request->session()->has($capiRetryKey)) {
+            $request->session()->put($capiRetryKey, true);
+
+            try {
+                $this->metaConversions->sendPurchase($order, $request);
+            } catch (\Throwable $exception) {
+                \Illuminate\Support\Facades\Log::warning('Meta CAPI Purchase retry processing failed.', [
+                    'order_id' => $order->getKey(),
+                    'exception' => get_class($exception),
+                ]);
+            }
+        }
+
         // Build tracking payload for the client-side purchase event.
         // OrderConfirmation.jsx will call trackPurchase() with this data.
         $trackingOrder = [

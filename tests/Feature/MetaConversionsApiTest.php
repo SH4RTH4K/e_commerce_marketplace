@@ -87,6 +87,45 @@ class MetaConversionsApiTest extends TestCase
         $this->assertNotNull($order->fresh()->meta_purchase_capi_sent_at);
     }
 
+    public function test_consent_gated_confirmation_retries_an_unsent_server_purchase(): void
+    {
+        $this->withoutVite();
+        $this->enableCapi();
+        Http::fake(['graph.facebook.com/*' => Http::response(['events_received' => 1], 200)]);
+
+        $order = $this->orderWithItem();
+        $confirmationUrl = route('order.confirmation', [
+            'order' => $order,
+            'token' => $order->confirmation_token,
+        ]);
+
+        $this->withUnencryptedCookie('taqi_marketing_consent', 'granted')
+            ->get($confirmationUrl)
+            ->assertOk();
+
+        // Reloading the signed confirmation does not send a second Purchase.
+        $this->get($confirmationUrl)->assertOk();
+
+        Http::assertSentCount(1);
+        $this->assertNotNull($order->fresh()->meta_purchase_capi_sent_at);
+    }
+
+    public function test_confirmation_does_not_retry_server_purchase_without_current_consent(): void
+    {
+        $this->withoutVite();
+        $this->enableCapi();
+        Http::fake();
+
+        $order = $this->orderWithItem();
+        $this->get(route('order.confirmation', [
+            'order' => $order,
+            'token' => $order->confirmation_token,
+        ]))->assertOk();
+
+        Http::assertNothingSent();
+        $this->assertNull($order->fresh()->meta_purchase_capi_sent_at);
+    }
+
     public function test_failed_server_purchase_is_not_marked_as_sent(): void
     {
         $this->enableCapi();
