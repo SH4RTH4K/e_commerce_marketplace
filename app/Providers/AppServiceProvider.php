@@ -32,7 +32,7 @@ class AppServiceProvider extends ServiceProvider
                         [
                             'name' => 'Mohasagor Bangladesh',
                             'auth_key_header' => 'api-key',
-                            'auth_secret_header' => 'secret-key',
+                            'auth_secret_header' => 'access-key',
                             'products_path' => 'product',
                             'categories_path' => null,
                             'collection_path' => null,

@@ -15,10 +15,9 @@ use LogicException;
 /**
  * Connection/configuration driver for the Mohasagor reseller API.
  *
- * The old WordPress project establishes the endpoint and header names, but it
- * does not provide a trusted live payload contract. Network connection checks
- * are therefore supported now; catalog normalization remains deliberately
- * unavailable until sanitized supplier fixtures are supplied.
+ * The supplier documentation confirms the endpoint and authentication header
+ * names. Catalog normalization remains deliberately unavailable until
+ * sanitized supplier response fixtures are supplied.
  */
 final class MohasagorClient implements SupplierClient
 {
@@ -51,7 +50,7 @@ final class MohasagorClient implements SupplierClient
                 ->timeout(15)
                 ->withHeaders([
                     'api-key' => trim((string) $supplier->api_key),
-                    'secret-key' => trim((string) $supplier->secret_key),
+                    'access-key' => trim((string) $supplier->secret_key),
                 ])
                 ->get($baseUrl . '/product', ['page' => 1]);
         } catch (\Throwable) {

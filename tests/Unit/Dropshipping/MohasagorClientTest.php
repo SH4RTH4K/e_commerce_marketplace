@@ -9,7 +9,7 @@ use Tests\TestCase;
 
 class MohasagorClientTest extends TestCase
 {
-    public function test_connection_uses_the_verified_endpoint_and_header_names(): void
+    public function test_connection_uses_the_supplier_documented_endpoint_and_header_names(): void
     {
         Http::fake([
             'https://mohasagor.com.bd/api/reseller/product*' => Http::response(['ok' => true], 200),
@@ -25,7 +25,7 @@ class MohasagorClientTest extends TestCase
 
         $this->assertTrue($result->successful);
         Http::assertSent(fn ($request) => $request->hasHeader('api-key', 'test-api-key')
-            && $request->hasHeader('secret-key', 'test-secret-key')
+            && $request->hasHeader('access-key', 'test-secret-key')
             && $request->url() === 'https://mohasagor.com.bd/api/reseller/product?page=1');
     }
 

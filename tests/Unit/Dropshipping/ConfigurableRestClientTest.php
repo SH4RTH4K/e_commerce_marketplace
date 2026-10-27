@@ -36,4 +36,32 @@ class ConfigurableRestClientTest extends TestCase
         $this->assertSame(4.0, $page->items[0]->stockQuantity);
         Http::assertSent(fn ($request) => $request->hasHeader('x-api-key', 'key') && $request->hasHeader('x-secret', 'secret'));
     }
+
+    public function test_mohasagor_connection_uses_supplier_documented_access_key_header(): void
+    {
+        DropshipDriverProfile::create([
+            'key' => 'mohasagor', 'name' => 'Mohasagor Bangladesh',
+            'auth_key_header' => 'api-key', 'auth_secret_header' => 'access-key',
+            'products_path' => 'product', 'collection_path' => '',
+            'pagination_param' => 'page', 'default_currency' => 'BDT',
+            'field_mapping' => ['fields' => ['id' => 'id', 'name' => 'name']],
+        ]);
+        Http::fake([
+            'https://mohasagor.com.bd/api/reseller/product*' => Http::response(['status' => 200, 'products' => []], 200),
+        ]);
+
+        $supplier = new DropshipSupplier([
+            'base_url' => 'https://mohasagor.com.bd/api/reseller',
+            'api_key' => 'test-api-key', 'secret_key' => 'test-secret-key',
+        ]);
+        $client = new ConfigurableRestClient('mohasagor', new SupplierImageUrlValidator(static fn (string $host): array => ['93.184.216.34']));
+
+        $result = $client->testConnection($supplier);
+
+        $this->assertTrue($result->successful);
+        Http::assertSent(fn ($request) => $request->hasHeader('api-key', 'test-api-key')
+            && $request->hasHeader('access-key', 'test-secret-key')
+            && ! $request->hasHeader('secret-key')
+            && $request->url() === 'https://mohasagor.com.bd/api/reseller/product?page=1');
+    }
 }

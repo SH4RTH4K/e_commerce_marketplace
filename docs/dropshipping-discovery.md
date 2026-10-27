@@ -40,7 +40,7 @@ The source-derived (unverified) conventions are:
 
 - base URL: `https://mohasagor.com.bd/api/reseller`;
 - list endpoint shape: `/product?page=N` with an optional `category` parameter;
-- authentication headers: `api-key` and `secret-key`;
+- authentication headers: `api-key` and `access-key` (confirmed by the supplier API documentation provided on 27 October 2026);
 - historical interpretation: `sale_price` as cost and `price` as maximum selling price.
 
 These are not implementation facts. In particular, the historical plugin falls back to an unfiltered request for **any** non-200 category-filter response and uses heuristic payload parsing. Both behaviours are explicitly excluded from the Laravel implementation.
