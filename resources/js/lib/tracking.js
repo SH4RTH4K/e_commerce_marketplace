@@ -192,6 +192,14 @@ export function trackPageView(url) {
 }
 
 /**
+ * Track a storefront search action without sending the visitor's search text.
+ * The Meta Pixel helper applies the same marketing-consent gate as other Pixel events.
+ */
+export function trackSearch() {
+  pixelTrack('Search', {});
+}
+
+/**
  * Track product detail view.
  * @param {{ id: string|number, name: string, price: number, category?: string, variant?: string }} product
  */

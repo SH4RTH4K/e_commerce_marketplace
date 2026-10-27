@@ -25,7 +25,7 @@ function setup(config = {}, blockedStorage = false) {
   };
   const sessionStorage = { getItem: key => { if (blockedStorage) throw Error('Blocked'); return saved.get(key); }, setItem: (key, value) => { if (blockedStorage) throw Error('Blocked'); saved.set(key, value); } };
   const context = vm.createContext({ window, sessionStorage, URL, document });
-  vm.runInContext(`${source}\nglobalThis.api = {trackPurchase, trackPageView, trackInitiateCheckout, trackAddToCart, trackViewItem, flushPendingMetaPixelPurchases, discardPendingMetaPixelPurchases};`, context);
+  vm.runInContext(`${source}\nglobalThis.api = {trackPurchase, trackPageView, trackSearch, trackInitiateCheckout, trackAddToCart, trackViewItem, flushPendingMetaPixelPurchases, discardPendingMetaPixelPurchases};`, context);
   return { ...context.api, window, sent, pixelSent, saved, appendedScripts };
 }
 
@@ -64,6 +64,19 @@ test('disabled analytics does not consume a purchase, and checkout keeps zero-va
   assert.equal(app.sent[1][2].items[0].item_id, '7');
   app.trackPageView('/shop');
   assert.equal(app.sent[2][1], 'page_view'); assert.equal(app.sent[2][2].page_location, 'https://taqilife.com/shop');
+});
+
+test('Meta Search sends no query text and respects marketing consent', () => {
+  const allowed = setup({ pixel: '3577038609126077', pixelConsent: true });
+  allowed.trackSearch();
+  assert.equal(allowed.pixelSent.length, 1);
+  assert.equal(allowed.pixelSent[0][0], 'track');
+  assert.equal(allowed.pixelSent[0][1], 'Search');
+  assert.deepEqual({ ...allowed.pixelSent[0][2] }, {});
+
+  const declined = setup({ pixel: '3577038609126077', pixelConsent: false });
+  declined.trackSearch();
+  assert.equal(declined.pixelSent.length, 0);
 });
 
 test('Meta Purchase waits for consent without being consumed by the GA4 event', () => {

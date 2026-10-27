@@ -7,6 +7,7 @@ import VisitorPopupModal from '@/Components/Storefront/VisitorPopupModal';
 import ParticleText from '@/Components/Storefront/ParticleText';
 import TrueFocus from '@/Components/Storefront/TrueFocus';
 import { imageUrl, whatsappNumber } from '@/lib/utils';
+import { trackSearch } from '@/lib/tracking';
 import { DesktopCategoryItem, MobileCategoryLinks } from '@/Components/Storefront/CategoryNavigation';
 import PageTransition from '@/Components/Storefront/PageTransition';
 
@@ -372,7 +373,7 @@ export default function StorefrontLayout({ children, title, description, activeC
                   placeholder="What are you looking for?"
                   className="flex-1 h-full px-3 text-sm bg-transparent border-none focus:outline-none focus:ring-0 text-gray-800 placeholder-gray-400" />
                 
-                <button type="submit" aria-label="Search products" title="Search products"
+                <button type="submit" aria-label="Search products" title="Search products" onClick={trackSearch}
                   className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-full text-gray-500 hover:text-white hover:bg-[#f15a24] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f15a24]/40 transition-colors">
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true">
                     <circle cx="11" cy="11" r="7"/><path strokeLinecap="round" d="m20 20-3-3"/>
@@ -443,7 +444,7 @@ export default function StorefrontLayout({ children, title, description, activeC
               <input type="text" value={searchQ} onChange={e => setSearchQ(e.target.value)}
                 placeholder={`Search in ${app?.name || 'store'}...`}
                 className="flex-1 min-w-0 h-10 px-4 text-sm bg-transparent border-none focus:outline-none focus:ring-0" autoFocus />
-              <button type="submit" className="shrink-0 h-10 px-4 text-gray-500 hover:text-[#f15a24] flex items-center justify-center">
+              <button type="submit" className="shrink-0 h-10 px-4 text-gray-500 hover:text-[#f15a24] flex items-center justify-center" onClick={trackSearch}>
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <circle cx="11" cy="11" r="7"/><path strokeLinecap="round" d="m20 20-3-3"/>
                 </svg>
