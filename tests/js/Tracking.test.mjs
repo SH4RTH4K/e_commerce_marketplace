@@ -68,14 +68,14 @@ test('disabled analytics does not consume a purchase, and checkout keeps zero-va
 
 test('Meta Search sends no query text and respects marketing consent', () => {
   const allowed = setup({ pixel: '3577038609126077', pixelConsent: true });
-  allowed.trackSearch();
+  assert.equal(allowed.trackSearch(), true);
   assert.equal(allowed.pixelSent.length, 1);
   assert.equal(allowed.pixelSent[0][0], 'track');
   assert.equal(allowed.pixelSent[0][1], 'Search');
   assert.deepEqual({ ...allowed.pixelSent[0][2] }, {});
 
   const declined = setup({ pixel: '3577038609126077', pixelConsent: false });
-  declined.trackSearch();
+  assert.equal(declined.trackSearch(), false);
   assert.equal(declined.pixelSent.length, 0);
 });
 

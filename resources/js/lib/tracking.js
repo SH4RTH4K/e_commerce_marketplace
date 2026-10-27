@@ -196,7 +196,7 @@ export function trackPageView(url) {
  * The Meta Pixel helper applies the same marketing-consent gate as other Pixel events.
  */
 export function trackSearch() {
-  pixelTrack('Search', {});
+  return pixelTrack('Search', {});
 }
 
 /**
