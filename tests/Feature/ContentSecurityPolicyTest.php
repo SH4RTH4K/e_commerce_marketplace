@@ -37,6 +37,7 @@ class ContentSecurityPolicyTest extends TestCase
 
         $this->assertNotEmpty($csp);
         $this->assertNotEmpty($scriptDirective);
+        $this->assertStringContainsString('https://www.facebook.com/signals/iwl.js', $scriptDirective);
         $this->assertStringNotContainsString("'unsafe-inline'", $scriptDirective);
         $this->assertStringNotContainsString("'unsafe-eval'", $csp);
         $this->assertMatchesRegularExpression("/'nonce-[A-Za-z0-9+\\/=]+'/", $scriptDirective);

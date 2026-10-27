@@ -38,7 +38,7 @@ class SecurityHeaders
         if (config('app.env') === 'production') {
             $csp = implode('; ', [
                 "default-src 'self'",
-                "script-src 'self' 'nonce-{$nonce}' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://static.hotjar.com",
+                "script-src 'self' 'nonce-{$nonce}' https://www.googletagmanager.com https://www.google-analytics.com https://connect.facebook.net https://www.facebook.com/signals/iwl.js https://static.hotjar.com",
                 // Style nonce migration is deferred: legacy storefront/admin markup still emits style attributes and preview HTML.
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
                 "font-src 'self' https://fonts.gstatic.com data:",
