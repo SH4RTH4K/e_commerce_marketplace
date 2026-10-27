@@ -43,7 +43,7 @@ class SecurityHeaders
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
                 "font-src 'self' https://fonts.gstatic.com data:",
                 "img-src 'self' data: blob: https:",
-                "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://www.facebook.com https://stats.g.doubleclick.net",
+                "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://www.facebook.com https://graph.facebook.com https://stats.g.doubleclick.net",
                 "frame-src 'self' https://www.youtube.com https://www.facebook.com",
                 "frame-ancestors 'self'",
                 "object-src 'none'",

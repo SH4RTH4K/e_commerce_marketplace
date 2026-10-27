@@ -34,10 +34,14 @@ class ContentSecurityPolicyTest extends TestCase
         $csp = (string) $response->headers->get('Content-Security-Policy');
         $scriptDirective = collect(explode(';', $csp))
             ->first(fn (string $directive): bool => str_starts_with(trim($directive), 'script-src'));
+        $connectDirective = collect(explode(';', $csp))
+            ->first(fn (string $directive): bool => str_starts_with(trim($directive), 'connect-src'));
 
         $this->assertNotEmpty($csp);
         $this->assertNotEmpty($scriptDirective);
+        $this->assertNotEmpty($connectDirective);
         $this->assertStringContainsString('https://www.facebook.com/signals/iwl.js', $scriptDirective);
+        $this->assertStringContainsString('https://graph.facebook.com', $connectDirective);
         $this->assertStringNotContainsString("'unsafe-inline'", $scriptDirective);
         $this->assertStringNotContainsString("'unsafe-eval'", $csp);
         $this->assertMatchesRegularExpression("/'nonce-[A-Za-z0-9+\\/=]+'/", $scriptDirective);
