@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 
 import './PulseHeart.css';
 
@@ -38,8 +38,10 @@ export default function PulseHeart({
   rollDuration = 350,
   disabled = false,
   label = 'Like',
+  description,
   className = '',
 }) {
+  const descriptionId = useId();
   const controlled = likedProp !== undefined;
   const [inner, setInner] = useState(defaultLiked);
   const [total, setTotal] = useState(count);
@@ -182,43 +184,47 @@ export default function PulseHeart({
     : [...text].map(character => ({ character }));
 
   return (
-    <button
-      ref={rootRef}
-      type="button"
-      aria-label={label}
-      aria-pressed={liked}
-      disabled={disabled}
-      data-liked={String(shown.liked)}
-      data-solid={idleOutline ? undefined : ''}
-      data-no-count={showCount ? undefined : ''}
-      className={`pulse-heart${className ? ` ${className}` : ''}`}
-      style={{
-        '--ph-size': `${size}px`, '--ph-corner': `${corner}px`, '--ph-pill': pillColor,
-        '--ph-idle': idleColor, '--ph-liked': likedColor, '--ph-text': textColor,
-        '--ph-roll': `${rollDuration}ms`, '--ph-stroke': `${(1.5 * size) / 24}px`,
-      }}
-      onPointerDown={handlePointerDown}
-      onPointerUp={releasePointer}
-      onPointerLeave={releasePointer}
-      onPointerCancel={() => { viaPointer.current = false; releasePointer(); }}
-      onKeyDown={() => { viaPointer.current = false; }}
-      onClick={handleClick}
-    >
-      <span ref={pillRef} className="pulse-heart__pill">
-        <span ref={heartRef} className="pulse-heart__heart" aria-hidden="true">
-          {path ? <svg viewBox="0 0 24 24"><g ref={glyphRef}><path d={path} vectorEffect="non-scaling-stroke" /></g></svg> : icon}
-        </span>
-        {showCount && (
-          <span className="pulse-heart__count" aria-hidden="true">
-            {cells.map((cell, index) => ('character' in cell ? <span key={`character-${index}`}>{cell.character}</span> : (
-              <span key={`roll-${index}`} className="pulse-heart__slot">
-                <span ref={rollRef} className="pulse-heart__roll"><span>{cell.top}</span><span>{cell.bottom}</span></span>
-              </span>
-            )))}
+    <>
+      <button
+        ref={rootRef}
+        type="button"
+        aria-label={label}
+        aria-describedby={description ? descriptionId : undefined}
+        aria-pressed={liked}
+        disabled={disabled}
+        data-liked={String(shown.liked)}
+        data-solid={idleOutline ? undefined : ''}
+        data-no-count={showCount ? undefined : ''}
+        className={`pulse-heart${className ? ` ${className}` : ''}`}
+        style={{
+          '--ph-size': `${size}px`, '--ph-corner': `${corner}px`, '--ph-pill': pillColor,
+          '--ph-idle': idleColor, '--ph-liked': likedColor, '--ph-text': textColor,
+          '--ph-roll': `${rollDuration}ms`, '--ph-stroke': `${(1.5 * size) / 24}px`,
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerUp={releasePointer}
+        onPointerLeave={releasePointer}
+        onPointerCancel={() => { viaPointer.current = false; releasePointer(); }}
+        onKeyDown={() => { viaPointer.current = false; }}
+        onClick={handleClick}
+      >
+        <span ref={pillRef} className="pulse-heart__pill">
+          <span ref={heartRef} className="pulse-heart__heart" aria-hidden="true">
+            {path ? <svg viewBox="0 0 24 24"><g ref={glyphRef}><path d={path} vectorEffect="non-scaling-stroke" /></g></svg> : icon}
           </span>
-        )}
-        <span className="pulse-heart__sr">{showCount ? `${label}, ${format(total)}` : label}</span>
-      </span>
-    </button>
+          {showCount && (
+            <span className="pulse-heart__count" aria-hidden="true">
+              {cells.map((cell, index) => ('character' in cell ? <span key={`character-${index}`}>{cell.character}</span> : (
+                <span key={`roll-${index}`} className="pulse-heart__slot">
+                  <span ref={rollRef} className="pulse-heart__roll"><span>{cell.top}</span><span>{cell.bottom}</span></span>
+                </span>
+              )))}
+            </span>
+          )}
+          <span className="pulse-heart__sr">{showCount ? `${label}, ${format(total)}` : label}</span>
+        </span>
+      </button>
+      {description && <span id={descriptionId} className="pulse-heart__sr">{description}</span>}
+    </>
   );
 }

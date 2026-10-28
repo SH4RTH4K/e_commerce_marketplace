@@ -151,7 +151,8 @@ export default function ProductCard({ product, highlightDiscount = true }) {
           beat={3}
           rollDuration={350}
           disabled={false}
-          label={inWishlist ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+          label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+          description={product.name}
           className="product-card-pulse-heart absolute right-2.5 top-2.5 z-10"
         />
       </div>
