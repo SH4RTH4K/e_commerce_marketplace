@@ -21,6 +21,18 @@ export default defineConfig({
         alias: {
             '@': resolve(__dirname, 'resources/js'),
         },
+        dedupe: ['react', 'react-dom', '@inertiajs/react'],
+    },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/@inertiajs/')) {
+                        return 'vendor-react';
+                    }
+                },
+            },
+        },
     },
     server: {
         watch: {

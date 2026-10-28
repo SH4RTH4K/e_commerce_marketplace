@@ -23,13 +23,13 @@ function directGa4() {
 }
 
 function hasPixel() {
-  return Boolean(cfg().pixel) || (typeof window !== 'undefined' && typeof window.fbq === 'function');
+  return Boolean(cfg().pixel);
 }
 
 function hasPixelConsent() {
-  const c = cfg();
-  if (c.pixelConsentRequired === true) {
-    return c.pixelConsent === true;
+  if (cfg().pixelConsent === false) return false;
+  if (cfg().pixelConsentRequired === true) {
+    return cfg().pixelConsent === true;
   }
   return true;
 }
@@ -207,9 +207,8 @@ export function trackPageView(url) {
  * Track a storefront search action.
  * The Meta Pixel helper applies the same marketing-consent gate as other Pixel events.
  */
-export function trackSearch(query = '') {
-  const searchString = typeof query === 'string' ? query.trim() : '';
-  return pixelTrack('Search', searchString ? { search_string: searchString } : {});
+export function trackSearch() {
+  return pixelTrack('Search', {});
 }
 
 /**
