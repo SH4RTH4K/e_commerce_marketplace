@@ -219,7 +219,7 @@ export default function StorefrontLayout({ children, title, description, activeC
 
   const handleSearch = (e) => {
     e.preventDefault();
-    trackSearch();
+    trackSearch(searchQ);
     router.visit(`/shop${searchQ ? '?q=' + encodeURIComponent(searchQ) : ''}`);
   };
 

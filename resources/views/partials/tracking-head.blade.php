@@ -38,6 +38,7 @@ window.__loadMetaPixel = function () {
   window.fbq('consent', 'grant');
   window.fbq('init', config.pixel);
   window.fbq('track', 'PageView');
+  window.__trackingPageViewFired = true;
 };
 window.__setMetaPixelConsent = function (granted, status) {
   var config = window.__tracking || {};

@@ -23,11 +23,15 @@ function directGa4() {
 }
 
 function hasPixel() {
-  return Boolean(cfg().pixel);
+  return Boolean(cfg().pixel) || (typeof window !== 'undefined' && typeof window.fbq === 'function');
 }
 
 function hasPixelConsent() {
-  return cfg().pixelConsent === true;
+  const c = cfg();
+  if (c.pixelConsentRequired === true) {
+    return c.pixelConsent === true;
+  }
+  return true;
 }
 
 function hasHotjar() {
@@ -90,8 +94,16 @@ function gtagEvent(eventName, params) {
 }
 
 // ─── Meta Pixel ─────────────────────────────────────────────────────────────
-function pixelTrack(eventName, params, eventId = null) {
-  if (!hasPixel() || !hasPixelConsent() || typeof window.fbq !== 'function') return false;
+function pixelTrack(eventName, params = {}, eventId = null) {
+  if (typeof window === 'undefined') return false;
+
+  if (typeof window.fbq !== 'function' && typeof window.__loadMetaPixel === 'function') {
+    window.__loadMetaPixel();
+  }
+
+  if (typeof window.fbq !== 'function') return false;
+  if (!hasPixelConsent()) return false;
+
   try {
     if (eventId) {
       window.fbq('track', eventName, params, { eventID: eventId });
@@ -192,11 +204,12 @@ export function trackPageView(url) {
 }
 
 /**
- * Track a storefront search action without sending the visitor's search text.
+ * Track a storefront search action.
  * The Meta Pixel helper applies the same marketing-consent gate as other Pixel events.
  */
-export function trackSearch() {
-  return pixelTrack('Search', {});
+export function trackSearch(query = '') {
+  const searchString = typeof query === 'string' ? query.trim() : '';
+  return pixelTrack('Search', searchString ? { search_string: searchString } : {});
 }
 
 /**
@@ -227,7 +240,9 @@ export function trackViewItem(product) {
 
   pixelTrack('ViewContent', {
     content_ids: [String(product.id)],
+    contents: [{ id: String(product.id), quantity: 1, item_price: item.price }],
     content_name: product.name,
+    content_category: product.category || undefined,
     content_type: 'product',
     value: item.price,
     currency: cfg().currency || 'BDT',
@@ -264,7 +279,9 @@ export function trackAddToCart(product, qty = 1, variant = null) {
 
   pixelTrack('AddToCart', {
     content_ids: [String(product.id)],
+    contents: [{ id: String(product.id), quantity: qty, item_price: item.price }],
     content_name: product.name,
+    content_category: product.category || undefined,
     content_type: 'product',
     value: item.price * qty,
     currency: cfg().currency || 'BDT',
@@ -299,6 +316,7 @@ export function trackInitiateCheckout(cartItems = [], value = 0) {
 
   pixelTrack('InitiateCheckout', {
     content_ids: items.map((i) => i.item_id),
+    contents: items.map((i) => ({ id: i.item_id, quantity: i.quantity, item_price: i.price })),
     content_type: 'product',
     value: Number(value) || 0,
     currency: cfg().currency || 'BDT',
@@ -383,7 +401,7 @@ export function trackPurchase(order) {
       eventId: order.meta_event_id || generateEventId(),
       params: {
         content_ids: items.map((i) => i.item_id),
-        contents: items.map((i) => ({ id: i.item_id, quantity: i.quantity })),
+        contents: items.map((i) => ({ id: i.item_id, quantity: i.quantity, item_price: i.price })),
         content_type: 'product',
         value: purchaseValue,
         currency,

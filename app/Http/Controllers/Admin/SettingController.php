@@ -510,9 +510,7 @@ class SettingController extends Controller
             } elseif ($request->boolean('tracking_meta_capi_clear_token')) {
                 Setting::put('tracking_meta_capi_access_token', '');
             }
-            $consentRequired = $request->has('tracking_meta_pixel_consent_required')
-                ? $request->boolean('tracking_meta_pixel_consent_required')
-                : true;
+            $consentRequired = $request->boolean('tracking_meta_pixel_consent_required');
             Setting::put('tracking_meta_pixel_consent_required', $consentRequired ? '1' : '0');
         }
 
