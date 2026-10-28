@@ -79,6 +79,18 @@ test('Meta Search sends no query text and respects marketing consent', () => {
   assert.equal(declined.pixelSent.length, 0);
 });
 
+test('an existing fbq cannot receive app events without a configured Pixel', () => {
+  const app = setup();
+  let loadAttempts = 0;
+  app.window.__loadMetaPixel = () => { loadAttempts += 1; };
+
+  assert.equal(app.trackSearch(), false);
+  app.trackViewItem({ id: 3, name: 'Shirt', price: 100 });
+
+  assert.equal(app.pixelSent.length, 0);
+  assert.equal(loadAttempts, 0);
+});
+
 test('Meta Purchase waits for consent without being consumed by the GA4 event', () => {
   const app = setup({
     ga4: 'G-STORE',

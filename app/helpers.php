@@ -446,9 +446,9 @@ if (! function_exists('tracking_meta_pixel_id')) {
     /** Valid Meta (Facebook) Pixel ID (numeric), or null when unset/invalid. */
     function tracking_meta_pixel_id(): ?string
     {
-        $id = trim((string) setting('tracking_meta_pixel_id', '3577038609126077'));
+        $id = trim((string) setting('tracking_meta_pixel_id', ''));
 
-        return preg_match('/^\d+$/', $id) ? $id : '3577038609126077';
+        return preg_match('/^\d+$/', $id) ? $id : null;
     }
 }
 
@@ -456,7 +456,7 @@ if (! function_exists('tracking_meta_pixel_consent_required')) {
     /** Whether the direct Meta Pixel must wait for visitor marketing consent. */
     function tracking_meta_pixel_consent_required(): bool
     {
-        return (string) setting('tracking_meta_pixel_consent_required', '0') === '1';
+        return (string) setting('tracking_meta_pixel_consent_required', '1') !== '0';
     }
 }
 

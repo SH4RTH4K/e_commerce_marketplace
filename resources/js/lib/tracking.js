@@ -95,14 +95,13 @@ function gtagEvent(eventName, params) {
 
 // ─── Meta Pixel ─────────────────────────────────────────────────────────────
 function pixelTrack(eventName, params = {}, eventId = null) {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined' || !hasPixel() || !hasPixelConsent()) return false;
 
   if (typeof window.fbq !== 'function' && typeof window.__loadMetaPixel === 'function') {
     window.__loadMetaPixel();
   }
 
   if (typeof window.fbq !== 'function') return false;
-  if (!hasPixelConsent()) return false;
 
   try {
     if (eventId) {

@@ -386,7 +386,7 @@ export default function Settings({ settings, templateStatus = {} }) {
     seo_canonical_host: settings.seo_canonical_host || 'non_www',
     
     // Tracking
-    tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_ga4_mode: settings.tracking_ga4_mode || 'direct', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '3577038609126077', tracking_meta_pixel_consent_required: settings.tracking_meta_pixel_consent_required === '1', tracking_meta_capi_enabled: settings.tracking_meta_capi_enabled === '1', tracking_meta_capi_access_token: '', tracking_meta_capi_clear_token: false, tracking_hotjar_id: settings.tracking_hotjar_id || '',
+    tracking_gtm_id: settings.tracking_gtm_id || '', tracking_ga4_id: settings.tracking_ga4_id || '', tracking_ga4_mode: settings.tracking_ga4_mode || 'direct', tracking_meta_pixel_id: settings.tracking_meta_pixel_id || '', tracking_meta_pixel_consent_required: settings.tracking_meta_pixel_consent_required !== '0', tracking_meta_capi_enabled: settings.tracking_meta_capi_enabled === '1', tracking_meta_capi_access_token: '', tracking_meta_capi_clear_token: false, tracking_hotjar_id: settings.tracking_hotjar_id || '',
     
     // Legal
     about_content: settings.about_content || '', terms_content: settings.terms_content || '', privacy_content: settings.privacy_content || '', refund_content: settings.refund_content || '', shipping_content: settings.shipping_content || '', shipping_page_enabled: settings.shipping_page_enabled !== '0',

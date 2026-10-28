@@ -32,6 +32,7 @@
 
 .pulse-heart[data-pressed] { transform: scale(0.97); }
 .pulse-heart.product-card-pulse-heart { position: absolute; }
+.pulse-heart.product-card-pulse-heart > * { pointer-events: none; }
 .pulse-heart:focus-visible { outline: 2px solid color-mix(in srgb, var(--ph-liked) 60%, transparent); outline-offset: 3px; }
 .pulse-heart:disabled { opacity: 0.55; cursor: default; }
 

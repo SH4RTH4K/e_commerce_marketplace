@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { usePage, router } from '@inertiajs/react';
-import { trackInitiateCheckout, trackPurchase } from '@/lib/tracking';
+import { trackInitiateCheckout } from '@/lib/tracking';
 import ProductAvailability from './ProductAvailability';
 import { orderQuantityLimit, productAvailability } from '@/lib/productAvailability';
 
@@ -221,20 +221,6 @@ export default function CodOrderModal({ open, onClose, product, qty = 1, variant
 
       if (data.success) {
         setSuccess({ order_number: data.order_number, total: data.total, redirect: data.redirect });
-        trackPurchase({
-          order_number: data.order_number,
-          total: Number(data.total) || (price * quantity),
-          subtotal: price * quantity,
-          tax: 0,
-          shipping_charge: 0,
-          items: [{
-            product_id: product.id,
-            product_name: product.name,
-            unit_price: price,
-            quantity: quantity,
-            variant: variant || undefined,
-          }],
-        });
       }
     } catch (err) {
       if (err?.errors) {
