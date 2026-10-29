@@ -234,27 +234,36 @@ class ApplicationUpdateService
 
         try {
             $status = $this->fetch($settings);
+            $previousCommit = $status['local'];
+            $targetCommit = $status['remote'];
+            $commitsApplied = count($status['commits']);
+            $sourceAlreadySynchronized = false;
 
             if ($discardLocalChanges && $status['status'] === 'Local Changes Detected') {
-                $this->gitOrFail(['reset', '--hard', 'HEAD'], 'The local tracked changes could not be discarded.');
+                // Reset directly to the fetched remote target. Resetting to HEAD
+                // first can briefly restore an old/broken bundle and then fail
+                // before the fast-forward merge, leaving the storefront blank.
+                $this->gitOrFail(['reset', '--hard', $targetCommit], 'The local tracked changes could not be discarded.');
+                $sourceAlreadySynchronized = true;
                 $status = $this->fetch($settings);
             }
 
-            if ($status['status'] !== 'Update Available') {
+            if (! $sourceAlreadySynchronized && $status['status'] !== 'Update Available') {
                 throw new \RuntimeException($status['message']);
             }
 
-            if (! empty($status['local_changes_match_target'])) {
+            if (! $sourceAlreadySynchronized && ! empty($status['local_changes_match_target'])) {
                 $this->gitOrFail(['reset', '--hard', $status['remote']], 'The checkout could not be synchronized with the remote update.');
+                $sourceAlreadySynchronized = true;
             }
 
             $deployment = ApplicationDeployment::create([
                 'repository_url' => $settings->repository_url,
                 'branch' => $settings->branch,
-                'previous_commit' => $status['local'],
-                'target_commit' => $status['remote'],
+                'previous_commit' => $previousCommit,
+                'target_commit' => $targetCommit,
                 'status' => 'running',
-                'commits_applied' => count($status['commits']),
+                'commits_applied' => $commitsApplied,
                 'started_by' => $adminId,
                 'started_at' => now(),
                 'migration_status' => 'not_run',
@@ -263,7 +272,9 @@ class ApplicationUpdateService
             ]);
 
             try {
-                $this->gitOrFail(['merge', '--ff-only', $settings->remote_name.'/'.$settings->branch], 'Fast-forward deployment was not possible.');
+                if (! $sourceAlreadySynchronized) {
+                    $this->gitOrFail(['merge', '--ff-only', $settings->remote_name.'/'.$settings->branch], 'Fast-forward deployment was not possible.');
+                }
                 $deployment->deployed_commit = trim($this->git(['rev-parse', 'HEAD'])['output']);
 
                 if ($settings->run_migrations) {
