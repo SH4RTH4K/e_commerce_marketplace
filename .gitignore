@@ -43,3 +43,7 @@ Thumbs.db
 /tmp_*
 /trigger.php
 /update_tables2.cjs
+
+# Generated deployment packages (never commit extracted production bundles)
+/output/deploy-*/
+/output/*-recovery-*.zip
