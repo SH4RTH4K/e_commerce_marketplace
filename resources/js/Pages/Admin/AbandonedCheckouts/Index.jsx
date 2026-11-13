@@ -1,4 +1,5 @@
 import AdminLayout from '@/Layouts/AdminLayout';
+import { whatsappNumber } from '@/lib/utils';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -100,7 +101,12 @@ export default function AbandonedCheckoutsIndex({ checkouts, stats, filter = 'ac
                   </td>
                   <td className="p-3 align-top">
                     {item.customer_phone ? (
-                      <div className="text-sm font-semibold text-gray-900 mb-0.5">{item.customer_phone}</div>
+                      <>
+                        <div className={`text-sm font-semibold mb-0.5 ${item.phone_is_valid ? 'text-gray-900' : 'text-red-600'}`}>{item.customer_phone}</div>
+                        {!item.phone_is_valid && (
+                          <span className="inline-flex rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-700">Invalid BD mobile</span>
+                        )}
+                      </>
                     ) : null}
                     {item.customer_email ? (
                       <div className="text-xs text-gray-500">{item.customer_email}</div>
@@ -146,8 +152,9 @@ export default function AbandonedCheckoutsIndex({ checkouts, stats, filter = 'ac
                       {/* 1-Click Create Order & Recover Button */}
                       {!item.is_recovered && <button
                         onClick={() => handleCreateOrder(item)}
-                        className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition-all shadow-xs shadow-orange-200"
-                        title="1-Click Create Order & Mark Recovered"
+                        disabled={!item.phone_is_valid}
+                        className={`inline-flex items-center gap-1 px-3 py-2 rounded-xl text-white text-xs font-bold transition-all ${item.phone_is_valid ? 'bg-orange-500 hover:bg-orange-600 shadow-xs shadow-orange-200' : 'cursor-not-allowed bg-gray-300'}`}
+                        title={item.phone_is_valid ? '1-Click Create Order & Mark Recovered' : 'A valid Bangladesh mobile number is required'}
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -156,9 +163,9 @@ export default function AbandonedCheckoutsIndex({ checkouts, stats, filter = 'ac
                       </button>}
 
                       {/* WhatsApp reachout */}
-                      {item.customer_phone && (
+                      {item.phone_is_valid && (
                         <a
-                          href={`https://wa.me/${item.customer_phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${item.customer_name || 'there'},\n\nWe noticed you left some items in your cart at ${appName}. Do you need any help completing your order?`)}`} 
+                          href={`https://wa.me/${whatsappNumber(item.customer_phone)}?text=${encodeURIComponent(`Hello ${item.customer_name || 'there'},\n\nWe noticed you left some items in your cart at ${appName}. Do you need any help completing your order?`)}`}
                           target="_blank"
                           rel="noreferrer" 
                           className="inline-flex items-center justify-center p-2 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 transition-colors"

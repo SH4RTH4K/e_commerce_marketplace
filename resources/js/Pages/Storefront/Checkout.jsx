@@ -3,7 +3,7 @@ import { requiresSourcing } from '@/lib/productAvailability';
 import { useState, useMemo, useEffect } from 'react';
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/react';
-import { money, imageUrl } from '@/lib/utils';
+import { money, imageUrl, isValidBdMobile } from '@/lib/utils';
 import { trackInitiateCheckout } from '@/lib/tracking';
 
 export default function CheckoutPage({ 
@@ -54,8 +54,10 @@ export default function CheckoutPage({
 
   // Abandoned Checkout Tracking
   useEffect(() => {
-    const hasValidPhone = data.customer_phone && data.customer_phone.trim().length >= 6;
+    const phoneProvided = Boolean(data.customer_phone?.trim());
+    const hasValidPhone = isValidBdMobile(data.customer_phone);
     const hasValidEmail = data.customer_email && data.customer_email.includes('@');
+    if (phoneProvided && !hasValidPhone) return;
     if (!hasValidPhone && !hasValidEmail) return;
 
     const timer = setTimeout(() => {
@@ -214,6 +216,10 @@ export default function CheckoutPage({
                     </label>
                     <input 
                       required 
+                      inputMode="tel"
+                      autoComplete="tel"
+                      pattern="^(?:\\+?88)?01[3-9][0-9]{8}$"
+                      title="Enter a valid Bangladesh mobile number (01XXXXXXXXX)"
                       placeholder="e.g. 01712345678" 
                       value={data.customer_phone}
                       onChange={e => setData('customer_phone', e.target.value)}

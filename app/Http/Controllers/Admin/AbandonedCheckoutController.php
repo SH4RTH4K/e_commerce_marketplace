@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Services\InventoryStockService;
+use App\Support\BdPhoneValidator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -41,6 +42,15 @@ class AbandonedCheckoutController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        $checkouts->through(function (AbandonedCheckout $checkout) {
+            $checkout->setAttribute(
+                'phone_is_valid',
+                BdPhoneValidator::isValid((string) $checkout->customer_phone)
+            );
+
+            return $checkout;
+        });
+
         $stats = [
             'total_abandoned' => AbandonedCheckout::where('is_recovered', false)->count(),
             'total_abandoned_amount' => AbandonedCheckout::where('is_recovered', false)->sum('cart_total'),
@@ -67,7 +77,15 @@ class AbandonedCheckoutController extends Controller
         $abandoned = AbandonedCheckout::findOrFail($id);
 
         $customerName = trim((string) ($abandoned->customer_name ?: 'Customer'));
-        $customerPhone = trim((string) ($abandoned->customer_phone ?: '01000000000'));
+        $customerPhone = trim((string) $abandoned->customer_phone);
+
+        if (! BdPhoneValidator::isValid($customerPhone)) {
+            return back()->withErrors([
+                'customer_phone' => 'This abandoned cart has no valid Bangladesh mobile number. Correct contact details before creating an order.',
+            ]);
+        }
+
+        $customerPhone = BdPhoneValidator::normalize($customerPhone);
         $customerEmail = $abandoned->customer_email ?: null;
         $shippingAddress = trim((string) ($abandoned->shipping_address ?: 'Address not specified'));
 

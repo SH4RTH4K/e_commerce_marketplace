@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\AbandonedCheckout;
+use App\Support\BdPhoneValidator;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class AbandonedCheckoutController extends Controller
 {
@@ -24,11 +26,20 @@ class AbandonedCheckoutController extends Controller
             return response()->json(['status' => 'skipped']);
         }
 
+        $phone = trim((string) ($data['customer_phone'] ?? ''));
+        if ($phone !== '' && ! BdPhoneValidator::isValid($phone)) {
+            throw ValidationException::withMessages([
+                'customer_phone' => 'Enter a valid Bangladesh mobile number (01XXXXXXXXX).',
+            ]);
+        }
+
+        $normalizedPhone = $phone !== '' ? BdPhoneValidator::normalize($phone) : null;
+
         AbandonedCheckout::updateOrCreate(
             ['session_id' => $session_id],
             [
                 'customer_name' => $data['customer_name'] ?? null,
-                'customer_phone' => $data['customer_phone'] ?? null,
+                'customer_phone' => $normalizedPhone,
                 'customer_email' => $data['customer_email'] ?? null,
                 'shipping_address' => $data['shipping_address'] ?? null,
                 'cart_items' => $data['cart_items'] ?? [],

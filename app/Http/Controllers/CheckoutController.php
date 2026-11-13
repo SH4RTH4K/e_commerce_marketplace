@@ -10,6 +10,7 @@ use App\Services\CouponService;
 use App\Services\FakeOrderGuardService;
 use App\Services\InventoryStockService;
 use App\Services\MetaConversionsApiService;
+use App\Support\BdPhoneValidator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -106,15 +107,15 @@ class CheckoutController extends Controller
             'delivery_note' => ['nullable', 'string', 'max:500'],
         ]);
 
-        // ─── Always enforce: must be at least a plausible BD number format ────
-        // Full smart validation is done by the Fake Order Guard below.
-        // This basic check just ensures the phone field isn't completely empty garbage.
         $rawPhone = trim((string) ($validated['customer_phone'] ?? ''));
-        if (! preg_match('/^[\+\d][\d\s\-]{7,19}$/', $rawPhone)) {
+        if (! BdPhoneValidator::isValid($rawPhone)) {
             return back()->withInput()->withErrors([
-                'customer_phone' => 'একটি সঠিক ফোন নম্বর দিন। বাংলাদেশী নম্বর হতে হবে (যেমন: 01712345678)।',
+                'customer_phone' => 'Enter a valid Bangladesh mobile number (01XXXXXXXXX).',
             ]);
         }
+
+        $validated['customer_phone'] = BdPhoneValidator::normalize($rawPhone);
+        $rawPhone = $validated['customer_phone'];
 
         // ─── Fake Order Guard ─────────────────────────────────────────────────
         $blockError = $this->fraudGuard->check($request, $rawPhone);

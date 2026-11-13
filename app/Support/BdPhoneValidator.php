@@ -15,8 +15,11 @@ class BdPhoneValidator
      */
     public static function isValid(string $phone): bool
     {
-        // Normalize: strip +88 or 88 prefix
-        $clean = preg_replace('/^(?:\+?88)/', '', trim($phone));
+        if (! preg_match('/^\+?[0-9][0-9\s\-()]*$/', trim($phone))) {
+            return false;
+        }
+
+        $clean = self::normalize($phone);
 
         // Must be exactly 11 digits
         if (! preg_match('/^\d{11}$/', $clean)) {
@@ -39,7 +42,7 @@ class BdPhoneValidator
      */
     public static function isFake(string $phone): bool
     {
-        $clean = preg_replace('/^(?:\+?88)/', '', trim($phone));
+        $clean = self::normalize($phone);
 
         // Strip the 01X prefix — check last 8 digits only
         $last8 = substr($clean, 3, 8);
@@ -84,6 +87,14 @@ class BdPhoneValidator
 
     public static function normalize(string $phone): string
     {
-        return preg_replace('/^(?:\+?88)/', '', trim($phone));
+        $digits = preg_replace('/\D+/', '', trim($phone)) ?? '';
+
+        if (str_starts_with($digits, '0088')) {
+            $digits = substr($digits, 4);
+        } elseif (strlen($digits) === 13 && str_starts_with($digits, '88')) {
+            $digits = substr($digits, 2);
+        }
+
+        return $digits;
     }
 }

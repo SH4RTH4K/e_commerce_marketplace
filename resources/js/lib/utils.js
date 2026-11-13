@@ -57,6 +57,22 @@ export function whatsappNumber(phone) {
   return digits;
 }
 
+export function normalizeBdMobile(phone) {
+  let digits = String(phone || '').replace(/\D/g, '');
+
+  if (digits.startsWith('0088')) digits = digits.slice(4);
+  else if (digits.length === 13 && digits.startsWith('88')) digits = digits.slice(2);
+
+  return digits;
+}
+
+export function isValidBdMobile(phone) {
+  const value = String(phone || '').trim();
+  if (!/^\+?[0-9][0-9\s\-()]*$/.test(value)) return false;
+
+  return /^01[3-9]\d{8}$/.test(normalizeBdMobile(value));
+}
+
 export function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     if (!file) {
