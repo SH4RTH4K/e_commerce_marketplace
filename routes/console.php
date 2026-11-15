@@ -4,6 +4,7 @@ use App\Jobs\Dropshipping\StartSupplierCatalogSync;
 use App\Jobs\Dropshipping\StartSupplierPriceStockSync;
 use App\Models\DropshipSupplier;
 use App\Models\DropshipSyncRun;
+use App\Services\DatabaseCacheService;
 use App\Services\Dropshipping\SyncRunService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -25,6 +26,12 @@ Schedule::command('storefront:cleanup-optimized-images')
 
 Schedule::command('storefront:purge-optimized-image-trash')
     ->dailyAt('04:30')
+    ->withoutOverlapping(30)
+    ->onOneServer();
+
+Schedule::call(fn (): int => app(DatabaseCacheService::class)->pruneExpired())
+    ->name('database-cache-prune')
+    ->dailyAt('03:15')
     ->withoutOverlapping(30)
     ->onOneServer();
 

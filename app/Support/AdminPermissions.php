@@ -111,7 +111,8 @@ class AdminPermissions
         'SystemHealthController' => [
             'index' => 'system_health.view', 'createBackup' => 'backups.add', 'createMediaBackup' => 'backups.add', 'createFullBackup' => 'backups.add',
             'download' => 'backups.view', 'destroy' => 'backups.delete', 'restoreDatabase' => 'backups.execute',
-            'restoreMedia' => 'backups.execute', 'restoreFull' => 'backups.execute', 'clearCache' => 'system_health.execute', 'runMigrations' => 'system_health.execute',
+            'restoreMedia' => 'backups.execute', 'restoreFull' => 'backups.execute', 'clearCache' => 'system_health.execute',
+            'pruneExpiredCache' => 'system_health.execute', 'clearDatabaseCache' => 'system_health.execute', 'runMigrations' => 'system_health.execute',
         ],
         'ApplicationUpdateController' => [
             'index' => 'git_repository.view', 'saveSettings' => 'git_repository.edit', 'test' => 'git_repository.execute',

@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\DatabaseBackupService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -22,7 +23,10 @@ class SystemHealthTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('health.disk.ok', true)
                 ->where('health.disk.message', fn ($message) => str_contains($message, 'Project files use'))
-                ->has('health.disk.breakdown'));
+                ->has('health.disk.breakdown')
+                ->where('databaseCache.available', true)
+                ->where('databaseCache.table', 'cache')
+                ->has('databaseCache.total_rows'));
     }
 
     public function test_customers_cannot_open_system_health(): void
@@ -44,5 +48,38 @@ class SystemHealthTest extends TestCase
 
         Storage::disk('local')->delete('backups/'.$backup->filename);
         DB::table('system_backups')->where('id', $backupId)->delete();
+    }
+
+    public function test_an_admin_can_prune_only_expired_database_cache_rows(): void
+    {
+        DB::table('cache')->insert([
+            ['key' => 'expired-cache-row', 'value' => 'expired', 'expiration' => now()->subMinute()->timestamp],
+            ['key' => 'active-cache-row', 'value' => 'active', 'expiration' => now()->addHour()->timestamp],
+        ]);
+
+        $this->actingAs(User::factory()->create(['role' => 'admin']))
+            ->post('/admin/system-health/cache/prune-expired')
+            ->assertRedirect()
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseMissing('cache', ['key' => 'expired-cache-row']);
+        $this->assertDatabaseHas('cache', ['key' => 'active-cache-row']);
+    }
+
+    public function test_an_admin_can_empty_the_database_cache_without_dropping_its_table(): void
+    {
+        DB::table('cache')->insert([
+            'key' => 'temporary-cache-row',
+            'value' => 'temporary',
+            'expiration' => now()->addHour()->timestamp,
+        ]);
+
+        $this->actingAs(User::factory()->create(['role' => 'admin']))
+            ->post('/admin/system-health/cache/clear')
+            ->assertRedirect()
+            ->assertSessionHas('status');
+
+        $this->assertSame(0, DB::table('cache')->count());
+        $this->assertTrue(Schema::hasTable('cache'));
     }
 }

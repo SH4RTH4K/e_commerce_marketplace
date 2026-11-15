@@ -51,7 +51,7 @@ function ActionButton({ children, onClick, tone = 'slate', disabled = false }) {
   return <button type="button" className={`${buttonClass} ${tones[tone]}`} onClick={onClick} disabled={disabled}>{children}</button>;
 }
 
-export default function SystemHealth({ health = {}, migrations = {}, backups = [], backupRetentionDays = 14 }) {
+export default function SystemHealth({ health = {}, migrations = {}, databaseCache = {}, backups = [], backupRetentionDays = 14 }) {
   const [busy, setBusy] = useState(false);
   const databaseFile = useRef(null);
   const mediaFile = useRef(null);
@@ -118,6 +118,63 @@ export default function SystemHealth({ health = {}, migrations = {}, backups = [
               </div>
             );
           })}
+        </section>
+
+        <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+          <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-bold text-slate-900">Database cache management</h3>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${databaseCache.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                  {databaseCache.active ? 'Active store' : 'Inactive store'}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-slate-500">
+                Monitor and remove temporary rows from <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">{databaseCache.table || 'cache'}</code>. Orders, products, customers, sessions and queue jobs are not stored here.
+              </p>
+            </div>
+            {databaseCache.available && (
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  tone="amber"
+                  disabled={busy || Number(databaseCache.expired_rows || 0) === 0}
+                  onClick={() => confirmPost('Remove all expired database cache rows? Store data, sessions and queue jobs will not be affected.', '/admin/system-health/cache/prune-expired')}
+                >
+                  Remove expired
+                </ActionButton>
+                <ActionButton
+                  tone="red"
+                  disabled={busy || Number(databaseCache.total_rows || 0) === 0}
+                  onClick={() => confirmPost('Empty the temporary database cache table and release its allocated space? The first storefront requests may be slower while cache rebuilds.', '/admin/system-health/cache/clear')}
+                >
+                  Empty cache table
+                </ActionButton>
+              </div>
+            )}
+          </div>
+
+          {databaseCache.available ? (
+            <>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {[
+                  ['Allocated size', databaseCache.allocated_formatted || formatBytes(databaseCache.allocated_bytes)],
+                  ['Total rows', Number(databaseCache.total_rows || 0).toLocaleString()],
+                  ['Expired rows', Number(databaseCache.expired_rows || 0).toLocaleString()],
+                  ['Active rows', Number(databaseCache.active_rows || 0).toLocaleString()],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-xl bg-slate-50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+                    <p className="mt-1 text-xl font-bold text-slate-900">{value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className={`mt-4 rounded-xl p-3 text-sm ${Number(databaseCache.expired_rows || 0) > 0 ? 'bg-amber-50 text-amber-800' : 'bg-emerald-50 text-emerald-700'}`}>
+                {databaseCache.message} Expired rows are also removed automatically every day at 03:15.
+              </div>
+            </>
+          ) : (
+            <div className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{databaseCache.message || 'Database cache information is unavailable.'}</div>
+          )}
         </section>
 
         <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">

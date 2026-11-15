@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\DatabaseBackupService;
+use App\Services\DatabaseCacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -15,12 +16,13 @@ use Inertia\Inertia;
 
 class SystemHealthController extends Controller
 {
-    public function index()
+    public function index(DatabaseCacheService $databaseCache)
     {
         return Inertia::render('Admin/SystemHealth', [
             'health' => $this->health(),
             'migrations' => $this->migrationStatus(),
             'backups' => $this->backups(),
+            'databaseCache' => $databaseCache->stats(),
             'backupRetentionDays' => max(1, (int) config('system-health.retention_days', 14)),
         ]);
     }
@@ -138,6 +140,32 @@ class SystemHealthController extends Controller
             report($exception);
 
             return back()->with('error', 'Cache refresh failed: '.$exception->getMessage());
+        }
+    }
+
+    public function pruneExpiredCache(DatabaseCacheService $databaseCache)
+    {
+        try {
+            $deleted = $databaseCache->pruneExpired();
+
+            return back()->with('status', number_format($deleted).' expired database cache row(s) removed.');
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Expired cache cleanup failed: '.$exception->getMessage());
+        }
+    }
+
+    public function clearDatabaseCache(DatabaseCacheService $databaseCache)
+    {
+        try {
+            $deleted = $databaseCache->clear();
+
+            return back()->with('status', number_format($deleted).' temporary database cache row(s) removed and table space released.');
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()->with('error', 'Database cache cleanup failed: '.$exception->getMessage());
         }
     }
 

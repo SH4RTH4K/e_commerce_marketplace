@@ -451,6 +451,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::delete('system-health/backups/{backup}', [SystemHealthController::class, 'destroy'])->name('system-health.backups.destroy');
             Route::post('system-health/backups/{backup}/delete', [SystemHealthController::class, 'destroy'])->name('system-health.backups.delete');
             Route::post('system-health/clear-cache', [SystemHealthController::class, 'clearCache'])->name('system-health.clear-cache');
+            Route::post('system-health/cache/prune-expired', [SystemHealthController::class, 'pruneExpiredCache'])->name('system-health.cache.prune-expired');
+            Route::post('system-health/cache/clear', [SystemHealthController::class, 'clearDatabaseCache'])->name('system-health.cache.clear');
             Route::post('system-health/migrations/run', [SystemHealthController::class, 'runMigrations'])->name('system-health.migrations.run');
 
             Route::get('system/git-repository', [ApplicationUpdateController::class, 'index'])->name('git-repository.index');
@@ -480,6 +482,8 @@ Route::middleware(['admin', 'testing.readonly', 'permission:settings.manage'])->
     Route::delete('/system-health/backups/{backup}', [SystemHealthController::class, 'destroy']);
     Route::post('/system-health/backups/{backup}/delete', [SystemHealthController::class, 'destroy']);
     Route::post('/system-health/clear-cache', [SystemHealthController::class, 'clearCache']);
+    Route::post('/system-health/cache/prune-expired', [SystemHealthController::class, 'pruneExpiredCache']);
+    Route::post('/system-health/cache/clear', [SystemHealthController::class, 'clearDatabaseCache']);
     Route::post('/system-health/migrations/run', [SystemHealthController::class, 'runMigrations']);
 });
 
