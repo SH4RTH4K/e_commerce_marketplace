@@ -43,6 +43,38 @@ class SystemHealthController extends Controller
         return $this->queueBackup($backups, 'full', 'Full backup');
     }
 
+    /** Browser-driven fallback for shared hosting without cron or SSH. */
+    public function processNextBackup(DatabaseBackupService $backups)
+    {
+        $record = DB::table('system_backups')
+            ->where('status', 'queued')
+            ->oldest('id')
+            ->first();
+
+        if (! $record) {
+            return response()->json(['status' => 'idle']);
+        }
+
+        $type = $this->queuedBackupType((int) $record->id);
+        if (! $type) {
+            return response()->json([
+                'status' => 'blocked',
+                'message' => 'The backup job is not available in the application queue yet.',
+            ], 409);
+        }
+
+        try {
+            $backups->runQueued((int) $record->id, $type);
+
+            return response()->json(['status' => 'completed', 'backup_id' => (int) $record->id]);
+        } catch (\Throwable $exception) {
+            report($exception);
+            $backups->failQueued((int) $record->id, $exception->getMessage());
+
+            return response()->json(['status' => 'failed', 'message' => $exception->getMessage()], 500);
+        }
+    }
+
     public function restoreDatabase(Request $request, DatabaseBackupService $backups)
     {
         $file = $request->file('backup');
@@ -371,6 +403,33 @@ class SystemHealthController extends Controller
 
             return back()->with('error', $label.' could not be queued: '.$exception->getMessage());
         }
+    }
+
+    private function queuedBackupType(int $backupId): ?string
+    {
+        if (! Schema::hasTable('jobs')) {
+            return null;
+        }
+
+        foreach (DB::table('jobs')->where('payload', 'like', '%CreateStoreBackup%')->pluck('payload') as $payload) {
+            $decoded = json_decode((string) $payload, true);
+            $command = $decoded['data']['command'] ?? null;
+            if (! is_string($command)) {
+                continue;
+            }
+
+            try {
+                $job = unserialize($command, ['allowed_classes' => [CreateStoreBackup::class]]);
+            } catch (\Throwable) {
+                continue;
+            }
+
+            if ($job instanceof CreateStoreBackup && $job->backupId === $backupId) {
+                return $job->type;
+            }
+        }
+
+        return null;
     }
 
     private function validateRestoreFile(Request $request, string $field, string $filenamePattern): void

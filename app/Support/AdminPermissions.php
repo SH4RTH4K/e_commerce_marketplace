@@ -109,7 +109,7 @@ class AdminPermissions
         'FakeOrderGuardController' => ['index' => 'fraud_guard.view', 'checkPhone' => 'fraud_guard.execute', 'testConnection' => 'fraud_guard.execute', 'planInfo' => 'fraud_guard.view'],
         'OptimizedImageController' => ['index' => 'optimized_images.view', 'delete' => 'optimized_images.delete', 'trash' => 'recovery_trash.view', 'previewTrash' => 'recovery_trash.view', 'restoreTrash' => 'recovery_trash.execute', 'purgeTrash' => 'recovery_trash.delete'],
         'SystemHealthController' => [
-            'index' => 'system_health.view', 'createBackup' => 'backups.add', 'createMediaBackup' => 'backups.add', 'createFullBackup' => 'backups.add',
+            'index' => 'system_health.view', 'createBackup' => 'backups.add', 'createMediaBackup' => 'backups.add', 'createFullBackup' => 'backups.add', 'processNextBackup' => 'backups.add',
             'download' => 'backups.view', 'destroy' => 'backups.delete', 'restoreDatabase' => 'backups.execute',
             'restoreMedia' => 'backups.execute', 'restoreFull' => 'backups.execute', 'clearCache' => 'system_health.execute',
             'pruneExpiredCache' => 'system_health.execute', 'clearDatabaseCache' => 'system_health.execute', 'runMigrations' => 'system_health.execute',

@@ -56,11 +56,31 @@ export default function SystemHealth({ health = {}, migrations = {}, databaseCac
   const databaseFile = useRef(null);
   const mediaFile = useRef(null);
   const fullFile = useRef(null);
+  const workerBusy = useRef(false);
   const hasPendingBackup = backups.some(backup => ['queued', 'creating'].includes(backup.status));
 
   useEffect(() => {
     if (!hasPendingBackup) return undefined;
-    const interval = window.setInterval(() => router.reload({ only: ['backups'], preserveScroll: true }), 5000);
+    const processQueuedBackup = async () => {
+      if (workerBusy.current) return;
+      workerBusy.current = true;
+      try {
+        await fetch('/admin/system-health/backups/process-next', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+          },
+        });
+      } catch (error) {
+        // Retry on the next poll after a transient request failure.
+      } finally {
+        workerBusy.current = false;
+        router.reload({ only: ['backups'], preserveScroll: true });
+      }
+    };
+    processQueuedBackup();
+    const interval = window.setInterval(processQueuedBackup, 5000);
     return () => window.clearInterval(interval);
   }, [hasPendingBackup]);
 
@@ -237,7 +257,7 @@ export default function SystemHealth({ health = {}, migrations = {}, databaseCac
             <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
               <p><strong>Automatic backup:</strong> daily at 02:00</p>
               <p className="mt-1"><strong>Scheduler:</strong> run <code className="rounded bg-white px-1.5 py-0.5 text-xs">php artisan schedule:run</code> every minute.</p>
-              <p className="mt-1"><strong>Backup worker:</strong> run <code className="rounded bg-white px-1.5 py-0.5 text-xs">php artisan queue:work --timeout=0</code> so queued media and full backups finish.</p>
+              <p className="mt-1"><strong>Backup worker:</strong> this page automatically processes queued backups while it is open. A server queue worker is still recommended for unattended backups.</p>
               <p className="mt-3 text-xs text-slate-500">Database and full restores create a safety backup first.</p>
             </div>
           </section>

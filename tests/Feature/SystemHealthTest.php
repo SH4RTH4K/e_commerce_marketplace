@@ -76,6 +76,20 @@ class SystemHealthTest extends TestCase
         Queue::assertPushed(CreateStoreBackup::class, fn (CreateStoreBackup $job) => $job->backupId === $backup->id && $job->type === 'full');
     }
 
+    public function test_completed_backup_jobs_are_not_run_twice(): void
+    {
+        $id = DB::table('system_backups')->insertGetId([
+            'filename' => 'ecommerce-completed.sql.gz',
+            'disk' => 'local',
+            'status' => 'completed',
+            'created_by' => 'test',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->assertSame($id, app(DatabaseBackupService::class)->runQueued($id, 'database'));
+    }
+
     public function test_an_admin_can_prune_only_expired_database_cache_rows(): void
     {
         DB::table('cache')->insert([

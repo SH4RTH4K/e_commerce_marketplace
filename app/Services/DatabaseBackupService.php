@@ -36,8 +36,14 @@ class DatabaseBackupService
     public function runQueued(int $id, string $type): int
     {
         $record = DB::table('system_backups')->find($id);
-        if (! $record || $record->status !== 'queued') {
+        if (! $record) {
             throw new RuntimeException('The queued backup is no longer available.');
+        }
+        if ($record->status === 'completed') {
+            return $id;
+        }
+        if ($record->status !== 'queued') {
+            throw new RuntimeException('The queued backup is already being processed.');
         }
 
         DB::table('system_backups')->where('id', $id)->update([

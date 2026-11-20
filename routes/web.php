@@ -444,6 +444,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             Route::post('system-health/backup', [SystemHealthController::class, 'createBackup'])->name('system-health.backup');
             Route::post('system-health/media-backup', [SystemHealthController::class, 'createMediaBackup'])->name('system-health.media-backup');
             Route::post('system-health/full-backup', [SystemHealthController::class, 'createFullBackup'])->name('system-health.full-backup');
+            Route::post('system-health/backups/process-next', [SystemHealthController::class, 'processNextBackup'])->name('system-health.backups.process-next');
             Route::post('system-health/restore', [SystemHealthController::class, 'restoreDatabase'])->name('system-health.restore');
             Route::post('system-health/media-restore', [SystemHealthController::class, 'restoreMedia'])->name('system-health.media-restore');
             Route::post('system-health/full-restore', [SystemHealthController::class, 'restoreFull'])->name('system-health.full-restore');
