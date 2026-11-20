@@ -3,11 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Jobs\CreateStoreBackup;
 use App\Services\DatabaseBackupService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
@@ -57,6 +59,21 @@ class SystemHealthTest extends TestCase
 
         Storage::disk('local')->delete('backups/'.$backup->filename);
         DB::table('system_backups')->where('id', $backupId)->delete();
+    }
+
+    public function test_full_backup_is_queued_instead_of_running_in_the_http_request(): void
+    {
+        Queue::fake();
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->post('/admin/system-health/full-backup')
+            ->assertRedirect()
+            ->assertSessionHas('status', fn (string $message) => str_contains($message, 'queued for background processing'));
+
+        $backup = DB::table('system_backups')->latest('id')->first();
+        $this->assertSame('queued', $backup->status);
+        Queue::assertPushed(CreateStoreBackup::class, fn (CreateStoreBackup $job) => $job->backupId === $backup->id && $job->type === 'full');
     }
 
     public function test_an_admin_can_prune_only_expired_database_cache_rows(): void

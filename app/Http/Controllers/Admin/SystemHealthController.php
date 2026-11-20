@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\CreateStoreBackup;
 use App\Services\DatabaseBackupService;
 use App\Services\DatabaseCacheService;
 use Illuminate\Http\Request;
@@ -29,17 +30,17 @@ class SystemHealthController extends Controller
 
     public function createBackup(DatabaseBackupService $backups)
     {
-        return $this->runBackup($backups, 'create', 'Database backup');
+        return $this->queueBackup($backups, 'database', 'Database backup');
     }
 
     public function createMediaBackup(DatabaseBackupService $backups)
     {
-        return $this->runBackup($backups, 'createMedia', 'Media backup');
+        return $this->queueBackup($backups, 'media', 'Media backup');
     }
 
     public function createFullBackup(DatabaseBackupService $backups)
     {
-        return $this->runBackup($backups, 'createFull', 'Full backup');
+        return $this->queueBackup($backups, 'full', 'Full backup');
     }
 
     public function restoreDatabase(Request $request, DatabaseBackupService $backups)
@@ -354,18 +355,21 @@ class SystemHealthController extends Controller
         }
     }
 
-    private function runBackup(DatabaseBackupService $service, string $method, string $label)
+    private function queueBackup(DatabaseBackupService $service, string $type, string $label)
     {
-        set_time_limit(0);
-
         try {
-            $id = $service->{$method}($this->actorName());
+            $id = $service->queue($type, $this->actorName());
+            CreateStoreBackup::dispatch($id, $type);
 
-            return back()->with('status', $label.' completed successfully. Reference #'.$id.'.');
+            return back()->with('status', $label.' queued for background processing. Reference #'.$id.'.');
         } catch (\Throwable $exception) {
             report($exception);
 
-            return back()->with('error', $label.' failed: '.$exception->getMessage());
+            if (isset($id)) {
+                $service->failQueued($id, $exception->getMessage());
+            }
+
+            return back()->with('error', $label.' could not be queued: '.$exception->getMessage());
         }
     }
 

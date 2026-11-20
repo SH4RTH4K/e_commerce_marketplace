@@ -1,6 +1,6 @@
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head, router } from '@inertiajs/react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const checks = [
   ['database', 'Database', 'Connection to the configured database'],
@@ -56,6 +56,13 @@ export default function SystemHealth({ health = {}, migrations = {}, databaseCac
   const databaseFile = useRef(null);
   const mediaFile = useRef(null);
   const fullFile = useRef(null);
+  const hasPendingBackup = backups.some(backup => ['queued', 'creating'].includes(backup.status));
+
+  useEffect(() => {
+    if (!hasPendingBackup) return undefined;
+    const interval = window.setInterval(() => router.reload({ only: ['backups'], preserveScroll: true }), 5000);
+    return () => window.clearInterval(interval);
+  }, [hasPendingBackup]);
 
   const post = (path, data = {}) => {
     setBusy(true);
@@ -212,7 +219,7 @@ export default function SystemHealth({ health = {}, migrations = {}, databaseCac
                 <ActionButton tone="emerald" disabled={busy} onClick={() => post('/admin/system-health/full-backup')}>Full</ActionButton>
               </div>
             </div>
-            <p className="mt-2 text-xs text-slate-400">Database is the lightweight recovery copy. Full combines the database with uploaded media and can be larger.</p>
+            <p className="mt-2 text-xs text-slate-400">Database is the lightweight recovery copy. Full combines the database with uploaded media and can be larger. Backups run in the background, so this page will not time out.</p>
 
             <div className="mt-5 space-y-4 border-t border-slate-100 pt-5">
               <RestoreForm label="Restore database" accept=".sql.gz,application/gzip" inputRef={databaseFile} field="backup" path="/admin/system-health/restore" busy={busy} onSubmit={(event) => restore(event, 'backup', databaseFile, '/admin/system-health/restore', 'This replaces the current database. Continue?')} />
@@ -230,6 +237,7 @@ export default function SystemHealth({ health = {}, migrations = {}, databaseCac
             <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
               <p><strong>Automatic backup:</strong> daily at 02:00</p>
               <p className="mt-1"><strong>Scheduler:</strong> run <code className="rounded bg-white px-1.5 py-0.5 text-xs">php artisan schedule:run</code> every minute.</p>
+              <p className="mt-1"><strong>Backup worker:</strong> run <code className="rounded bg-white px-1.5 py-0.5 text-xs">php artisan queue:work --timeout=0</code> so queued media and full backups finish.</p>
               <p className="mt-3 text-xs text-slate-500">Database and full restores create a safety backup first.</p>
             </div>
           </section>

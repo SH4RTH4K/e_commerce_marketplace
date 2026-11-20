@@ -22,10 +22,50 @@ class DatabaseBackupService
         'asset/front-end/img',
     ];
 
-    public function create(?string $createdBy = 'scheduler'): int
+    public function queue(string $type, ?string $createdBy = 'scheduler'): int
     {
-        $filename = 'ecommerce-'.now()->format('Y-m-d-His').'.sql.gz';
-        $id = $this->startRecord($filename, $createdBy);
+        $filename = match ($type) {
+            'database', 'full' => 'ecommerce-'.now()->format('Y-m-d-His').'.sql.gz',
+            'media' => 'ecommerce-'.now()->format('Y-m-d-His').'.media.tar.gz',
+            default => throw new RuntimeException('Unsupported backup type.'),
+        };
+
+        return $this->startRecord($filename, $createdBy, 'queued');
+    }
+
+    public function runQueued(int $id, string $type): int
+    {
+        $record = DB::table('system_backups')->find($id);
+        if (! $record || $record->status !== 'queued') {
+            throw new RuntimeException('The queued backup is no longer available.');
+        }
+
+        DB::table('system_backups')->where('id', $id)->update([
+            'status' => 'creating',
+            'error' => null,
+            'updated_at' => now(),
+        ]);
+
+        return match ($type) {
+            'database' => $this->create($record->created_by, $id),
+            'media' => $this->createMedia($record->created_by, $id),
+            'full' => $this->createFull($record->created_by, $id),
+            default => throw new RuntimeException('Unsupported backup type.'),
+        };
+    }
+
+    public function failQueued(int $id, string $message): void
+    {
+        if (DB::table('system_backups')->where('id', $id)->exists()) {
+            $this->failRecord($id, $message);
+        }
+    }
+
+    public function create(?string $createdBy = 'scheduler', ?int $existingId = null, bool $complete = true): int
+    {
+        $record = $existingId ? DB::table('system_backups')->find($existingId) : null;
+        $filename = $record?->filename ?: 'ecommerce-'.now()->format('Y-m-d-His').'.sql.gz';
+        $id = $existingId ?: $this->startRecord($filename, $createdBy);
         $absolute = $this->backupPath($filename);
         $handle = null;
 
@@ -80,8 +120,10 @@ class DatabaseBackupService
                 throw new RuntimeException('The backup file was created but its size could not be read.');
             }
 
-            $this->completeRecord($id, (int) $size);
-            $this->prune();
+            if ($complete) {
+                $this->completeRecord($id, (int) $size);
+                $this->prune();
+            }
 
             return $id;
         } catch (\Throwable $exception) {
@@ -94,10 +136,11 @@ class DatabaseBackupService
         }
     }
 
-    public function createMedia(?string $createdBy = 'scheduler'): int
+    public function createMedia(?string $createdBy = 'scheduler', ?int $existingId = null): int
     {
-        $filename = 'ecommerce-'.now()->format('Y-m-d-His').'.media.tar.gz';
-        $id = $this->startRecord($filename, $createdBy);
+        $record = $existingId ? DB::table('system_backups')->find($existingId) : null;
+        $filename = $record?->filename ?: 'ecommerce-'.now()->format('Y-m-d-His').'.media.tar.gz';
+        $id = $existingId ?: $this->startRecord($filename, $createdBy);
         $tarPath = $this->backupPath(substr($filename, 0, -3));
         $archivePath = $tarPath.'.gz';
 
@@ -126,9 +169,9 @@ class DatabaseBackupService
         }
     }
 
-    public function createFull(?string $createdBy = 'scheduler'): int
+    public function createFull(?string $createdBy = 'scheduler', ?int $existingId = null): int
     {
-        $databaseId = $this->create($createdBy);
+        $databaseId = $this->create($createdBy, $existingId, false);
         $database = DB::table('system_backups')->find($databaseId);
 
         if (! $database) {
@@ -159,8 +202,10 @@ class DatabaseBackupService
             DB::table('system_backups')->where('id', $databaseId)->update([
                 'filename' => $filename,
                 'size_bytes' => $size,
+                'status' => 'completed',
                 'updated_at' => now(),
             ]);
+            $this->prune();
 
             return $databaseId;
         } catch (\Throwable $exception) {
@@ -481,12 +526,12 @@ class DatabaseBackupService
         }
     }
 
-    private function startRecord(string $filename, ?string $createdBy): int
+    private function startRecord(string $filename, ?string $createdBy, string $status = 'creating'): int
     {
         return (int) DB::table('system_backups')->insertGetId([
             'filename' => $filename,
             'disk' => config('system-health.backup_disk', 'local'),
-            'status' => 'creating',
+            'status' => $status,
             'created_by' => $createdBy,
             'created_at' => now(),
             'updated_at' => now(),
