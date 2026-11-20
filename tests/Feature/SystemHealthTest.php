@@ -38,6 +38,12 @@ class SystemHealthTest extends TestCase
 
     public function test_database_backup_is_recorded_and_stored_on_the_private_disk(): void
     {
+        DB::table('cache')->insert([
+            'key' => 'backup-cache-row',
+            'value' => 'temporary data that should not be archived',
+            'expiration' => now()->addHour()->timestamp,
+        ]);
+
         $backupId = app(DatabaseBackupService::class)->create('test');
         $backup = DB::table('system_backups')->find($backupId);
 
@@ -45,6 +51,9 @@ class SystemHealthTest extends TestCase
         $this->assertSame('completed', $backup->status);
         $this->assertGreaterThan(0, $backup->size_bytes);
         Storage::disk('local')->assertExists('backups/'.$backup->filename);
+        $contents = gzdecode(Storage::disk('local')->get('backups/'.$backup->filename));
+        $this->assertIsString($contents);
+        $this->assertStringNotContainsString('backup-cache-row', $contents);
 
         Storage::disk('local')->delete('backups/'.$backup->filename);
         DB::table('system_backups')->where('id', $backupId)->delete();

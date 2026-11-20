@@ -179,11 +179,15 @@
 .storefront-category-panel .storefront-category-panel-heading { display: flex; align-items: center; min-height: 44px; height: auto; padding: 10px 14px; border-radius: 10px; color: #9c2f0d; background: #fff4ee; font-size: 14px; font-weight: 800; line-height: 1.35; white-space: normal; margin-bottom: 8px; border: 1px solid #ffe1d3; }
 .storefront-category-panel .storefront-category-branch { position: relative; }
 .storefront-category-panel .storefront-category-branch:not(.storefront-category-branch-level-0)::before { content: ''; position: absolute; left: 25px; top: 0; bottom: 0; border-left: 1px solid #e8edf3; }
+.storefront-category-panel .storefront-category-branch-children { display: none; }
+.storefront-category-panel .storefront-category-branch:hover > .storefront-category-branch-children,
+.storefront-category-panel .storefront-category-branch:focus-within > .storefront-category-branch-children { display: block; }
 .storefront-category-panel .storefront-category-branch-link { position: relative; display: flex; align-items: center; min-height: 40px; height: auto; padding-top: 8px; padding-right: 12px; padding-bottom: 8px; border-radius: 9px; color: #334155; font-size: 13px; font-weight: 600; line-height: 1.35; white-space: normal; transition: color .15s ease, background-color .15s ease, transform .15s ease; }
 .storefront-category-panel .storefront-category-branch-level-0 > .storefront-category-branch-link { color: #475569; font-size: 13px; font-weight: 700; }
 .storefront-category-panel .storefront-category-branch-level-1 > .storefront-category-branch-link { color: #475569; font-weight: 600; }
 .storefront-category-panel .storefront-category-branch-level-2 > .storefront-category-branch-link { color: #64748b; font-size: 12px; font-weight: 500; }
 .storefront-category-branch-marker { width: 7px; height: 7px; margin-right: 10px; border-right: 1.5px solid #94a3b8; border-bottom: 1.5px solid #94a3b8; transform: rotate(-45deg); flex: 0 0 auto; }
+.storefront-category-branch-chevron { margin-left: 8px; color: #94a3b8; font-size: 18px; line-height: 1; }
 .storefront-category-panel .storefront-category-branch-link:hover,
 .storefront-category-panel .storefront-category-branch-link[aria-current='page'],
 .storefront-category-panel .storefront-category-panel-heading:hover { color: #9c2f0d; background: #ffede5; }

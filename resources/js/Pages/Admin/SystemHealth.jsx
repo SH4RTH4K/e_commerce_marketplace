@@ -204,7 +204,7 @@ export default function SystemHealth({ health = {}, migrations = {}, databaseCac
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
               <div>
                 <h3 className="font-bold text-slate-900">Create backups</h3>
-                <p className="mt-1 text-sm text-slate-500">Backups are stored privately outside the public web root.</p>
+                <p className="mt-1 text-sm text-slate-500">Backups are stored privately outside the public web root. Rebuildable cache, session, and queue tables are excluded to keep the archive small.</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <ActionButton disabled={busy} onClick={() => post('/admin/system-health/backup')}>Database</ActionButton>
@@ -212,6 +212,7 @@ export default function SystemHealth({ health = {}, migrations = {}, databaseCac
                 <ActionButton tone="emerald" disabled={busy} onClick={() => post('/admin/system-health/full-backup')}>Full</ActionButton>
               </div>
             </div>
+            <p className="mt-2 text-xs text-slate-400">Database is the lightweight recovery copy. Full combines the database with uploaded media and can be larger.</p>
 
             <div className="mt-5 space-y-4 border-t border-slate-100 pt-5">
               <RestoreForm label="Restore database" accept=".sql.gz,application/gzip" inputRef={databaseFile} field="backup" path="/admin/system-health/restore" busy={busy} onSubmit={(event) => restore(event, 'backup', databaseFile, '/admin/system-health/restore', 'This replaces the current database. Continue?')} />

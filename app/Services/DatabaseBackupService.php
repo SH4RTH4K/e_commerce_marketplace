@@ -31,7 +31,10 @@ class DatabaseBackupService
 
         try {
             $this->ensureBackupDirectory();
-            $handle = gzopen($absolute, 'wb9');
+            // Level 6 keeps the archive compact while avoiding the CPU cost of
+            // maximum compression, which is especially important on shared
+            // hosting where this operation can otherwise hit the HTTP timeout.
+            $handle = gzopen($absolute, 'wb'.(int) config('system-health.backup_compression_level', 6));
             if ($handle === false) {
                 throw new RuntimeException('Unable to create the compressed backup file.');
             }
@@ -410,16 +413,31 @@ class DatabaseBackupService
     {
         $driver = DB::connection()->getDriverName();
 
+        $excluded = $this->excludedTables();
+
         if ($driver === 'sqlite') {
             return collect(DB::select("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != 'system_backups' ORDER BY name"))
                 ->map(fn ($row) => (string) $row->name)
+                ->reject(fn (string $table) => in_array(strtolower($table), $excluded, true))
                 ->all();
         }
 
         return collect(DB::select('SHOW TABLES'))
             ->map(fn ($row) => (string) array_values((array) $row)[0])
-            ->reject(fn (string $table) => $table === 'system_backups')
+            ->reject(fn (string $table) => strtolower($table) === 'system_backups' || in_array(strtolower($table), $excluded, true))
             ->all();
+    }
+
+    /**
+     * Runtime tables are deliberately omitted: Laravel recreates these through
+     * migrations and the application can safely rebuild their contents.
+     */
+    private function excludedTables(): array
+    {
+        return array_values(array_unique(array_filter(array_map(
+            static fn (mixed $table): string => strtolower(trim((string) $table)),
+            (array) config('system-health.backup_excluded_tables', []),
+        ))));
     }
 
     private function tableDefinition(string $table): ?string

@@ -19,13 +19,24 @@ function Chevron({ expanded }) {
 }
 
 export function CategoryBranchLinks({ categories = [], activeId, level = 0, onNavigate }) {
-  return categories.map(category => <div key={category.id} className={`storefront-category-branch storefront-category-branch-level-${level}`}>
-    <CategoryLink href={`/category/${category.slug}`} onClick={onNavigate} aria-current={String(category.id) === String(activeId) ? 'page' : undefined}
+  return categories.map(category => <DesktopCategoryBranch key={category.id} category={category} activeId={activeId} level={level} onNavigate={onNavigate} />);
+}
+
+function DesktopCategoryBranch({ category, activeId, level, onNavigate }) {
+  const children = categoryChildren(category);
+  const active = String(category.id) === String(activeId);
+
+  return <div className={`storefront-category-branch storefront-category-branch-level-${level}`}>
+    <CategoryLink href={`/category/${category.slug}`} onClick={onNavigate} aria-current={active ? 'page' : undefined}
       className="storefront-category-branch-link" style={{ paddingLeft: `${16 + level * 18}px` }}>
-      {level > 0 && <span aria-hidden="true" className="storefront-category-branch-marker" />}{category.name}
+      {level > 0 && <span aria-hidden="true" className="storefront-category-branch-marker" />}
+      <span className="min-w-0 flex-1">{category.name}</span>
+      {children.length > 0 && <span aria-hidden="true" className="storefront-category-branch-chevron">›</span>}
     </CategoryLink>
-    <CategoryBranchLinks categories={categoryChildren(category)} activeId={activeId} level={level + 1} onNavigate={onNavigate} />
-  </div>);
+    {children.length > 0 && <div className="storefront-category-branch-children">
+      <CategoryBranchLinks categories={children} activeId={activeId} level={level + 1} onNavigate={onNavigate} />
+    </div>}
+  </div>;
 }
 
 export function DesktopCategoryItem({ category, activeId, alignRight = false }) {
