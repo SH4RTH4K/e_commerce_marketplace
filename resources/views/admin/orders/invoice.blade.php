@@ -470,14 +470,14 @@
         }
 
         .item-image-cell {
-            width: 58px;
+            width: 112px;
         }
 
         .item-thumb {
             display: block;
-            width: 46px;
-            height: 46px;
-            line-height: 46px;
+            width: 96px;
+            height: 96px;
+            line-height: 96px;
             border: 1px solid var(--line-soft);
             border-radius: 8px;
             background: #fff;
@@ -1027,7 +1027,7 @@
                         <thead>
                             <tr>
                                 <th style="width: 36px;">SL</th>
-                                <th style="width: 58px;">Image</th>
+                                <th style="width: 112px;">Image</th>
                                 <th>Item &amp; description</th>
                                 <th class="text-right" style="width: 92px;">Price</th>
                                 <th class="text-center" style="width: 42px;">Qty</th>
@@ -1308,7 +1308,7 @@
             const canvas = document.createElement('canvas');
             const scale = 2;
             const width = 1200;
-            const height = Math.max(1500, 1180 + (tableRows.length * 130));
+            const height = Math.max(1500, 1180 + (tableRows.length * 170));
             const ctx = canvas.getContext('2d');
 
             canvas.width = width * scale;
@@ -1417,21 +1417,21 @@
 
                 if (index === 0 && productImage) {
                     try {
-                        ctx.drawImage(productImage, left + 68, y - 12, 58, 58);
+                        ctx.drawImage(productImage, left + 52, y - 28, 116, 116);
                     } catch (error) {
-                        ctx.strokeRect(left + 68, y - 12, 58, 58);
+                        ctx.strokeRect(left + 52, y - 28, 116, 116);
                     }
                 } else {
-                    ctx.strokeRect(left + 68, y - 12, 58, 58);
+                    ctx.strokeRect(left + 52, y - 28, 116, 116);
                     ctx.font = '700 10px Arial, sans-serif';
-                    ctx.fillText('IMAGE', left + 79, y + 20);
+                    ctx.fillText('IMAGE', left + 92, y + 34);
                 }
 
                 ctx.font = '700 17px Arial, sans-serif';
-                drawWrappedText(ctx, itemTitle, left + 170, y + 4, 470, 23);
+                drawWrappedText(ctx, itemTitle, left + 205, y + 4, 435, 23);
                 ctx.font = '400 12px Arial, sans-serif';
                 ctx.fillStyle = '#64748b';
-                if (sku || itemDiscount) drawWrappedText(ctx, [sku, itemDiscount].filter(Boolean).join(' · '), left + 170, y + 64, 470, 16);
+                if (sku || itemDiscount) drawWrappedText(ctx, [sku, itemDiscount].filter(Boolean).join(' · '), left + 205, y + 82, 435, 16);
                 ctx.fillStyle = '#111827';
                 ctx.font = '400 15px Arial, sans-serif';
                 ctx.fillText(price, width - 378, y + 18);
@@ -1439,7 +1439,7 @@
                 ctx.font = '700 15px Arial, sans-serif';
                 ctx.fillText(total, width - 183, y + 18);
 
-                y += 116;
+                y += 170;
             });
 
             y += 18;
@@ -1483,12 +1483,10 @@
             try {
                 const blob = await buildInvoiceImageBlob(mode);
                 const file = new File([blob], fileName, { type: 'image/png' });
-                // Desktop Chrome opens a blocking OS share sheet for navigator.share
-                // and can leave the WhatsApp tile spinning indefinitely. Keep the
-                // native file share for phones/tablets and use the reliable download
-                // fallback on desktop instead.
-                const mobileShare = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-                const canShareFile = mobileShare && typeof navigator.share === 'function'
+                // Use the native file share wherever the browser supports it so
+                // WhatsApp receives the generated image, not only the message.
+                // Browsers without file sharing use the download fallback below.
+                const canShareFile = typeof navigator.share === 'function'
                     && (!navigator.canShare || navigator.canShare({ files: [file] }));
 
                 if (canShareFile) {
