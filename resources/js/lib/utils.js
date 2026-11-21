@@ -6,6 +6,49 @@ export function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 
+// Browser storage can be unavailable (private mode, blocked cookies, or a
+// mobile WebView policy). Never let a storage exception prevent the storefront
+// React tree from mounting.
+export function readBrowserStorage(area, key, fallback = null) {
+  try {
+    if (typeof window === 'undefined' || !window[area]) return fallback;
+    const value = window[area].getItem(key);
+    return value === null ? fallback : value;
+  } catch {
+    return fallback;
+  }
+}
+
+export function writeBrowserStorage(area, key, value) {
+  try {
+    if (typeof window === 'undefined' || !window[area]) return false;
+    window[area].setItem(key, String(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function removeBrowserStorage(area, key) {
+  try {
+    if (typeof window === 'undefined' || !window[area]) return false;
+    window[area].removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function readStoredJson(area, key, fallback = null) {
+  const raw = readBrowserStorage(area, key, null);
+  if (raw === null) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
 export function imageUrl(path, seed = 'SHARTHAK') {
   if (path) {
     const value = String(path).trim();

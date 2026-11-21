@@ -3,6 +3,25 @@ import { useState, useEffect } from 'react';
 import { orderSegments, activeOrderSegment, orderSegmentHref } from '@/lib/orderSegments';
 import { customerSegments, activeCustomerSegment } from '@/lib/customerCrm';
 
+const readBrowserStorage = (area, key, fallback = null) => {
+  try {
+    if (typeof window === 'undefined' || !window[area]) return fallback;
+    const value = window[area].getItem(key);
+    return value === null ? fallback : value;
+  } catch {
+    return fallback;
+  }
+};
+const writeBrowserStorage = (area, key, value) => {
+  try {
+    if (typeof window === 'undefined' || !window[area]) return false;
+    window[area].setItem(key, String(value));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 /* ─── Nav structure ──────────────────────────────────────────────── */
 const navGroups = [
   {
@@ -316,10 +335,10 @@ export default function AdminLayout({ children, title }) {
     if (!user || !hasPerm('abandoned_carts.view')) return;
 
     const storageKey = `admin-abandoned-checkout-cursor-${user.id}`;
-    let cursor = Number(sessionStorage.getItem(storageKey));
+    let cursor = Number(readBrowserStorage('sessionStorage', storageKey, '0'));
     if (!Number.isFinite(cursor) || cursor <= 0) {
       cursor = Number(admin_badges?.latest_abandoned_checkout_id || 0);
-      sessionStorage.setItem(storageKey, String(cursor));
+      writeBrowserStorage('sessionStorage', storageKey, cursor);
     }
 
     let disposed = false;
@@ -346,7 +365,7 @@ export default function AdminLayout({ children, title }) {
           });
         }
         cursor = Math.max(cursor, Number(data.latest_id) || 0);
-        sessionStorage.setItem(storageKey, String(cursor));
+        writeBrowserStorage('sessionStorage', storageKey, cursor);
       } catch {
         // A later polling cycle can recover from temporary network errors.
       }

@@ -7,6 +7,24 @@ import ProductAvailability from './ProductAvailability';
 import { productAvailability } from '@/lib/productAvailability';
 
 let productPageModule;
+const readStoredJson = (area, key, fallback = null) => {
+  try {
+    if (typeof window === 'undefined' || !window[area]) return fallback;
+    const raw = window[area].getItem(key);
+    return raw === null ? fallback : JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+};
+const writeBrowserStorage = (area, key, value) => {
+  try {
+    if (typeof window === 'undefined' || !window[area]) return false;
+    window[area].setItem(key, String(value));
+    return true;
+  } catch {
+    return false;
+  }
+};
 const preloadProductPage = () => {
   productPageModule ??= import('@/Pages/Storefront/Product.jsx');
   return productPageModule;
@@ -21,18 +39,10 @@ export default function ProductCard({ product, highlightDiscount = true }) {
 
   useEffect(() => {
     const checkWishlist = () => {
-      const saved = localStorage.getItem('sharthak_wishlist');
-      if (saved) {
-        try {
-          const list = JSON.parse(saved);
-          const wishlist = Array.isArray(list) ? list : [];
-          setInWishlist(wishlist.some(p => p.id === product.id));
-          setWishlistCount(wishlist.length);
-        } catch (e) {}
-      } else {
-        setInWishlist(false);
-        setWishlistCount(0);
-      }
+      const list = readStoredJson('localStorage', 'sharthak_wishlist', []);
+      const wishlist = Array.isArray(list) ? list : [];
+      setInWishlist(wishlist.some(p => p.id === product.id));
+      setWishlistCount(wishlist.length);
     };
     checkWishlist();
     window.addEventListener('wishlist-updated', checkWishlist);
@@ -40,16 +50,8 @@ export default function ProductCard({ product, highlightDiscount = true }) {
   }, [product.id]);
 
   const toggleWishlist = (nextLiked) => {
-    const saved = localStorage.getItem('sharthak_wishlist');
-    let list = [];
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        list = Array.isArray(parsed) ? parsed : [];
-      } catch (error) {
-        list = [];
-      }
-    }
+    let list = readStoredJson('localStorage', 'sharthak_wishlist', []);
+    if (!Array.isArray(list)) list = [];
     
     if (!nextLiked) {
       list = list.filter(p => p.id !== product.id);
@@ -57,7 +59,7 @@ export default function ProductCard({ product, highlightDiscount = true }) {
       if (!list.some(p => p.id === product.id)) list.push(product);
     }
     
-    localStorage.setItem('sharthak_wishlist', JSON.stringify(list));
+    writeBrowserStorage('localStorage', 'sharthak_wishlist', JSON.stringify(list));
     setInWishlist(nextLiked);
     setWishlistCount(list.length);
     window.dispatchEvent(new Event('wishlist-updated'));

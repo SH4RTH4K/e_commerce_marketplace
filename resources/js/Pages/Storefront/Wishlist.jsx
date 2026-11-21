@@ -2,32 +2,25 @@ import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, Link } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import ProductCard from '@/Components/Storefront/ProductCard';
+import { readStoredJson, removeBrowserStorage } from '@/lib/utils';
 
 export default function Wishlist() {
   const [wishlist, setWishlist] = useState([]);
   
   useEffect(() => {
-    const saved = localStorage.getItem('sharthak_wishlist');
-    if (saved) {
-      try {
-        setWishlist(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to parse wishlist', e);
-      }
-    }
-    
-    const handleUpdate = () => {
-      const updated = localStorage.getItem('sharthak_wishlist');
-      setWishlist(updated ? JSON.parse(updated) : []);
+    const loadWishlist = () => {
+      const saved = readStoredJson('localStorage', 'sharthak_wishlist', []);
+      setWishlist(Array.isArray(saved) ? saved : []);
     };
+    loadWishlist();
     
-    window.addEventListener('wishlist-updated', handleUpdate);
-    return () => window.removeEventListener('wishlist-updated', handleUpdate);
+    window.addEventListener('wishlist-updated', loadWishlist);
+    return () => window.removeEventListener('wishlist-updated', loadWishlist);
   }, []);
 
   const clearWishlist = () => {
     if (confirm('Are you sure you want to clear your wishlist?')) {
-      localStorage.removeItem('sharthak_wishlist');
+      removeBrowserStorage('localStorage', 'sharthak_wishlist');
       setWishlist([]);
       window.dispatchEvent(new Event('wishlist-updated'));
     }

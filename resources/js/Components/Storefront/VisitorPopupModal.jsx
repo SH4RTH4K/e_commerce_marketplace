@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from '@inertiajs/react';
+import { readBrowserStorage, writeBrowserStorage } from '@/lib/utils';
 
 export default function VisitorPopupModal({ popup }) {
   if (!popup || !popup.enabled) return null;
@@ -10,8 +11,8 @@ export default function VisitorPopupModal({ popup }) {
   useEffect(() => {
     // Check frequency restriction
     const frequency = popup.frequency || 'once_per_session';
-    const sessionSeen = sessionStorage.getItem('shopzy_popup_seen');
-    const localSeenTime = localStorage.getItem('shopzy_popup_seen_time');
+    const sessionSeen = readBrowserStorage('sessionStorage', 'shopzy_popup_seen');
+    const localSeenTime = readBrowserStorage('localStorage', 'shopzy_popup_seen_time');
 
     if (frequency === 'once_per_session' && sessionSeen === '1') {
       return;
@@ -41,8 +42,8 @@ export default function VisitorPopupModal({ popup }) {
     }, 200);
 
     // Record seen
-    sessionStorage.setItem('shopzy_popup_seen', '1');
-    localStorage.setItem('shopzy_popup_seen_time', String(Date.now()));
+    writeBrowserStorage('sessionStorage', 'shopzy_popup_seen', '1');
+    writeBrowserStorage('localStorage', 'shopzy_popup_seen_time', Date.now());
   };
 
   if (!isOpen) return null;

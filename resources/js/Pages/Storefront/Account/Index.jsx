@@ -1,7 +1,7 @@
 import StorefrontLayout from '@/Layouts/StorefrontLayout';
 import { Head, usePage, useForm, Link, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
-import { money, imageUrl } from '@/lib/utils';
+import { money, imageUrl, readStoredJson, writeBrowserStorage } from '@/lib/utils';
 
 const Icon = ({ path, className = 'w-5 h-5' }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -32,8 +32,8 @@ export default function AccountIndex({ user, orders }) {
 
   useEffect(() => {
     const load = () => {
-      try { setWishlist(JSON.parse(localStorage.getItem('sharthak_wishlist') || '[]')); }
-      catch { setWishlist([]); }
+      const saved = readStoredJson('localStorage', 'sharthak_wishlist', []);
+      setWishlist(Array.isArray(saved) ? saved : []);
     };
     load();
     window.addEventListener('wishlist-updated', load);
@@ -42,7 +42,7 @@ export default function AccountIndex({ user, orders }) {
 
   const removeFromWishlist = (id) => {
     const updated = wishlist.filter(p => p.id !== id);
-    localStorage.setItem('sharthak_wishlist', JSON.stringify(updated));
+    writeBrowserStorage('localStorage', 'sharthak_wishlist', JSON.stringify(updated));
     setWishlist(updated);
     window.dispatchEvent(new Event('wishlist-updated'));
   };
