@@ -831,6 +831,17 @@
             line-height: 1.55;
         }
 
+        .wa-choice-status {
+            margin-top: 12px;
+            padding: 9px 10px;
+            color: #126a40;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 9px;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
         .wa-choice-actions {
             display: grid;
             gap: 9px;
@@ -1131,6 +1142,7 @@
         <div class="wa-choice-card">
             <div class="wa-choice-title" id="wa-choice-title">Send invoice on WhatsApp</div>
             <div class="wa-choice-copy">Send an invoice image for the easiest WhatsApp sharing, or use PDF/link when needed.</div>
+            <div id="wa-choice-status" class="wa-choice-status" hidden role="status" aria-live="polite"></div>
             <div class="wa-choice-actions">
                 <button type="button" class="wa-choice-action primary" data-wa-choice="image">
                     <span aria-hidden="true">IMG</span>
@@ -1170,10 +1182,23 @@
 
         let activeWhatsAppButton = null;
         const waChoiceModal = document.getElementById('wa-choice-modal');
+        const waChoiceStatus = document.getElementById('wa-choice-status');
 
         function closeWhatsAppChoice() {
             activeWhatsAppButton = null;
             if (waChoiceModal) waChoiceModal.hidden = true;
+        }
+
+        function setWhatsAppChoiceBusy(busy, message) {
+            document.querySelectorAll('[data-wa-choice]').forEach(function (choice) {
+                choice.disabled = busy;
+                choice.style.pointerEvents = busy ? 'none' : '';
+                choice.style.opacity = busy ? '0.62' : '';
+            });
+            if (waChoiceStatus) {
+                waChoiceStatus.hidden = !busy;
+                waChoiceStatus.textContent = message || '';
+            }
         }
 
         function normalizeWhatsAppNumber(phone) {
@@ -1257,11 +1282,21 @@
 
                 const image = new Image();
                 image.crossOrigin = 'anonymous';
-                image.onload = function () { resolve(image); };
-                image.onerror = function () { resolve(null); };
+                let settled = false;
+                const finish = function (value) {
+                    if (settled) return;
+                    settled = true;
+                    window.clearTimeout(timeout);
+                    resolve(value);
+                };
+                image.onerror = function () { finish(null); };
+                const timeout = window.setTimeout(function () { finish(null); }, 4000);
+                image.onload = function () { finish(image); };
                 image.src = src;
             });
         }
+
+        let invoiceImageBusy = false;
 
         async function buildInvoiceImageBlob(mode) {
             const sheet = document.querySelector('.invoice-sheet');
@@ -1439,13 +1474,21 @@
         }
 
         async function sendInvoiceImage(button) {
+            if (invoiceImageBusy) return;
+            invoiceImageBusy = true;
+            setWhatsAppChoiceBusy(true, 'Preparing the invoice image…');
             const mode = button.dataset.waInvoice === 'mono' ? 'mono' : 'color';
             const fileName = 'Invoice_' + button.dataset.waOrder + '_' + mode + '.png';
 
             try {
                 const blob = await buildInvoiceImageBlob(mode);
                 const file = new File([blob], fileName, { type: 'image/png' });
-                const canShareFile = typeof navigator.share === 'function'
+                // Desktop Chrome opens a blocking OS share sheet for navigator.share
+                // and can leave the WhatsApp tile spinning indefinitely. Keep the
+                // native file share for phones/tablets and use the reliable download
+                // fallback on desktop instead.
+                const mobileShare = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+                const canShareFile = mobileShare && typeof navigator.share === 'function'
                     && (!navigator.canShare || navigator.canShare({ files: [file] }));
 
                 if (canShareFile) {
@@ -1469,6 +1512,9 @@
                 if (error?.name !== 'AbortError') {
                     window.alert('Could not prepare the invoice image. Please try again or send the invoice link.');
                 }
+            } finally {
+                invoiceImageBusy = false;
+                setWhatsAppChoiceBusy(false);
             }
         }
 

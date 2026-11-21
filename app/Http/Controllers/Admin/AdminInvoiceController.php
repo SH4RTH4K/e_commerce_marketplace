@@ -15,6 +15,7 @@ class AdminInvoiceController extends Controller
     public function show(Order $order)
     {
         $order->load(['items.product.images']);
+        $this->ensureConfirmationToken($order);
         $store = $this->getStoreDetails();
 
         return view('admin.orders.invoice', [
@@ -153,6 +154,22 @@ class AdminInvoiceController extends Controller
             'currency'   => setting('currency_symbol', '৳'),
             'footer_text'=> setting('footer_text', 'Thank you for shopping with us!'),
         ];
+    }
+
+    /**
+     * Older orders can predate confirmation tokens (or contain a bad imported
+     * value). Ensure admin-created share links always point to a valid,
+     * customer-authorized invoice URL instead of token=undefined.
+     */
+    private function ensureConfirmationToken(Order $order): void
+    {
+        $token = trim((string) $order->confirmation_token);
+        if (preg_match('/^[a-f0-9]{48}$/i', $token)) {
+            return;
+        }
+
+        $order->confirmation_token = bin2hex(random_bytes(24));
+        $order->saveQuietly();
     }
 
     private function renderPdf(string $html, Options $options): string
