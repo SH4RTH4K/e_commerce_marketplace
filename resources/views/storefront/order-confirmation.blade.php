@@ -15,7 +15,7 @@
     </div>
     <h1 class="mt-5 font-display text-2xl sm:text-3xl font-extrabold">Thank you for your order!</h1>
     @if($order->payment_method === 'cod')
-      <p class="mt-2 text-slate-500">Your order <b class="text-ink">{{ $order->order_number }}</b> is confirmed. Pay the product amount on delivery.</p>
+      <p class="mt-2 text-slate-500">Your order <b class="text-ink">{{ $order->order_number }}</b> has been received and is eligible for review. An admin will confirm it before dispatch.</p>
     @else
       <p class="mt-2 text-slate-500">Your order <b class="text-ink">{{ $order->order_number }}</b> has been placed and is now <b class="text-amber-600">pending verification</b>.</p>
       @if($order->isMobileBanking())
@@ -23,6 +23,13 @@
       @endif
     @endif
   </div>
+
+  @if($order->payment_method === 'cod')
+    <div class="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left shadow-sm">
+      <p class="font-bold text-amber-900">Order received — pending admin confirmation</p>
+      <p class="mt-1 text-sm leading-relaxed text-amber-800">Your order is eligible to be placed. Our admin team will review and confirm it before dispatch.</p>
+    </div>
+  @endif
 
   <div class="mt-10 rounded-2xl border border-slate-100 bg-white shadow-soft overflow-hidden">
     <div class="p-5 border-b border-slate-100 flex items-center justify-between">

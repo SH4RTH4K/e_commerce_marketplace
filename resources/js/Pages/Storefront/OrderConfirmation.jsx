@@ -39,7 +39,7 @@ export default function OrderConfirmationPage({ order, trackingOrder }) {
 
   return (
     <StorefrontLayout>
-      <Head title={order.awaiting_sourcing ? 'Order Received - Awaiting sourcing' : 'Order Confirmed'} />
+      <Head title={order.awaiting_sourcing ? 'Order Received - Awaiting sourcing' : 'Order Received - Pending admin confirmation'} />
       
       {showConfetti && (
         <div className="fixed inset-0 z-50 pointer-events-none">
@@ -69,6 +69,15 @@ export default function OrderConfirmationPage({ order, trackingOrder }) {
                 <p className="mt-2 text-sm text-gray-500 font-medium">আমরা শীঘ্রই আপনার {paymentMethodLabel} পেমেন্ট ভেরিফাই করবো।</p>
               )}
             </>
+          )}
+
+          {isCod && (
+            <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left shadow-sm">
+              <p className="font-bold text-amber-900">Order received — eligible for review</p>
+              <p className="mt-1 text-sm leading-relaxed text-amber-800">
+                Your order is eligible to be placed. An admin will review the order and confirm it before dispatch.
+              </p>
+            </div>
           )}
 
           {order.awaiting_sourcing && <div className="mt-6 text-left"><SourcingNotice awaiting /></div>}

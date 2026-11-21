@@ -80,6 +80,50 @@ class FakeOrderGuardTest extends TestCase
         ]);
     }
 
+    public function test_risky_courier_history_is_saved_for_review_without_blocking_a_valid_order(): void
+    {
+        Setting::put('fog_enabled', '1');
+        Setting::put('fog_bdcourier_enabled', '1');
+        Setting::put('fog_bdcourier_auto_check_checkout', '1');
+        Setting::put('fog_bdcourier_api_key', 'valid-test-key');
+        Setting::put('fog_bdcourier_block_risk_levels', 'danger,high');
+
+        Http::fake([
+            'api.bdcourier.com/courier-check*' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    'summary' => [
+                        'total_parcel' => 10,
+                        'success_parcel' => 0,
+                        'cancelled_parcel' => 10,
+                    ],
+                ],
+            ]),
+        ]);
+
+        $this->fillCart();
+
+        $response = $this->post('/checkout', [
+            'customer_name'    => 'Review Customer',
+            'customer_phone'   => '01711223344',
+            'shipping_address' => '123 Test St',
+            'city'             => 'Dhaka',
+            'shipping_zone'    => 'inside_dhaka',
+            'payment_method'   => 'cod',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect();
+        $this->assertDatabaseHas('orders', [
+            'customer_phone' => '01711223344',
+            'status' => 'pending',
+        ]);
+        $this->assertDatabaseHas('bd_courier_checks', [
+            'phone' => '01711223344',
+            'risk_level' => 'danger',
+        ]);
+    }
+
     public function test_blocks_checkout_if_ip_is_blocked()
     {
         BlockedIp::create([

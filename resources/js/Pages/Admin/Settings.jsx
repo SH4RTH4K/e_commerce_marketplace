@@ -1882,19 +1882,19 @@ export default function Settings({ settings, templateStatus = {} }) {
                     <a href="https://bdcourier.com" target="_blank" rel="noreferrer" className="ml-auto text-xs text-orange-500 hover:underline">BD Courier ↗</a>
                   </div>
                   <label className="flex items-center gap-3"><input type="checkbox" checked={data.fog_bdcourier_enabled ?? (settings.fog_bdcourier_enabled === '1')} onChange={e => setData('fog_bdcourier_enabled', e.target.checked)} className={checkboxClass} /> <span className="text-sm font-medium">Enable BD Courier phone check at checkout</span></label>
-                  <label className="flex items-center gap-3"><input type="checkbox" checked={data.fog_bdcourier_auto_check_checkout ?? (settings.fog_bdcourier_auto_check_checkout === '1')} onChange={e => setData('fog_bdcourier_auto_check_checkout', e.target.checked)} className={checkboxClass} /> <span className="text-sm">Auto-check phone at checkout (block if risky)</span></label>
+                  <label className="flex items-center gap-3"><input type="checkbox" checked={data.fog_bdcourier_auto_check_checkout ?? (settings.fog_bdcourier_auto_check_checkout === '1')} onChange={e => setData('fog_bdcourier_auto_check_checkout', e.target.checked)} className={checkboxClass} /> <span className="text-sm">Auto-check phone at checkout (flag for admin review)</span></label>
                   <div className="grid grid-cols-2 gap-4">
                     <Field label="BD Courier API Key" error={errors.fog_bdcourier_api_key}>
                       <input type="password" value={data.fog_bdcourier_api_key ?? (settings.fog_bdcourier_api_key || '')} onChange={e => setData('fog_bdcourier_api_key', e.target.value)} className={inputClass} placeholder="Your BD Courier API key" />
                     </Field>
-                    <Field label="Minimum Success Rate to Allow (%)" error={errors.fog_bdcourier_min_success_rate}>
+                    <Field label="Flag below success rate (%)" error={errors.fog_bdcourier_min_success_rate}>
                       <input type="number" min="0" max="100" value={data.fog_bdcourier_min_success_rate ?? (settings.fog_bdcourier_min_success_rate || '0')} onChange={e => setData('fog_bdcourier_min_success_rate', e.target.value)} className={inputClass} placeholder="0 = no minimum" />
                     </Field>
-                    <Field label="Block Risk Levels (comma-separated)" error={errors.fog_bdcourier_block_risk_levels}>
+                    <Field label="Risk levels to flag (comma-separated)" error={errors.fog_bdcourier_block_risk_levels}>
                       <input value={data.fog_bdcourier_block_risk_levels ?? (settings.fog_bdcourier_block_risk_levels || 'danger,high')} onChange={e => setData('fog_bdcourier_block_risk_levels', e.target.value)} className={inputClass} placeholder="danger,high" />
                     </Field>
                   </div>
-                  <p className="text-xs text-gray-400">Risk levels: <code>safe</code>, <code>low</code>, <code>medium</code>, <code>high</code>, <code>danger</code></p>
+                  <p className="text-xs text-gray-400">Risk results are saved on the order for admin review. Valid customers can still submit orders. Levels: <code>safe</code>, <code>low</code>, <code>medium</code>, <code>high</code>, <code>danger</code>.</p>
                 </div>
 
                 <div className="flex gap-3 flex-wrap">

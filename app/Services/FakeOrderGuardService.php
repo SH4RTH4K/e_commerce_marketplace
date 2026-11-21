@@ -134,6 +134,12 @@ class FakeOrderGuardService
         }
 
         // 8. BD Courier Fraud Check (auto check at checkout)
+        //
+        // A valid customer remains eligible to place an order even when the
+        // courier history is risky. The result is persisted in
+        // bd_courier_checks for the admin to review before confirming or
+        // dispatching the pending order. Hard blocks above (invalid numbers,
+        // blocked phones/IPs/devices and cooldowns) still protect checkout.
         if ((string) setting('fog_bdcourier_enabled', '0') === '1' &&
             (string) setting('fog_bdcourier_auto_check_checkout', '0') === '1') {
             if ($phone) {
@@ -161,13 +167,8 @@ class FakeOrderGuardService
                         );
                     }
                 }
-                // Fail-open: if API is unreachable, allow order
-                if ($result && $courier->shouldBlock($result)) {
-                    return [
-                        'field'   => 'customer_phone',
-                        'message' => $courier->blockMessage($result),
-                    ];
-                }
+                // Fail-open when the API is unavailable, and review-only when
+                // it returns a risky history. Do not reject a valid order here.
             }
         }
 
