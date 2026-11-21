@@ -22,11 +22,14 @@
   #taqi-pixel-consent-preferences:hover { background: #f8fafc; }
   #taqi-pixel-consent button[data-consent-accept] { border-color: #f15a24; background: #f15a24; color: #fff; }
   #taqi-pixel-consent button[data-consent-accept]:hover { background: #d94c1a; }
-  #taqi-pixel-consent-preferences { position: fixed; z-index: 9998; left: 12px; bottom: 12px; min-height: 36px; padding: 6px 11px; font-size: 12px; box-shadow: 0 4px 16px rgba(15, 23, 42, .12); }
+  #taqi-pixel-consent-preferences { position: fixed; z-index: 9998; right: 12px; bottom: 12px; min-height: 36px; padding: 6px 11px; font-size: 12px; box-shadow: 0 4px 16px rgba(15, 23, 42, .12); }
   @media (max-width: 600px) {
     #taqi-pixel-consent { inset: auto 0 0; width: 100%; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; }
     #taqi-pixel-consent .taqi-consent-actions { flex-direction: column; }
     #taqi-pixel-consent .taqi-consent-actions button { width: 100%; }
+    /* The storefront has a 60px fixed bottom nav on phones. Keep Cookie settings
+       above it, on the right, instead of covering the nav's left-side controls. */
+    #taqi-pixel-consent-preferences { right: 12px; bottom: calc(60px + env(safe-area-inset-bottom, 0px) + 12px); }
   }
 </style>
 
