@@ -40,41 +40,6 @@
 </section>
 <button type="button" id="taqi-pixel-consent-preferences" aria-controls="taqi-pixel-consent" hidden>Cookie settings</button>
 
-<script nonce="{{ csp_nonce() }}">
-(() => {
-  const banner = document.getElementById('taqi-pixel-consent');
-  const preferences = document.getElementById('taqi-pixel-consent-preferences');
-  if (!banner || !preferences) return;
-
-  const cookieName = 'taqi_marketing_consent';
-  const readChoice = () => document.cookie.split(';').map(value => value.trim()).find(value => value.startsWith(cookieName + '='))?.slice(cookieName.length + 1) || '';
-  const saveChoice = choice => {
-    const secure = location.protocol === 'https:' ? '; Secure' : '';
-    document.cookie = `${cookieName}=${choice}; Max-Age=15552000; Path=/; SameSite=Lax${secure}`;
-    banner.hidden = true;
-    preferences.hidden = false;
-    window.__setMetaPixelConsent?.(choice === 'granted', choice);
-  };
-  const openPreferences = () => {
-    banner.hidden = false;
-    preferences.hidden = true;
-    banner.querySelector('[data-consent-accept]')?.focus();
-  };
-
-  const savedChoice = readChoice();
-  if (savedChoice === 'granted' || savedChoice === 'denied') {
-    banner.hidden = true;
-    preferences.hidden = false;
-    window.__setMetaPixelConsent?.(savedChoice === 'granted', savedChoice);
-  } else {
-    banner.hidden = false;
-    preferences.hidden = true;
-    window.__setMetaPixelConsent?.(false, 'pending');
-  }
-
-  banner.querySelector('[data-consent-accept]')?.addEventListener('click', () => saveChoice('granted'));
-  banner.querySelector('[data-consent-reject]')?.addEventListener('click', () => saveChoice('denied'));
-  preferences.addEventListener('click', openPreferences);
-})();
-</script>
+{{-- Keep consent controls outside the main React bundle so they still work if the storefront bundle is slow or cached. --}}
+<script nonce="{{ csp_nonce() }}" src="{{ asset('theme/js/consent.js') }}?v=2" defer></script>
 @endif

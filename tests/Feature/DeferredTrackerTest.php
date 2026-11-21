@@ -32,8 +32,8 @@ class DeferredTrackerTest extends TestCase
         $this->assertStringContainsString('pixelConsentStatus: "pending"', $html);
         $this->assertStringContainsString('data-consent-accept', $html);
         $this->assertStringContainsString('data-consent-reject', $html);
-        $this->assertStringContainsString("window.__setMetaPixelConsent?.(false, 'pending')", $html);
-        $this->assertStringContainsString("window.__setMetaPixelConsent?.(choice === 'granted', choice)", $html);
+        $this->assertStringContainsString('theme/js/consent.js', $html);
+        $this->assertStringNotContainsString('window.__setMetaPixelConsent?.(choice === \'granted\', choice)', $html);
         $this->assertDoesNotMatchRegularExpression('/<script\b[^>]*\bsrc=["\']https:\/\/connect\.facebook\.net/i', $html);
         $this->assertStringNotContainsString('facebook.com/tr?id=123456789012345', $html);
     }
